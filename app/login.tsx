@@ -39,8 +39,12 @@ function formatPhoneNumber(value: string) {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { session, signInWithGoogle, signInWithPhone } = useMockAuth();
+  const { isHydrated, session, signInWithGoogle, signInWithPhone } = useMockAuth();
   const [phoneNumber, setPhoneNumber] = React.useState('+62 ');
+
+  if (!isHydrated) {
+    return null;
+  }
 
   if (session) {
     return <Redirect href="/(tabs)" />;
@@ -80,8 +84,8 @@ export default function LoginScreen() {
             <AppButton
               detail="Mock OAuth sign-in"
               label="Continue with Google"
-              onPress={() => {
-                signInWithGoogle();
+              onPress={async () => {
+                await signInWithGoogle();
                 router.replace('/(tabs)');
               }}
               size="lg"
@@ -109,8 +113,8 @@ export default function LoginScreen() {
                 detail="Mock OTP entry"
                 disabled={phoneNumber.replace(/\D/g, '').length < 8}
                 label="Continue with Phone"
-                onPress={() => {
-                  signInWithPhone(phoneNumber);
+                onPress={async () => {
+                  await signInWithPhone(phoneNumber);
                   router.replace('/(tabs)');
                 }}
                 variant="secondary"
