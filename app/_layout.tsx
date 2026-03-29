@@ -5,6 +5,7 @@ import { ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { NavigationThemes } from '@/constants/theme';
@@ -21,21 +22,23 @@ export default function RootLayout() {
   const [queryClient] = React.useState(() => createQueryClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <MockAuthProvider>
-        <ThemeProvider value={NavigationThemes[colorScheme]}>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: 'modal', title: 'Design Principles' }}
-            />
-          </Stack>
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        </ThemeProvider>
-      </MockAuthProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <MockAuthProvider>
+          <ThemeProvider value={NavigationThemes[colorScheme]}>
+            <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="modal"
+                options={{ presentation: 'modal', title: 'Design Principles' }}
+              />
+            </Stack>
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          </ThemeProvider>
+        </MockAuthProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
