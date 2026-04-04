@@ -12,6 +12,11 @@ const destinations = [
     detail: 'Review new suggestions and decide who moves forward.',
   },
   {
+    href: './products',
+    title: 'Products',
+    detail: 'Browse the React Query demo that loads a real product catalog.',
+  },
+  {
     href: './chat',
     title: 'Chat',
     detail: 'Open active conversations and keep momentum moving.',

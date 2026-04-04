@@ -3,41 +3,40 @@ import { ScrollView, View } from 'react-native';
 
 import { AppCard, AppPill, AppText } from '@shared/components';
 
-import { useTodos } from '../hooks/use-todos';
-import { TODOS_USER_ID } from '../services/todos-service';
-import { TodoCard } from './todo-card';
+import { useProducts } from '../hooks/use-products';
+import { ProductCard } from './product-card';
 
-export function TodosScreen() {
-  const { data, error, isLoading, refetch } = useTodos();
+export function ProductsScreen() {
+  const { data, error, isLoading, refetch } = useProducts();
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Todos' }} />
+      <Stack.Screen options={{ title: 'Products' }} />
       <ScrollView
         className="flex-1 bg-canvas"
         contentContainerClassName="gap-6 px-5 pt-4 pb-24"
         contentInsetAdjustmentBehavior="automatic">
         <AppCard className="gap-4">
           <AppPill className="self-start" label="React Query Demo" tone="accent" />
-          <AppText variant="hero">Feature-based fetching with `useQuery`.</AppText>
+          <AppText variant="hero">Feature-based fetching with products.</AppText>
           <AppText tone="muted">
-            This tab fetches the todo list for dummy user {TODOS_USER_ID} through the shared API
-            client and a feature-local hook.
+            This screen fetches the DummyJSON products list through the shared API client, a
+            feature-local service, and a `useQuery` hook inside the `products` slice.
           </AppText>
         </AppCard>
 
         {isLoading ? (
           <AppCard tone="muted" className="gap-2">
-            <AppText variant="subtitle">Loading todos...</AppText>
+            <AppText variant="subtitle">Loading products...</AppText>
             <AppText tone="muted">
-              React Query is resolving the request and caching the response for this feature.
+              React Query is fetching and caching the products response for this feature.
             </AppText>
           </AppCard>
         ) : null}
 
         {error ? (
           <AppCard tone="signal" className="gap-3">
-            <AppText variant="subtitle">Could not load todos</AppText>
+            <AppText variant="subtitle">Could not load products</AppText>
             <AppText tone="muted">
               {error instanceof Error ? error.message : 'Unknown request error'}
             </AppText>
@@ -58,17 +57,17 @@ export function TodosScreen() {
               </AppCard>
               <AppCard className="flex-1 gap-2">
                 <AppText tone="accent" variant="label">
-                  Completed
+                  Categories
                 </AppText>
                 <AppText variant="title">
-                  {data.todos.filter((item) => item.completed).length}
+                  {new Set(data.products.map((item) => item.category)).size}
                 </AppText>
               </AppCard>
             </View>
 
-            <View className="gap-3">
-              {data.todos.map((todo) => (
-                <TodoCard key={todo.id} todo={todo} />
+            <View className="gap-4">
+              {data.products.map((product) => (
+                <ProductCard key={product.id} product={product} />
               ))}
             </View>
           </>

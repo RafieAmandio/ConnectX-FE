@@ -26,9 +26,9 @@ export default function TabLayout() {
         <Icon sf="heart.fill" drawable="favorite" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="todos">
-        <Label>Todos</Label>
-        <Icon sf="checkmark.circle.fill" drawable="check-circle" />
+      <NativeTabs.Trigger name="products">
+        <Label>Products</Label>
+        <Icon sf="bag.fill" drawable="shopping-bag" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="chat">

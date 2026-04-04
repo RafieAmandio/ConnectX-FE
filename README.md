@@ -23,7 +23,7 @@ src/
     auth/
     home/
     matches/
-    todos/
+    products/
     chat/
     team/
     profile/
@@ -50,7 +50,7 @@ Use feature barrels:
 
 ```tsx
 import { LoginScreen } from '@features/auth';
-import { TodosScreen } from '@features/todos';
+import { ProductsScreen } from '@features/products';
 ```
 
 Use shared primitives through shared entry points:
@@ -88,49 +88,46 @@ The shared API layer lives in [src/shared/services/api](/Users/dwiki/Development
 - Feature hooks call `useQuery` / `useMutation`.
 - Feature screens render state.
 
-Example flow from the Todos feature:
+Example flow from the Products feature:
 
 ```ts
-// src/features/todos/services/todos-service.ts
-export async function fetchUserTodos(userId = 5) {
-  return apiFetch<UserTodosResponse>(`https://dummyjson.com/users/${userId}/todos`);
+// src/features/products/services/products-service.ts
+export async function fetchProducts() {
+  return apiFetch<ProductsResponse>('https://dummyjson.com/products');
 }
 ```
 
 ```ts
-// src/features/todos/hooks/use-todos.ts
-export function useTodos(userId = 5) {
+// src/features/products/hooks/use-products.ts
+export function useProducts() {
   return useQuery({
-    ...createApiQueryOptions<UserTodosResponse>(
-      ['todos', userId],
-      `https://dummyjson.com/users/${userId}/todos`
-    ),
-    queryFn: () => fetchUserTodos(userId),
+    ...createApiQueryOptions<ProductsResponse>(['products'], 'https://dummyjson.com/products'),
+    queryFn: fetchProducts,
   });
 }
 ```
 
 ```tsx
-// app/(tabs)/todos.tsx
-import { TodosScreen } from '@features/todos';
+// app/(tabs)/products.tsx
+import { ProductsScreen } from '@features/products';
 
-export default function TodosRoute() {
-  return <TodosScreen />;
+export default function ProductsRoute() {
+  return <ProductsScreen />;
 }
 ```
 
-## Todos Demo Feature
+## Products Demo Feature
 
-For presentation purposes, the app now includes a `Todos` tab that fetches:
+For presentation purposes, the app now includes a `Products` tab that fetches:
 
-- `https://dummyjson.com/users/5/todos`
+- `https://dummyjson.com/products`
 
 The response is rendered through the current design pattern:
 
-- route wrapper in [app/(tabs)/todos.tsx](/Users/dwiki/Development/connectx/app/(tabs)/todos.tsx)
-- feature screen in [src/features/todos/components/todos-screen.tsx](/Users/dwiki/Development/connectx/src/features/todos/components/todos-screen.tsx)
-- feature hook in [src/features/todos/hooks/use-todos.ts](/Users/dwiki/Development/connectx/src/features/todos/hooks/use-todos.ts)
-- feature service in [src/features/todos/services/todos-service.ts](/Users/dwiki/Development/connectx/src/features/todos/services/todos-service.ts)
+- route wrapper in [app/(tabs)/products.tsx](/Users/dwiki/Development/connectx/app/(tabs)/products.tsx)
+- feature screen in [src/features/products/components/products-screen.tsx](/Users/dwiki/Development/connectx/src/features/products/components/products-screen.tsx)
+- feature hook in [src/features/products/hooks/use-products.ts](/Users/dwiki/Development/connectx/src/features/products/hooks/use-products.ts)
+- feature service in [src/features/products/services/products-service.ts](/Users/dwiki/Development/connectx/src/features/products/services/products-service.ts)
 
 ## Running The App
 
@@ -146,10 +143,10 @@ npm install
 npx expo start
 ```
 
-3. Open the authenticated shell and visit the `Todos` tab to see the React Query example.
+3. Open the authenticated shell and visit the `Products` tab to see the React Query example.
 
 ## Notes
 
 - The shared API layer already supports bearer-token injection when auth exists.
-- The Todos demo uses the exact same shared fetch/query foundation as future real endpoints.
+- The Products demo uses the exact same shared fetch/query foundation as future real endpoints.
 - The current app uses Expo Router, React Query, SecureStore, NativeWind, and feature barrels together.
