@@ -8,10 +8,10 @@ import React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import { NavigationThemes } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { createQueryClient } from '@/src/api/query-client';
-import { MockAuthProvider } from '@/src/auth/mock-auth';
+import { AuthProvider } from '@features/auth';
+import { useColorScheme } from '@shared/hooks/use-color-scheme';
+import { createQueryClient } from '@shared/services/api';
+import { NavigationThemes } from '@shared/theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -24,11 +24,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <MockAuthProvider>
+        <AuthProvider>
           <ThemeProvider value={NavigationThemes[colorScheme]}>
             <Stack>
               <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="modal"
@@ -37,7 +37,7 @@ export default function RootLayout() {
             </Stack>
             <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           </ThemeProvider>
-        </MockAuthProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

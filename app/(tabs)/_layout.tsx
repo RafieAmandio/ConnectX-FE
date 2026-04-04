@@ -1,11 +1,10 @@
 import { Redirect } from 'expo-router';
 import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
-import React from 'react';
 
-import { useMockAuth } from '@/src/auth/mock-auth';
+import { useAuth } from '@features/auth';
 
 export default function TabLayout() {
-  const { isHydrated, session } = useMockAuth();
+  const { isHydrated, session } = useAuth();
 
   if (!isHydrated) {
     return null;
@@ -27,6 +26,11 @@ export default function TabLayout() {
         <Icon sf="heart.fill" drawable="favorite" />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="todos">
+        <Label>Todos</Label>
+        <Icon sf="checkmark.circle.fill" drawable="check-circle" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="chat">
         <Label>Chat</Label>
         <Icon sf="bubble.left.and.bubble.right.fill" drawable="chat" />
@@ -44,6 +48,3 @@ export default function TabLayout() {
     </NativeTabs>
   );
 }
-
-
-
