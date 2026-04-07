@@ -6,4 +6,4 @@ export { AuthIndexRedirect } from './components/auth-index-redirect';
 export { useAuth } from './hooks/use-auth';
 export { AuthProvider } from './store/auth-provider';
 export { canAccessProtectedRoutes, getRouteForAuthPhase } from './utils/auth-routing';
-export type { AuthPhase, AuthSession } from './types/auth.types';
+export type { AuthPhase, AuthSession, GoogleAuthResult } from './types/auth.types';

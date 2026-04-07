@@ -13,10 +13,12 @@ import {
   submitMockLoginPlaceholder,
   verifyEmailOtpWithMock,
 } from '../services/auth-service';
+import { signInWithGoogleToken } from '../services/google-auth-service';
 import { isAuthBypassEnabled } from '../config/auth-config';
 import type {
   AuthPhase,
   AuthSession,
+  GoogleAuthResult,
   LoginPlaceholderResponse,
   RegisterPayload,
   VerifyEmailPayload,
@@ -31,6 +33,7 @@ type AuthContextValue = {
   register: (payload: RegisterPayload) => ReturnType<typeof registerWithMock>;
   resendEmailOtp: () => ReturnType<typeof resendEmailOtpWithMock>;
   sendEmailOtp: () => ReturnType<typeof sendEmailOtpWithMock>;
+  signInWithGoogle: () => Promise<GoogleAuthResult>;
   submitEmailLogin: () => Promise<LoginPlaceholderResponse>;
   signOut: () => Promise<void>;
   verifyEmailOtp: (payload: VerifyEmailPayload) => ReturnType<typeof verifyEmailOtpWithMock>;
@@ -92,6 +95,10 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     return submitMockLoginPlaceholder();
   }, []);
 
+  const signInWithGoogle = React.useCallback(async () => {
+    return signInWithGoogleToken();
+  }, []);
+
   const register = React.useCallback(
     async (payload: RegisterPayload) => {
       const result = await registerWithMock(payload);
@@ -139,6 +146,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       resendEmailOtp,
       sendEmailOtp,
       session,
+      signInWithGoogle,
       submitEmailLogin,
       signOut,
       verifyEmailOtp,
@@ -152,6 +160,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       resendEmailOtp,
       sendEmailOtp,
       session,
+      signInWithGoogle,
       submitEmailLogin,
       signOut,
       verifyEmailOtp,

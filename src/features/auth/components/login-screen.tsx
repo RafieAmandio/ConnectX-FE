@@ -1,23 +1,13 @@
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 
 import { AppText } from '@shared/components';
 
 import { useAuth } from '../hooks/use-auth';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
 import { getEmailError, getPasswordError } from '../utils/auth-validation';
-
-const socialProviders = [
-  {
-    detail: 'Google',
-    label: 'GOOGLE',
-  },
-  {
-    detail: 'Apple',
-    label: 'Apple',
-  },
-] as const;
 
 type AuthFieldProps = {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
@@ -75,16 +65,26 @@ function AuthField({
   );
 }
 
+function formatProviderTokenPreview(providerToken: string) {
+  if (providerToken.length <= 24) {
+    return providerToken;
+  }
+
+  return `${providerToken.slice(0, 14)}...${providerToken.slice(-8)}`;
+}
+
 export function LoginScreen() {
   const router = useRouter();
-  const { authPhase, isHydrated, session, submitEmailLogin } = useAuth();
+  const { authPhase, isHydrated, session, signInWithGoogle, submitEmailLogin } = useAuth();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [emailError, setEmailError] = React.useState<string | null>(null);
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
+  const [googlePayloadPreview, setGooglePayloadPreview] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
 
   if (!isHydrated) {
     return null;
@@ -157,6 +157,7 @@ export function LoginScreen() {
               <Pressable
                 className="self-end px-1"
                 onPress={() => {
+                  setGooglePayloadPreview(null);
                   setStatusMessage('Forgot password flow is not connected yet.');
                 }}>
                 <AppText className="text-[#4D8DFF]" variant="bodyStrong">
@@ -172,6 +173,7 @@ export function LoginScreen() {
 
                   setEmailError(nextEmailError);
                   setPasswordError(nextPasswordError);
+                  setGooglePayloadPreview(null);
                   setStatusMessage(null);
 
                   if (nextEmailError || nextPasswordError || isSubmitting) {
@@ -208,6 +210,17 @@ export function LoginScreen() {
                 </AppText>
               ) : null}
 
+              {googlePayloadPreview ? (
+                <View className="gap-2 rounded-[22px] border border-[#232A38] bg-[#151C2A] px-4 py-4">
+                  <AppText className="text-[#8FA8D9]" variant="label">
+                    GOOGLE PAYLOAD PREVIEW
+                  </AppText>
+                  <AppText selectable className="text-[#DCE6FF]" variant="code">
+                    {googlePayloadPreview}
+                  </AppText>
+                </View>
+              ) : null}
+
               <View className="flex-row items-center gap-4 py-1">
                 <View className="h-px flex-1 bg-[#2A2C36]" />
                 <AppText className="text-[#555A67]" variant="code">
@@ -217,21 +230,103 @@ export function LoginScreen() {
               </View>
 
               <View className="flex-row gap-4">
-                {socialProviders.map((provider) => (
-                  <Pressable
-                    key={provider.label}
-                    className="flex-1 rounded-[18px] border border-[#2A2B33] bg-[#232228] px-4 py-5 opacity-80"
-                    disabled>
-                    <View className="flex-row items-center justify-center gap-2">
-                      <AppText className="tracking-[1.2px] text-white" variant="subtitle">
-                        {provider.label}
-                      </AppText>
-                      <AppText className="text-[#D5D8E0]" variant="code">
-                        {provider.detail}
-                      </AppText>
+                <View
+                  className="flex-1"
+                  pointerEvents={
+                    isGoogleSubmitting || isSubmitting || process.env.EXPO_OS === 'web'
+                      ? 'none'
+                      : 'auto'
+                  }
+                  style={{
+                    opacity: isGoogleSubmitting || isSubmitting || process.env.EXPO_OS === 'web' ? 0.6 : 1,
+                  }}>
+                  {process.env.EXPO_OS === 'web' ? (
+                    <Pressable
+                      className="rounded-[18px] border border-[#2A2B33] bg-[#232228] px-4 py-5"
+                      disabled>
+                      <View className="flex-row items-center justify-center gap-2">
+                        <AppText className="tracking-[1.2px] text-white" variant="subtitle">
+                          GOOGLE
+                        </AppText>
+                        <AppText className="text-[#D5D8E0]" variant="code">
+                          Native only
+                        </AppText>
+                      </View>
+                    </Pressable>
+                  ) : (
+                    <View
+                      style={{
+                        overflow: 'hidden',
+                        borderRadius: 18,
+                      }}>
+                      <GoogleSigninButton
+                        color={GoogleSigninButton.Color.Light}
+                        onPress={async () => {
+                          if (isGoogleSubmitting || isSubmitting) {
+                            return;
+                          }
+
+                          setEmailError(null);
+                          setPasswordError(null);
+                          setStatusMessage(null);
+                          setGooglePayloadPreview(null);
+                          setIsGoogleSubmitting(true);
+
+                          try {
+                            const result = await signInWithGoogle();
+                            const payloadPreview = JSON.stringify(
+                              {
+                                provider: result.provider,
+                                providerToken: formatProviderTokenPreview(result.providerToken),
+                                fcmToken: result.fcmToken,
+                              },
+                              null,
+                              2
+                            );
+
+                            console.info('Google OAuth payload ready for backend exchange.', {
+                              provider: result.provider,
+                              providerTokenPreview: formatProviderTokenPreview(result.providerToken),
+                              fcmToken: result.fcmToken,
+                            });
+
+                            setGooglePayloadPreview(payloadPreview);
+                            setStatusMessage(
+                              'Google Sign-In succeeded. The provider token is ready for the backend exchange.'
+                            );
+                          } catch (error) {
+                            setGooglePayloadPreview(null);
+                            setStatusMessage(
+                              error instanceof Error
+                                ? error.message
+                                : 'Google Sign-In failed. Please try again.'
+                            );
+                          } finally {
+                            setIsGoogleSubmitting(false);
+                          }
+                        }}
+                        size={GoogleSigninButton.Size.Wide}
+                        style={{
+                          width: '100%',
+                          height: 56,
+                        }}
+                      />
                     </View>
-                  </Pressable>
-                ))}
+                  )}
+                </View>
+
+                <Pressable
+                  className="flex-1 rounded-[18px] border border-[#2A2B33] bg-[#232228] px-4 py-5 opacity-80"
+                  disabled>
+                  <View className="flex-row items-center justify-center gap-2">
+                    <AppText className="tracking-[1.2px] text-white" variant="subtitle">
+                      APPLE
+                    </AppText>
+                    <AppText className="text-[#D5D8E0]" variant="code">
+                      Soon
+                    </AppText>
+                  </View>
+                </Pressable>
               </View>
             </View>
           </View>
