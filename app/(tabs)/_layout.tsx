@@ -36,7 +36,7 @@ export default function TabLayout() {
         <Icon sf="bubble.left.and.bubble.right.fill" drawable="chat" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="team">
+      <NativeTabs.Trigger hidden={process.env.EXPO_OS === 'android'} name="team">
         <Label>Team</Label>
         <Icon sf="person.3.fill" drawable="groups" />
       </NativeTabs.Trigger>
