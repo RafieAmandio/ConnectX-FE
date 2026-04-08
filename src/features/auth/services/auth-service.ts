@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { apiFetch } from '@shared/services/api';
 
 import type {
+  AuthNextStep,
   AuthPhase,
   AuthSession,
   AuthUser,
@@ -21,6 +22,7 @@ const SESSION_KEY = 'connectx.auth.session';
 const AUTH_API = {
   REGISTER: '/api/v1/auth/register',
   LOGIN: '/api/v1/auth/login/password',
+  GOOGLE_OAUTH_VERIFY: '/api/v1/auth/oauth/google/verify-token',
 } as const;
 
 const mockFCMToken = 'mock-fcm-a1b2c3d4e5f6g7h8_mock_fcm_token';
@@ -43,6 +45,29 @@ type PersistedAuthState = {
 type SessionActionResult<TResponse> = {
   response: TResponse;
   session: AuthSession;
+};
+
+type AuthSuccessResponse = {
+  data: {
+    user: AuthUser;
+  };
+  message: string;
+  next_step?: AuthNextStep | 'NEED_EMAIL_OTP';
+  status: string;
+  token: string;
+  token_type: string;
+};
+
+export type GoogleOAuthLoginPayload = {
+  accessToken: string;
+  displayName?: string | null;
+  email?: string | null;
+};
+
+export type GoogleOAuthVerifyResponse = AuthSuccessResponse & {
+  data: AuthSuccessResponse['data'] & {
+    oauth_provider: 'google';
+  };
 };
 
 export async function getStoredToken() {
@@ -153,6 +178,56 @@ function createOtpSuccessMessage(email: string) {
   return `Kode Verifikasi OTP telah dikirim ke ${email}. Kode ini berlaku selama 10 menit.`;
 }
 
+function resolveAuthPhase(user: AuthUser, nextStep?: AuthSuccessResponse['next_step']): AuthPhase {
+  if (nextStep === 'NEED_EMAIL_VERIFICATION' || nextStep === 'NEED_EMAIL_OTP') {
+    return 'pending_email_verification';
+  }
+
+  if (nextStep === 'NEED_WHATSAPP_VERIFICATION') {
+    return 'pending_whatsapp_verification';
+  }
+
+  if (!user.email_verified_at) {
+    return 'pending_email_verification';
+  }
+
+  if (!user.whatsapp_verified_at) {
+    return 'pending_whatsapp_verification';
+  }
+
+  return 'authenticated';
+}
+
+function createAuthSession({
+  displayName,
+  method,
+  nextStep,
+  user,
+}: {
+  displayName?: string | null;
+  method: AuthSession['method'];
+  nextStep?: AuthSuccessResponse['next_step'];
+  user: AuthUser;
+}): AuthSession {
+  const normalizedEmail = user.email.trim().toLowerCase();
+  const normalizedDisplayName = displayName?.trim() || buildDisplayNameFromEmail(normalizedEmail);
+
+  return {
+    authPhase: resolveAuthPhase(user, nextStep),
+    displayName: normalizedDisplayName || 'ConnectX Member',
+    email: normalizedEmail,
+    emailOtpCode: null,
+    emailOtpExpiresAt: null,
+    emailOtpLastSentAt: null,
+    emailOtpResendAvailableAt: null,
+    method,
+    user: {
+      ...user,
+      email: normalizedEmail,
+    },
+  };
+}
+
 async function requireStoredAuthState() {
   const [token, session] = await Promise.all([getStoredToken(), getStoredSession()]);
 
@@ -196,16 +271,7 @@ export type LoginPayload = {
 export async function loginWithApi(
   payload: LoginPayload
 ): Promise<SessionActionResult<OtpMessageResponse>> {
-  const response = await apiFetch<{
-    data: {
-      user: AuthUser;
-    };
-    message: string;
-    next_step?: string;
-    status: string;
-    token: string;
-    token_type: string;
-  }>(AUTH_API.LOGIN, {
+  const response = await apiFetch<AuthSuccessResponse>(AUTH_API.LOGIN, {
     method: 'POST',
     body: {
       ...payload,
@@ -215,28 +281,12 @@ export async function loginWithApi(
 
   const user = response.data.user;
   const token = response.token;
-
-  const needsEmailVerification = !user.email_verified_at || response.next_step === 'NEED_EMAIL_OTP';
-  const needsWhatsappVerification = !user.whatsapp_verified_at && user.email_verified_at;
-
-  let authPhase: AuthPhase = 'authenticated';
-  if (needsEmailVerification) {
-    authPhase = 'pending_email_verification';
-  } else if (needsWhatsappVerification) {
-    authPhase = 'pending_whatsapp_verification';
-  }
-
-  const session: AuthSession = {
-    authPhase,
+  const session = createAuthSession({
     displayName: buildDisplayNameFromEmail(user.email),
-    email: user.email,
-    emailOtpCode: null,
-    emailOtpExpiresAt: null,
-    emailOtpLastSentAt: null,
-    emailOtpResendAvailableAt: null,
     method: 'email',
+    nextStep: response.next_step,
     user,
-  };
+  });
 
   await persistAuthSession(session, token);
 
@@ -247,6 +297,32 @@ export async function loginWithApi(
       next_step: 'NEED_EMAIL_VERIFICATION',
       status: 'success',
     },
+    session,
+  };
+}
+
+export async function loginWithGoogleApi(
+  payload: GoogleOAuthLoginPayload
+): Promise<SessionActionResult<GoogleOAuthVerifyResponse>> {
+  const response = await apiFetch<GoogleOAuthVerifyResponse>(AUTH_API.GOOGLE_OAUTH_VERIFY, {
+    method: 'POST',
+    body: {
+      provider_token: payload.accessToken,
+      fcm_token: '',
+    } as any,
+  });
+
+  const session = createAuthSession({
+    displayName: payload.displayName || payload.email || response.data.user.email,
+    method: 'google',
+    nextStep: response.next_step,
+    user: response.data.user,
+  });
+
+  await persistAuthSession(session, response.token);
+
+  return {
+    response,
     session,
   };
 }

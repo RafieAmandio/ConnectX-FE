@@ -48,7 +48,7 @@ export type GoogleAuthResult = {
   email: string;
   displayName: string;
   provider: 'google';
-  providerToken: string;
+  accessToken: string;
   fcmToken: string | null;
   userId: string;
 };
@@ -85,4 +85,3 @@ export type VerifyEmailErrorResponse = {
   };
   message: string;
 };
-

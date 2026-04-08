@@ -79,12 +79,16 @@ export async function signInWithGoogleToken(): Promise<GoogleAuthResult> {
       throw new Error('Google Sign-In was cancelled.');
     }
 
-    const providerToken = response.data.idToken?.trim();
+    const tokens = await GoogleSignin.getTokens();
+
+    console.log('Google access token:', tokens.accessToken);
+
+    const accessToken = tokens.accessToken?.trim();
     const email = response.data.user.email.trim().toLowerCase();
     const displayName = response.data.user.name?.trim() || email.split('@')[0] || 'ConnectX Member';
     const userId = response.data.user.id.trim();
 
-    if (!providerToken || !email || !userId) {
+    if (!accessToken || !email || !userId) {
       throw new Error(
         'Google Sign-In succeeded, but the expected identity payload was incomplete. Check the configured Google OAuth client IDs.'
       );
@@ -94,7 +98,7 @@ export async function signInWithGoogleToken(): Promise<GoogleAuthResult> {
       email,
       displayName,
       provider: 'google',
-      providerToken,
+      accessToken,
       fcmToken: null,
       userId,
     };

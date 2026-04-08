@@ -66,14 +66,6 @@ function AuthField({
   );
 }
 
-function formatProviderTokenPreview(providerToken: string) {
-  if (providerToken.length <= 24) {
-    return providerToken;
-  }
-
-  return `${providerToken.slice(0, 14)}...${providerToken.slice(-8)}`;
-}
-
 export function LoginScreen() {
   const router = useRouter();
   const { authPhase, isHydrated, login, session, signInWithGoogle } = useAuth();
@@ -303,14 +295,13 @@ export function LoginScreen() {
                         try {
                           const result = await signInWithGoogle();
 
-                          console.info('Google OAuth payload ready for backend exchange.', {
-                            email: result.email,
-                            provider: result.provider,
-                            providerTokenPreview: formatProviderTokenPreview(result.providerToken),
-                            fcmToken: result.fcmToken,
+                          console.info('Google OAuth backend login successful.', {
+                            authPhase: result.session.authPhase,
+                            email: result.session.email,
+                            nextStep: result.response.next_step ?? null,
                           });
 
-                          router.replace('/(tabs)');
+                          router.replace(getRouteForAuthPhase(result.session.authPhase));
                         } catch (error) {
                           setGooglePayloadPreview(null);
                           setStatusMessage(

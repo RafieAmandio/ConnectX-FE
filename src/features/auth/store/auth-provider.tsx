@@ -8,6 +8,7 @@ import {
   enterWithDevBypassSession,
   getPersistedAuthState,
   getStoredToken,
+  loginWithGoogleApi,
   loginWithApi,
   registerWithApi,
   resendEmailOtpWithMock,
@@ -19,7 +20,6 @@ import { signInWithGoogleToken } from '../services/google-auth-service';
 import type {
   AuthPhase,
   AuthSession,
-  GoogleAuthResult,
   RegisterPayload,
   VerifyEmailPayload,
 } from '../types/auth.types';
@@ -34,7 +34,7 @@ type AuthContextValue = {
   register: (payload: RegisterPayload) => ReturnType<typeof registerWithApi>;
   resendEmailOtp: () => ReturnType<typeof resendEmailOtpWithMock>;
   sendEmailOtp: () => ReturnType<typeof sendEmailOtpWithMock>;
-  signInWithGoogle: () => Promise<GoogleAuthResult>;
+  signInWithGoogle: () => ReturnType<typeof loginWithGoogleApi>;
   signOut: () => Promise<void>;
   verifyEmailOtp: (payload: VerifyEmailPayload) => ReturnType<typeof verifyEmailOtpWithMock>;
 };
@@ -102,31 +102,15 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   );
 
   const signInWithGoogle = React.useCallback(async () => {
-    const result = await signInWithGoogleToken();
-    const verifiedAt = new Date().toISOString();
-    const nextSession: AuthSession = {
-      authPhase: 'authenticated',
-      displayName: result.displayName,
-      email: result.email,
-      emailOtpCode: null,
-      emailOtpExpiresAt: null,
-      emailOtpLastSentAt: null,
-      emailOtpResendAvailableAt: null,
-      method: 'google',
-      user: {
-        id: result.userId,
-        entity_type: null,
-        email: result.email,
-        email_verified_at: verifiedAt,
-        whatsapp_number: null,
-        whatsapp_verified_at: null,
-        registration_step: 4,
-        is_active: true,
-      },
-    };
+    const googleResult = await signInWithGoogleToken();
+    const result = await loginWithGoogleApi({
+      accessToken: googleResult.accessToken,
+      displayName: googleResult.displayName,
+      email: googleResult.email,
+    });
 
-    setSession(nextSession);
-    setAuthPhase(nextSession.authPhase);
+    setSession(result.session);
+    setAuthPhase(result.session.authPhase);
 
     return result;
   }, []);

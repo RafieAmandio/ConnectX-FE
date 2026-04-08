@@ -84,12 +84,6 @@ export function HomeScreen() {
           />
         </View>
 
-        <AppStatCard
-          detail={session.email}
-          label="Authenticated Session"
-          value="91%"
-        />
-
         <AppCard className="gap-3">
           <View className="gap-1">
             <AppText variant="subtitle">Priority actions</AppText>
