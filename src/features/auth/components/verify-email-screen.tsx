@@ -1,6 +1,6 @@
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { View } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 
 import { AppButton, AppInput, AppText } from '@shared/components';
 
@@ -40,7 +40,7 @@ function getSecondsRemaining(timestamp: string | null | undefined) {
 export function VerifyEmailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ status?: string | string[] }>();
-  const { authPhase, isHydrated, resendEmailOtp, sendEmailOtp, session, verifyEmailOtp } = useAuth();
+  const { authPhase, isHydrated, resendEmailOtp, sendEmailOtp, session, verifyEmailOtp, signOut } = useAuth();
   const [otpCode, setOtpCode] = React.useState('');
   const [otpError, setOtpError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
@@ -135,6 +135,11 @@ export function VerifyEmailScreen() {
         highlights={verifyHighlights}
         pill="Verify Email"
         title="Enter your OTP code">
+        <View className="flex-row justify-end -mt-2 mb-2">
+          <TouchableOpacity onPress={() => signOut()} className="py-1 px-2">
+            <AppText tone="muted" className="font-medium text-[15px]">Log out</AppText>
+          </TouchableOpacity>
+        </View>
         <View className="gap-4">
           <View className="gap-2">
             <AppText tone="muted" variant="label">Email OTP</AppText>
