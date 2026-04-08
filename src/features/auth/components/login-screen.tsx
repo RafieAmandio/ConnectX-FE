@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 
 import { AppText } from '@shared/components';
+import { ApiError } from '@shared/services/api';
 
 import { useAuth } from '../hooks/use-auth';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
@@ -75,7 +76,7 @@ function formatProviderTokenPreview(providerToken: string) {
 
 export function LoginScreen() {
   const router = useRouter();
-  const { authPhase, isHydrated, session, signInWithGoogle, submitEmailLogin } = useAuth();
+  const { authPhase, isHydrated, login, session, signInWithGoogle } = useAuth();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [emailError, setEmailError] = React.useState<string | null>(null);
@@ -180,8 +181,44 @@ export function LoginScreen() {
                   setIsSubmitting(true);
 
                   try {
-                    const response = await submitEmailLogin();
-                    setStatusMessage(response.message);
+                    const result = await login({
+                      email,
+                      password,
+                      fcm_token: '',
+                    });
+
+                    if (result.session.authPhase === 'authenticated') {
+                      router.replace('/(tabs)');
+                    } else if (result.session.authPhase === 'pending_email_verification') {
+                      router.replace('/verify-email');
+                    } else if (result.session.authPhase === 'pending_whatsapp_verification') {
+                      router.replace('/verify-whatsapp');
+                    }
+                  } catch (error: unknown) {
+                    if (error instanceof ApiError && error.payload) {
+                      const payload = error.payload as {
+                        message?: string;
+                        errors?: {
+                          email?: string[];
+                          password?: string[];
+                        };
+                      };
+                      const fieldErrors = payload.errors;
+
+                      if (fieldErrors?.email?.[0]) {
+                        setEmailError(fieldErrors.email[0]);
+                      }
+                      if (fieldErrors?.password?.[0]) {
+                        setPasswordError(fieldErrors.password[0]);
+                      }
+                      if (!fieldErrors) {
+                        setStatusMessage(payload.message ?? error.message);
+                      }
+                    } else {
+                      setStatusMessage(
+                        error instanceof Error ? error.message : 'Login gagal. Silakan coba lagi.'
+                      );
+                    }
                   } finally {
                     setIsSubmitting(false);
                   }

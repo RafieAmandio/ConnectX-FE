@@ -86,7 +86,3 @@ export type VerifyEmailErrorResponse = {
   message: string;
 };
 
-export type LoginPlaceholderResponse = {
-  message: string;
-  status: 'info';
-};

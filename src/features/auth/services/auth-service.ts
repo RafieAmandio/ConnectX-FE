@@ -3,10 +3,10 @@ import * as SecureStore from 'expo-secure-store';
 import { apiFetch } from '@shared/services/api';
 
 import type {
+  AuthPhase,
   AuthSession,
   AuthUser,
   EmailAlreadyVerifiedResponse,
-  LoginPlaceholderResponse,
   OtpMessageResponse,
   OtpRateLimitResponse,
   RegisterPayload,
@@ -20,7 +20,7 @@ const SESSION_KEY = 'connectx.auth.session';
 
 const AUTH_API = {
   REGISTER: '/api/v1/auth/register',
-  LOGIN: '/api/v1/auth/login',
+  LOGIN: '/api/v1/auth/login/password',
 } as const;
 
 const mockFCMToken = 'mock-fcm-a1b2c3d4e5f6g7h8_mock_fcm_token';
@@ -187,12 +187,67 @@ async function persistSessionResult<TResponse>(
   };
 }
 
+export type LoginPayload = {
+  email: string;
+  password: string;
+  fcm_token: string;
+};
 
+export async function loginWithApi(
+  payload: LoginPayload
+): Promise<SessionActionResult<OtpMessageResponse>> {
+  const response = await apiFetch<{
+    data: {
+      user: AuthUser;
+    };
+    message: string;
+    next_step?: string;
+    status: string;
+    token: string;
+    token_type: string;
+  }>(AUTH_API.LOGIN, {
+    method: 'POST',
+    body: {
+      ...payload,
+      fcm_token: mockFCMToken,
+    } as any,
+  });
 
-export async function submitMockLoginPlaceholder(): Promise<LoginPlaceholderResponse> {
+  const user = response.data.user;
+  const token = response.token;
+
+  const needsEmailVerification = !user.email_verified_at || response.next_step === 'NEED_EMAIL_OTP';
+  const needsWhatsappVerification = !user.whatsapp_verified_at && user.email_verified_at;
+
+  let authPhase: AuthPhase = 'authenticated';
+  if (needsEmailVerification) {
+    authPhase = 'pending_email_verification';
+  } else if (needsWhatsappVerification) {
+    authPhase = 'pending_whatsapp_verification';
+  }
+
+  const session: AuthSession = {
+    authPhase,
+    displayName: buildDisplayNameFromEmail(user.email),
+    email: user.email,
+    emailOtpCode: null,
+    emailOtpExpiresAt: null,
+    emailOtpLastSentAt: null,
+    emailOtpResendAvailableAt: null,
+    method: 'email',
+    user,
+  };
+
+  await persistAuthSession(session, token);
+
   return {
-    message: 'Login API is not connected yet. Use Register or the developer bypass for now.',
-    status: 'info',
+    response: {
+      data: [],
+      message: response.message,
+      next_step: 'NEED_EMAIL_VERIFICATION',
+      status: 'success',
+    },
+    session,
   };
 }
 

@@ -8,18 +8,18 @@ import {
   enterWithDevBypassSession,
   getPersistedAuthState,
   getStoredToken,
+  loginWithApi,
   registerWithApi,
   resendEmailOtpWithMock,
   sendEmailOtpWithMock,
-  submitMockLoginPlaceholder,
   verifyEmailOtpWithMock,
 } from '../services/auth-service';
+import type { LoginPayload } from '../services/auth-service';
 import { signInWithGoogleToken } from '../services/google-auth-service';
 import type {
   AuthPhase,
   AuthSession,
   GoogleAuthResult,
-  LoginPlaceholderResponse,
   RegisterPayload,
   VerifyEmailPayload,
 } from '../types/auth.types';
@@ -30,11 +30,11 @@ type AuthContextValue = {
   isAuthBypassEnabled: boolean;
   session: AuthSession | null;
   enterWithDevBypass: () => Promise<void>;
+  login: (payload: LoginPayload) => ReturnType<typeof loginWithApi>;
   register: (payload: RegisterPayload) => ReturnType<typeof registerWithApi>;
   resendEmailOtp: () => ReturnType<typeof resendEmailOtpWithMock>;
   sendEmailOtp: () => ReturnType<typeof sendEmailOtpWithMock>;
   signInWithGoogle: () => Promise<GoogleAuthResult>;
-  submitEmailLogin: () => Promise<LoginPlaceholderResponse>;
   signOut: () => Promise<void>;
   verifyEmailOtp: (payload: VerifyEmailPayload) => ReturnType<typeof verifyEmailOtpWithMock>;
 };
@@ -91,9 +91,15 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     });
   }, [signOut]);
 
-  const submitEmailLogin = React.useCallback(async () => {
-    return submitMockLoginPlaceholder();
-  }, []);
+  const login = React.useCallback(
+    async (payload: LoginPayload) => {
+      const result = await loginWithApi(payload);
+      setSession(result.session);
+      setAuthPhase(result.session.authPhase);
+      return result;
+    },
+    []
+  );
 
   const signInWithGoogle = React.useCallback(async () => {
     const result = await signInWithGoogleToken();
@@ -169,12 +175,12 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       enterWithDevBypass,
       isHydrated,
       isAuthBypassEnabled: authBypassEnabled,
+      login,
       register,
       resendEmailOtp,
       sendEmailOtp,
       session,
       signInWithGoogle,
-      submitEmailLogin,
       signOut,
       verifyEmailOtp,
     }),
@@ -183,12 +189,12 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       authBypassEnabled,
       enterWithDevBypass,
       isHydrated,
+      login,
       register,
       resendEmailOtp,
       sendEmailOtp,
       session,
       signInWithGoogle,
-      submitEmailLogin,
       signOut,
       verifyEmailOtp,
     ]
