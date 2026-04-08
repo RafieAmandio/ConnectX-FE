@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-import { apiFetch } from '@shared/services/api';
+import { ApiError, apiFetch } from '@shared/services/api';
 
 import type {
   AuthNextStep,
@@ -14,6 +14,12 @@ import type {
   VerifyEmailErrorResponse,
   VerifyEmailPayload,
   VerifyEmailSuccessResponse,
+  VerifyWhatsappPayload,
+  VerifyWhatsappStepErrorResponse,
+  VerifyWhatsappSuccessResponse,
+  VerifyWhatsappValidationErrorResponse,
+  WhatsappOtpMessageResponse,
+  WhatsappOtpPayload,
 } from '../types/auth.types';
 
 const TOKEN_KEY = 'connectx.auth.token';
@@ -23,6 +29,9 @@ const AUTH_API = {
   REGISTER: '/api/v1/auth/register',
   LOGIN: '/api/v1/auth/login/password',
   GOOGLE_OAUTH_VERIFY: '/api/v1/auth/oauth/google/verify-token',
+  WHATSAPP_SEND_OTP: '/api/v1/auth/whatsapp/send-otp',
+  WHATSAPP_RESEND_OTP: '/api/v1/auth/whatsapp/resend-otp',
+  VERIFY_WHATSAPP: '/api/v1/auth/verify-whatsapp',
 } as const;
 
 const mockFCMToken = 'mock-fcm-a1b2c3d4e5f6g7h8_mock_fcm_token';
@@ -52,7 +61,7 @@ type AuthSuccessResponse = {
     user: AuthUser;
   };
   message: string;
-  next_step?: AuthNextStep | 'NEED_EMAIL_OTP';
+  next_step?: AuthNextStep;
   status: string;
   token: string;
   token_type: string;
@@ -170,7 +179,10 @@ function createPendingEmailSession(email: string): AuthSession {
     emailOtpLastSentAt: null,
     emailOtpResendAvailableAt: null,
     method: 'email',
+    pendingWhatsappNumber: null,
     user: createPendingEmailUser(email),
+    whatsappOtpLastSentAt: null,
+    whatsappOtpResendAvailableAt: null,
   };
 }
 
@@ -221,10 +233,13 @@ function createAuthSession({
     emailOtpLastSentAt: null,
     emailOtpResendAvailableAt: null,
     method,
+    pendingWhatsappNumber: null,
     user: {
       ...user,
       email: normalizedEmail,
     },
+    whatsappOtpLastSentAt: null,
+    whatsappOtpResendAvailableAt: null,
   };
 }
 
@@ -248,6 +263,54 @@ function withFreshOtpSession(session: AuthSession) {
     emailOtpLastSentAt: new Date(now).toISOString(),
     emailOtpResendAvailableAt: new Date(now + OTP_LOCK_WINDOW_MS).toISOString(),
   } satisfies AuthSession;
+}
+
+function withFreshWhatsappOtpSession(session: AuthSession, whatsappNumber: string) {
+  const now = Date.now();
+
+  return {
+    ...session,
+    pendingWhatsappNumber: whatsappNumber,
+    whatsappOtpLastSentAt: new Date(now).toISOString(),
+    whatsappOtpResendAvailableAt: new Date(now + OTP_LOCK_WINDOW_MS).toISOString(),
+  } satisfies AuthSession;
+}
+
+function moveSessionBackToEmailVerification(session: AuthSession) {
+  return {
+    ...session,
+    authPhase: 'pending_email_verification',
+    pendingWhatsappNumber: null,
+    whatsappOtpLastSentAt: null,
+    whatsappOtpResendAvailableAt: null,
+  } satisfies AuthSession;
+}
+
+function isVerifyWhatsappValidationErrorResponse(
+  value: unknown
+): value is VerifyWhatsappValidationErrorResponse {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<VerifyWhatsappValidationErrorResponse>;
+
+  return (
+    typeof candidate.message === 'string' &&
+    !!candidate.errors &&
+    typeof candidate.errors === 'object' &&
+    Array.isArray(candidate.errors.otp_code)
+  );
+}
+
+function isVerifyWhatsappStepErrorResponse(value: unknown): value is VerifyWhatsappStepErrorResponse {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<VerifyWhatsappStepErrorResponse>;
+
+  return candidate.next_step === 'NEED_EMAIL_OTP' && typeof candidate.message === 'string';
 }
 
 async function persistSessionResult<TResponse>(
@@ -463,6 +526,7 @@ export async function verifyEmailOtpWithMock(
     emailOtpExpiresAt: null,
     emailOtpLastSentAt: session.emailOtpLastSentAt,
     emailOtpResendAvailableAt: session.emailOtpResendAvailableAt,
+    pendingWhatsappNumber: session.user?.whatsapp_number ?? session.pendingWhatsappNumber ?? null,
     user: session.user
       ? {
         ...session.user,
@@ -471,6 +535,8 @@ export async function verifyEmailOtpWithMock(
         registration_step: 3,
       }
       : null,
+    whatsappOtpLastSentAt: null,
+    whatsappOtpResendAvailableAt: null,
   };
 
   return persistSessionResult(nextSession, {
@@ -481,6 +547,85 @@ export async function verifyEmailOtpWithMock(
     next_step: 'NEED_WHATSAPP_VERIFICATION',
     status: 'success',
   });
+}
+
+export async function sendWhatsappOtpWithApi(
+  payload: WhatsappOtpPayload
+): Promise<SessionActionResult<WhatsappOtpMessageResponse>> {
+  const { session } = await requireStoredAuthState();
+  const response = await apiFetch<WhatsappOtpMessageResponse>(AUTH_API.WHATSAPP_SEND_OTP, {
+    method: 'POST',
+    body: payload as any,
+  });
+  const nextSession = withFreshWhatsappOtpSession(session, payload.whatsapp_number);
+
+  console.log('[sendWhatsappOtpWithApi] success response:', response);
+  return persistSessionResult(nextSession, response);
+}
+
+export async function resendWhatsappOtpWithApi(): Promise<
+  SessionActionResult<WhatsappOtpMessageResponse>
+> {
+  const { session } = await requireStoredAuthState();
+  const whatsappNumber = session.pendingWhatsappNumber ?? session.user?.whatsapp_number;
+
+  if (!whatsappNumber) {
+    throw new Error('Nomor WhatsApp belum tersedia untuk mengirim ulang OTP.');
+  }
+
+  const response = await apiFetch<WhatsappOtpMessageResponse>(AUTH_API.WHATSAPP_RESEND_OTP, {
+    method: 'POST',
+  });
+  const nextSession = withFreshWhatsappOtpSession(session, whatsappNumber);
+
+  console.log('[resendWhatsappOtpWithApi] success response:', response);
+  return persistSessionResult(nextSession, response);
+}
+
+export async function verifyWhatsappOtpWithApi(
+  payload: VerifyWhatsappPayload
+): Promise<
+  SessionActionResult<
+    VerifyWhatsappSuccessResponse | VerifyWhatsappValidationErrorResponse | VerifyWhatsappStepErrorResponse
+  >
+> {
+  const { session } = await requireStoredAuthState();
+
+  try {
+    const response = await apiFetch<VerifyWhatsappSuccessResponse>(AUTH_API.VERIFY_WHATSAPP, {
+      method: 'POST',
+      body: payload as any,
+    });
+    const nextSession = createAuthSession({
+      displayName: session.displayName,
+      method: session.method,
+      nextStep: response.next_step,
+      user: response.data.user,
+    });
+
+    await persistAuthSession(nextSession, response.token);
+
+    console.log('[verifyWhatsappOtpWithApi] success response:', response);
+    return {
+      response,
+      session: nextSession,
+    };
+  } catch (error) {
+    if (error instanceof ApiError && isVerifyWhatsappValidationErrorResponse(error.payload)) {
+      return {
+        response: error.payload,
+        session,
+      };
+    }
+
+    if (error instanceof ApiError && isVerifyWhatsappStepErrorResponse(error.payload)) {
+      const nextSession = moveSessionBackToEmailVerification(session);
+
+      return persistSessionResult(nextSession, error.payload);
+    }
+
+    throw error;
+  }
 }
 
 export async function enterWithDevBypassSession() {
@@ -495,6 +640,7 @@ export async function enterWithDevBypassSession() {
     emailOtpResendAvailableAt: null,
     isDevelopmentBypass: true,
     method: 'developer-bypass',
+    pendingWhatsappNumber: null,
     user: {
       id: 'dev-bypass-user',
       entity_type: null,
@@ -505,6 +651,8 @@ export async function enterWithDevBypassSession() {
       registration_step: 4,
       is_active: true,
     },
+    whatsappOtpLastSentAt: null,
+    whatsappOtpResendAvailableAt: null,
   };
   const token = 'dev-bypass-token';
 

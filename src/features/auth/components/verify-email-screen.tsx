@@ -1,4 +1,4 @@
-import { Redirect, Stack, useRouter } from 'expo-router';
+import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
 
@@ -39,6 +39,7 @@ function getSecondsRemaining(timestamp: string | null | undefined) {
 
 export function VerifyEmailScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ status?: string | string[] }>();
   const { authPhase, isHydrated, resendEmailOtp, sendEmailOtp, session, verifyEmailOtp } = useAuth();
   const [otpCode, setOtpCode] = React.useState('');
   const [otpError, setOtpError] = React.useState<string | null>(null);
@@ -52,6 +53,14 @@ export function VerifyEmailScreen() {
   React.useEffect(() => {
     setSecondsRemaining(getSecondsRemaining(session?.emailOtpResendAvailableAt));
   }, [session?.emailOtpResendAvailableAt]);
+
+  React.useEffect(() => {
+    const nextStatusMessage = Array.isArray(params.status) ? params.status[0] : params.status;
+
+    if (nextStatusMessage) {
+      setStatusMessage(nextStatusMessage);
+    }
+  }, [params.status]);
 
   React.useEffect(() => {
     if (!session || authPhase !== 'pending_email_verification' || session.emailOtpLastSentAt) {
@@ -163,7 +172,7 @@ export function VerifyEmailScreen() {
           />
 
           <AppButton
-            detail="Next step: WhatsApp verification placeholder"
+            detail="Next step: WhatsApp verification"
             disabled={isVerifying || otpCode.length !== 6}
             label={isVerifying ? 'Verifying...' : 'Verify Email'}
             onPress={async () => {

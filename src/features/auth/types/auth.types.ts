@@ -6,7 +6,11 @@ export type AuthPhase =
   | 'pending_whatsapp_verification'
   | 'authenticated';
 
-export type AuthNextStep = 'NEED_EMAIL_VERIFICATION' | 'NEED_WHATSAPP_VERIFICATION';
+export type AuthNextStep =
+  | 'NEED_EMAIL_VERIFICATION'
+  | 'NEED_WHATSAPP_VERIFICATION'
+  | 'NEED_EMAIL_OTP'
+  | 'REGISTRATION_COMPLETE';
 
 export type AuthUser = {
   id: string;
@@ -29,7 +33,10 @@ export type AuthSession = {
   emailOtpResendAvailableAt?: string | null;
   isDevelopmentBypass?: boolean;
   method: AuthMethod;
+  pendingWhatsappNumber?: string | null;
   user: AuthUser | null;
+  whatsappOtpLastSentAt?: string | null;
+  whatsappOtpResendAvailableAt?: string | null;
 };
 
 export type RegisterPayload = {
@@ -41,6 +48,14 @@ export type RegisterPayload = {
 };
 
 export type VerifyEmailPayload = {
+  otp_code: string;
+};
+
+export type WhatsappOtpPayload = {
+  whatsapp_number: string;
+};
+
+export type VerifyWhatsappPayload = {
   otp_code: string;
 };
 
@@ -84,4 +99,46 @@ export type VerifyEmailErrorResponse = {
     otp_code: string[];
   };
   message: string;
+};
+
+export type WhatsappOtpMessageResponse = {
+  data: [];
+  message: string;
+  next_step: 'NEED_WHATSAPP_VERIFICATION';
+  status: 'success';
+};
+
+export type WhatsappOtpErrorResponse = {
+  errors: {
+    whatsapp_number: string[];
+  };
+  message: string;
+};
+
+export type VerifyWhatsappSuccessResponse = {
+  data: {
+    user: AuthUser;
+  };
+  message: string;
+  next_step: 'REGISTRATION_COMPLETE';
+  status: 'success';
+  token: string;
+  token_type: string;
+};
+
+export type VerifyWhatsappValidationErrorResponse = {
+  errors: {
+    otp_code: string[];
+  };
+  message: string;
+};
+
+export type VerifyWhatsappStepErrorResponse = {
+  data: {
+    current_step: number;
+    required_step: number;
+  };
+  message: string;
+  next_step: 'NEED_EMAIL_OTP';
+  status: 'error';
 };
