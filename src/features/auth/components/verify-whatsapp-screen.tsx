@@ -56,6 +56,7 @@ export function VerifyWhatsappScreen() {
     isHydrated,
     session,
     sendWhatsappOtp,
+    signOut,
   } = useAuth();
   
   const persistedWhatsappNumber = session?.user?.whatsapp_number ?? session?.pendingWhatsappNumber ?? '';
@@ -138,7 +139,11 @@ export function VerifyWhatsappScreen() {
       <Pressable className="flex-1" onPress={Keyboard.dismiss} accessible={false}>
       <View className="flex-1 px-5 pt-16 pb-8">
         
-        {/* Back Button omitted intentionally per user request */}
+        <View className="flex-row justify-end items-center h-12">
+          <TouchableOpacity onPress={() => signOut()} className="py-2">
+            <AppText tone="muted" className="font-medium text-[15px]">Log out</AppText>
+          </TouchableOpacity>
+        </View>
 
         <View className="flex-1 pt-8">
           <View className="gap-2 shrink-0">
