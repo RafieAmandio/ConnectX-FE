@@ -9,6 +9,19 @@ module.exports = ({ config }) => {
     return plugin?.[0] !== '@react-native-google-signin/google-signin';
   });
 
+  const requestedPlugins = [
+    "expo-font",
+    "expo-image",
+    "expo-sqlite",
+    "expo-web-browser"
+  ];
+
+  requestedPlugins.forEach((plugin) => {
+    if (!pluginsWithoutGoogleSignIn.includes(plugin)) {
+      pluginsWithoutGoogleSignIn.push(plugin);
+    }
+  });
+
   if (googleIosUrlScheme) {
     pluginsWithoutGoogleSignIn.push([
       '@react-native-google-signin/google-signin',
