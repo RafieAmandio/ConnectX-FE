@@ -129,7 +129,7 @@ export function LoginScreen() {
           <View className="flex-1 pt-8">
             <View className="gap-2 shrink-0">
               <AppText variant="hero" className="text-[32px] font-bold tracking-tight">
-                Welcome backs
+                Welcome back
               </AppText>
               <AppText tone="muted" className="text-base">
                 Sign in to continue
