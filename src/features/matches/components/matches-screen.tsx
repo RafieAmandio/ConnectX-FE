@@ -5,29 +5,36 @@ import { AppCard, AppPill, AppStatCard, AppText } from '@shared/components';
 
 import { SwipeDeck } from './swipe-deck';
 
-const matches = [
-  {
-    name: 'Maya Chen',
-    role: 'Product strategist',
-    score: '92%',
-    status: 'Warm lead',
-    bio: 'Strong async communicator with marketplace experience and a calm leadership style.',
-  },
-  {
-    name: 'Rafi Nandha',
-    role: 'Operations partner',
-    score: '88%',
-    status: 'Needs review',
-    bio: 'Great at coordinating teams across time zones and keeping execution detail sharp.',
-  },
-  {
-    name: 'Jess Alvarez',
-    role: 'Community builder',
-    score: '95%',
-    status: 'Ready to chat',
-    bio: 'Brings fast trust-building, crisp writing, and a strong instinct for member onboarding.',
-  },
+const matchBlueprints = [
+  ['Maya Chen', 'Product strategist', '92%', 'Warm lead', 'Strong async communicator with marketplace experience and a calm leadership style.'],
+  ['Rafi Nandha', 'Operations partner', '88%', 'Needs review', 'Great at coordinating teams across time zones and keeping execution detail sharp.'],
+  ['Jess Alvarez', 'Community builder', '95%', 'Ready to chat', 'Brings fast trust-building, crisp writing, and a strong instinct for member onboarding.'],
+  ['Nina Patel', 'Growth operator', '91%', 'Warm lead', 'Balances creative experiments with disciplined reporting and fast weekly iteration.'],
+  ['Owen Brooks', 'Technical founder', '86%', 'Needs review', 'Sharp product instincts with a bias toward shipping practical features over theory.'],
+  ['Lina Gomez', 'Partnership lead', '94%', 'Ready to chat', 'Builds trust quickly and keeps multi-party deals moving with calm follow-through.'],
+  ['Haruto Sato', 'Marketplace analyst', '89%', 'Warm lead', 'Strong on funnel diagnosis, pricing signals, and opportunity sizing.'],
+  ['Ava Johnson', 'Member success lead', '93%', 'Ready to chat', 'Customer-centric operator with a knack for reducing churn and sharpening onboarding.'],
+  ['Theo Martin', 'Design systems lead', '87%', 'Needs review', 'Creates clean interaction systems and keeps teams aligned on product quality.'],
+  ['Farah Rahman', 'Community host', '90%', 'Warm lead', 'Makes new members feel seen fast and turns loose interest into active participation.'],
+  ['Diego Silva', 'Sales advisor', '84%', 'Needs review', 'Good outbound instincts and consistent follow-up with a clear handoff style.'],
+  ['Chloe Bennett', 'People operator', '96%', 'Ready to chat', 'Brings empathy, crisp communication, and excellent cross-functional judgment.'],
+  ['Imran Yusuf', 'Revenue strategist', '85%', 'Warm lead', 'Comfortable with monetization tests, pricing ladders, and retention levers.'],
+  ['Grace Lee', 'Brand builder', '91%', 'Warm lead', 'Blends community storytelling with disciplined execution and clear campaign thinking.'],
+  ['Noah Kim', 'Product marketer', '88%', 'Needs review', 'Strong positioning instincts with clean launch planning and sharp messaging.'],
+  ['Sara Costa', 'Customer researcher', '94%', 'Ready to chat', 'Pulls clear insights from interviews and turns them into action for product teams.'],
+  ['Ethan Walker', 'Operations chief', '83%', 'Needs review', 'Solid operator who thrives in ambiguity and tidies messy systems quickly.'],
+  ['Priya Menon', 'Growth PM', '92%', 'Warm lead', 'Connects product bets to revenue outcomes and keeps experiments grounded in user behavior.'],
+  ['Lucas Reed', 'Community strategist', '89%', 'Warm lead', 'Builds repeatable engagement loops without losing the human feel of the experience.'],
+  ['Amara Okafor', 'Founder associate', '97%', 'Ready to chat', 'High-trust generalist who can turn direction into thoughtful execution immediately.'],
 ] as const;
+
+const matches = matchBlueprints.map(([name, role, score, status, bio]) => ({
+  bio,
+  name,
+  role,
+  score,
+  status,
+}));
 
 export function MatchesScreen() {
   const readyCount = matches.filter((match) => match.status === 'Ready to chat').length;

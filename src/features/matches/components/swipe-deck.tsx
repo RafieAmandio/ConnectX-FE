@@ -11,8 +11,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { AppPill, AppText } from '@shared/components';
+import { AppButton, AppCard, AppPill, AppText } from '@shared/components';
 import { Shadows } from '@shared/theme';
+import { useRevenueCat } from '@features/revenuecat';
 
 import type { SwipeMatch } from '../types/matches.types';
 
@@ -23,6 +24,7 @@ type SwipeDeckProps = {
 };
 
 const SWIPE_THRESHOLD = 120;
+const FREE_SWIPE_LIMIT = 5;
 
 function triggerSwipeHaptic(direction: SwipeDirection) {
   if (process.env.EXPO_OS === 'ios') {
@@ -33,14 +35,20 @@ function triggerSwipeHaptic(direction: SwipeDirection) {
 }
 
 export function SwipeDeck({ items }: SwipeDeckProps) {
+  const { isConnectXProActive, presentPaywallIfNeeded } = useRevenueCat();
   const { width } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const [isOpeningPaywall, setIsOpeningPaywall] = React.useState(false);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const nextCardScale = useSharedValue(0.96);
 
   const currentItem = items[activeIndex];
   const nextItem = items[activeIndex + 1];
+  const swipeLimitReached = !isConnectXProActive && activeIndex >= FREE_SWIPE_LIMIT;
+  const freeSwipesRemaining = isConnectXProActive
+    ? null
+    : Math.max(FREE_SWIPE_LIMIT - activeIndex, 0);
 
   const resetCardPosition = React.useCallback(() => {
     translateX.value = withSpring(0);
@@ -48,19 +56,53 @@ export function SwipeDeck({ items }: SwipeDeckProps) {
     nextCardScale.value = withSpring(0.96);
   }, [nextCardScale, translateX, translateY]);
 
+  const resetDeck = React.useCallback(() => {
+    setActiveIndex(0);
+    translateX.value = 0;
+    translateY.value = 0;
+    nextCardScale.value = 0.96;
+  }, [nextCardScale, translateX, translateY]);
+
+  const openUpgrade = React.useCallback(async () => {
+    if (isConnectXProActive || isOpeningPaywall) {
+      return;
+    }
+
+    setIsOpeningPaywall(true);
+
+    try {
+      await presentPaywallIfNeeded();
+    } finally {
+      setIsOpeningPaywall(false);
+      resetCardPosition();
+    }
+  }, [isConnectXProActive, isOpeningPaywall, presentPaywallIfNeeded, resetCardPosition]);
+
   const commitSwipe = React.useCallback(
     (direction: SwipeDirection) => {
+      if (swipeLimitReached) {
+        void openUpgrade();
+        resetCardPosition();
+        return;
+      }
+
       triggerSwipeHaptic(direction);
       setActiveIndex((index) => Math.min(index + 1, items.length));
       translateX.value = 0;
       translateY.value = 0;
       nextCardScale.value = 0.96;
     },
-    [items.length, nextCardScale, translateX, translateY]
+    [items.length, nextCardScale, openUpgrade, resetCardPosition, swipeLimitReached, translateX, translateY]
   );
 
   const forceSwipe = React.useCallback(
     (direction: SwipeDirection) => {
+      if (swipeLimitReached) {
+        void openUpgrade();
+        resetCardPosition();
+        return;
+      }
+
       const destination = direction === 'right' ? width : -width;
 
       translateX.value = withTiming(destination * 1.25, { duration: 220 }, (finished) => {
@@ -71,10 +113,11 @@ export function SwipeDeck({ items }: SwipeDeckProps) {
       translateY.value = withTiming(-18, { duration: 220 });
       nextCardScale.value = withTiming(1, { duration: 220 });
     },
-    [commitSwipe, nextCardScale, translateX, translateY, width]
+    [commitSwipe, nextCardScale, openUpgrade, resetCardPosition, swipeLimitReached, translateX, translateY, width]
   );
 
   const panGesture = Gesture.Pan()
+    .enabled(!swipeLimitReached)
     .onUpdate((event) => {
       translateX.value = event.translationX;
       translateY.value = event.translationY * 0.18;
@@ -137,6 +180,19 @@ export function SwipeDeck({ items }: SwipeDeckProps) {
   if (!currentItem) {
     return (
       <View className="gap-4">
+        <View className="gap-2">
+          <AppPill
+            className="self-start"
+            label={isConnectXProActive ? 'Pro Active' : 'Free Mode'}
+            tone={isConnectXProActive ? 'success' : 'neutral'}
+          />
+          <AppText tone="muted">
+            {isConnectXProActive
+              ? 'Unlimited swipes enabled.'
+              : `Free swipe cap: ${FREE_SWIPE_LIMIT} per reset.`}
+          </AppText>
+        </View>
+
         <View
           className="rounded-[24px] border border-border bg-surface p-5"
           style={Shadows.card}>
@@ -145,12 +201,41 @@ export function SwipeDeck({ items }: SwipeDeckProps) {
             Fresh candidates can repopulate this queue as new high-fit profiles arrive.
           </AppText>
         </View>
+
+        <AppButton
+          detail="Rewind the mock stack and swipe again"
+          label="Reset Cards"
+          onPress={resetDeck}
+          variant="secondary"
+        />
       </View>
     );
   }
 
   return (
     <View className="gap-5">
+      <AppCard tone={isConnectXProActive ? 'success' : swipeLimitReached ? 'signal' : 'muted'} className="gap-2">
+        <View className="flex-row items-center justify-between gap-3">
+          <View className="flex-1 gap-1">
+            <AppText variant="subtitle">
+              {isConnectXProActive ? 'ConnectX Pro active' : 'Free swipe mode'}
+            </AppText>
+            <AppText tone="muted">
+              {isConnectXProActive
+                ? 'Unlimited swipes are unlocked for this account.'
+                : swipeLimitReached
+                  ? 'You hit the 5-swipe free limit. Upgrade for unlimited access or reset the demo deck.'
+                  : `${freeSwipesRemaining} of ${FREE_SWIPE_LIMIT} free swipes remaining.`}
+            </AppText>
+          </View>
+
+          <AppPill
+            label={isConnectXProActive ? 'Unlimited' : swipeLimitReached ? 'Locked' : 'Limited'}
+            tone={isConnectXProActive ? 'success' : swipeLimitReached ? 'signal' : 'neutral'}
+          />
+        </View>
+      </AppCard>
+
       <View className="min-h-[510px] justify-start">
         {nextItem ? (
           <Animated.View
@@ -256,6 +341,7 @@ export function SwipeDeck({ items }: SwipeDeckProps) {
         <Pressable
           android_ripple={{ color: 'rgba(229,125,87,0.16)', borderless: false }}
           className="h-14 flex-1 items-center justify-center rounded-[16px] border border-border-strong bg-background"
+          disabled={swipeLimitReached}
           onPress={() => {
             forceSwipe('left');
           }}>
@@ -267,6 +353,7 @@ export function SwipeDeck({ items }: SwipeDeckProps) {
         <Pressable
           android_ripple={{ color: 'rgba(255,255,255,0.12)', borderless: false }}
           className="h-14 flex-1 items-center justify-center rounded-[16px] bg-accent"
+          disabled={swipeLimitReached}
           onPress={() => {
             forceSwipe('right');
           }}
@@ -275,6 +362,27 @@ export function SwipeDeck({ items }: SwipeDeckProps) {
             Advance
           </AppText>
         </Pressable>
+      </View>
+
+      <View className="flex-row items-center justify-center gap-3">
+        <AppButton
+          className="flex-1"
+          detail="Reset the mock deck and swipe counter"
+          label="Reset Cards"
+          onPress={resetDeck}
+          variant="secondary"
+        />
+
+        {!isConnectXProActive ? (
+          <AppButton
+            className="flex-1"
+            detail="Open the Pro paywall for unlimited swipes"
+            label={isOpeningPaywall ? 'Opening...' : 'Unlock Pro'}
+            onPress={() => {
+              void openUpgrade();
+            }}
+          />
+        ) : null}
       </View>
     </View>
   );
