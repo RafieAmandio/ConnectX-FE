@@ -1,19 +1,22 @@
 import { AntDesign } from '@expo/vector-icons';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Keyboard, Pressable, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Platform, Pressable, TouchableOpacity, View } from 'react-native';
 
 import { AppButton, AppInput, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 import { cn } from '@shared/utils/cn';
 
 import { useAuth } from '../hooks/use-auth';
+import { useFcmToken } from '../hooks/use-fcm-token';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
 import { getEmailError, getPasswordError } from '../utils/auth-validation';
 
 export function LoginScreen() {
   const router = useRouter();
   const { authPhase, isHydrated, login, session, signInWithGoogle } = useAuth();
+  const fcmToken = useFcmToken();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [emailError, setEmailError] = React.useState<string | null>(null);
@@ -23,6 +26,12 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
+
+  React.useEffect(() => {
+    if (fcmToken) {
+      console.log('FCM token obtained:', fcmToken);
+    }
+  }, [fcmToken]);
 
   if (!isHydrated) {
     return null;
@@ -50,7 +59,7 @@ export function LoginScreen() {
       const result = await login({
         email,
         password,
-        fcm_token: '',
+        fcm_token: fcmToken ?? '',
       });
 
       router.replace(getRouteForAuthPhase(result.session.authPhase));
