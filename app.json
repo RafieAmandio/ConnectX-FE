@@ -10,7 +10,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dwiki.connectx",
-      "googleServicesFile": "./ios/GoogleService-Info.plist"
+      "googleServicesFile": "./ios/GoogleService-Info.plist",
+      "appleTeamId": "6YQB49MLC8"
     },
     "android": {
       "package": "com.dwiki.connectx",
@@ -43,14 +44,7 @@
       "expo-secure-store",
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
-      ]
+      "./plugins/withFirebaseConfig.js"
     ],
     "experiments": {
       "typedRoutes": true,
