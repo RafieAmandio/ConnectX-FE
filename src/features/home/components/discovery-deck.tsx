@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import React from 'react';
 import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -14,32 +15,60 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
+import { ApiError } from '@shared/services/api';
 import { Shadows } from '@shared/theme';
 
-import { useDiscoveryCards, useSwipeAction } from '../hooks/use-discovery';
-import { mockDiscoveryCardsResponse } from '../mock/discovery.mock';
-import type { DiscoveryCard, DiscoveryCardsResponse, SwipeActionRequest } from '../types/discovery.types';
+import {
+  countAppliedDiscoveryFilters,
+  useDiscoveryCards,
+  useDiscoveryFilterOptions,
+  useSwipeAction,
+} from '../hooks/use-discovery';
+import {
+  mockDiscoveryCardsResponse,
+  mockDiscoveryFilterOptionsByMode,
+} from '../mock/discovery.mock';
+import type {
+  DiscoveryAppliedFilters,
+  DiscoveryCard,
+  DiscoveryCardsRequest,
+  DiscoveryFilterField,
+  DiscoveryFilterSection,
+  DiscoveryGoalId,
+  DiscoveryMode,
+  SwipeActionRequest,
+} from '../types/discovery.types';
+import { DiscoveryFilterSheet } from './discovery-filter-sheet';
 
 type SwipeDirection = 'left' | 'right';
 
 const SWIPE_THRESHOLD = 120;
 const PRELOAD_THRESHOLD = 3;
 const DISCOVERY_PAGE_LIMIT = 10;
+const DEFAULT_FILTER_MODE: DiscoveryMode = 'joining_startups';
+
+const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
+  finding_cofounder: 'goal_finding_cofounder',
+  building_team: 'goal_building_team',
+  explore_startups: 'goal_explore_startups',
+  joining_startups: 'goal_joining_startups',
+};
 
 function hasUsableCards(items: DiscoveryCard[]) {
   return items.length > 0;
 }
 
-function triggerSwipeHaptic(direction: SwipeDirection) {
-  if (process.env.EXPO_OS === 'ios') {
-    void Haptics.impactAsync(
-      direction === 'right' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light
-    );
-  }
+function hasUsableFilterSections(sections?: DiscoveryFilterSection[]) {
+  return Boolean(sections?.length);
 }
 
-function flattenUniqueCards(response?: { pages: DiscoveryCardsResponse[] }) {
+function getFallbackFilterOptions(mode: DiscoveryMode) {
+  return mockDiscoveryFilterOptionsByMode[mode];
+}
+
+function flattenUniqueCards(response?: { pages: { data: { items: DiscoveryCard[] } }[] }) {
   const seen = new Set<string>();
 
   return (
@@ -54,6 +83,14 @@ function flattenUniqueCards(response?: { pages: DiscoveryCardsResponse[] }) {
       })
     ) ?? []
   );
+}
+
+function triggerSwipeHaptic(direction: SwipeDirection) {
+  if (process.env.EXPO_OS === 'ios') {
+    void Haptics.impactAsync(
+      direction === 'right' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light
+    );
+  }
 }
 
 function getBadgeIcon(icon?: string): keyof typeof Ionicons.glyphMap {
@@ -79,6 +116,178 @@ function getBadgeIcon(icon?: string): keyof typeof Ionicons.glyphMap {
     default:
       return 'star-outline';
   }
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+function isPremiumRequiredError(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  const payloadCode =
+    error.payload &&
+    typeof error.payload === 'object' &&
+    'error' in error.payload &&
+    error.payload.error &&
+    typeof error.payload.error === 'object' &&
+    'code' in error.payload.error
+      ? error.payload.error.code
+      : undefined;
+
+  return (
+    payloadCode === 'PREMIUM_REQUIRED' ||
+    error.message.toUpperCase().includes('PREMIUM_REQUIRED') ||
+    error.message.toLowerCase().includes('premium subscription required')
+  );
+}
+
+function getDefaultFieldValue(field: DiscoveryFilterField) {
+  if (field.defaultValue !== undefined) {
+    return field.defaultValue;
+  }
+
+  if (field.type === 'multi_select') {
+    return [];
+  }
+
+  if (field.type === 'boolean') {
+    return false;
+  }
+
+  if (field.type === 'range') {
+    return field.min ?? 0;
+  }
+
+  return '';
+}
+
+function getDefaultSectionValue(section: DiscoveryFilterSection) {
+  if (section.defaultValue !== undefined) {
+    return section.defaultValue;
+  }
+
+  if (section.type === 'multi_select') {
+    return [];
+  }
+
+  if (section.fields?.length) {
+    return Object.fromEntries(section.fields.map((field) => [field.id, getDefaultFieldValue(field)]));
+  }
+
+  return '';
+}
+
+function sanitizeFieldValue(field: DiscoveryFilterField, rawValue: unknown) {
+  if (field.type === 'multi_select') {
+    return Array.isArray(rawValue)
+      ? rawValue.filter((value): value is string => typeof value === 'string' && value.length > 0)
+      : [];
+  }
+
+  if (field.type === 'boolean') {
+    return Boolean(rawValue);
+  }
+
+  if (field.type === 'range') {
+    const numericValue =
+      typeof rawValue === 'number'
+        ? rawValue
+        : typeof rawValue === 'string'
+          ? Number(rawValue)
+          : field.defaultValue;
+
+    return Number.isFinite(numericValue) ? numericValue : field.defaultValue ?? field.min ?? 0;
+  }
+
+  if (typeof rawValue !== 'string') {
+    return '';
+  }
+
+  return rawValue.trim();
+}
+
+function sanitizeSectionValue(section: DiscoveryFilterSection, rawValue: unknown) {
+  if (section.id === 'goal') {
+    return '';
+  }
+
+  if (section.type === 'group') {
+    const record =
+      rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
+        ? (rawValue as Record<string, unknown>)
+        : {};
+
+    return section.fields?.reduce<Record<string, unknown>>((nextValue, field) => {
+      const normalized = sanitizeFieldValue(field, record[field.id]);
+      const defaultValue = getDefaultFieldValue(field);
+
+      if (JSON.stringify(normalized) !== JSON.stringify(defaultValue)) {
+        nextValue[field.id] = normalized;
+      }
+
+      return nextValue;
+    }, {}) ?? {};
+  }
+
+  if (section.type === 'multi_select') {
+    return Array.isArray(rawValue)
+      ? rawValue.filter((value): value is string => typeof value === 'string' && value.length > 0)
+      : [];
+  }
+
+  if (typeof rawValue !== 'string') {
+    return '';
+  }
+
+  return rawValue.trim();
+}
+
+function sanitizeDiscoveryFilters(
+  filters: DiscoveryAppliedFilters,
+  sections: DiscoveryFilterSection[]
+) {
+  return sections.reduce<DiscoveryAppliedFilters>((nextFilters, section) => {
+    const normalized = sanitizeSectionValue(section, filters[section.id]);
+    const defaultValue = sanitizeSectionValue(section, getDefaultSectionValue(section));
+
+    const isEmpty =
+      normalized === '' ||
+      (Array.isArray(normalized) && normalized.length === 0) ||
+      (normalized &&
+        typeof normalized === 'object' &&
+        !Array.isArray(normalized) &&
+        Object.keys(normalized).length === 0);
+
+    if (section.id === 'goal' || isEmpty) {
+      return nextFilters;
+    }
+
+    if (JSON.stringify(normalized) === JSON.stringify(defaultValue)) {
+      return nextFilters;
+    }
+
+    nextFilters[section.id] = normalized;
+    return nextFilters;
+  }, {});
+}
+
+function getGoalOptions(sections: DiscoveryFilterSection[], mode: DiscoveryMode) {
+  const goalSection = sections.find((section) => section.id === 'goal');
+
+  if (goalSection?.options?.length) {
+    return goalSection.options;
+  }
+
+  return (
+    getFallbackFilterOptions(mode).data.sections.find((section) => section.id === 'goal')?.options ?? []
+  );
 }
 
 function DiscoveryTag({
@@ -195,37 +404,98 @@ function EmptyState({
 
 export function DiscoveryDeck() {
   const insets = useSafeAreaInsets();
-  const discoveryQuery = useDiscoveryCards(DISCOVERY_PAGE_LIMIT);
-  const swipeAction = useSwipeAction();
   const { width } = useWindowDimensions();
+  const { isConnectXProActive, presentPaywallIfNeeded, supported } = useRevenueCat();
   const [fallbackCards, setFallbackCards] = React.useState(mockDiscoveryCardsResponse.data.items);
   const [restoredCards, setRestoredCards] = React.useState<DiscoveryCard[]>([]);
   const [history, setHistory] = React.useState<DiscoveryCard[]>([]);
+  const [lastSuccessfulCards, setLastSuccessfulCards] = React.useState<DiscoveryCard[]>([]);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [filterError, setFilterError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isFilterVisible, setIsFilterVisible] = React.useState(false);
+  const [isApplyingFilters, setIsApplyingFilters] = React.useState(false);
+  const [sheetMode, setSheetMode] = React.useState<DiscoveryMode>(DEFAULT_FILTER_MODE);
+  const [appliedMode, setAppliedMode] = React.useState<DiscoveryMode | null>(null);
+  const [appliedFilters, setAppliedFilters] = React.useState<DiscoveryAppliedFilters>({});
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const nextCardScale = useSharedValue(0.96);
   const currentCardRef = React.useRef<DiscoveryCard | null>(null);
 
-  const liveCards = React.useMemo(
-    () => flattenUniqueCards(discoveryQuery.data),
-    [discoveryQuery.data]
+  const filterOptionsQuery = useDiscoveryFilterOptions(sheetMode, isFilterVisible);
+  const liveFilterOptions = filterOptionsQuery.data;
+  const usingFilterFallback = !hasUsableFilterSections(liveFilterOptions?.data.sections);
+  const activeFilterOptions = usingFilterFallback
+    ? getFallbackFilterOptions(sheetMode)
+    : liveFilterOptions ?? getFallbackFilterOptions(sheetMode);
+  const filterSections = activeFilterOptions.data.sections;
+  const goalOptions = getGoalOptions(filterSections, sheetMode);
+
+  const appliedSections = React.useMemo(() => {
+    if (!appliedMode) {
+      return getFallbackFilterOptions(DEFAULT_FILTER_MODE).data.sections;
+    }
+
+    if (
+      appliedMode === sheetMode &&
+      liveFilterOptions?.data.context.mode === appliedMode &&
+      hasUsableFilterSections(liveFilterOptions.data.sections)
+    ) {
+      return liveFilterOptions.data.sections;
+    }
+
+    return getFallbackFilterOptions(appliedMode).data.sections;
+  }, [appliedMode, liveFilterOptions, sheetMode]);
+
+  const sanitizedAppliedFilters = React.useMemo(
+    () => sanitizeDiscoveryFilters(appliedFilters, appliedSections),
+    [appliedFilters, appliedSections]
   );
 
+  const discoveryRequest = React.useMemo<Omit<DiscoveryCardsRequest, 'pagination'>>(() => {
+    if (!appliedMode) {
+      return {};
+    }
+
+    return {
+      context: {
+        mode: appliedMode,
+      },
+      filters: {
+        goalId: GOAL_ID_BY_MODE[appliedMode],
+        ...sanitizedAppliedFilters,
+      },
+    };
+  }, [appliedMode, sanitizedAppliedFilters]);
+
+  const discoveryQuery = useDiscoveryCards(discoveryRequest, DISCOVERY_PAGE_LIMIT);
+  const swipeAction = useSwipeAction();
+
+  const liveCards = React.useMemo(() => flattenUniqueCards(discoveryQuery.data), [discoveryQuery.data]);
+
+  React.useEffect(() => {
+    if (liveCards.length > 0) {
+      setLastSuccessfulCards(liveCards);
+    }
+  }, [liveCards]);
+
+  const effectiveLiveCards = liveCards.length > 0 ? liveCards : lastSuccessfulCards;
   const usingFallback =
-    !hasUsableCards(liveCards) && (discoveryQuery.isError || discoveryQuery.isSuccess);
-  
-  const baseCards = usingFallback ? fallbackCards : liveCards;
+    !hasUsableCards(effectiveLiveCards) && (discoveryQuery.isError || discoveryQuery.isSuccess);
+  const baseCards = usingFallback ? fallbackCards : effectiveLiveCards;
   const cards = React.useMemo(() => {
-    // Filter out cards that are already in baseCards to avoid duplicates when restoring
-    const baseIds = new Set(baseCards.map(c => c.id));
-    return [...restoredCards.filter(c => !baseIds.has(c.id)), ...baseCards];
-  }, [restoredCards, baseCards]);
+    const baseIds = new Set(baseCards.map((card) => card.id));
+    return [...restoredCards.filter((card) => !baseIds.has(card.id)), ...baseCards];
+  }, [baseCards, restoredCards]);
 
   const currentItem = cards[0] ?? null;
   const nextItem = cards[1] ?? null;
   const remainingCards = cards.length;
+  const appliedFilterCount = React.useMemo(
+    () => countAppliedDiscoveryFilters(sanitizedAppliedFilters),
+    [sanitizedAppliedFilters]
+  );
 
   currentCardRef.current = currentItem;
 
@@ -249,6 +519,26 @@ export function DiscoveryDeck() {
     usingFallback,
   ]);
 
+  React.useEffect(() => {
+    if (!discoveryQuery.isError || !isPremiumRequiredError(discoveryQuery.error)) {
+      return;
+    }
+
+    setFilterError(
+      getErrorMessage(discoveryQuery.error, 'Premium subscription required to use advanced discovery filters.')
+    );
+  }, [discoveryQuery.error, discoveryQuery.isError]);
+
+  React.useEffect(() => {
+    setFallbackCards(mockDiscoveryCardsResponse.data.items);
+    setRestoredCards([]);
+    setHistory([]);
+    setActionError(null);
+    translateX.value = 0;
+    translateY.value = 0;
+    nextCardScale.value = 0.96;
+  }, [discoveryRequest, nextCardScale, translateX, translateY]);
+
   const resetCardPosition = React.useCallback(() => {
     translateX.value = withSpring(0);
     translateY.value = withSpring(0);
@@ -269,16 +559,12 @@ export function DiscoveryDeck() {
 
       try {
         triggerSwipeHaptic(direction);
-
-        // Add to local history for rewind
-        setHistory(prev => [...prev.slice(-19), activeCard]);
+        setHistory((current) => [...current.slice(-19), activeCard]);
 
         if (usingFallback) {
           setFallbackCards((current) => current.filter((item) => item.id !== activeCard.id));
         } else {
-          // Remove from restoredCards if it was one of them
-          setRestoredCards(prev => prev.filter(c => c.id !== activeCard.id));
-          
+          setRestoredCards((current) => current.filter((card) => card.id !== activeCard.id));
           await swipeAction.mutateAsync({
             payload: { action },
             profileId: activeCard.profileId,
@@ -287,9 +573,7 @@ export function DiscoveryDeck() {
 
         setActionError(null);
       } catch (error) {
-        setActionError(
-          error instanceof Error ? error.message : 'Unable to record this swipe right now.'
-        );
+        setActionError(getErrorMessage(error, 'Unable to record this swipe right now.'));
       } finally {
         setIsSubmitting(false);
         translateX.value = 0;
@@ -301,15 +585,15 @@ export function DiscoveryDeck() {
   );
 
   const handleRewind = React.useCallback(() => {
-    if (history.length === 0 || isSubmitting) return;
+    if (history.length === 0 || isSubmitting) {
+      return;
+    }
 
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+
     const lastCard = history[history.length - 1];
-    setHistory(prev => prev.slice(0, -1));
-    setRestoredCards(prev => [lastCard, ...prev]);
-    
-    // Animate the restoration if possible? For now just visual pop back.
+    setHistory((current) => current.slice(0, -1));
+    setRestoredCards((current) => [lastCard, ...current]);
   }, [history, isSubmitting]);
 
   const handleSuperLike = React.useCallback(() => {
@@ -338,6 +622,75 @@ export function DiscoveryDeck() {
     },
     [handleSwipeAction, isSubmitting, nextCardScale, translateX, translateY, width]
   );
+
+  const handleOpenFilters = React.useCallback(() => {
+    setFilterError(null);
+    setSheetMode(appliedMode ?? DEFAULT_FILTER_MODE);
+    setIsFilterVisible(true);
+  }, [appliedMode]);
+
+  const handleCloseFilters = React.useCallback(() => {
+    setIsFilterVisible(false);
+  }, []);
+
+  const handleResetFilters = React.useCallback(() => {
+    setAppliedMode(null);
+    setAppliedFilters({});
+    setFilterError(null);
+    setSheetMode(DEFAULT_FILTER_MODE);
+    setIsFilterVisible(false);
+  }, []);
+
+  const handleApplyFilters = React.useCallback(
+    async (mode: DiscoveryMode, nextFilters: DiscoveryAppliedFilters) => {
+      setIsApplyingFilters(true);
+
+      try {
+        if (!isConnectXProActive) {
+          const result = await presentPaywallIfNeeded();
+          const unlockedPro =
+            isConnectXProActive ||
+            result === PAYWALL_RESULT.PURCHASED ||
+            result === PAYWALL_RESULT.RESTORED;
+
+          if (!unlockedPro) {
+            setFilterError(
+              supported
+                ? 'ConnectX Pro is required to apply discovery filters.'
+                : 'Discovery premium filters are available in native builds with ConnectX Pro.'
+            );
+            return;
+          }
+        }
+
+        console.log('applyDiscoveryFilters payload', {
+          context: {
+            mode,
+          },
+          filters: {
+            goalId: GOAL_ID_BY_MODE[mode],
+            ...sanitizeDiscoveryFilters(nextFilters, getFallbackFilterOptions(mode).data.sections),
+          },
+        });
+
+        setAppliedMode(mode);
+        setAppliedFilters(nextFilters);
+        setSheetMode(mode);
+        setFilterError(null);
+        setIsFilterVisible(false);
+      } catch (error) {
+        setFilterError(getErrorMessage(error, 'Unable to open the ConnectX Pro upgrade flow.'));
+      } finally {
+        setIsApplyingFilters(false);
+      }
+    },
+    [isConnectXProActive, presentPaywallIfNeeded, supported]
+  );
+
+  const handleModeChange = React.useCallback((mode: DiscoveryMode) => {
+    setSheetMode(mode);
+    setFilterError(null);
+  }, []);
 
   const panGesture = Gesture.Pan()
     .enabled(Boolean(currentItem) && !isSubmitting)
@@ -386,6 +739,26 @@ export function DiscoveryDeck() {
     transform: [{ scale: interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0.8, 1]) }],
   }));
 
+  const filterSheet = (
+    <DiscoveryFilterSheet
+      currentMode={sheetMode}
+      errorMessage={
+        filterError ??
+        (usingFilterFallback ? 'Showing fallback filter options while the API is unavailable.' : null)
+      }
+      goalOptions={goalOptions}
+      initialAppliedMode={appliedMode}
+      initialFilters={appliedFilters}
+      isApplying={isApplyingFilters}
+      onApply={handleApplyFilters}
+      onClose={handleCloseFilters}
+      onModeChange={handleModeChange}
+      onReset={handleResetFilters}
+      sections={filterSections}
+      visible={isFilterVisible}
+    />
+  );
+
   if (!currentItem && discoveryQuery.isLoading && !usingFallback) {
     return (
       <View className="flex-1 justify-center px-4" style={{ paddingTop: insets.top }}>
@@ -395,6 +768,7 @@ export function DiscoveryDeck() {
             Pulling the latest founder cards and match signals for this account.
           </AppText>
         </AppCard>
+        {filterSheet}
       </View>
     );
   }
@@ -416,12 +790,60 @@ export function DiscoveryDeck() {
             size="medium"
           />
         </View>
+        {filterSheet}
       </View>
     );
   }
 
   return (
     <View className="flex-1 gap-4 px-4 pb-1" style={{ paddingTop: insets.top + 4 }}>
+      <View className="flex-row items-center justify-between">
+        <View className="gap-1">
+          <AppText variant="title">Discover</AppText>
+          <AppText tone="muted">
+            Swipe through curated builders, founders, and operators near you.
+          </AppText>
+        </View>
+        <Pressable
+          className="flex-row items-center gap-2 rounded-full border px-3 py-2"
+          onPress={handleOpenFilters}
+          style={{
+            backgroundColor: '#1A1C22',
+            borderColor:
+              appliedFilterCount > 0 || appliedMode
+                ? 'rgba(255, 154, 62, 0.38)'
+                : 'rgba(152, 162, 179, 0.18)',
+          }}>
+          <Ionicons
+            color={appliedFilterCount > 0 || appliedMode ? '#FF9A3E' : '#D0D5DD'}
+            name="options-outline"
+            size={16}
+          />
+          <AppText
+            className="text-[13px]"
+            style={{ color: appliedFilterCount > 0 || appliedMode ? '#FF9A3E' : '#D0D5DD' }}
+            variant="bodyStrong">
+            Filter
+          </AppText>
+          {appliedFilterCount > 0 ? (
+            <View
+              className="min-w-6 items-center rounded-full px-2 py-0.5"
+              style={{ backgroundColor: '#2A2117' }}>
+              <AppText className="text-[11px]" tone="signal" variant="code">
+                {appliedFilterCount}
+              </AppText>
+            </View>
+          ) : null}
+        </Pressable>
+      </View>
+
+      {filterError ? (
+        <AppCard tone="signal" className="gap-2 rounded-[16px] p-3">
+          <AppText variant="subtitle">Discovery search</AppText>
+          <AppText tone="muted">{filterError}</AppText>
+        </AppCard>
+      ) : null}
+
       {actionError ? (
         <AppCard tone="signal" className="gap-2 rounded-[16px] p-3">
           <AppText variant="subtitle">Swipe action failed</AppText>
@@ -690,6 +1112,8 @@ export function DiscoveryDeck() {
           Loading more cards...
         </AppText>
       ) : null}
+
+      {filterSheet}
     </View>
   );
 }
