@@ -1,5 +1,5 @@
-import { MatchesScreen } from '@features/matches';
+import { View } from 'react-native';
 
 export default function MatchesRoute() {
-  return <MatchesScreen />;
+  return <View className="flex-1 bg-background" />;
 }

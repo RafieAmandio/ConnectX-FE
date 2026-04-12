@@ -29,7 +29,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="matches"
         options={{
-          title: '',
+          title: 'Connect',
         }}
       />
       <Tabs.Screen
