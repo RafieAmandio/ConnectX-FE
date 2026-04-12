@@ -22,6 +22,8 @@ export async function fetchProfileOptions() {
 }
 
 export async function updateMyProfile(payload: UpdateMyProfileRequest) {
+  console.log('updateMyProfile payload', payload);
+
   return apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
     body: payload as unknown as BodyInit,
     method: 'PATCH',
