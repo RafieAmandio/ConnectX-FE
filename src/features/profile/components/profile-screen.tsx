@@ -1,118 +1,247 @@
-import { Stack, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { Stack } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
-import { AppButton, AppCard, AppListItem, AppPill, AppStatCard, AppText } from '@shared/components';
+import { AppCard, AppText } from '@shared/components';
 
-import { useAuth } from '@features/auth';
-import { ConnectXProCard } from '@features/revenuecat';
+import { mockProfileResponse } from '../mock/profile.mock';
+import type {
+  ProfileBadge,
+  ProfileDetail,
+  ProfileHighlight,
+  ProfileTrait,
+} from '../types/profile.types';
 
-function getMethodLabel(method: string) {
-  switch (method) {
-    case 'email':
-      return 'Email';
-    case 'apple':
-      return 'Apple';
-    case 'google':
-      return 'Google';
-    case 'developer-bypass':
-      return 'Developer Bypass';
-    default:
-      return 'Auth';
-  }
+type ProfileStatCardProps = {
+  label: string;
+  value: number;
+};
+
+type SectionTitleProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+};
+
+type WarmPillProps = {
+  icon?: keyof typeof Ionicons.glyphMap;
+  label: string;
+  emoji?: string | null;
+};
+
+function isIoniconName(name: string | null): name is keyof typeof Ionicons.glyphMap {
+  return Boolean(name && name in Ionicons.glyphMap);
+}
+
+function getInitials(value: string) {
+  return value
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function ProfileStatCard({ label, value }: ProfileStatCardProps) {
+  return (
+    <AppCard className="flex-1 items-center rounded-[16px] px-2 py-3">
+      <AppText align="center" className="text-[28px] leading-[32px]" variant="title">
+        {value}
+      </AppText>
+      <AppText align="center" className="mt-0.5 text-[10px] normal-case tracking-[0px]" tone="muted" variant="label">
+        {label}
+      </AppText>
+    </AppCard>
+  );
+}
+
+function SectionTitle({ icon, title }: SectionTitleProps) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <Ionicons color="#F59E0B" name={icon} size={16} />
+      <AppText className="text-[14px]" variant="subtitle">{title}</AppText>
+    </View>
+  );
+}
+
+function WarmPill({ emoji, icon, label }: WarmPillProps) {
+  return (
+    <View
+      className="flex-row items-center gap-1 rounded-full border px-2.5 py-1"
+      style={{ backgroundColor: '#2A2117', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
+      {emoji ? <AppText className="text-[13px] leading-[14px]">{emoji}</AppText> : null}
+      {icon ? <Ionicons color="#F59E0B" name={icon} size={12} /> : null}
+      <AppText className="text-[12px] font-semibold" tone="signal">
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+function BadgeList({ badges }: { badges: ProfileBadge[] }) {
+  return (
+    <View className="flex-row flex-wrap gap-1.5">
+      {badges.map((badge) => (
+        <WarmPill
+          key={badge.id}
+          icon={isIoniconName(badge.icon) ? badge.icon : undefined}
+          label={badge.label}
+        />
+      ))}
+    </View>
+  );
+}
+
+function TraitList({ traits }: { traits: ProfileTrait[] }) {
+  return (
+    <View className="flex-row flex-wrap gap-1.5">
+      {traits.map((trait) => (
+        <WarmPill key={trait.id} emoji={trait.emoji} label={trait.label} />
+      ))}
+    </View>
+  );
+}
+
+function KeywordList({ items, tone = 'signal' }: { items: string[]; tone?: 'signal' | 'warning' }) {
+  const borderColor = tone === 'warning' ? 'rgba(245, 208, 84, 0.34)' : 'rgba(245, 158, 11, 0.28)';
+  const backgroundColor = tone === 'warning' ? '#302712' : '#2A2117';
+  const textColor = tone === 'warning' ? '#F4D03F' : '#F59E0B';
+
+  return (
+    <View className="flex-row flex-wrap gap-1.5">
+      {items.map((item) => (
+        <View
+          key={item}
+          className="rounded-full border px-2.5 py-1"
+          style={{ backgroundColor, borderColor }}>
+          <AppText className="text-[12px] font-medium" style={{ color: textColor }}>
+            {item}
+          </AppText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function HighlightList({ items }: { items: ProfileHighlight[] }) {
+  return (
+    <AppCard className="gap-3 rounded-[20px] px-3.5 py-4">
+      {items.map((item) => (
+        <View key={item.id} className="flex-row items-center gap-2.5">
+          <Ionicons
+            color="#F59E0B"
+            name={isIoniconName(item.icon) ? item.icon : 'ellipse-outline'}
+            size={18}
+          />
+          <AppText className="flex-1 text-[13px] leading-5">{item.text}</AppText>
+        </View>
+      ))}
+    </AppCard>
+  );
+}
+
+function Header({ profile }: { profile: ProfileDetail }) {
+  const initials = getInitials(profile.fullName);
+
+  return (
+    <View className="items-center gap-1.5 pt-0">
+      {profile.photoUrl ? (
+        <Image
+          contentFit="cover"
+          source={{ uri: profile.photoUrl }}
+          style={{
+            borderColor: 'rgba(245, 158, 11, 0.9)',
+            borderRadius: 999,
+            borderWidth: 2.5,
+            height: 84,
+            width: 84,
+          }}
+        />
+      ) : (
+        <View
+          className="items-center justify-center rounded-full"
+          style={{
+            backgroundColor: '#F59E0B',
+            borderColor: 'rgba(255, 216, 128, 0.4)',
+            borderWidth: 2.5,
+            height: 84,
+            width: 84,
+          }}>
+          <AppText className="text-[24px] leading-[28px]" tone="inverse" variant="title">
+            {initials}
+          </AppText>
+        </View>
+      )}
+
+      <View className="items-center gap-0">
+        <AppText align="center" className="text-[28px] leading-[34px]" variant="hero">
+          {profile.fullName}
+        </AppText>
+        <AppText align="center" className="text-[14px]" tone="muted">
+          {profile.headline}
+        </AppText>
+        <View className="mt-0.5 flex-row items-center gap-1">
+          <Ionicons color="#F59E0B" name="location-outline" size={14} />
+          <AppText className="text-[14px]" tone="signal">
+            {profile.location.displayName}
+          </AppText>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 export function ProfileScreen() {
-  const router = useRouter();
-  const { session, signOut } = useAuth();
-
-  if (!session) {
-    return null;
-  }
+  const profile = mockProfileResponse.data.profile;
 
   return (
     <>
-      <Stack.Screen options={{ title: '' }} />
+      <Stack.Screen options={{ headerShown: false, title: '' }} />
       <ScrollView
         className="flex-1 bg-canvas"
-        contentContainerClassName="gap-6 px-5 pt-4 pb-24"
+        contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
         contentInsetAdjustmentBehavior="automatic">
-        <View className="gap-3">
-          <AppPill className="self-start" label="Account" tone="accent" />
-          <AppText variant="hero">{session.displayName}</AppText>
-          <AppText tone="muted">
-            Keep identity, access method, and session controls clear and low-friction.
+        <Header profile={profile} />
+
+        <View className="flex-row gap-2">
+          <ProfileStatCard label="Connections" value={profile.stats.connections} />
+          <ProfileStatCard label="Teams Joined" value={profile.stats.teamsJoined} />
+          <ProfileStatCard label="Matches" value={profile.stats.matches} />
+        </View>
+
+        <BadgeList badges={profile.badges} />
+
+        <AppCard
+          className="gap-2.5 rounded-[20px] px-3.5 py-4"
+          style={{ backgroundColor: '#231C13', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
+          <SectionTitle icon="bulb-outline" title="Startup Idea" />
+          <AppText className="text-[14px] leading-6" tone="muted">
+            {profile.startupIdea}
           </AppText>
+        </AppCard>
+
+        <AppCard className="gap-3.5 rounded-[20px] px-3.5 py-4">
+          <SectionTitle icon="flash-outline" title="Personality & Hobbies" />
+          <TraitList traits={profile.personalityAndHobbies} />
+        </AppCard>
+
+        <View className="flex-row gap-2.5">
+          <AppCard className="min-h-[160px] flex-1 gap-3.5 rounded-[20px] px-3.5 py-4">
+            <AppText className="text-[12px] tracking-[1px]" tone="muted" variant="label">
+              Skills
+            </AppText>
+            <KeywordList items={profile.skills} tone="warning" />
+          </AppCard>
+
+          <AppCard className="min-h-[160px] flex-1 gap-3.5 rounded-[20px] px-3.5 py-4">
+            <AppText className="text-[12px] tracking-[1px]" tone="muted" variant="label">
+              Interests
+            </AppText>
+            <KeywordList items={profile.interests} />
+          </AppCard>
         </View>
 
-        <View className="flex-row gap-3">
-          <AppStatCard
-            className="flex-1"
-            detail="Healthy"
-            label="Security Status"
-            tone="success"
-            value="Secure"
-          />
-          <AppStatCard
-            className="flex-1"
-            detail="Active"
-            label="Current Session"
-            value="Live"
-          />
-        </View>
-
-        <AppCard className="gap-3">
-          <AppText variant="subtitle">Access details</AppText>
-          <AppListItem
-            description={
-              session.isDevelopmentBypass
-                ? 'Synthetic session used for local development work.'
-                : session.method === 'email'
-                  ? 'Primary email and password path.'
-                  : 'Connected sign-in method.'
-            }
-            leading={<AppText variant="bodyStrong">ID</AppText>}
-            title="Login method"
-            value={getMethodLabel(session.method)}
-          />
-          <AppListItem
-            description="Active identifier used for this demo session."
-            leading={<AppText variant="bodyStrong">#</AppText>}
-            meta={session.user?.email_verified_at ? 'Verified' : 'Pending'}
-            title="Sign-in ID"
-            value={session.email}
-          />
-        </AppCard>
-
-        <AppCard tone="muted" className="gap-4">
-          <View className="gap-1">
-            <AppText variant="subtitle">Subscriptions</AppText>
-            <AppText tone="muted">
-              Keep plan state, restore controls, and paid access visibility in one predictable
-              place.
-            </AppText>
-          </View>
-
-          <ConnectXProCard />
-        </AppCard>
-
-        <AppCard tone="muted" className="gap-4">
-          <View className="gap-1">
-            <AppText variant="subtitle">Session control</AppText>
-            <AppText tone="muted">
-              Keep destructive actions visually quieter until the user truly needs them.
-            </AppText>
-          </View>
-
-          <AppButton
-            detail="Return to the secure entry screen"
-            label="Sign Out"
-            onPress={async () => {
-              await signOut();
-              router.replace('/login');
-            }}
-            variant="secondary"
-          />
-        </AppCard>
+        <HighlightList items={profile.highlights} />
       </ScrollView>
     </>
   );

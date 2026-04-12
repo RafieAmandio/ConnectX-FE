@@ -3,6 +3,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { configureApiClient } from '@shared/services/api';
 import {
+  clearSupabaseSession,
   getSupabaseSession,
   signOutSupabase,
   supabase,
@@ -59,6 +60,25 @@ type AuthContextValue = {
 };
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
+
+function isRecoverableSupabaseSessionError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const normalizedName = error.name.toLowerCase();
+  const normalizedMessage = error.message.toLowerCase();
+
+  if (normalizedName === 'authsessionmissingerror') {
+    return true;
+  }
+
+  return (
+    normalizedName === 'authapierror' &&
+    normalizedMessage.includes('refresh token') &&
+    (normalizedMessage.includes('invalid') || normalizedMessage.includes('not found'))
+  );
+}
 
 export function AuthProvider({ children }: React.PropsWithChildren) {
   const [isHydrated, setIsHydrated] = React.useState(false);
@@ -135,46 +155,70 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     let isActive = true;
 
     const hydrate = async () => {
-      const supabaseSession = await getSupabaseSession();
+      try {
+        const supabaseSession = await getSupabaseSession();
 
-      if (!isActive) {
-        return;
-      }
+        if (!isActive) {
+          return;
+        }
 
-      if (supabaseSession?.user) {
-        const nextSession = createGoogleAuthSessionFromSupabaseSession(supabaseSession);
+        if (supabaseSession?.user) {
+          const nextSession = createGoogleAuthSessionFromSupabaseSession(supabaseSession);
 
-        await Promise.all([
-          replaceStoredSession(nextSession),
-          syncSupabaseRealtimeAuth(supabaseSession),
+          await Promise.all([
+            replaceStoredSession(nextSession),
+            syncSupabaseRealtimeAuth(supabaseSession),
+          ]);
+
+          if (!isActive) {
+            return;
+          }
+
+          setSession(nextSession);
+          setAuthPhase(nextSession.authPhase);
+          setIsHydrated(true);
+          return;
+        }
+
+        const { token, session: storedSession } = await getPersistedAuthState();
+
+        if (!isActive) {
+          return;
+        }
+
+        if (token && storedSession) {
+          setSession(storedSession);
+          setAuthPhase(storedSession.authPhase);
+        } else {
+          await clearPersistedAuth();
+          setSession(null);
+          setAuthPhase('signed_out');
+        }
+
+        setIsHydrated(true);
+      } catch (error) {
+        if (!isRecoverableSupabaseSessionError(error)) {
+          throw error;
+        }
+
+        if (__DEV__) {
+          console.warn('[auth] cleared stale Supabase session during hydrate', error);
+        }
+
+        await Promise.allSettled([
+          clearPersistedAuth(),
+          clearSupabaseSession(),
+          syncSupabaseRealtimeAuth(null),
         ]);
 
         if (!isActive) {
           return;
         }
 
-        setSession(nextSession);
-        setAuthPhase(nextSession.authPhase);
-        setIsHydrated(true);
-        return;
-      }
-
-      const { token, session: storedSession } = await getPersistedAuthState();
-
-      if (!isActive) {
-        return;
-      }
-
-      if (token && storedSession) {
-        setSession(storedSession);
-        setAuthPhase(storedSession.authPhase);
-      } else {
-        await clearPersistedAuth();
         setSession(null);
         setAuthPhase('signed_out');
+        setIsHydrated(true);
       }
-
-      setIsHydrated(true);
     };
 
     void hydrate();

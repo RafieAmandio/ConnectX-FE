@@ -90,6 +90,14 @@ export async function signOutSupabase() {
   }
 }
 
+export async function clearSupabaseSession() {
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function requireSupabaseUser() {
   const session = await getSupabaseSession();
 
