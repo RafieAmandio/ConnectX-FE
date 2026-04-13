@@ -5,8 +5,14 @@ export type MessageRow = {
   room_id: string;
   sender_id: string;
   client_id: string | null;
-  content: string;
+  content: string | null;
   created_at: string;
+  media_mime_type: string | null;
+  media_name: string | null;
+  media_size_bytes: number | null;
+  media_url: string | null;
+  message_type: 'text' | 'image' | 'video' | 'file';
+  thumbnail_url: string | null;
 };
 
 export type ConversationSummaryRow = {
@@ -28,9 +34,15 @@ export function mapMessageRow(row: MessageRow): ChatMessage {
     id: row.id,
     roomId: row.room_id,
     senderId: row.sender_id,
-    content: row.content,
+    content: row.content ?? '',
     createdAt: row.created_at,
+    mediaMimeType: row.media_mime_type,
+    mediaName: row.media_name,
+    mediaSizeBytes: row.media_size_bytes,
+    mediaUrl: row.media_url,
+    messageType: row.message_type ?? 'text',
     status: 'sent',
+    thumbnailUrl: row.thumbnail_url,
     clientId: row.client_id,
   };
 }

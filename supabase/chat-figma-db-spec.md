@@ -1,6 +1,12 @@
 # Chat Figma DB Spec
 
-This document describes the database shape needed to support the Figma-style chat screen:
+This document describes the database shape needed to support the Figma-style chat screen.
+
+If your backend already has `public.users` as the app profile table, prefer
+[supabase/chat-figma-backend-handoff.md](/Users/dwiki/Development/connectx/supabase/chat-figma-backend-handoff.md)
+and do not add a duplicate `profiles` table.
+
+The Figma screen needs:
 
 - a horizontal row of conversation cards
 - avatar and headline on each card

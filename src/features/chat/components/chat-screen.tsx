@@ -5,6 +5,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -15,7 +16,7 @@ import {
 import { useAuth } from '@features/auth';
 import { AppButton, AppText } from '@shared/components';
 
-import type { ChatRoom } from '../domain/models';
+import type { ChatMessage, ChatRoom } from '../domain/models';
 import {
   useChatRooms,
   useMarkConversationRead,
@@ -86,6 +87,97 @@ function getConversationSubtitle(conversation: ChatRoom | null, onlineCount: num
   }
 
   return getPresenceLabel(onlineCount);
+}
+
+function formatBytes(value: number | null | undefined) {
+  if (!value || value <= 0) {
+    return null;
+  }
+
+  if (value < 1024) {
+    return `${value} B`;
+  }
+
+  if (value < 1024 * 1024) {
+    return `${(value / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function MessageBody({
+  isOutgoing,
+  message,
+}: {
+  isOutgoing: boolean;
+  message: ChatMessage;
+}) {
+  const textClassName = isOutgoing ? 'text-[#201507]' : 'text-[#F3F0EB]';
+  const subtleTextClassName = isOutgoing ? 'text-[#7C5526]' : 'text-[#B8B2AB]';
+
+  if (message.messageType === 'image' && message.mediaUrl) {
+    return (
+      <View className="gap-3">
+        <Image
+          contentFit="cover"
+          source={{ uri: message.mediaUrl }}
+          style={{ borderRadius: 18, height: 220, width: 240 }}
+        />
+        {message.content ? (
+          <AppText className={textClassName} variant="body">
+            {message.content}
+          </AppText>
+        ) : null}
+      </View>
+    );
+  }
+
+  if ((message.messageType === 'video' || message.messageType === 'file') && message.mediaUrl) {
+    return (
+      <Pressable
+        className="gap-3 active:opacity-80"
+        onPress={() => {
+          void Linking.openURL(message.mediaUrl!);
+        }}>
+        {message.thumbnailUrl ? (
+          <Image
+            contentFit="cover"
+            source={{ uri: message.thumbnailUrl }}
+            style={{ borderRadius: 18, height: 180, width: 240 }}
+          />
+        ) : null}
+
+        <View className="flex-row items-center gap-3 rounded-[18px] border border-white/10 px-4 py-3">
+          <Ionicons
+            color={isOutgoing ? '#5C3D18' : '#F7B05B'}
+            name={message.messageType === 'video' ? 'videocam-outline' : 'document-outline'}
+            size={22}
+          />
+          <View className="flex-1 gap-0.5">
+            <AppText className={textClassName} numberOfLines={1} variant="bodyStrong">
+              {message.mediaName ?? (message.messageType === 'video' ? 'Video attachment' : 'File attachment')}
+            </AppText>
+            <AppText className={subtleTextClassName} numberOfLines={1} variant="code">
+              {formatBytes(message.mediaSizeBytes) ??
+                (message.messageType === 'video' ? 'Tap to open video' : 'Tap to open attachment')}
+            </AppText>
+          </View>
+        </View>
+
+        {message.content ? (
+          <AppText className={textClassName} variant="body">
+            {message.content}
+          </AppText>
+        ) : null}
+      </Pressable>
+    );
+  }
+
+  return (
+    <AppText className={textClassName} variant="body">
+      {message.content}
+    </AppText>
+  );
 }
 
 function ChatExperimentNotice() {
@@ -306,6 +398,11 @@ function ConversationPanel({
 
         {messages.map((message) => {
           const isOutgoing = message.senderId === session?.user?.id;
+          const hasRichMedia =
+            Boolean(message.mediaUrl) &&
+            (message.messageType === 'image' ||
+              message.messageType === 'video' ||
+              message.messageType === 'file');
 
           return (
             <View
@@ -314,14 +411,13 @@ function ConversationPanel({
               <View
                 className={
                   isOutgoing
-                    ? 'max-w-[82%] rounded-[26px] rounded-br-[10px] bg-[#FF9D3D] px-5 py-4'
-                    : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] px-5 py-4'
+                    ? `max-w-[82%] rounded-[26px] rounded-br-[10px] bg-[#FF9D3D] ${hasRichMedia ? 'p-3' : 'px-5 py-4'}`
+                    : `max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] ${hasRichMedia ? 'p-3' : 'px-5 py-4'}`
                 }>
-                <AppText
-                  className={isOutgoing ? 'text-[#201507]' : 'text-[#F3F0EB]'}
-                  variant="body">
-                  {message.content}
-                </AppText>
+                <MessageBody
+                  isOutgoing={isOutgoing}
+                  message={message}
+                />
                 <AppText
                   className={isOutgoing ? 'mt-2 text-[#7C5526]' : 'mt-2 text-[#97928B]'}
                   variant="code">

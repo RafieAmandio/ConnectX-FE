@@ -175,9 +175,16 @@ at `room:<conversationId>` for message inserts, typing, and presence.
 For the planned Figma-style chat UI database changes, see
 [supabase/chat-figma-db-spec.md](/Users/dwiki/Development/connectx/supabase/chat-figma-db-spec.md).
 
+If your backend already uses `public.users` as the profile table, use
+[supabase/chat-figma-backend-handoff.md](/Users/dwiki/Development/connectx/supabase/chat-figma-backend-handoff.md)
+as the handoff spec and do not add a duplicate `profiles` table.
+
 To apply the first concrete schema step for that design, run
 [supabase/chat-figma-schema.sql](/Users/dwiki/Development/connectx/supabase/chat-figma-schema.sql)
 after the base chat setup script.
+
+To extend chat from text-only messages to image/video/file messages, run
+[supabase/chat-media-message-support.sql](/Users/dwiki/Development/connectx/supabase/chat-media-message-support.sql).
 
 ### Two-emulator test flow
 

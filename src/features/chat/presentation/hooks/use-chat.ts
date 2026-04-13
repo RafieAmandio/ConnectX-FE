@@ -163,6 +163,7 @@ export function useSendChatMessage(roomId: string | null) {
         senderId: session.user.id,
         content: content.trim(),
         createdAt: new Date().toISOString(),
+        messageType: 'text',
         status: 'sending',
         clientId,
       };

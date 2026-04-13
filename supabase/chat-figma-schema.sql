@@ -1,6 +1,9 @@
 -- Chat Figma schema migration
 --
 -- Run this after `supabase/chat-experiment-setup.sql`.
+-- This migration assumes there is no existing `public.users` profile source.
+-- If your backend already keeps `public.users` in sync, do not add `public.profiles`.
+-- Instead, keep the participant columns on `conversation_summaries` and join from `public.users`.
 --
 -- Goal:
 -- - keep the current chat message + unread summary model

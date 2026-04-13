@@ -110,7 +110,9 @@ class SupabaseChatRepository implements ChatRepository {
   async getMessages(roomId: string, cursor?: string): Promise<PaginatedMessages> {
     let query = supabase
       .from('messages')
-      .select('id, room_id, sender_id, client_id, content, created_at')
+      .select(
+        'id, room_id, sender_id, client_id, content, created_at, media_mime_type, media_name, media_size_bytes, media_url, message_type, thumbnail_url'
+      )
       .eq('room_id', roomId)
       .order('created_at', { ascending: false })
       .limit(MESSAGE_PAGE_SIZE);
@@ -151,7 +153,9 @@ class SupabaseChatRepository implements ChatRepository {
         client_id: input.clientId ?? null,
         content: normalizedContent,
       })
-      .select('id, room_id, sender_id, client_id, content, created_at')
+      .select(
+        'id, room_id, sender_id, client_id, content, created_at, media_mime_type, media_name, media_size_bytes, media_url, message_type, thumbnail_url'
+      )
       .single();
 
     if (error) {
