@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  ListRenderItemInfo,
   KeyboardAvoidingView,
   Linking,
+  ListRenderItemInfo,
   Platform,
   Pressable,
   ScrollView,
@@ -285,6 +285,7 @@ function ConversationPanel({
   onBack?: () => void;
 }) {
   const { session } = useAuth();
+  const router = useRouter();
   const isChatEnabled = session?.method === 'google';
   const [draftMessage, setDraftMessage] = React.useState('');
   const roomId = conversation?.id ?? null;
@@ -411,18 +412,24 @@ function ConversationPanel({
     return null;
   }, [messages.length, messagesQuery.hasNextPage, messagesQuery.isFetchingNextPage]);
 
+
+
   if (!conversation) {
     return (
       <View className="flex-1 items-center justify-center px-6">
-        <AppText className="text-[#555A67]" variant="display">
-          Chat
+        <AppText className="text-white" variant="title">
+          Conversation unavailable
         </AppText>
         <AppText align="center" className="mt-2" tone="muted">
-          Pick a conversation to start chatting.
+          This chat could not be found or is no longer available.
         </AppText>
+        <Pressable className="mt-4" onPress={() => router.replace('/chat')}>
+          <AppText tone="signal">Open chats</AppText>
+        </Pressable>
       </View>
     );
   }
+
 
   return (
     <View className="flex-1">
@@ -552,11 +559,24 @@ function ConversationPanel({
 }
 
 export function ChatListScreen() {
+  const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const { session } = useAuth();
   const isChatEnabled = session?.method === 'google';
   const conversationsQuery = useChatRooms(isChatEnabled);
   const conversations = React.useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
   const [selectedConversationId, setSelectedConversationId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!conversationId) {
+      return;
+    }
+
+    if (!conversations.some((conversation) => conversation.id === conversationId)) {
+      return;
+    }
+
+    setSelectedConversationId(conversationId);
+  }, [conversationId, conversations]);
 
   React.useEffect(() => {
     if (conversations.length === 0) {

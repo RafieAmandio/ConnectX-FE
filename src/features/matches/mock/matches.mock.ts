@@ -7,7 +7,7 @@ import type {
 const matchBlueprints = [
   {
     matchId: 'mtc_789',
-    conversationId: 'conv_abc',
+    conversationId: '11111111-1111-1111-1111-111111111111',
     userId: 'usr_123',
     name: 'Ardi Wijaya',
     photoUrl: 'https://i.pravatar.cc/512?img=12',
@@ -35,7 +35,7 @@ const matchBlueprints = [
   },
   {
     matchId: 'mtc_790',
-    conversationId: 'conv_def',
+    conversationId: '11111111-1111-1111-1111-111111111113',
     userId: 'usr_456',
     name: 'Maya Chen',
     photoUrl: 'https://i.pravatar.cc/512?img=32',

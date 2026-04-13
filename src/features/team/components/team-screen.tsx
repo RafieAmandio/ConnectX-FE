@@ -1,7 +1,7 @@
-import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
+import React from 'react';
 import {
   Alert,
   Pressable,
@@ -9,9 +9,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { startupStageOptions, industryOptions } from '@features/onboarding/mock/catalogs';
-import { AppButton, AppCard, AppInput, AppPill, AppText } from '@shared/components';
+
+import { industryOptions, startupStageOptions } from '@features/onboarding/mock/catalogs';
+import { AppCard, AppText } from '@shared/components';
 import { Shadows } from '@shared/theme';
 
 import { useCurrentStartupId, useTeamOverview, useUpdateStartup } from '../hooks/use-team';
@@ -250,8 +252,10 @@ export function TeamScreen() {
   const draftRef = React.useRef<StartupDraft | null>(null);
   const autosaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestRequestIdRef = React.useRef(0);
+  const insets = useSafeAreaInsets();
 
   const overview = teamOverviewQuery.data;
+
 
   React.useEffect(() => {
     if (!overview) {
@@ -393,8 +397,13 @@ export function TeamScreen() {
         <Stack.Screen options={{ title: 'Team' }} />
         <ScrollView
           className="flex-1 bg-canvas"
-          contentContainerClassName="px-5 pt-4 pb-24"
+          contentContainerStyle={{
+            paddingBottom: insets.bottom + 96,
+            paddingHorizontal: 20,
+            paddingTop: insets.top + 16,
+          }}
           contentInsetAdjustmentBehavior="automatic">
+
           <AppCard className="gap-3">
             <AppText variant="subtitle">Loading team</AppText>
             <AppText tone="muted">
@@ -408,8 +417,11 @@ export function TeamScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Team', headerShown: false }} />
-      <View className="flex-1 bg-[#11131A] pt-14">
+      <Stack.Screen options={{ title: '', headerShown: false }} />
+      <View
+        className="flex-1 bg-[#11131A]"
+        style={{ paddingTop: insets.top }}>
+
         <View className="flex-row items-center gap-3 px-5 pb-6">
           <Ionicons color="#FF9A3E" name="rocket" size={28} />
           <AppText className="text-2xl font-bold text-text">Startup Team Builder</AppText>
@@ -417,9 +429,14 @@ export function TeamScreen() {
 
         <ScrollView
           className="flex-1"
-          contentContainerClassName="gap-6 px-5 pb-32"
+          contentContainerStyle={{
+            gap: 24,
+            paddingBottom: insets.bottom + 128,
+            paddingHorizontal: 20,
+          }}
           showsVerticalScrollIndicator={false}>
-          
+
+
           <AppCard className="gap-6 bg-[#1A1A1F] border-border/50">
             <View className="gap-4">
               <View className="gap-1 border-b border-border/30 pb-4">
@@ -476,7 +493,7 @@ export function TeamScreen() {
                     )
                   ))}
                   {/* Keep selection logic available via a simple pill if needed, or just text */}
-                  <Pressable 
+                  <Pressable
                     onPress={() => {
                       // Logic to open industry picker could go here
                     }}

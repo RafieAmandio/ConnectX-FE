@@ -228,11 +228,21 @@ export function MatchesScreen() {
                   onOpenAnalysis={() => router.push(`/match-analysis/${match.matchId}` as never)}
                   onOpenChat={() => {
                     if (!match.conversationId) {
+                      console.log('[Connects] Chat tapped', {
+                        conversationId: null,
+                        destination: '/chat',
+                        matchId: match.matchId,
+                      });
                       router.push('/chat');
                       return;
                     }
 
-                    router.push(`/conversation/${match.conversationId}`);
+                    console.log('[Connects] Chat tapped', {
+                      conversationId: match.conversationId,
+                      destination: `/chat?conversationId=${match.conversationId}`,
+                      matchId: match.matchId,
+                    });
+                    router.push(`/chat?conversationId=${match.conversationId}`);
                   }}
                 />
               ))}
