@@ -8,11 +8,13 @@ import type {
   AuthNextStep,
   AuthPhase,
   AuthSession,
+  AuthMethod,
   AuthUser,
   EmailAlreadyVerifiedResponse,
   OtpMessageResponse,
   OtpRateLimitResponse,
   RegisterPayload,
+  SocialAuthMethod,
   VerifyEmailErrorResponse,
   VerifyEmailPayload,
   VerifyEmailSuccessResponse,
@@ -47,7 +49,7 @@ const AUTH_PHASES = new Set([
   'pending_onboarding',
   'authenticated',
 ]);
-const AUTH_METHODS = new Set(['email', 'google', 'apple', 'developer-bypass']);
+const AUTH_METHODS = new Set(['email', 'google', 'linkedin', 'apple', 'developer-bypass']);
 
 type PersistedAuthState = {
   session: AuthSession | null;
@@ -86,6 +88,16 @@ export type GoogleOAuthVerifyResponse = AuthSuccessResponse & {
 export type GoogleSupabaseLoginResponse = {
   data: {
     oauth_provider: 'google';
+    user: AuthUser;
+  };
+  message: string;
+  next_step: 'REGISTRATION_COMPLETE';
+  status: 'success';
+};
+
+export type LinkedInSupabaseLoginResponse = {
+  data: {
+    oauth_provider: 'linkedin';
     user: AuthUser;
   };
   message: string;
@@ -275,14 +287,56 @@ function buildDisplayNameFromSupabaseUser(
   return buildDisplayNameFromEmail(user.email?.trim().toLowerCase() ?? 'connectx-member');
 }
 
-export function createGoogleAuthSessionFromSupabaseUser(
+function mapSupabaseProviderToSocialMethod(provider: string | null | undefined): SocialAuthMethod | null {
+  const normalizedProvider = provider?.trim().toLowerCase();
+
+  if (normalizedProvider === 'google') {
+    return 'google';
+  }
+
+  if (normalizedProvider === 'linkedin' || normalizedProvider === 'linkedin_oidc') {
+    return 'linkedin';
+  }
+
+  return null;
+}
+
+function resolveSocialAuthMethodFromSupabaseUser(user: SupabaseUser): SocialAuthMethod {
+  const providerFromMetadata =
+    typeof user.app_metadata?.provider === 'string' ? user.app_metadata.provider : null;
+  const metadataMethod = mapSupabaseProviderToSocialMethod(providerFromMetadata);
+
+  if (metadataMethod) {
+    return metadataMethod;
+  }
+
+  const providerFromIdentity = user.identities?.find((identity) =>
+    mapSupabaseProviderToSocialMethod(identity.provider)
+  )?.provider;
+  const identityMethod = mapSupabaseProviderToSocialMethod(providerFromIdentity);
+
+  if (identityMethod) {
+    return identityMethod;
+  }
+
+  throw new Error('Supabase social login succeeded, but the provider could not be determined.');
+}
+
+export function isSupabaseSocialAuthMethod(
+  method: AuthMethod | null | undefined
+): method is SocialAuthMethod {
+  return method === 'google' || method === 'linkedin';
+}
+
+export function createSocialAuthSessionFromSupabaseUser(
   user: SupabaseUser,
+  method?: SocialAuthMethod,
   displayName?: string | null
 ): AuthSession {
   const normalizedEmail = user.email?.trim().toLowerCase();
 
   if (!normalizedEmail) {
-    throw new Error('Supabase Google login succeeded, but no email was returned.');
+    throw new Error('Supabase social login succeeded, but no email was returned.');
   }
 
   const now = new Date().toISOString();
@@ -295,7 +349,7 @@ export function createGoogleAuthSessionFromSupabaseUser(
     emailOtpExpiresAt: null,
     emailOtpLastSentAt: null,
     emailOtpResendAvailableAt: null,
-    method: 'google',
+    method: method ?? resolveSocialAuthMethodFromSupabaseUser(user),
     onboardingCompletedAt: now,
     pendingWhatsappNumber: null,
     user: {
@@ -313,11 +367,12 @@ export function createGoogleAuthSessionFromSupabaseUser(
   };
 }
 
-export function createGoogleAuthSessionFromSupabaseSession(
+export function createSocialAuthSessionFromSupabaseSession(
   session: SupabaseSession,
+  method?: SocialAuthMethod,
   displayName?: string | null
 ) {
-  return createGoogleAuthSessionFromSupabaseUser(session.user, displayName);
+  return createSocialAuthSessionFromSupabaseUser(session.user, method, displayName);
 }
 
 async function requireStoredAuthState() {
@@ -460,7 +515,11 @@ export async function loginWithGoogleSupabase(
     throw new Error('Supabase Google sign-in succeeded, but no user profile was returned.');
   }
 
-  const session = createGoogleAuthSessionFromSupabaseUser(supabaseUser, payload.displayName);
+  const session = createSocialAuthSessionFromSupabaseUser(
+    supabaseUser,
+    'google',
+    payload.displayName
+  );
   const response: GoogleSupabaseLoginResponse = {
     data: {
       oauth_provider: 'google',

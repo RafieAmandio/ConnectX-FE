@@ -29,6 +29,10 @@ import {
   useSendChatMessage,
 } from '../presentation/hooks/use-chat';
 
+function isSocialAuthSession(method: string | null | undefined) {
+  return method === 'google' || method === 'linkedin';
+}
+
 function createClientId(userId: string) {
   return `${userId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -186,11 +190,11 @@ function ChatExperimentNotice() {
   return (
     <View className="flex-1 items-center justify-center gap-3 bg-[#111015] px-8">
       <AppText className="text-white" variant="title">
-        Chat experiment requires Google login
+        Chat experiment requires social login
       </AppText>
       <AppText align="center" tone="muted">
-        Sign in with Google to create a Supabase session, then seed a shared room in Supabase to
-        test realtime chat across two devices.
+        Sign in with Google or LinkedIn to create a Supabase session, then seed a shared room in
+        Supabase to test realtime chat across two devices.
       </AppText>
     </View>
   );
@@ -286,7 +290,7 @@ function ConversationPanel({
 }) {
   const { session } = useAuth();
   const router = useRouter();
-  const isChatEnabled = session?.method === 'google';
+  const isChatEnabled = isSocialAuthSession(session?.method);
   const [draftMessage, setDraftMessage] = React.useState('');
   const roomId = conversation?.id ?? null;
   const messagesQuery = useRoomMessages(roomId, isChatEnabled && Boolean(roomId));
@@ -561,7 +565,7 @@ function ConversationPanel({
 export function ChatListScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
   const { session } = useAuth();
-  const isChatEnabled = session?.method === 'google';
+  const isChatEnabled = isSocialAuthSession(session?.method);
   const conversationsQuery = useChatRooms(isChatEnabled);
   const conversations = React.useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
   const [selectedConversationId, setSelectedConversationId] = React.useState<string | null>(null);
@@ -662,7 +666,7 @@ export function ChatListScreen() {
             </AppText>
             <AppText align="center" tone="muted">
               No Supabase rooms are available for this user yet. Seed a test room and add both
-              Google users to `chat_room_members`.
+              social-login users to `chat_room_members`.
             </AppText>
           </View>
         ) : null}
@@ -676,7 +680,7 @@ export function ChatListScreen() {
 export function ChatConversationScreen({ conversationId }: { conversationId: string }) {
   const router = useRouter();
   const { session } = useAuth();
-  const isChatEnabled = session?.method === 'google';
+  const isChatEnabled = isSocialAuthSession(session?.method);
   const conversationsQuery = useChatRooms(isChatEnabled);
   const conversation = conversationsQuery.data?.find((room) => room.id === conversationId) ?? null;
 

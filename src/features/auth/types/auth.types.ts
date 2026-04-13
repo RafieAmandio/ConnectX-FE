@@ -1,4 +1,5 @@
-export type AuthMethod = 'email' | 'google' | 'apple' | 'developer-bypass';
+export type AuthMethod = 'email' | 'google' | 'linkedin' | 'apple' | 'developer-bypass';
+export type SocialAuthMethod = 'google' | 'linkedin';
 
 export type AuthPhase =
   | 'signed_out'
@@ -69,6 +70,10 @@ export type GoogleAuthResult = {
   idToken: string;
   fcmToken: string | null;
   userId: string;
+};
+
+export type LinkedInAuthResult = {
+  provider: 'linkedin';
 };
 
 export type OtpMessageResponse = {

@@ -6,6 +6,11 @@ export { VerifyOtpScreen } from './components/verify-otp-screen';
 export { VerifyWhatsappScreen } from './components/verify-whatsapp-screen';
 export { useAuth } from './hooks/use-auth';
 export { AuthProvider } from './store/auth-provider';
-export type { AuthPhase, AuthSession, GoogleAuthResult } from './types/auth.types';
+export type {
+  AuthPhase,
+  AuthSession,
+  GoogleAuthResult,
+  LinkedInAuthResult,
+  SocialAuthMethod,
+} from './types/auth.types';
 export { canAccessProtectedRoutes, getRouteForAuthPhase } from './utils/auth-routing';
-

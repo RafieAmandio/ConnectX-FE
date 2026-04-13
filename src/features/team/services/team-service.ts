@@ -23,7 +23,7 @@ function hasUsableTeamOverviewResponse(payload: unknown): payload is TeamOvervie
     return false;
   }
 
-  const data = payload.data;
+  const data = payload.data as { startup?: { id?: unknown; name?: unknown } };
 
   if (!data || typeof data !== 'object') {
     return false;

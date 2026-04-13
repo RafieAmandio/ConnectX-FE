@@ -10,4 +10,4 @@ export {
   Spacing,
   Typography,
 } from '@shared/theme';
-export type { AuthSession, GoogleAuthResult } from '@features/auth';
+export type { AuthSession, GoogleAuthResult, LinkedInAuthResult, SocialAuthMethod } from '@features/auth';

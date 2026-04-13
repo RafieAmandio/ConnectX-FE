@@ -158,15 +158,17 @@ npx expo start
 
 ## Supabase Chat Experiment
 
-The Google login path now creates a Supabase session directly and bypasses the email/WhatsApp
-verification screens. Email/password login still uses the existing backend verification flow.
+The Google and LinkedIn login paths now create a Supabase session directly and bypass the
+email/WhatsApp verification screens. Email/password login still uses the existing backend
+verification flow.
 
 Set up Supabase first:
 
-1. In Supabase Auth, enable Google and use the same Google project/client family as the app.
-2. Run [supabase/chat-experiment-setup.sql](/Users/dwiki/Development/connectx/supabase/chat-experiment-setup.sql) in the Supabase SQL editor.
-3. Make sure `messages` and `conversation_summaries` are included in the `supabase_realtime` publication.
-4. If you use channel Presence/Broadcast, keep the `realtime.messages` policies from the setup script in place so room members can join `room:<uuid>` topics.
+1. In Supabase Auth, enable Google and LinkedIn.
+2. For LinkedIn, make sure your Supabase Auth Redirect URLs allow `connectx://auth/linkedin`.
+3. Run [supabase/chat-experiment-setup.sql](/Users/dwiki/Development/connectx/supabase/chat-experiment-setup.sql) in the Supabase SQL editor.
+4. Make sure `messages` and `conversation_summaries` are included in the `supabase_realtime` publication.
+5. If you use channel Presence/Broadcast, keep the `realtime.messages` policies from the setup script in place so room members can join `room:<uuid>` topics.
 
 The inbox list now reads from `conversation_summaries`, a per-user summary table maintained by
 Postgres triggers. Message history still comes from `messages`, and the active room still subscribes
@@ -189,7 +191,7 @@ To extend chat from text-only messages to image/video/file messages, run
 ### Two-emulator test flow
 
 1. Run the app on an iPhone simulator and an Android emulator.
-2. Sign in with a different Google account on each device.
+2. Sign in with a different Google or LinkedIn account on each device.
 3. In Supabase SQL editor, run:
 
 ```sql
