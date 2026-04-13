@@ -1,47 +1,11 @@
 import type {
+  CreateStartupInvitationRequest,
+  CreateStartupInvitationResponse,
   TeamOverviewResponse,
-  TeamEntityOption,
-  UpdateStartupRequest,
-  UpdateStartupResponse,
 } from '../types/team.types';
-
-const INDUSTRY_LABELS: Record<string, string> = {
-  ai: 'AI & Automation',
-  fintech: 'Fintech',
-  healthtech: 'Healthtech',
-  edtech: 'Edtech',
-  climate: 'Climate',
-  consumer: 'Consumer',
-  b2b_saas: 'B2B SaaS',
-  marketplace: 'Marketplace',
-  logistics: 'Logistics',
-  web3: 'Web3',
-  devtools: 'Developer Tools',
-  media: 'Media & Creator Economy',
-};
-
-const STAGE_LABELS: Record<string, string> = {
-  idea: 'Idea',
-  mvp: 'MVP',
-  live: 'Live',
-};
 
 function cloneResponse(response: TeamOverviewResponse) {
   return JSON.parse(JSON.stringify(response)) as TeamOverviewResponse;
-}
-
-function mapIndustry(industryId: string): TeamEntityOption {
-  return {
-    id: industryId,
-    label: INDUSTRY_LABELS[industryId] ?? industryId,
-  };
-}
-
-function mapStage(stageId: string): TeamEntityOption {
-  return {
-    id: stageId,
-    label: STAGE_LABELS[stageId] ?? stageId,
-  };
 }
 
 const initialMockResponse: TeamOverviewResponse = {
@@ -129,37 +93,16 @@ export function getMockTeamOverviewResponse(startupId = 'stp_local_demo'): TeamO
   return nextResponse;
 }
 
-export function applyMockStartupUpdate(
-  startupId: string,
-  payload: UpdateStartupRequest
-): UpdateStartupResponse {
-  const nextResponse = cloneResponse(mockTeamOverviewState);
-
-  if (payload.name !== undefined) {
-    nextResponse.data.startup.name = payload.name.trim();
-  }
-
-  if (payload.description !== undefined) {
-    nextResponse.data.startup.description = payload.description.trim();
-  }
-
-  if (payload.industryId !== undefined) {
-    nextResponse.data.startup.industry = mapIndustry(payload.industryId);
-  }
-
-  if (payload.stageId !== undefined) {
-    nextResponse.data.startup.stage = mapStage(payload.stageId);
-  }
-
-  nextResponse.data.startup.id = startupId;
-  mockTeamOverviewState = nextResponse;
-
+export function createMockStartupInvitationResponse(
+  payload: CreateStartupInvitationRequest
+): CreateStartupInvitationResponse {
   return {
     success: true,
-    message: 'Startup updated',
+    message: `Invitation sent to ${payload.email.trim().toLowerCase()}`,
     data: {
-      ...nextResponse.data.startup,
-      updatedAt: new Date().toISOString(),
+      invitationId: `inv_${Date.now().toString(36)}`,
+      email: payload.email.trim().toLowerCase(),
+      status: 'pending',
     },
   };
 }

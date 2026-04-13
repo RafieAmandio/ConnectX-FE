@@ -1,21 +1,21 @@
-import { apiFetch } from '@shared/services/api';
+import { ApiError, apiFetch } from '@shared/services/api';
 
-import { applyMockStartupUpdate, getMockTeamOverviewResponse } from '../mock/team.mock';
+import {
+  createMockStartupInvitationResponse,
+  getMockTeamOverviewResponse,
+} from '../mock/team.mock';
 import type {
   CreateStartupInvitationRequest,
   CreateStartupInvitationResponse,
   TeamOverviewResponse,
   UpdateRequiredRolesRequest,
   UpdateRequiredRolesResponse,
-  UpdateStartupRequest,
-  UpdateStartupResponse,
 } from '../types/team.types';
 
 export const TEAM_API = {
-  OVERVIEW: (startupId: string) => `/api/v1/startups/${startupId}/team-overview`,
-  STARTUP: (startupId: string) => `/api/v1/startups/${startupId}`,
+  OVERVIEW: '/api/v1/me/startup/team-overview',
+  INVITATIONS: '/api/v1/me/startup/invitations',
   REQUIRED_ROLES: (startupId: string) => `/api/v1/startups/${startupId}/required-roles`,
-  INVITATIONS: (startupId: string) => `/api/v1/startups/${startupId}/invitations`,
 } as const;
 
 function hasUsableTeamOverviewResponse(payload: unknown): payload is TeamOverviewResponse {
@@ -36,28 +36,37 @@ function hasUsableTeamOverviewResponse(payload: unknown): payload is TeamOvervie
   return typeof data.startup.id === 'string' && typeof data.startup.name === 'string';
 }
 
-export async function fetchTeamOverview(startupId: string) {
+function getApiErrorCode(error: unknown) {
+  if (!(error instanceof ApiError) || !error.payload || typeof error.payload !== 'object') {
+    return null;
+  }
+
+  if (!('code' in error.payload)) {
+    return null;
+  }
+
+  return typeof error.payload.code === 'string' ? error.payload.code : null;
+}
+
+export function isNoActiveStartupError(error: unknown) {
+  return error instanceof ApiError && error.status === 404 && getApiErrorCode(error) === 'NO_ACTIVE_STARTUP';
+}
+
+export async function fetchTeamOverview() {
   try {
-    const response = await apiFetch<TeamOverviewResponse>(TEAM_API.OVERVIEW(startupId));
+    const response = await apiFetch<TeamOverviewResponse>(TEAM_API.OVERVIEW);
 
     if (!hasUsableTeamOverviewResponse(response)) {
-      return getMockTeamOverviewResponse(startupId);
+      return getMockTeamOverviewResponse();
     }
 
     return response;
-  } catch {
-    return getMockTeamOverviewResponse(startupId);
-  }
-}
+  } catch (error) {
+    if (isNoActiveStartupError(error)) {
+      throw error;
+    }
 
-export async function updateStartup(startupId: string, payload: UpdateStartupRequest) {
-  try {
-    return await apiFetch<UpdateStartupResponse>(TEAM_API.STARTUP(startupId), {
-      body: payload as unknown as BodyInit,
-      method: 'PATCH',
-    });
-  } catch {
-    return applyMockStartupUpdate(startupId, payload);
+    return getMockTeamOverviewResponse();
   }
 }
 
@@ -68,12 +77,17 @@ export async function updateRequiredRoles(startupId: string, payload: UpdateRequ
   });
 }
 
-export async function createStartupInvitation(
-  startupId: string,
-  payload: CreateStartupInvitationRequest
-) {
-  return apiFetch<CreateStartupInvitationResponse>(TEAM_API.INVITATIONS(startupId), {
-    body: payload as unknown as BodyInit,
-    method: 'POST',
-  });
+export async function createStartupInvitation(payload: CreateStartupInvitationRequest) {
+  try {
+    return await apiFetch<CreateStartupInvitationResponse>(TEAM_API.INVITATIONS, {
+      body: payload as unknown as BodyInit,
+      method: 'POST',
+    });
+  } catch (error) {
+    if (isNoActiveStartupError(error)) {
+      throw error;
+    }
+
+    return createMockStartupInvitationResponse(payload);
+  }
 }

@@ -3,47 +3,20 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   Pressable,
   ScrollView,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
-import { industryOptions, startupStageOptions } from '@features/onboarding/mock/catalogs';
-import { AppCard, AppText } from '@shared/components';
+import { AppButton, AppCard, AppInput, AppText } from '@shared/components';
 import { Shadows } from '@shared/theme';
 
-import { useCurrentStartupId, useTeamOverview, useUpdateStartup } from '../hooks/use-team';
-import type { TeamMember, UpdateStartupRequest } from '../types/team.types';
-
-type StartupDraft = {
-  name: string;
-  description: string;
-  industryId: string;
-  stageId: string;
-};
-
-const industryChoices = industryOptions.map((option) => ({
-  id: option.value,
-  label: option.label.en,
-}));
-
-const stageChoices = startupStageOptions.map((option) => ({
-  id: option.value,
-  label: option.label.en,
-}));
-
-function getInitials(value: string) {
-  return value
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
+import { useCreateStartupInvitation, useTeamOverview } from '../hooks/use-team';
+import { isNoActiveStartupError } from '../services/team-service';
+import type { TeamMember } from '../types/team.types';
 
 function getCommitmentLabel(value: string) {
   switch (value) {
@@ -58,91 +31,21 @@ function getCommitmentLabel(value: string) {
   }
 }
 
-function toDraft(startup: {
-  name: string;
-  description: string;
-  industry: { id: string };
-  stage: { id: string };
-}): StartupDraft {
-  return {
-    name: startup.name,
-    description: startup.description,
-    industryId: startup.industry.id,
-    stageId: startup.stage.id,
-  };
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function diffStartupDraft(current: StartupDraft, saved: StartupDraft): UpdateStartupRequest {
-  const patch: UpdateStartupRequest = {};
-
-  if (current.name.trim() !== saved.name.trim()) {
-    patch.name = current.name.trim();
-  }
-
-  if (current.description.trim() !== saved.description.trim()) {
-    patch.description = current.description.trim();
-  }
-
-  if (current.industryId !== saved.industryId) {
-    patch.industryId = current.industryId;
-  }
-
-  if (current.stageId !== saved.stageId) {
-    patch.stageId = current.stageId;
-  }
-
-  return patch;
-}
-
-function hasPatch(payload: UpdateStartupRequest) {
-  return Object.keys(payload).length > 0;
-}
-
-function SelectablePill({
-  active,
+function InfoPill({
   label,
-  onPress,
 }: {
-  active: boolean;
   label: string;
-  onPress: () => void;
 }) {
   return (
-    <Pressable
-      className={active
-        ? 'rounded-full border border-[#FF9A3E]/30 bg-[#FF9A3E]/10 px-4 py-2'
-        : 'rounded-full border border-border bg-[#1A1A1F] px-4 py-2'}
-      onPress={onPress}>
-      <AppText tone={active ? 'accent' : 'muted'} variant="body">
+    <View className="rounded-full border border-[#FF9A3E]/30 bg-[#FF9A3E]/10 px-4 py-2">
+      <AppText tone="accent" variant="body">
         {label}
       </AppText>
-    </Pressable>
-  );
-}
-
-function StagePill({
-  active,
-  label,
-  onPress,
-}: {
-  active: boolean;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      className={active
-        ? 'h-[52px] w-[52px] items-center justify-center rounded-full border border-[#FF9A3E] bg-[#FF9A3E]/20'
-        : 'h-[52px] w-[52px] items-center justify-center rounded-full border border-border bg-[#1A1A1F]'}
-      onPress={onPress}>
-      <AppText
-        align="center"
-        className="text-[10px] leading-3"
-        tone={active ? 'accent' : 'muted'}
-        variant="label">
-        {label}
-      </AppText>
-    </Pressable>
+    </View>
   );
 }
 
@@ -241,157 +144,57 @@ function ActionButton({
 
 export function TeamScreen() {
   const router = useRouter();
-  const startupId = useCurrentStartupId();
-  const teamOverviewQuery = useTeamOverview(startupId);
-  const updateStartupMutation = useUpdateStartup(startupId);
-  const [draft, setDraft] = React.useState<StartupDraft | null>(null);
-  const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const initializedStartupIdRef = React.useRef<string | null>(null);
-  const savedDraftRef = React.useRef<StartupDraft | null>(null);
-  const draftRef = React.useRef<StartupDraft | null>(null);
-  const autosaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestRequestIdRef = React.useRef(0);
+  const teamOverviewQuery = useTeamOverview();
+  const createStartupInvitationMutation = useCreateStartupInvitation();
+  const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
+  const [inviteEmail, setInviteEmail] = React.useState('');
+  const [inviteError, setInviteError] = React.useState<string | null>(null);
+  const [inviteSuccessMessage, setInviteSuccessMessage] = React.useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
   const overview = teamOverviewQuery.data;
-
-
-  React.useEffect(() => {
-    if (!overview) {
-      return;
-    }
-
-    if (initializedStartupIdRef.current === startupId && draftRef.current) {
-      return;
-    }
-
-    const nextDraft = toDraft(overview.data.startup);
-    initializedStartupIdRef.current = startupId;
-    savedDraftRef.current = nextDraft;
-    draftRef.current = nextDraft;
-    setDraft(nextDraft);
-    setSaveError(null);
-  }, [overview, startupId]);
-
-  React.useEffect(() => {
-    return () => {
-      if (autosaveTimerRef.current) {
-        clearTimeout(autosaveTimerRef.current);
-      }
-    };
-  }, []);
-
-  const applyDraft = React.useCallback((updater: (current: StartupDraft) => StartupDraft) => {
-    setDraft((current) => {
-      if (!current) {
-        return current;
-      }
-
-      const nextDraft = updater(current);
-      draftRef.current = nextDraft;
-      return nextDraft;
-    });
-  }, []);
-
-  const savePatch = React.useCallback(
-    async (payload: UpdateStartupRequest) => {
-      if (!hasPatch(payload)) {
-        return;
-      }
-
-      const requestId = latestRequestIdRef.current + 1;
-      latestRequestIdRef.current = requestId;
-      setIsSaving(true);
-      setSaveError(null);
-
-      try {
-        const result = await updateStartupMutation.mutateAsync({
-          payload,
-          requestId,
-        });
-
-        if (requestId !== latestRequestIdRef.current) {
-          return;
-        }
-
-        const savedDraft = toDraft(result.response.data);
-        const savedKeys = Object.keys(payload) as (keyof UpdateStartupRequest)[];
-
-        savedDraftRef.current = savedDraft;
-        setDraft((current) => {
-          if (!current) {
-            draftRef.current = savedDraft;
-            return savedDraft;
-          }
-
-          const nextDraft = { ...current };
-
-          for (const key of savedKeys) {
-            if (key === 'name') {
-              nextDraft.name = savedDraft.name;
-            }
-
-            if (key === 'description') {
-              nextDraft.description = savedDraft.description;
-            }
-
-            if (key === 'industryId') {
-              nextDraft.industryId = savedDraft.industryId;
-            }
-
-            if (key === 'stageId') {
-              nextDraft.stageId = savedDraft.stageId;
-            }
-          }
-
-          draftRef.current = nextDraft;
-          return nextDraft;
-        });
-      } catch (error) {
-        if (requestId !== latestRequestIdRef.current) {
-          return;
-        }
-
-        setSaveError(error instanceof Error ? error.message : 'Unable to save startup changes.');
-      } finally {
-        if (requestId === latestRequestIdRef.current) {
-          setIsSaving(false);
-        }
-      }
-    },
-    [updateStartupMutation]
-  );
-
-  const flushAutosave = React.useCallback(async () => {
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-    }
-
-    if (!draftRef.current || !savedDraftRef.current) {
-      return;
-    }
-
-    const payload = diffStartupDraft(draftRef.current, savedDraftRef.current);
-    await savePatch(payload);
-  }, [savePatch]);
-
-  const scheduleAutosave = React.useCallback(() => {
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
-    }
-
-    autosaveTimerRef.current = setTimeout(() => {
-      void flushAutosave();
-    }, 800);
-  }, [flushAutosave]);
 
   const navigateToHome = React.useCallback(() => {
     router.navigate('/(tabs)' as never);
   }, [router]);
 
-  if (!draft || !overview) {
+  const openInviteComposer = React.useCallback(() => {
+    setInviteComposerVisible(true);
+    setInviteError(null);
+    setInviteSuccessMessage(null);
+  }, []);
+
+  const closeInviteComposer = React.useCallback(() => {
+    setInviteComposerVisible(false);
+    setInviteEmail('');
+    setInviteError(null);
+  }, []);
+
+  const handleInvite = React.useCallback(async () => {
+    const normalizedEmail = inviteEmail.trim().toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setInviteError('Enter a valid email address.');
+      return;
+    }
+
+    setInviteError(null);
+    setInviteSuccessMessage(null);
+
+    try {
+      const response = await createStartupInvitationMutation.mutateAsync({
+        email: normalizedEmail,
+      });
+
+      setInviteComposerVisible(false);
+      setInviteEmail('');
+      setInviteSuccessMessage(response.message);
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Unable to send invitation.');
+    }
+  }, [createStartupInvitationMutation, inviteEmail]);
+
+  if (teamOverviewQuery.isPending && !overview) {
     return (
       <>
         <Stack.Screen options={{ title: 'Team' }} />
@@ -414,6 +217,55 @@ export function TeamScreen() {
       </>
     );
   }
+
+  if (teamOverviewQuery.isError && !overview) {
+    const isNoStartupState = isNoActiveStartupError(teamOverviewQuery.error);
+
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Team' }} />
+        <ScrollView
+          className="flex-1 bg-canvas"
+          contentContainerStyle={{
+            paddingBottom: insets.bottom + 96,
+            paddingHorizontal: 20,
+            paddingTop: insets.top + 16,
+          }}
+          contentInsetAdjustmentBehavior="automatic">
+          <AppCard className="gap-4">
+            <View className="flex-row items-center gap-3">
+              <Ionicons
+                color={isNoStartupState ? '#98A2B3' : '#FF9A3E'}
+                name={isNoStartupState ? 'people-outline' : 'alert-circle-outline'}
+                size={24}
+              />
+              <AppText variant="subtitle">
+                {isNoStartupState ? 'No startup team yet' : 'Unable to load team'}
+              </AppText>
+            </View>
+            <AppText tone="muted">
+              {isNoStartupState
+                ? 'This account is not linked to an active startup yet. Once you create or join a startup team, it will show up here.'
+                : 'We could not load your startup team right now. Try again in a moment.'}
+            </AppText>
+            <AppButton
+              label={teamOverviewQuery.isRefetching ? 'Refreshing...' : 'Try Again'}
+              onPress={() => {
+                void teamOverviewQuery.refetch();
+              }}
+              variant="secondary"
+            />
+          </AppCard>
+        </ScrollView>
+      </>
+    );
+  }
+
+  if (!overview) {
+    return null;
+  }
+
+  const startup = overview.data.startup;
 
   return (
     <>
@@ -441,43 +293,16 @@ export function TeamScreen() {
             <View className="gap-4">
               <View className="gap-1 border-b border-border/30 pb-4">
                 <AppText tone="muted" variant="label">Startup Name</AppText>
-                <TextInput
-                  onBlur={() => {
-                    void flushAutosave();
-                  }}
-                  onChangeText={(value) => {
-                    applyDraft((current) => ({
-                      ...current,
-                      name: value,
-                    }));
-                    scheduleAutosave();
-                  }}
-                  className="font-display text-xl font-bold text-text py-1"
-                  value={draft.name}
-                  placeholder="My Startup"
-                  placeholderTextColor="#667085"
-                />
+                <AppText className="font-display text-xl font-bold text-text py-1">
+                  {startup.name}
+                </AppText>
               </View>
 
               <View className="gap-1 border-b border-border/30 pb-4">
-                <AppText tone="muted" variant="label">Description</AppText>
-                <TextInput
-                  multiline
-                  onBlur={() => {
-                    void flushAutosave();
-                  }}
-                  onChangeText={(value) => {
-                    applyDraft((current) => ({
-                      ...current,
-                      description: value,
-                    }));
-                    scheduleAutosave();
-                  }}
-                  className="font-body text-[15px] leading-6 text-text-muted py-1"
-                  value={draft.description}
-                  placeholder="Al-powered supply chain platform..."
-                  placeholderTextColor="#667085"
-                />
+                <AppText tone="muted" variant="label">Startup Idea</AppText>
+                <AppText className="font-body text-[15px] leading-6 text-text-muted py-1">
+                  {startup.description || 'No startup description yet.'}
+                </AppText>
               </View>
             </View>
 
@@ -485,56 +310,17 @@ export function TeamScreen() {
               <View className="flex-1 gap-2">
                 <AppText tone="muted" variant="label">Industry</AppText>
                 <View className="flex-row flex-wrap gap-2">
-                  {industryChoices.map((option) => (
-                    draft.industryId === option.id && (
-                      <AppText key={option.id} className="text-[17px] font-semibold text-text">
-                        {option.label}
-                      </AppText>
-                    )
-                  ))}
-                  {/* Keep selection logic available via a simple pill if needed, or just text */}
-                  <Pressable
-                    onPress={() => {
-                      // Logic to open industry picker could go here
-                    }}
-                    className="hidden">
-                    <AppText tone="accent">Change</AppText>
-                  </Pressable>
+                  <InfoPill label={startup.industry.label} />
                 </View>
               </View>
 
-              <View className="flex-1 gap-3">
+              <View className="flex-1 gap-2">
                 <AppText tone="muted" variant="label">Stage</AppText>
-                <View className="flex-row gap-2">
-                  {stageChoices.slice(0, 4).map((option) => (
-                    <StagePill
-                      key={option.id}
-                      active={draft.stageId === option.id}
-                      label={option.label}
-                      onPress={() => {
-                        applyDraft((current) => ({
-                          ...current,
-                          stageId: option.id,
-                        }));
-                        const nextDraft = draftRef.current;
-                        const savedDraft = savedDraftRef.current;
-                        if (!nextDraft || !savedDraft) return;
-                        void savePatch(diffStartupDraft(nextDraft, savedDraft));
-                      }}
-                    />
-                  ))}
+                <View className="flex-row flex-wrap gap-2">
+                  <InfoPill label={startup.stage.label} />
                 </View>
               </View>
             </View>
-
-            {saveError && (
-              <View className="flex-row items-center justify-between gap-3 rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
-                <AppText className="flex-1" tone="danger">{saveError}</AppText>
-                <Pressable onPress={() => void flushAutosave()}>
-                  <AppText tone="accent" variant="bodyStrong">Retry</AppText>
-                </Pressable>
-              </View>
-            )}
           </AppCard>
 
           <AppCard className="gap-4 bg-[#1A1A1F] border-border/50">
@@ -565,6 +351,70 @@ export function TeamScreen() {
             </View>
           </View>
 
+          {inviteSuccessMessage ? (
+            <View className="rounded-[18px] border border-[#FF9A3E]/30 bg-[#FF9A3E]/10 px-4 py-3">
+              <AppText tone="accent" variant="bodyStrong">{inviteSuccessMessage}</AppText>
+            </View>
+          ) : null}
+
+          {inviteComposerVisible ? (
+            <AppCard className="gap-4 bg-[#1A1A1F] border-border/50">
+              <View className="gap-1">
+                <AppText variant="subtitle">Invite by email</AppText>
+                <AppText tone="muted">
+                  Send a team invitation using the startup linked to your current account.
+                </AppText>
+              </View>
+
+              <AppInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                label="Email"
+                onChangeText={(value) => {
+                  setInviteEmail(value);
+                  if (inviteError) {
+                    setInviteError(null);
+                  }
+                }}
+                placeholder="person@example.com"
+                value={inviteEmail}
+              />
+
+              {inviteError ? (
+                <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
+                  <AppText tone="danger">{inviteError}</AppText>
+                </View>
+              ) : null}
+
+              <View className="flex-row gap-3">
+                <AppButton
+                  className="flex-1"
+                  disabled={createStartupInvitationMutation.isPending}
+                  label="Cancel"
+                  onPress={closeInviteComposer}
+                  variant="secondary"
+                />
+                <Pressable
+                  className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#FF9A3E] px-4 py-3"
+                  disabled={createStartupInvitationMutation.isPending}
+                  onPress={() => {
+                    void handleInvite();
+                  }}
+                  style={{ opacity: createStartupInvitationMutation.isPending ? 0.7 : 1 }}>
+                  {createStartupInvitationMutation.isPending ? (
+                    <ActivityIndicator color="#11131A" size="small" />
+                  ) : (
+                    <Ionicons color="#11131A" name="mail-outline" size={18} />
+                  )}
+                  <AppText className="text-[#11131A]" variant="bodyStrong">
+                    {createStartupInvitationMutation.isPending ? 'Sending...' : 'Send Invite'}
+                  </AppText>
+                </Pressable>
+              </View>
+            </AppCard>
+          ) : null}
+
           <View className="flex-row gap-4 mt-2">
             <ActionButton
               icon="search-outline"
@@ -575,7 +425,7 @@ export function TeamScreen() {
             <ActionButton
               icon="mail-outline"
               label="Invite"
-              onPress={() => Alert.alert('Invite', 'Coming soon.')}
+              onPress={openInviteComposer}
               variant="secondary"
             />
           </View>

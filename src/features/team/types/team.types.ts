@@ -54,21 +54,6 @@ export type TeamOverviewResponse = {
   data: TeamOverviewData;
 };
 
-export type UpdateStartupRequest = Partial<{
-  name: string;
-  description: string;
-  industryId: string;
-  stageId: string;
-}>;
-
-export type UpdateStartupResponse = {
-  success: boolean;
-  message: string;
-  data: StartupTeamOverview & {
-    updatedAt: string;
-  };
-};
-
 export type UpdateRequiredRolesRequest = {
   roleIds: string[];
 };
@@ -85,7 +70,6 @@ export type UpdateRequiredRolesResponse = {
 
 export type CreateStartupInvitationRequest = {
   email: string;
-  roleId?: string;
 };
 
 export type CreateStartupInvitationResponse = {
@@ -94,7 +78,6 @@ export type CreateStartupInvitationResponse = {
   data: {
     invitationId: string;
     email: string;
-    roleId: string | null;
     status: 'pending' | string;
   };
 };

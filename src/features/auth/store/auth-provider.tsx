@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { supabaseChatRepository } from '@features/chat/data/supabase/SupabaseChatRepository';
 import { configureApiClient } from '@shared/services/api';
 import {
   clearSupabaseSession,
@@ -90,6 +91,14 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   React.useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+
+  const reconnectChatRealtime = React.useCallback(() => {
+    void supabaseChatRepository.reconnectRealtime().catch((error) => {
+      if (__DEV__) {
+        console.warn('[chat] failed to reconnect realtime subscriptions', error);
+      }
+    });
+  }, []);
 
   const signOut = React.useCallback(async () => {
     const shouldSignOutSupabase = session?.method === 'google';
@@ -245,6 +254,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     const syncAutoRefresh = (state: AppStateStatus) => {
       if (state === 'active') {
         supabase.auth.startAutoRefresh();
+        reconnectChatRealtime();
       } else {
         supabase.auth.stopAutoRefresh();
       }
@@ -256,7 +266,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [reconnectChatRealtime]);
 
   React.useEffect(() => {
     const {
@@ -284,13 +294,14 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         ]);
         setSession(nextSession);
         setAuthPhase(nextSession.authPhase);
+        reconnectChatRealtime();
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [reconnectChatRealtime]);
 
   const login = React.useCallback(
     async (payload: LoginPayload) => {

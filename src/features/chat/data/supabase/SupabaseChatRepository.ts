@@ -88,6 +88,23 @@ class SupabaseChatRepository implements ChatRepository {
   private roomStates = new Map<string, RoomChannelState>();
   private summaryStates = new Map<string, SummaryChannelState>();
 
+  async reconnectRealtime() {
+    const activeRoomIds = Array.from(this.roomStates.entries())
+      .filter(([, state]) => state.handlers.size || state.presenceHandlers.size)
+      .map(([roomId]) => roomId);
+    const activeUserIds = Array.from(this.summaryStates.entries())
+      .filter(([, state]) => state.handlers.size)
+      .map(([userId]) => userId);
+
+    for (const roomId of activeRoomIds) {
+      this.replaceRoomState(roomId);
+    }
+
+    for (const userId of activeUserIds) {
+      this.replaceConversationSummaryState(userId);
+    }
+  }
+
   async getConversationSummaries(): Promise<ChatRoom[]> {
     const { userId } = await getCurrentIdentity();
 
@@ -228,7 +245,8 @@ class SupabaseChatRepository implements ChatRepository {
     roomState.handlers.add(handlers);
 
     return () => {
-      roomState.handlers.delete(handlers);
+      const currentState = this.roomStates.get(roomId);
+      currentState?.handlers.delete(handlers);
       this.cleanupRoomState(roomId);
     };
   }
@@ -256,7 +274,8 @@ class SupabaseChatRepository implements ChatRepository {
     roomState.presenceHandlers.add(handlers);
 
     return () => {
-      roomState.presenceHandlers.delete(handlers);
+      const currentState = this.roomStates.get(roomId);
+      currentState?.presenceHandlers.delete(handlers);
       this.cleanupRoomState(roomId);
     };
   }
@@ -279,12 +298,29 @@ class SupabaseChatRepository implements ChatRepository {
   private getOrCreateRoomState(roomId: string) {
     const existingState = this.roomStates.get(roomId);
 
-    if (existingState) {
+    if (existingState && !existingState.initializationError) {
       return existingState;
     }
 
+    if (existingState) {
+      return this.replaceRoomState(roomId, existingState);
+    }
+
+    return this.createRoomState(roomId);
+  }
+
+  private createRoomState(roomId: string, previousState?: RoomChannelState) {
     const deferred = createDeferred();
-    const channel = supabase.channel(createRoomTopic(roomId), {
+    const roomTopic = createRoomTopic(roomId);
+    const staleChannels = supabase
+      .getChannels()
+      .filter((channel) => channel.topic === `realtime:${roomTopic}`);
+
+    for (const staleChannel of staleChannels) {
+      void supabase.removeChannel(staleChannel);
+    }
+
+    const channel = supabase.channel(roomTopic, {
       config: {
         broadcast: { self: true },
       },
@@ -292,12 +328,12 @@ class SupabaseChatRepository implements ChatRepository {
 
     const roomState: RoomChannelState = {
       channel,
-      handlers: new Set(),
+      handlers: new Set(previousState?.handlers ?? []),
       initialized: false,
       initializationError: null,
       initializePromise: null,
       isPresenceTracked: false,
-      presenceHandlers: new Set(),
+      presenceHandlers: new Set(previousState?.presenceHandlers ?? []),
       readyPromise: deferred.promise,
       rejectReady: deferred.reject,
       resolveReady: deferred.resolve,
@@ -365,6 +401,19 @@ class SupabaseChatRepository implements ChatRepository {
     return roomState;
   }
 
+  private replaceRoomState(roomId: string, previousState?: RoomChannelState) {
+    const currentState = previousState ?? this.roomStates.get(roomId);
+
+    if (currentState) {
+      currentState.handlers.clear();
+      currentState.presenceHandlers.clear();
+      void supabase.removeChannel(currentState.channel);
+      this.roomStates.delete(roomId);
+    }
+
+    return this.createRoomState(roomId, currentState);
+  }
+
   private cleanupConversationSummaryState(userId: string) {
     const summaryState = this.summaryStates.get(userId);
 
@@ -383,10 +432,21 @@ class SupabaseChatRepository implements ChatRepository {
   private getOrCreateConversationSummaryState(userId: string) {
     const existingState = this.summaryStates.get(userId);
 
-    if (existingState) {
+    if (existingState && !existingState.initializationError) {
       return existingState;
     }
 
+    if (existingState) {
+      return this.replaceConversationSummaryState(userId, existingState);
+    }
+
+    return this.createConversationSummaryState(userId);
+  }
+
+  private createConversationSummaryState(
+    userId: string,
+    previousState?: SummaryChannelState
+  ) {
     const deferred = createDeferred();
     const channelName = `conversation-summaries:${userId}`;
     const staleChannels = supabase
@@ -400,7 +460,7 @@ class SupabaseChatRepository implements ChatRepository {
     const channel = supabase.channel(channelName);
     const summaryState: SummaryChannelState = {
       channel,
-      handlers: new Set(),
+      handlers: new Set(previousState?.handlers ?? []),
       initialized: false,
       initializationError: null,
       initializePromise: null,
@@ -445,6 +505,21 @@ class SupabaseChatRepository implements ChatRepository {
     void summaryState.readyPromise.catch(() => undefined);
 
     return summaryState;
+  }
+
+  private replaceConversationSummaryState(
+    userId: string,
+    previousState?: SummaryChannelState
+  ) {
+    const currentState = previousState ?? this.summaryStates.get(userId);
+
+    if (currentState) {
+      currentState.handlers.clear();
+      void supabase.removeChannel(currentState.channel);
+      this.summaryStates.delete(userId);
+    }
+
+    return this.createConversationSummaryState(userId, currentState);
   }
 
   private async initializeConversationSummaryState(summaryState: SummaryChannelState) {
