@@ -148,6 +148,7 @@ export async function postRewindAction(
   }
 ) {
   const mockMode = __DEV__ ? getMockRewindMode() : null;
+  console.log(mockMode)
 
   if (mockMode) {
     if (mockMode === 'premium_required') {

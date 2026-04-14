@@ -679,19 +679,9 @@ export function DiscoveryDeck() {
     if (history.length === 0 || isSubmitting) {
       return;
     }
-
     const lastEntry = history[history.length - 1];
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (usingFallbackRef.current) {
-      setHistory((current) => current.slice(0, -1));
-      setRestoredCards((current) => [
-        lastEntry.card,
-        ...current.filter((card) => card.id !== lastEntry.card.id),
-      ]);
-      setActionError(null);
-      return;
-    }
 
     setIsSubmitting(true);
     setActionError(null);
@@ -704,6 +694,7 @@ export function DiscoveryDeck() {
       })
       .then(async (response) => {
         setHistory((current) => current.slice(0, -1));
+
         setRestoredCards((current) => [
           response.data.card,
           ...current.filter((card) => card.id !== response.data.card.id),
@@ -967,7 +958,7 @@ export function DiscoveryDeck() {
   }
 
   return (
-    <View className="flex-1 gap-4 px-4 pb-1" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 gap-2 px-4 pb-1" style={{ paddingTop: insets.top }}>
       {matchToastName ? (
         <View className="absolute inset-x-4 top-2 z-20" pointerEvents="none">
           <AppCard
@@ -1028,12 +1019,6 @@ export function DiscoveryDeck() {
         </AppCard>
       ) : null}
 
-      {actionError ? (
-        <AppCard tone="signal" className="gap-2 rounded-[16px] p-3">
-          <AppText variant="subtitle">Swipe action failed</AppText>
-          <AppText tone="muted">{actionError}</AppText>
-        </AppCard>
-      ) : null}
 
       <View className="flex-1 mt-6">
         <View className="h-full w-full">
@@ -1362,7 +1347,7 @@ export function DiscoveryDeck() {
         </View>
       </View>
 
-      <View className="mt-6 flex-row items-center justify-center gap-4">
+      <View className="flex-row items-center justify-center gap-4">
         <DeckActionButton
           color="#EF4444"
           disabled={isSubmitting}
