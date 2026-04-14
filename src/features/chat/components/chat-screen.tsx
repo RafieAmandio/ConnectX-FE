@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Alert,
   ActivityIndicator,
@@ -243,48 +244,43 @@ function ChatAvatar({
 
 function ConversationCard({
   conversation,
-  isActive,
   onPress,
 }: {
   conversation: ChatRoom;
-  isActive: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      className="mr-3 active:opacity-80"
+      className="flex-row items-center gap-4 px-4 py-4 active:bg-[#312C28]"
       onPress={onPress}>
-      <View
-        className="w-[296px] flex-row items-center gap-4 rounded-[24px] border px-4 py-4"
-        style={{
-          backgroundColor: isActive ? '#3A2F24' : '#262525',
-          borderColor: isActive ? '#A46A31' : '#343434',
-        }}>
-        <View className="relative">
-          <ChatAvatar conversation={conversation} size={52} />
-          {conversation.unreadCount > 0 ? (
-            <View className="absolute -right-1 -top-1 min-h-5 min-w-5 items-center justify-center rounded-full bg-[#F59E0B] px-1">
-              <AppText className="text-[11px] text-[#1E1B16]" variant="label">
-                {conversation.unreadCount}
-              </AppText>
-            </View>
-          ) : null}
-        </View>
-
-        <View className="flex-1 gap-1">
-          <View className="flex-row items-start justify-between gap-3">
-            <AppText className="flex-1 text-white" numberOfLines={1} variant="title">
-              {conversation.title}
-            </AppText>
-            <AppText className="text-[#8E8B87]" variant="code">
-              {formatRelativeTime(conversation.lastMessageAt)}
+      <View className="relative">
+        <ChatAvatar conversation={conversation} size={56} />
+        {conversation.unreadCount > 0 ? (
+          <View className="absolute -right-1 -top-1 min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#242322] bg-[#F59E0B] px-1">
+            <AppText className="text-[11px] text-[#1E1B16]" variant="label">
+              {conversation.unreadCount}
             </AppText>
           </View>
+        ) : null}
+      </View>
 
-          <AppText className="text-[#A5A19B]" numberOfLines={1}>
-            {conversation.headline ?? conversation.preview}
+      <View className="flex-1 justify-center gap-1">
+        <View className="flex-row items-center justify-between gap-3">
+          <AppText className="flex-1 text-white" numberOfLines={1} variant="title">
+            {conversation.title}
+          </AppText>
+          <AppText
+            className={conversation.unreadCount > 0 ? 'text-[#F59E0B]' : 'text-[#8E8B87]'}
+            variant="code">
+            {formatRelativeTime(conversation.lastMessageAt)}
           </AppText>
         </View>
+
+        <AppText
+          className={conversation.unreadCount > 0 ? 'font-semibold text-[#D5D1CB]' : 'text-[#A5A19B]'}
+          numberOfLines={2}>
+          {conversation.headline ?? conversation.preview}
+        </AppText>
       </View>
     </Pressable>
   );
@@ -301,6 +297,7 @@ function ConversationPanel({
 }) {
   const { session } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isChatEnabled = session?.method === 'google';
   const [draftMessage, setDraftMessage] = React.useState('');
   const roomId = conversation?.id ?? null;
@@ -462,7 +459,9 @@ function ConversationPanel({
 
   return (
     <View className="flex-1">
-      <View className="flex-row items-center gap-3 px-4 py-4">
+      <View 
+        className="flex-row items-center gap-3 px-4 pb-4"
+        style={{ paddingTop: Math.max(insets.top + 8, 16) }}>
         {showBackButton ? (
           <Pressable
             className="h-11 w-11 items-center justify-center rounded-full bg-[#2E2C2B] active:opacity-70"
@@ -594,41 +593,12 @@ function ConversationPanel({
 }
 
 export function ChatListScreen() {
-  const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
+  const router = useRouter();
   const { session } = useAuth();
   const isChatEnabled = session?.method === 'google';
   const conversationsQuery = useChatRooms(isChatEnabled);
   const conversations = React.useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
-  const [selectedConversationId, setSelectedConversationId] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!conversationId) {
-      return;
-    }
-
-    if (!conversations.some((conversation) => conversation.id === conversationId)) {
-      return;
-    }
-
-    setSelectedConversationId(conversationId);
-  }, [conversationId, conversations]);
-
-  React.useEffect(() => {
-    if (conversations.length === 0) {
-      setSelectedConversationId(null);
-      return;
-    }
-
-    if (
-      !selectedConversationId ||
-      !conversations.some((conversation) => conversation.id === selectedConversationId)
-    ) {
-      setSelectedConversationId(conversations[0].id);
-    }
-  }, [conversations, selectedConversationId]);
-
-  const selectedConversation =
-    conversations.find((conversation) => conversation.id === selectedConversationId) ?? null;
   const unreadTotal = conversations.reduce((sum, room) => sum + room.unreadCount, 0);
 
   if (!isChatEnabled) {
@@ -643,40 +613,21 @@ export function ChatListScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1 bg-[#242322]"
-        keyboardVerticalOffset={0}>
+      <View className="flex-1 bg-[#242322]">
         <View className="px-4 pb-3 pt-14">
-          <View className="mb-4 flex-row items-center justify-between">
+          <View className="mb-2 flex-row items-center justify-between">
             <AppText className="text-white" variant="display">
               Chats
             </AppText>
-            <View className="rounded-full bg-[#5B4225] px-4 py-2">
-              <AppText className="text-[#FFB35E]" variant="bodyStrong">
-                {unreadTotal} unread
-              </AppText>
-            </View>
+            {unreadTotal > 0 ? (
+              <View className="rounded-full bg-[#5B4225] px-4 py-2">
+                <AppText className="text-[#FFB35E]" variant="bodyStrong">
+                  {unreadTotal} unread
+                </AppText>
+              </View>
+            ) : null}
           </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingRight: 12 }}>
-            {conversations.map((conversation) => (
-              <ConversationCard
-                key={conversation.id}
-                conversation={conversation}
-                isActive={conversation.id === selectedConversationId}
-                onPress={() => {
-                  setSelectedConversationId(conversation.id);
-                }}
-              />
-            ))}
-          </ScrollView>
         </View>
-
-        <View className="h-px bg-[#3A3938]" />
 
         {conversationsQuery.isLoading && conversations.length === 0 ? (
           <View className="flex-1 items-center justify-center">
@@ -702,8 +653,23 @@ export function ChatListScreen() {
           </View>
         ) : null}
 
-        {conversations.length > 0 ? <ConversationPanel conversation={selectedConversation} /> : null}
-      </KeyboardAvoidingView>
+        {conversations.length > 0 ? (
+          <FlatList
+            data={conversations}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 32 }}
+            ItemSeparatorComponent={() => <View className="ml-[76px] h-px bg-[#3A3938]" />}
+            renderItem={({ item: conversation }) => (
+              <ConversationCard
+                conversation={conversation}
+                onPress={() => {
+                  router.push(`/conversation/${conversation.id}`);
+                }}
+              />
+            )}
+          />
+        ) : null}
+      </View>
     </>
   );
 }
