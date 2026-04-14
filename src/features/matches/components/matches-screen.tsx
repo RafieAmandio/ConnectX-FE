@@ -6,7 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
-import { AppButton, AppCard, AppText } from '@shared/components';
+import { AppCard, AppText } from '@shared/components';
 
 import { useActivateSpotlight, useMatchesList } from '../hooks/use-matches';
 import { mockMatchesListResponse } from '../mock/matches.mock';
@@ -287,85 +287,76 @@ export function MatchesScreen() {
               </AppText>
             </Pressable>
 
-            <AppCard
-              className="gap-4 rounded-[24px] border border-[#544126] bg-[#2E261F] p-5"
-              style={{ shadowColor: 'transparent' }}>
-              <View className="flex-row items-start justify-between gap-4">
-                <View className="flex-1 gap-1">
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons color="#FFD33D" name="star-outline" size={18} />
-                    <AppText className="text-[18px] text-[#F4E3C3]" variant="subtitle">
-                      Premium Spotlight
-                    </AppText>
-                  </View>
-                  <AppText className="text-[#D2B98D]">
-                    Feature your profile for one hour so more people see you first.
-                  </AppText>
-                  {spotlightEndsAtLabel ? (
-                    <AppText className="text-[13px] text-[#FFD580]" variant="code">
-                      Active until {spotlightEndsAtLabel}
-                    </AppText>
-                  ) : null}
+            <Pressable
+              className="flex-row items-center justify-between rounded-[24px] border px-5 py-4"
+              disabled={spotlightActivation.isPending}
+              onPress={handleActivateSpotlight}
+              style={{
+                backgroundColor: '#2E261F',
+                borderColor: spotlightEndsAtLabel ? '#FFD33D' : '#544126',
+              }}>
+              <View className="flex-row items-center gap-4">
+                <View className="h-11 w-11 items-center justify-center rounded-full bg-[#4A3820]">
+                  <Ionicons
+                    color="#FFD33D"
+                    name={spotlightEndsAtLabel ? 'star' : 'star-outline'}
+                    size={22}
+                  />
                 </View>
-
-                <View className="rounded-full bg-[#4A3820] px-3 py-1.5">
-                  <AppText className="text-[12px] uppercase tracking-[0.3px] text-[#FFD33D]">
-                    1 hour
+                <View className="gap-0.5">
+                  <AppText className="text-[17px] text-[#F4E3C3]" variant="bodyStrong">
+                    {spotlightActivation.isPending ? 'Activating...' : 'Activate Spotlight'}
+                  </AppText>
+                  <AppText className="text-[13px] text-[#D2B98D]">
+                    {spotlightEndsAtLabel
+                      ? `Active until ${spotlightEndsAtLabel}`
+                      : 'Feature your profile for 1 hour'}
                   </AppText>
                 </View>
               </View>
+              <Ionicons color="#FFD33D" name="chevron-forward" size={20} />
+            </Pressable>
 
-              <AppButton
-                detail="Backend controls activation and remaining spotlight credits."
-                disabled={spotlightActivation.isPending}
-                label={spotlightActivation.isPending ? 'Activating...' : 'Turn On Spotlight'}
-                onPress={() => {
-                  void handleActivateSpotlight();
-                }}
-                size="lg"
-              />
-
-              {spotlightBanner ? (
-                <View
-                  className="rounded-[18px] border px-4 py-3"
-                  style={{
-                    backgroundColor:
-                      spotlightBanner.tone === 'success'
-                        ? '#1F3025'
-                        : spotlightBanner.tone === 'warning'
-                          ? '#35281D'
-                          : '#2C2C2F',
-                    borderColor:
-                      spotlightBanner.tone === 'success'
-                        ? '#2F6E45'
-                        : spotlightBanner.tone === 'warning'
-                          ? '#8A6125'
-                          : '#454548',
-                  }}>
-                  <AppText
-                    className={
-                      spotlightBanner.tone === 'success'
-                        ? 'text-[#D8F7E3]'
-                        : spotlightBanner.tone === 'warning'
-                          ? 'text-[#FFD9A3]'
-                          : 'text-[#F1F1F1]'
-                    }
-                    variant="bodyStrong">
-                    {spotlightBanner.title}
-                  </AppText>
-                  <AppText
-                    className={
-                      spotlightBanner.tone === 'success'
-                        ? 'text-[#A7E6BE]'
-                        : spotlightBanner.tone === 'warning'
-                          ? 'text-[#E9BD82]'
-                          : 'text-[#B4B4B7]'
-                    }>
-                    {spotlightBanner.detail}
-                  </AppText>
-                </View>
-              ) : null}
-            </AppCard>
+            {spotlightBanner ? (
+              <View
+                className="mt-2 rounded-[18px] border px-4 py-3"
+                style={{
+                  backgroundColor:
+                    spotlightBanner.tone === 'success'
+                      ? '#1F3025'
+                      : spotlightBanner.tone === 'warning'
+                        ? '#35281D'
+                        : '#2C2C2F',
+                  borderColor:
+                    spotlightBanner.tone === 'success'
+                      ? '#2F6E45'
+                      : spotlightBanner.tone === 'warning'
+                        ? '#8A6125'
+                        : '#454548',
+                }}>
+                <AppText
+                  className={
+                    spotlightBanner.tone === 'success'
+                      ? 'text-[#D8F7E3]'
+                      : spotlightBanner.tone === 'warning'
+                        ? 'text-[#FFD9A3]'
+                        : 'text-[#F1F1F1]'
+                  }
+                  variant="bodyStrong">
+                  {spotlightBanner.title}
+                </AppText>
+                <AppText
+                  className={
+                    spotlightBanner.tone === 'success'
+                      ? 'text-[#A7E6BE]'
+                      : spotlightBanner.tone === 'warning'
+                        ? 'text-[#E9BD82]'
+                        : 'text-[#B4B4B7]'
+                  }>
+                  {spotlightBanner.detail}
+                </AppText>
+              </View>
+            ) : null}
           </View>
 
           <View className="gap-4">
@@ -444,7 +435,7 @@ export function MatchesScreen() {
             </View>
           </View>
         </View>
-      </ScrollView>
-    </View>
+      </ScrollView >
+    </View >
   );
 }
