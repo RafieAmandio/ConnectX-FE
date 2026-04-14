@@ -107,3 +107,32 @@ export type MatchesListQueryParams = {
   page?: number;
   status?: MatchesListStatusFilter;
 };
+
+export type SpotlightActivationSuccessResponse = {
+  success: true;
+  message: string;
+  data: {
+    active: true;
+    startedAt: string;
+    endsAt: string;
+    remainingSpotlights: number;
+  };
+};
+
+export type SpotlightActivationErrorCode =
+  | 'DISCOVERY_SPOTLIGHT_REQUIRES_CREDIT'
+  | 'DISCOVERY_SPOTLIGHT_ALREADY_ACTIVE';
+
+export type SpotlightActivationDeniedResponse = {
+  success: false;
+  message: string;
+  error: {
+    code: SpotlightActivationErrorCode;
+    details: {
+      remaining: number;
+      active: boolean;
+      endsAt: string | null;
+      nextEligibleAt: string | null;
+    };
+  };
+};

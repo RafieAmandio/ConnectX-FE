@@ -1,10 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
-import { fetchMatchAnalysis, fetchMatchesList } from '../services/matches-service';
+import { activateSpotlight, fetchMatchAnalysis, fetchMatchesList } from '../services/matches-service';
 import type {
   MatchAnalysisResponse,
   MatchesListQueryParams,
   MatchesListResponse,
+  SpotlightActivationSuccessResponse,
 } from '../types/matches.types';
 
 export const matchesQueryKeys = {
@@ -25,5 +26,11 @@ export function useMatchAnalysis(matchId: string, enabled = true) {
     enabled: enabled && Boolean(matchId),
     queryKey: matchesQueryKeys.analysis(matchId),
     queryFn: () => fetchMatchAnalysis(matchId),
+  });
+}
+
+export function useActivateSpotlight() {
+  return useMutation<SpotlightActivationSuccessResponse>({
+    mutationFn: activateSpotlight,
   });
 }

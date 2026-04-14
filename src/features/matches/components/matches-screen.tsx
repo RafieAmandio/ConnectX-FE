@@ -5,11 +5,41 @@ import React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppCard, AppText } from '@shared/components';
+import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
+import { AppButton, AppCard, AppText } from '@shared/components';
 
-import { useMatchesList } from '../hooks/use-matches';
+import { useActivateSpotlight, useMatchesList } from '../hooks/use-matches';
 import { mockMatchesListResponse } from '../mock/matches.mock';
+import {
+  isSpotlightAlreadyActiveError,
+  isSpotlightRequiresCreditError,
+} from '../services/spotlight-contract';
 import type { MatchListItem } from '../types/matches.types';
+
+type SpotlightBannerState = {
+  detail: string;
+  title: string;
+  tone: 'default' | 'success' | 'warning';
+};
+
+function formatSpotlightTimestamp(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toLocaleString([], {
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    month: 'short',
+  });
+}
 
 function MatchAvatar({ match }: { match: MatchListItem }) {
   return (
@@ -128,7 +158,11 @@ function MatchRow({
 export function MatchesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { presentPaywallForOffering, supported } = useRevenueCat();
   const matchesQuery = useMatchesList({ limit: 10, page: 1, status: 'active' });
+  const spotlightActivation = useActivateSpotlight();
+  const [spotlightBanner, setSpotlightBanner] = React.useState<SpotlightBannerState | null>(null);
+  const [spotlightEndsAt, setSpotlightEndsAt] = React.useState<string | null>(null);
 
   const usingFallback = matchesQuery.isError;
   const responseData = usingFallback ? mockMatchesListResponse.data : matchesQuery.data?.data;
@@ -138,6 +172,78 @@ export function MatchesScreen() {
   const lockedConnects = Array.from({ length: 3 }, (_, index) => likesYou[index] ?? null);
   const matchCountLabel = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`;
   const likesYouCountLabel = formatLikesYouCount(likesYouCount);
+  const spotlightEndsAtLabel = formatSpotlightTimestamp(spotlightEndsAt);
+
+  const maybePresentSpotlightPaywall = React.useCallback(async () => {
+    if (!supported) {
+      setSpotlightBanner({
+        detail: 'Spotlight purchases are available in the native iOS and Android builds.',
+        title: 'Spotlight credits unavailable here',
+        tone: 'warning',
+      });
+      return;
+    }
+
+    try {
+      await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.discoveryBoosts);
+    } catch (error) {
+      setSpotlightBanner({
+        detail: error instanceof Error ? error.message : 'Unable to open the spotlight paywall.',
+        title: 'Could not open spotlight paywall',
+        tone: 'warning',
+      });
+    }
+  }, [presentPaywallForOffering, supported]);
+
+  const handleActivateSpotlight = React.useCallback(async () => {
+    setSpotlightBanner(null);
+
+    try {
+      const response = await spotlightActivation.mutateAsync();
+      const endsAtLabel = formatSpotlightTimestamp(response.data.endsAt);
+
+      setSpotlightEndsAt(response.data.endsAt);
+      setSpotlightBanner({
+        detail: endsAtLabel
+          ? `You are featured until ${endsAtLabel}. ${response.data.remainingSpotlights} spotlights left.`
+          : `${response.data.remainingSpotlights} spotlights left after this activation.`,
+        title: 'Spotlight is live',
+        tone: 'success',
+      });
+    } catch (error) {
+      if (isSpotlightRequiresCreditError(error)) {
+        setSpotlightBanner({
+          detail: 'Buy a spotlight credit to activate your profile now.',
+          title: 'No spotlight credits remaining',
+          tone: 'warning',
+        });
+        await maybePresentSpotlightPaywall();
+        return;
+      }
+
+      if (isSpotlightAlreadyActiveError(error)) {
+        const details = error.payload.error.details;
+        const nextEligibleLabel =
+          formatSpotlightTimestamp(details.nextEligibleAt) ?? formatSpotlightTimestamp(details.endsAt);
+
+        setSpotlightEndsAt(details.endsAt);
+        setSpotlightBanner({
+          detail: nextEligibleLabel
+            ? `Your spotlight is already active until ${nextEligibleLabel}.`
+            : 'Your spotlight is already active right now.',
+          title: 'Spotlight already active',
+          tone: 'default',
+        });
+        return;
+      }
+
+      setSpotlightBanner({
+        detail: error instanceof Error ? error.message : 'Unable to activate spotlight right now.',
+        title: 'Spotlight activation failed',
+        tone: 'warning',
+      });
+    }
+  }, [maybePresentSpotlightPaywall, spotlightActivation]);
 
   return (
     <View className="flex-1 bg-[#242322]" style={{ paddingTop: insets.top }}>
@@ -180,6 +286,86 @@ export function MatchesScreen() {
                 Unlock Connects
               </AppText>
             </Pressable>
+
+            <AppCard
+              className="gap-4 rounded-[24px] border border-[#544126] bg-[#2E261F] p-5"
+              style={{ shadowColor: 'transparent' }}>
+              <View className="flex-row items-start justify-between gap-4">
+                <View className="flex-1 gap-1">
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons color="#FFD33D" name="star-outline" size={18} />
+                    <AppText className="text-[18px] text-[#F4E3C3]" variant="subtitle">
+                      Premium Spotlight
+                    </AppText>
+                  </View>
+                  <AppText className="text-[#D2B98D]">
+                    Feature your profile for one hour so more people see you first.
+                  </AppText>
+                  {spotlightEndsAtLabel ? (
+                    <AppText className="text-[13px] text-[#FFD580]" variant="code">
+                      Active until {spotlightEndsAtLabel}
+                    </AppText>
+                  ) : null}
+                </View>
+
+                <View className="rounded-full bg-[#4A3820] px-3 py-1.5">
+                  <AppText className="text-[12px] uppercase tracking-[0.3px] text-[#FFD33D]">
+                    1 hour
+                  </AppText>
+                </View>
+              </View>
+
+              <AppButton
+                detail="Backend controls activation and remaining spotlight credits."
+                disabled={spotlightActivation.isPending}
+                label={spotlightActivation.isPending ? 'Activating...' : 'Turn On Spotlight'}
+                onPress={() => {
+                  void handleActivateSpotlight();
+                }}
+                size="lg"
+              />
+
+              {spotlightBanner ? (
+                <View
+                  className="rounded-[18px] border px-4 py-3"
+                  style={{
+                    backgroundColor:
+                      spotlightBanner.tone === 'success'
+                        ? '#1F3025'
+                        : spotlightBanner.tone === 'warning'
+                          ? '#35281D'
+                          : '#2C2C2F',
+                    borderColor:
+                      spotlightBanner.tone === 'success'
+                        ? '#2F6E45'
+                        : spotlightBanner.tone === 'warning'
+                          ? '#8A6125'
+                          : '#454548',
+                  }}>
+                  <AppText
+                    className={
+                      spotlightBanner.tone === 'success'
+                        ? 'text-[#D8F7E3]'
+                        : spotlightBanner.tone === 'warning'
+                          ? 'text-[#FFD9A3]'
+                          : 'text-[#F1F1F1]'
+                    }
+                    variant="bodyStrong">
+                    {spotlightBanner.title}
+                  </AppText>
+                  <AppText
+                    className={
+                      spotlightBanner.tone === 'success'
+                        ? 'text-[#A7E6BE]'
+                        : spotlightBanner.tone === 'warning'
+                          ? 'text-[#E9BD82]'
+                          : 'text-[#B4B4B7]'
+                    }>
+                    {spotlightBanner.detail}
+                  </AppText>
+                </View>
+              ) : null}
+            </AppCard>
           </View>
 
           <View className="gap-4">

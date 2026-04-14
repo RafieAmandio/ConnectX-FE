@@ -145,7 +145,9 @@ EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=...
 EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME=...
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=...
 EXPO_PUBLIC_MOCK_SUPERLIKE_NO_BOOST=false
+EXPO_PUBLIC_MOCK_SPOTLIGHT_ACTIVATION_RESPONSE=off
 EXPO_PUBLIC_REVENUECAT_DISCOVERY_BOOSTS_OFFERING_ID=discovery_boosts
+EXPO_PUBLIC_REVENUECAT_DISCOVERY_SPOTLIGHT_OFFERING_ID=discovery_spotlight
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 EXPO_PUBLIC_SUPABASE_URL=...
 ```
@@ -156,6 +158,12 @@ RevenueCat paywall.
 
 Set `EXPO_PUBLIC_REVENUECAT_DISCOVERY_BOOSTS_OFFERING_ID` if your boost paywall offering uses a
 different identifier than `discovery_boosts`.
+
+Set `EXPO_PUBLIC_REVENUECAT_DISCOVERY_SPOTLIGHT_OFFERING_ID` if your spotlight paywall offering
+uses a different identifier than `discovery_spotlight`.
+
+Set `EXPO_PUBLIC_MOCK_SPOTLIGHT_ACTIVATION_RESPONSE` to `success`, `no_credit`, or
+`already_active` in development to mock the spotlight activation API path on the Matches screen.
 
 3. Start Expo
 
