@@ -167,7 +167,7 @@ class SupabaseChatRepository implements ChatRepository {
       throw error;
     }
 
-    return ((data ?? []) as ConversationSummaryRow[])
+    return ((data ?? []) as unknown as ConversationSummaryRow[])
       .map(mapConversationSummaryRow)
       .sort((left, right) => right.lastMessageAt.localeCompare(left.lastMessageAt));
   }
