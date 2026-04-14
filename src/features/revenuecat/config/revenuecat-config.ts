@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-export const REVENUECAT_ENTITLEMENT_CONNECTX_PRO = 'ConnectX Pro';
+export const REVENUECAT_ENTITLEMENT_CONNECTX_PRO = 'getconnectx Pro';
 
 export const REVENUECAT_PACKAGE_IDS = {
   lifetime: 'lifetime',
