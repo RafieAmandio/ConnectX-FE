@@ -1,3 +1,5 @@
+import React from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import Purchases, {
   type CustomerInfo,
   type CustomerInfoUpdateListener,
@@ -7,8 +9,6 @@ import Purchases, {
   type PurchasesPackage,
 } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import React from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
 
 import { useAuth } from '@features/auth';
 
@@ -272,6 +272,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   const packages = React.useMemo(() => getOfferPackages(currentOffering), [currentOffering]);
   const connectXProEntitlement =
     customerInfo?.entitlements.active[REVENUECAT_ENTITLEMENT_CONNECTX_PRO] ?? null;
+  console.log('connectXProEntitlement', customerInfo);
 
   const restorePurchases = React.useCallback(async () => {
     if (!REVENUECAT_SUPPORTED_PLATFORM || !configuredRef.current) {

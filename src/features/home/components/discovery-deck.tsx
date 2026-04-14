@@ -454,8 +454,8 @@ export function DiscoveryDeck() {
   const activeFilterOptions = usingMockFilterOptions
     ? mockDiscoveryFilterOptionsByMode[sheetMode]
     : usingFilterFallback
-    ? getFallbackFilterOptions(sheetMode)
-    : liveFilterOptions ?? getFallbackFilterOptions(sheetMode);
+      ? getFallbackFilterOptions(sheetMode)
+      : liveFilterOptions ?? getFallbackFilterOptions(sheetMode);
   const filterSections = activeFilterOptions.data.sections;
   const goalOptions = getGoalOptions(filterSections, sheetMode);
 
@@ -632,8 +632,7 @@ export function DiscoveryDeck() {
       try {
         let matched = false;
 
-        if (usingFallbackRef.current) {
-          setMockCards((current) => current.filter((item) => item.id !== activeCard.id));
+        if (false) {
         } else {
           const response = await swipeAction.mutateAsync({
             payload: { action },

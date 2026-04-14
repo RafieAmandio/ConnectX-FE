@@ -154,6 +154,7 @@ export async function fetchDiscoveryFilterOptions(mode: DiscoveryMode) {
 
 export async function postSwipeAction(profileId: string, payload: SwipeActionRequest) {
   if (__DEV__ && payload.action === 'super_like' && shouldMockSuperLikeRequiresBoost()) {
+
     throw new ApiError('No boosts remaining.', 409, {
       success: false,
       message: 'No boosts remaining.',
