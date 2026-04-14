@@ -708,9 +708,14 @@ export function DiscoveryDeck() {
         }
       } finally {
         setIsSubmitting(false);
-        translateX.value = 0;
-        translateY.value = 0;
-        nextCardScale.value = 0.96;
+        // Defer the position reset to the next frame so React commits the
+        // new currentItem first. Without this, the card snaps to center
+        // while still showing the previous card's content for one frame.
+        requestAnimationFrame(() => {
+          translateX.value = 0;
+          translateY.value = 0;
+          nextCardScale.value = 0.96;
+        });
       }
     },
     [
@@ -971,7 +976,7 @@ export function DiscoveryDeck() {
   });
 
   const nextCardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: nextCardScale.value }],
+    transform: [{ translateY: 8 }, { scale: nextCardScale.value }],
   }));
 
   const leftBadgeStyle = useAnimatedStyle(() => ({
@@ -1112,15 +1117,12 @@ export function DiscoveryDeck() {
           {nextItem ? (
             <Animated.View
               className="absolute inset-0 overflow-hidden rounded-[24px] border border-border bg-background"
-              style={[
-                Shadows.card,
-                nextCardStyle,
-                { transform: [...(nextCardStyle.transform || []), { translateY: 8 }, { scale: 0.96 }] },
-              ]}>
+              style={[Shadows.card, nextCardStyle]}>
               <ScrollView className="flex-1" scrollEnabled={false} showsVerticalScrollIndicator={false}>
                 <View className="h-[400px] overflow-hidden">
                   {nextItem.photoUrl ? (
                     <Image
+                      key={nextItem.id}
                       contentFit="cover"
                       source={{ uri: nextItem.photoUrl }}
                       style={{ height: '100%', width: '100%' }}
@@ -1250,6 +1252,7 @@ export function DiscoveryDeck() {
                 <View className="h-[400px] overflow-hidden">
                   {currentItem.photoUrl ? (
                     <Image
+                      key={currentItem.id}
                       contentFit="cover"
                       source={{ uri: currentItem.photoUrl }}
                       style={{ height: '100%', width: '100%' }}
