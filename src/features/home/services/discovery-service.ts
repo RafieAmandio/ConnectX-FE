@@ -1,5 +1,6 @@
 import { ApiError, apiFetch } from '@shared/services/api';
 
+import { mockDiscoveryCardsResponse, mockDiscoveryFilterOptionsByMode } from '../mock/discovery.mock';
 import type {
   DiscoveryCardFeedInput,
   DiscoveryCardsRequest,
@@ -62,6 +63,32 @@ function getMockRewindMode(): MockRewindMode | null {
   return null;
 }
 
+export function getMockDiscoveryCardsResponse(limit = DEFAULT_LIMIT, cursor?: string) {
+  const items = mockDiscoveryCardsResponse.data.items;
+  const startIndex = cursor ? Number.parseInt(cursor, 10) || 0 : 0;
+  const normalizedStartIndex = Math.max(0, startIndex);
+  const endIndex = Math.min(items.length, normalizedStartIndex + normalizeLimit(limit));
+  const nextCursor = endIndex < items.length ? String(endIndex) : null;
+
+  return {
+    ...mockDiscoveryCardsResponse,
+    data: {
+      ...mockDiscoveryCardsResponse.data,
+      items: items.slice(normalizedStartIndex, endIndex),
+      nextCursor,
+      hasMore: nextCursor !== null,
+    },
+  } satisfies DiscoveryCardsResponse;
+}
+
+export function isDiscoveryCardsMockEnabled() {
+  return __DEV__;
+}
+
+export function isDiscoveryFilterOptionsMockEnabled() {
+  return __DEV__;
+}
+
 export const DISCOVERY_API = {
   CARDS: '/api/v1/discovery/cards',
   FILTER_OPTIONS: '/api/v1/discovery/filter-options',
@@ -105,6 +132,10 @@ function buildDiscoveryCardsPayload({
 }
 
 export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
+  if (isDiscoveryCardsMockEnabled()) {
+    return getMockDiscoveryCardsResponse(input.limit, input.cursor);
+  }
+
   return apiFetch<DiscoveryCardsResponse>(DISCOVERY_API.CARDS, {
     body: buildDiscoveryCardsPayload(input) as unknown as BodyInit,
     method: 'POST',
@@ -112,6 +143,10 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
 }
 
 export async function fetchDiscoveryFilterOptions(mode: DiscoveryMode) {
+  if (isDiscoveryFilterOptionsMockEnabled()) {
+    return mockDiscoveryFilterOptionsByMode[mode];
+  }
+
   const params = new URLSearchParams({ mode });
 
   return apiFetch<DiscoveryFilterOptionsResponse>(`${DISCOVERY_API.FILTER_OPTIONS}?${params.toString()}`);
@@ -133,7 +168,6 @@ export async function postSwipeAction(profileId: string, payload: SwipeActionReq
       },
     });
   }
-  console.log("HEL")
 
   return apiFetch<SwipeActionResponse>(DISCOVERY_API.ACTION(profileId), {
     body: payload as unknown as BodyInit,
@@ -148,7 +182,6 @@ export async function postRewindAction(
   }
 ) {
   const mockMode = __DEV__ ? getMockRewindMode() : null;
-  console.log(mockMode)
 
   if (mockMode) {
     if (mockMode === 'premium_required') {

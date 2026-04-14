@@ -36,6 +36,10 @@ import {
   isRewindPremiumRequiredError,
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
+import {
+  isDiscoveryCardsMockEnabled,
+  isDiscoveryFilterOptionsMockEnabled,
+} from '../services/discovery-service';
 import type {
   DiscoveryAppliedFilters,
   DiscoveryCard,
@@ -386,11 +390,11 @@ function DeckActionButton({
 function EmptyState({
   isLoadingMore,
   onResetFallback,
-  usingFallback,
+  usingMockData,
 }: {
   isLoadingMore: boolean;
   onResetFallback: () => void;
-  usingFallback: boolean;
+  usingMockData: boolean;
 }) {
   return (
     <AppCard className="gap-3 rounded-[24px] p-4">
@@ -402,7 +406,7 @@ function EmptyState({
           ? 'Hang tight while the next page of profiles loads into the deck.'
           : 'You reached the end of the current stack. Check back later for fresh profiles.'}
       </AppText>
-      {usingFallback ? (
+      {usingMockData ? (
         <Pressable
           className="self-start rounded-full border px-3 py-1.5"
           onPress={onResetFallback}
@@ -419,9 +423,11 @@ function EmptyState({
 export function DiscoveryDeck() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const usingMockCards = isDiscoveryCardsMockEnabled();
+  const usingMockFilterOptions = isDiscoveryFilterOptionsMockEnabled();
   const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
     useRevenueCat();
-  const [fallbackCards, setFallbackCards] = React.useState(mockDiscoveryCardsResponse.data.items);
+  const [mockCards, setMockCards] = React.useState(mockDiscoveryCardsResponse.data.items);
   const [restoredCards, setRestoredCards] = React.useState<DiscoveryCard[]>([]);
   const [history, setHistory] = React.useState<DiscoverySwipeHistoryEntry[]>([]);
   const [lastSuccessfulCards, setLastSuccessfulCards] = React.useState<DiscoveryCard[]>([]);
@@ -443,8 +449,11 @@ export function DiscoveryDeck() {
 
   const filterOptionsQuery = useDiscoveryFilterOptions(sheetMode, isFilterVisible);
   const liveFilterOptions = filterOptionsQuery.data;
-  const usingFilterFallback = !hasUsableFilterSections(liveFilterOptions?.data.sections);
-  const activeFilterOptions = usingFilterFallback
+  const usingFilterFallback =
+    !usingMockFilterOptions && !hasUsableFilterSections(liveFilterOptions?.data.sections);
+  const activeFilterOptions = usingMockFilterOptions
+    ? mockDiscoveryFilterOptionsByMode[sheetMode]
+    : usingFilterFallback
     ? getFallbackFilterOptions(sheetMode)
     : liveFilterOptions ?? getFallbackFilterOptions(sheetMode);
   const filterSections = activeFilterOptions.data.sections;
@@ -502,8 +511,10 @@ export function DiscoveryDeck() {
 
   const effectiveLiveCards = liveCards.length > 0 ? liveCards : lastSuccessfulCards;
   const usingFallback =
+    !usingMockCards &&
     !hasUsableCards(effectiveLiveCards) && (discoveryQuery.isError || discoveryQuery.isSuccess);
-  const baseCards = usingFallback ? fallbackCards : effectiveLiveCards;
+  const usingLocalMockCards = usingMockCards || usingFallback;
+  const baseCards = usingLocalMockCards ? mockCards : effectiveLiveCards;
   const cards = React.useMemo(() => {
     const baseIds = new Set(baseCards.map((card) => card.id));
     return [...restoredCards.filter((card) => !baseIds.has(card.id)), ...baseCards];
@@ -518,7 +529,7 @@ export function DiscoveryDeck() {
   );
 
   currentCardRef.current = currentItem;
-  usingFallbackRef.current = usingFallback;
+  usingFallbackRef.current = usingLocalMockCards;
 
   React.useEffect(() => {
     if (usingFallbackRef.current) {
@@ -537,7 +548,7 @@ export function DiscoveryDeck() {
     discoveryQuery.hasNextPage,
     discoveryQuery.isFetchingNextPage,
     remainingCards,
-    usingFallback,
+    usingLocalMockCards,
   ]);
 
   React.useEffect(() => {
@@ -551,7 +562,7 @@ export function DiscoveryDeck() {
   }, [discoveryQuery.error, discoveryQuery.isError]);
 
   React.useEffect(() => {
-    setFallbackCards(mockDiscoveryCardsResponse.data.items);
+    setMockCards(mockDiscoveryCardsResponse.data.items);
     setRestoredCards([]);
     setHistory([]);
     setActionError(null);
@@ -622,7 +633,7 @@ export function DiscoveryDeck() {
         let matched = false;
 
         if (usingFallbackRef.current) {
-          setFallbackCards((current) => current.filter((item) => item.id !== activeCard.id));
+          setMockCards((current) => current.filter((item) => item.id !== activeCard.id));
         } else {
           const response = await swipeAction.mutateAsync({
             payload: { action },
@@ -906,7 +917,11 @@ export function DiscoveryDeck() {
       currentMode={sheetMode}
       errorMessage={
         filterError ??
-        (usingFilterFallback ? 'Showing fallback filter options while the API is unavailable.' : null)
+        (usingMockFilterOptions
+          ? 'Using development mock filter options.'
+          : usingFilterFallback
+            ? 'Showing fallback filter options while the API is unavailable.'
+            : null)
       }
       goalOptions={goalOptions}
       initialAppliedMode={appliedMode}
@@ -921,7 +936,7 @@ export function DiscoveryDeck() {
     />
   );
 
-  if (!currentItem && discoveryQuery.isLoading && !usingFallback) {
+  if (!currentItem && discoveryQuery.isLoading && !usingLocalMockCards) {
     return (
       <View className="flex-1 justify-center px-4" style={{ paddingTop: insets.top }}>
         <AppCard className="gap-3 rounded-[24px] p-4">
@@ -940,8 +955,8 @@ export function DiscoveryDeck() {
       <View className="flex-1 justify-center px-4" style={{ paddingTop: insets.top }}>
         <EmptyState
           isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
-          onResetFallback={() => setFallbackCards(mockDiscoveryCardsResponse.data.items)}
-          usingFallback={usingFallback}
+          onResetFallback={() => setMockCards(mockDiscoveryCardsResponse.data.items)}
+          usingMockData={usingLocalMockCards}
         />
         <View className="mt-8 flex-row items-center justify-center gap-6">
           <DeckActionButton

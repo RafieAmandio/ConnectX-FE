@@ -9,16 +9,19 @@ import {
 import {
   fetchDiscoveryCards,
   fetchDiscoveryFilterOptions,
+  getMockDiscoveryCardsResponse,
+  isDiscoveryCardsMockEnabled,
+  isDiscoveryFilterOptionsMockEnabled,
   postRewindAction,
   postSwipeAction,
 } from '../services/discovery-service';
 import type {
   DiscoveryAppliedFilters,
-  DiscoverySwipeHistoryEntry,
   DiscoveryCardsRequest,
   DiscoveryCardsResponse,
   DiscoveryFilterOptionsResponse,
   DiscoveryMode,
+  DiscoverySwipeHistoryEntry,
   RewindActionRequest,
   RewindActionSuccessResponse,
   SwipeActionRequest,
@@ -71,9 +74,16 @@ export function useDiscoveryCards(
   limit = DEFAULT_LIMIT
 ) {
   const normalizedLimit = normalizeLimit(limit);
+  const usingMockCards = isDiscoveryCardsMockEnabled();
 
   return useInfiniteQuery({
     initialPageParam: undefined as string | undefined,
+    initialData: usingMockCards
+      ? {
+        pageParams: [undefined as string | undefined],
+        pages: [getMockDiscoveryCardsResponse(normalizedLimit)],
+      }
+      : undefined,
     queryKey: discoveryQueryKeys.feed(request, normalizedLimit),
     queryFn: ({ pageParam }) =>
       fetchDiscoveryCards({
@@ -83,14 +93,19 @@ export function useDiscoveryCards(
       }),
     getNextPageParam: (lastPage) =>
       lastPage.data.hasMore ? (lastPage.data.nextCursor ?? undefined) : undefined,
+    staleTime: usingMockCards ? Number.POSITIVE_INFINITY : 0,
   });
 }
 
 export function useDiscoveryFilterOptions(mode: DiscoveryMode, enabled = true) {
+  const usingMockFilterOptions = isDiscoveryFilterOptionsMockEnabled();
+  console.log("USINGGG")
+
   return useQuery<DiscoveryFilterOptionsResponse>({
     enabled,
     queryKey: discoveryQueryKeys.options(mode),
     queryFn: () => fetchDiscoveryFilterOptions(mode),
+    staleTime: usingMockFilterOptions ? Number.POSITIVE_INFINITY : 0,
   });
 }
 
