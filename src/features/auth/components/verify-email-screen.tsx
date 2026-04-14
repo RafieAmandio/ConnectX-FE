@@ -1,27 +1,14 @@
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 
 import { AppButton, AppInput, AppText } from '@shared/components';
+import { ApiError } from '@shared/services/api';
 
 import { useAuth } from '../hooks/use-auth';
+import type { VerifyEmailErrorResponse } from '../types/auth.types';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
 import { AuthShell } from './auth-shell';
-
-const verifyHighlights = [
-  {
-    description: 'The first arrival triggers the mocked OTP send automatically, just like the planned backend flow.',
-    title: 'Auto-send on entry',
-  },
-  {
-    description: 'Resend is locally locked for 60 seconds so the UX is realistic before the API exists.',
-    title: 'Cooldown included',
-  },
-  {
-    description: 'Mock code `671706` is exposed so QA and design review can complete the full happy path.',
-    title: 'Testable today',
-  },
-] as const;
 
 function getSecondsRemaining(timestamp: string | null | undefined) {
   if (!timestamp) {
@@ -37,13 +24,39 @@ function getSecondsRemaining(timestamp: string | null | undefined) {
   return Math.ceil(remainingMs / 1000);
 }
 
+function isHandledEmailOtpError(response: VerifyEmailErrorResponse | { message: string }) {
+  return 'errors' in response;
+}
+
+function getEmailOtpMessageTone(response: unknown) {
+  if (
+    response &&
+    typeof response === 'object' &&
+    'status' in response &&
+    response.status === 'success'
+  ) {
+    return 'signal';
+  }
+
+  return 'danger';
+}
+
 export function VerifyEmailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ status?: string | string[] }>();
-  const { authPhase, isHydrated, resendEmailOtp, sendEmailOtp, session, verifyEmailOtp, signOut } = useAuth();
+  const {
+    authPhase,
+    isHydrated,
+    resendEmailOtp,
+    sendEmailOtp,
+    session,
+    signOut,
+    verifyEmailOtp,
+  } = useAuth();
   const [otpCode, setOtpCode] = React.useState('');
   const [otpError, setOtpError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [statusTone, setStatusTone] = React.useState<'danger' | 'signal'>('signal');
   const [isSendingOtp, setIsSendingOtp] = React.useState(false);
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [secondsRemaining, setSecondsRemaining] = React.useState(
@@ -57,13 +70,16 @@ export function VerifyEmailScreen() {
   React.useEffect(() => {
     const nextStatusMessage = Array.isArray(params.status) ? params.status[0] : params.status;
 
-    if (nextStatusMessage) {
-      setStatusMessage(nextStatusMessage);
+    if (!nextStatusMessage) {
+      return;
     }
+
+    setStatusTone('signal');
+    setStatusMessage(nextStatusMessage);
   }, [params.status]);
 
   React.useEffect(() => {
-    if (!session || authPhase !== 'pending_email_verification' || session.emailOtpLastSentAt) {
+    if (!session || authPhase !== 'pending_email_verification' || !session.shouldAutoSendEmailOtp) {
       return;
     }
 
@@ -71,6 +87,8 @@ export function VerifyEmailScreen() {
 
     const bootstrapOtp = async () => {
       setIsSendingOtp(true);
+      setStatusMessage(null);
+      setStatusTone('signal');
 
       try {
         const result = await sendEmailOtp();
@@ -79,7 +97,15 @@ export function VerifyEmailScreen() {
           return;
         }
 
+        setStatusTone(getEmailOtpMessageTone(result.response));
         setStatusMessage(result.response.message);
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        setStatusTone('danger');
+        setStatusMessage(error instanceof Error ? error.message : 'Failed to send verification code.');
       } finally {
         if (isActive) {
           setIsSendingOtp(false);
@@ -131,71 +157,69 @@ export function VerifyEmailScreen() {
     <>
       <Stack.Screen options={{ headerShown: false, title: 'Verify Email' }} />
       <AuthShell
-        description={`Verify ${session.email} before the flow moves on to the WhatsApp step.`}
-        highlights={verifyHighlights}
+        description={`Enter the code sent to ${session.email} to continue to WhatsApp verification.`}
         pill="Verify Email"
-        title="Enter your OTP code">
+        title="Check your inbox">
         <View className="flex-row justify-end -mt-2 mb-2">
-          <TouchableOpacity onPress={() => signOut()} className="py-1 px-2">
-            <AppText tone="muted" className="font-medium text-[15px]">Log out</AppText>
+          <TouchableOpacity className="py-1 px-2" onPress={() => signOut()}>
+            <AppText className="font-medium text-[15px]" tone="muted">
+              Log out
+            </AppText>
           </TouchableOpacity>
         </View>
+
         <View className="gap-4">
-          <View className="gap-2">
-            <AppText tone="muted" variant="label">Email OTP</AppText>
-            <AppText variant="title">Check your inbox.</AppText>
-            <AppText tone="muted">
-              The backend message style is already preserved here, including resend rate-limit copy
-              and invalid-code feedback.
-            </AppText>
-          </View>
-
-          <View className="gap-2 rounded-[20px] border border-signal/25 bg-signal-tint p-4">
-            <AppText variant="subtitle">Mock test code</AppText>
-            <AppText selectable tone="muted">
-              Use `671706` while the backend email sender is still unavailable.
-            </AppText>
-          </View>
-
           <AppInput
+            autoCapitalize="none"
+            autoCorrect={false}
             error={otpError ?? undefined}
-            hint="6 digits"
-            keyboardType="number-pad"
-            label="OTP Code"
+            hint="Enter the 6-character verification code"
+            label="Verification Code"
             maxLength={6}
             onChangeText={(value) => {
-              const normalizedValue = value.replace(/\D/g, '').slice(0, 6);
-
-              setOtpCode(normalizedValue);
+              setOtpCode(value.slice(0, 6));
 
               if (otpError) {
                 setOtpError(null);
               }
             }}
-            placeholder="671706"
+            placeholder="Enter code"
             value={otpCode}
           />
 
           <AppButton
             detail="Next step: WhatsApp verification"
-            disabled={isVerifying || otpCode.length !== 6}
+            disabled={isVerifying || otpCode.trim().length !== 6}
             label={isVerifying ? 'Verifying...' : 'Verify Email'}
             onPress={async () => {
               setIsVerifying(true);
               setOtpError(null);
               setStatusMessage(null);
+              setStatusTone('signal');
 
               try {
-                const result = await verifyEmailOtp({ otp_code: otpCode });
+                const result = await verifyEmailOtp({ otp_code: otpCode.trim() });
 
-                if ('errors' in result.response) {
+                if (isHandledEmailOtpError(result.response)) {
                   setOtpError(result.response.errors.otp_code[0] ?? result.response.message);
                   setStatusMessage(result.response.message);
+                  setStatusTone('danger');
                   return;
                 }
 
                 setStatusMessage(result.response.message);
+                setStatusTone('signal');
                 router.replace('/verify-whatsapp');
+              } catch (error) {
+                if (error instanceof ApiError && error.payload && typeof error.payload === 'object') {
+                  const payload = error.payload as { message?: string };
+                  setStatusMessage(payload.message ?? error.message);
+                } else {
+                  setStatusMessage(
+                    error instanceof Error ? error.message : 'Email verification failed.'
+                  );
+                }
+                setStatusTone('danger');
               } finally {
                 setIsVerifying(false);
               }
@@ -204,20 +228,23 @@ export function VerifyEmailScreen() {
           />
 
           <AppButton
-            detail={
-              secondsRemaining
-                ? `Try again in ${secondsRemaining}s`
-                : 'Requests a fresh mock OTP'
-            }
+            detail={secondsRemaining ? `Try again in ${secondsRemaining}s` : 'Request a new code'}
             disabled={isSendingOtp || secondsRemaining > 0}
-            label={isSendingOtp ? 'Sending OTP...' : 'Resend OTP'}
+            label={isSendingOtp ? 'Sending code...' : 'Resend Code'}
             onPress={async () => {
               setIsSendingOtp(true);
               setStatusMessage(null);
+              setStatusTone('signal');
 
               try {
                 const result = await resendEmailOtp();
+                setStatusTone(getEmailOtpMessageTone(result.response));
                 setStatusMessage(result.response.message);
+              } catch (error) {
+                setStatusTone('danger');
+                setStatusMessage(
+                  error instanceof Error ? error.message : 'Failed to resend verification code.'
+                );
               } finally {
                 setIsSendingOtp(false);
               }
@@ -226,7 +253,7 @@ export function VerifyEmailScreen() {
           />
 
           {statusMessage ? (
-            <AppText selectable tone={otpError ? 'danger' : 'signal'}>
+            <AppText selectable tone={statusTone}>
               {statusMessage}
             </AppText>
           ) : null}

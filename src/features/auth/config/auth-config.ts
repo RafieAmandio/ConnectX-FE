@@ -26,6 +26,8 @@ function getRequiredEnv(value: string | undefined, name: string, description: st
   return normalizedValue;
 }
 
+export type MockAuthFlowMode = 'pending_onboarding' | 'authenticated';
+
 export function isAuthBypassEnabled() {
   const envValue = parseBooleanEnv(process.env.EXPO_PUBLIC_AUTH_BYPASS);
 
@@ -34,6 +36,24 @@ export function isAuthBypassEnabled() {
   }
 
   return __DEV__;
+}
+
+export function getMockAuthFlowMode(): MockAuthFlowMode | null {
+  if (!__DEV__) {
+    return null;
+  }
+
+  const normalized = process.env.EXPO_PUBLIC_MOCK_AUTH_FLOW?.trim().toLowerCase();
+
+  if (normalized === 'pending_onboarding') {
+    return 'pending_onboarding';
+  }
+
+  if (normalized === 'authenticated') {
+    return 'authenticated';
+  }
+
+  return null;
 }
 
 export function getGoogleAuthConfig() {

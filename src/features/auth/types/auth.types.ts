@@ -22,6 +22,7 @@ export type AuthUser = {
   whatsapp_verified_at: string | null;
   registration_step: number;
   is_active: boolean;
+  is_onboarded: boolean | null;
 };
 
 export type AuthSession = {
@@ -36,9 +37,27 @@ export type AuthSession = {
   method: AuthMethod;
   onboardingCompletedAt?: string | null;
   pendingWhatsappNumber?: string | null;
+  shouldAutoSendEmailOtp?: boolean;
   user: AuthUser | null;
   whatsappOtpLastSentAt?: string | null;
   whatsappOtpResendAvailableAt?: string | null;
+};
+
+export type AuthSupabaseSessionPayload = {
+  supabase_access_token?: string | null;
+  supabase_refresh_token?: string | null;
+  supabase_token?: string | null;
+};
+
+export type AuthSuccessResponse = AuthSupabaseSessionPayload & {
+  data: {
+    user: AuthUser;
+  };
+  message: string;
+  next_step: AuthNextStep;
+  status: 'success';
+  token: string;
+  token_type: string;
 };
 
 export type RegisterPayload = {
@@ -127,7 +146,7 @@ export type VerifyWhatsappSuccessResponse = {
   status: 'success';
   token: string;
   token_type: string;
-};
+} & AuthSupabaseSessionPayload;
 
 export type VerifyWhatsappValidationErrorResponse = {
   errors: {

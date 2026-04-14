@@ -36,7 +36,6 @@ export function VerifyOtpScreen() {
   const router = useRouter();
   const {
     authPhase,
-    enterPendingOnboarding,
     isHydrated,
     resendWhatsappOtp,
     session,
@@ -81,29 +80,7 @@ export function VerifyOtpScreen() {
     };
   }, [secondsRemaining]);
 
-  React.useEffect(() => {
-    if (otpCode.length === 6 && !isVerifying) {
-      handleVerifyOtp();
-    }
-  }, [otpCode]);
-
-  if (!isHydrated) {
-    return null;
-  }
-
-  if (!session) {
-    return <Redirect href="/login" />;
-  }
-
-  if (authPhase !== 'pending_whatsapp_verification') {
-    return <Redirect href={getRouteForAuthPhase(authPhase)} />;
-  }
-
-  if (!whatsappNumber) {
-    return <Redirect href="/verify-whatsapp" />;
-  }
-
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = React.useCallback(async () => {
     setIsVerifying(true);
     setOtpError(null);
     setStatusMessage(null);
@@ -127,8 +104,7 @@ export function VerifyOtpScreen() {
         return;
       }
 
-      await enterPendingOnboarding();
-      router.replace('/onboarding');
+      router.replace(getRouteForAuthPhase(result.session.authPhase));
     } catch (error: unknown) {
       setStatusTone('danger');
 
@@ -141,7 +117,29 @@ export function VerifyOtpScreen() {
     } finally {
       setIsVerifying(false);
     }
-  };
+  }, [otpCode, router, verifyWhatsappOtp]);
+
+  React.useEffect(() => {
+    if (otpCode.length === 6 && !isVerifying) {
+      void handleVerifyOtp();
+    }
+  }, [handleVerifyOtp, isVerifying, otpCode]);
+
+  if (!isHydrated) {
+    return null;
+  }
+
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
+
+  if (authPhase !== 'pending_whatsapp_verification') {
+    return <Redirect href={getRouteForAuthPhase(authPhase)} />;
+  }
+
+  if (!whatsappNumber) {
+    return <Redirect href="/verify-whatsapp" />;
+  }
 
   return (
     <KeyboardAvoidingView

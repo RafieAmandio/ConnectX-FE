@@ -82,6 +82,28 @@ export async function syncSupabaseRealtimeAuth(session?: Session | null) {
   await supabase.realtime.setAuth(session?.access_token ?? null);
 }
 
+export async function setSupabaseRealtimeToken(token?: string | null) {
+  await supabase.realtime.setAuth(token ?? null);
+}
+
+export async function setSupabaseSession(tokens: {
+  accessToken: string;
+  refreshToken: string;
+}) {
+  const { data, error } = await supabase.auth.setSession({
+    access_token: tokens.accessToken,
+    refresh_token: tokens.refreshToken,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  await syncSupabaseRealtimeAuth(data.session ?? null);
+
+  return data.session;
+}
+
 export async function signOutSupabase() {
   const { error } = await supabase.auth.signOut();
 

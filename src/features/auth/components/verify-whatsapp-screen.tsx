@@ -81,7 +81,7 @@ export function VerifyWhatsappScreen() {
         // Automatically route to otp screen if we already had a pending otp
         router.replace('/verify-otp');
     }
-  }, [hasPersistedOtpState, params.reset]);
+  }, [hasPersistedOtpState, params.reset, router]);
 
   if (!isHydrated) {
     return null;

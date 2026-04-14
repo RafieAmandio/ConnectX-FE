@@ -23,12 +23,12 @@ import {
   loginWithGoogleSupabase,
   registerWithApi,
   replaceStoredSession,
-  resendEmailOtpWithMock,
-  resendWhatsappOtpWithApi,
-  sendEmailOtpWithMock,
-  sendWhatsappOtpWithApi,
-  verifyEmailOtpWithMock,
-  verifyWhatsappOtpWithApi,
+  resendEmailOtp as resendEmailOtpRequest,
+  resendWhatsappOtp as resendWhatsappOtpRequest,
+  sendEmailOtp as sendEmailOtpRequest,
+  sendWhatsappOtp as sendWhatsappOtpRequest,
+  verifyEmailOtp as verifyEmailOtpRequest,
+  verifyWhatsappOtp as verifyWhatsappOtpRequest,
 } from '../services/auth-service';
 import { signInWithGoogleToken } from '../services/google-auth-service';
 import type {
@@ -50,14 +50,14 @@ type AuthContextValue = {
   enterWithDevBypass: () => Promise<void>;
   login: (payload: LoginPayload) => ReturnType<typeof loginWithApi>;
   register: (payload: RegisterPayload) => ReturnType<typeof registerWithApi>;
-  resendEmailOtp: () => ReturnType<typeof resendEmailOtpWithMock>;
-  resendWhatsappOtp: () => ReturnType<typeof resendWhatsappOtpWithApi>;
-  sendEmailOtp: () => ReturnType<typeof sendEmailOtpWithMock>;
-  sendWhatsappOtp: (payload: WhatsappOtpPayload) => ReturnType<typeof sendWhatsappOtpWithApi>;
+  resendEmailOtp: () => ReturnType<typeof resendEmailOtpRequest>;
+  resendWhatsappOtp: () => ReturnType<typeof resendWhatsappOtpRequest>;
+  sendEmailOtp: () => ReturnType<typeof sendEmailOtpRequest>;
+  sendWhatsappOtp: (payload: WhatsappOtpPayload) => ReturnType<typeof sendWhatsappOtpRequest>;
   signInWithGoogle: () => ReturnType<typeof loginWithGoogleSupabase>;
   signOut: () => Promise<void>;
-  verifyEmailOtp: (payload: VerifyEmailPayload) => ReturnType<typeof verifyEmailOtpWithMock>;
-  verifyWhatsappOtp: (payload: VerifyWhatsappPayload) => ReturnType<typeof verifyWhatsappOtpWithApi>;
+  verifyEmailOtp: (payload: VerifyEmailPayload) => ReturnType<typeof verifyEmailOtpRequest>;
+  verifyWhatsappOtp: (payload: VerifyWhatsappPayload) => ReturnType<typeof verifyWhatsappOtpRequest>;
 };
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -128,6 +128,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         ? {
           ...session.user,
           is_active: false,
+          is_onboarded: false,
           registration_step: Math.max(session.user.registration_step, 4),
         }
         : null,
@@ -152,6 +153,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         ? {
           ...session.user,
           is_active: true,
+          is_onboarded: true,
           registration_step: Math.max(session.user.registration_step, 5),
         }
         : null,
@@ -168,13 +170,22 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     const hydrate = async () => {
       try {
         const supabaseSession = await getSupabaseSession();
+        const persistedState = await getPersistedAuthState();
 
         if (!isActive) {
           return;
         }
 
         if (supabaseSession?.user) {
-          const nextSession = createGoogleAuthSessionFromSupabaseSession(supabaseSession);
+          const normalizedEmail = supabaseSession.user.email?.trim().toLowerCase() ?? null;
+          const persistedGoogleSession =
+            persistedState.session?.method === 'google' &&
+            normalizedEmail &&
+            persistedState.session.email === normalizedEmail
+              ? persistedState.session
+              : null;
+          const nextSession =
+            persistedGoogleSession ?? createGoogleAuthSessionFromSupabaseSession(supabaseSession);
 
           await Promise.all([
             replaceStoredSession(nextSession),
@@ -190,8 +201,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           setIsHydrated(true);
           return;
         }
-
-        const { token, session: storedSession } = await getPersistedAuthState();
+        const { token, session: storedSession } = persistedState;
 
         if (!isActive) {
           return;
@@ -291,7 +301,14 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') &&
         nextSupabaseSession?.user
       ) {
-        const nextSession = createGoogleAuthSessionFromSupabaseSession(nextSupabaseSession);
+        const normalizedEmail = nextSupabaseSession.user.email?.trim().toLowerCase() ?? null;
+        const currentSession = sessionRef.current;
+        const nextSession =
+          currentSession?.method === 'google' &&
+          normalizedEmail &&
+          currentSession.email === normalizedEmail
+            ? currentSession
+            : createGoogleAuthSessionFromSupabaseSession(nextSupabaseSession);
 
         await Promise.all([
           replaceStoredSession(nextSession),
@@ -347,42 +364,42 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   );
 
   const sendEmailOtp = React.useCallback(async () => {
-    const result = await sendEmailOtpWithMock();
+    const result = await sendEmailOtpRequest();
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
     return result;
   }, []);
 
   const resendEmailOtp = React.useCallback(async () => {
-    const result = await resendEmailOtpWithMock();
+    const result = await resendEmailOtpRequest();
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
     return result;
   }, []);
 
   const sendWhatsappOtp = React.useCallback(async (payload: WhatsappOtpPayload) => {
-    const result = await sendWhatsappOtpWithApi(payload);
+    const result = await sendWhatsappOtpRequest(payload);
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
     return result;
   }, []);
 
   const resendWhatsappOtp = React.useCallback(async () => {
-    const result = await resendWhatsappOtpWithApi();
+    const result = await resendWhatsappOtpRequest();
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
     return result;
   }, []);
 
   const verifyEmailOtp = React.useCallback(async (payload: VerifyEmailPayload) => {
-    const result = await verifyEmailOtpWithMock(payload);
+    const result = await verifyEmailOtpRequest(payload);
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
     return result;
   }, []);
 
   const verifyWhatsappOtp = React.useCallback(async (payload: VerifyWhatsappPayload) => {
-    const result = await verifyWhatsappOtpWithApi(payload);
+    const result = await verifyWhatsappOtpRequest(payload);
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
     return result;
