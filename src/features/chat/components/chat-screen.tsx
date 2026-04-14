@@ -129,7 +129,7 @@ function formatBytes(value: number | null | undefined) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function MessageBody({
+const MessageBody = React.memo(function MessageBody({
   isOutgoing,
   message,
 }: {
@@ -202,6 +202,10 @@ function MessageBody({
       {message.content}
     </AppText>
   );
+});
+
+function ConversationSeparator() {
+  return <View className="ml-[76px] h-px bg-[#3A3938]" />;
 }
 
 function ChatExperimentNotice() {
@@ -248,7 +252,7 @@ function ChatAvatar({
   );
 }
 
-function ConversationCard({
+const ConversationCard = React.memo(function ConversationCard({
   conversation,
   onPress,
 }: {
@@ -290,7 +294,7 @@ function ConversationCard({
       </View>
     </Pressable>
   );
-}
+});
 
 function ConversationPanel({
   conversation,
@@ -662,6 +666,18 @@ export function ChatListScreen() {
 
   const unreadTotal = conversations.reduce((sum, room) => sum + room.unreadCount, 0);
 
+  const renderConversation = React.useCallback(
+    ({ item: conversation }: { item: ChatRoom }) => (
+      <ConversationCard
+        conversation={conversation}
+        onPress={() => {
+          router.push(`/conversation/${conversation.id}`);
+        }}
+      />
+    ),
+    [router]
+  );
+
   if (!isChatEnabled) {
     return (
       <>
@@ -719,15 +735,8 @@ export function ChatListScreen() {
             data={conversations}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 32 }}
-            ItemSeparatorComponent={() => <View className="ml-[76px] h-px bg-[#3A3938]" />}
-            renderItem={({ item: conversation }) => (
-              <ConversationCard
-                conversation={conversation}
-                onPress={() => {
-                  router.push(`/conversation/${conversation.id}`);
-                }}
-              />
-            )}
+            ItemSeparatorComponent={ConversationSeparator}
+            renderItem={renderConversation}
           />
         ) : null}
       </View>
