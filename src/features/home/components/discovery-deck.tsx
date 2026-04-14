@@ -967,7 +967,7 @@ export function DiscoveryDeck() {
   }
 
   return (
-    <View className="flex-1 gap-2 px-4 pb-1" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 gap-4 px-4 pb-1" style={{ paddingTop: insets.top }}>
       {matchToastName ? (
         <View className="absolute inset-x-4 top-2 z-20" pointerEvents="none">
           <AppCard
@@ -1035,7 +1035,7 @@ export function DiscoveryDeck() {
         </AppCard>
       ) : null}
 
-      <View className="flex-1">
+      <View className="flex-1 mt-6">
         <View className="h-full w-full">
           {nextItem ? (
             <Animated.View
@@ -1362,7 +1362,7 @@ export function DiscoveryDeck() {
         </View>
       </View>
 
-      <View className="flex-row items-center justify-center gap-4">
+      <View className="mt-6 flex-row items-center justify-center gap-4">
         <DeckActionButton
           color="#EF4444"
           disabled={isSubmitting}
