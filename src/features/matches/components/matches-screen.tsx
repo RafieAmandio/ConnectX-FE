@@ -239,10 +239,10 @@ export function MatchesScreen() {
 
                     console.log('[Connects] Chat tapped', {
                       conversationId: match.conversationId,
-                      destination: `/chat?conversationId=${match.conversationId}`,
+                      destination: `/conversation/${match.conversationId}`,
                       matchId: match.matchId,
                     });
-                    router.push(`/chat?conversationId=${match.conversationId}`);
+                    router.push(`/conversation/${match.conversationId}`);
                   }}
                 />
               ))}
