@@ -6,6 +6,9 @@ import type {
   DiscoveryCardsResponse,
   DiscoveryFilterOptionsResponse,
   DiscoveryMode,
+  DiscoverySwipeHistoryEntry,
+  RewindActionRequest,
+  RewindActionSuccessResponse,
   SpotlightActivationRequest,
   SpotlightActivationSuccessResponse,
   SwipeActionRequest,
@@ -43,10 +46,27 @@ function shouldMockSuperLikeRequiresBoost() {
   return false;
 }
 
+type MockRewindMode = 'success' | 'premium_required' | 'not_available';
+
+function getMockRewindMode(): MockRewindMode | null {
+  const normalized = process.env.EXPO_PUBLIC_MOCK_DISCOVERY_REWIND_RESPONSE?.trim().toLowerCase();
+
+  if (
+    normalized === 'success' ||
+    normalized === 'premium_required' ||
+    normalized === 'not_available'
+  ) {
+    return normalized;
+  }
+
+  return null;
+}
+
 export const DISCOVERY_API = {
   CARDS: '/api/v1/discovery/cards',
   FILTER_OPTIONS: '/api/v1/discovery/filter-options',
   ACTION: (profileId: string) => `/api/v1/discovery/cards/${profileId}/action`,
+  REWIND: '/api/v1/discovery/swipes/rewind',
   SPOTLIGHT_ACTIVATE: '/api/v1/discovery/spotlight/activate',
 } as const;
 
@@ -113,8 +133,65 @@ export async function postSwipeAction(profileId: string, payload: SwipeActionReq
       },
     });
   }
+  console.log("HEL")
 
   return apiFetch<SwipeActionResponse>(DISCOVERY_API.ACTION(profileId), {
+    body: payload as unknown as BodyInit,
+    method: 'POST',
+  });
+}
+
+export async function postRewindAction(
+  payload: RewindActionRequest = {},
+  options?: {
+    mockHistoryEntry?: DiscoverySwipeHistoryEntry | null;
+  }
+) {
+  const mockMode = __DEV__ ? getMockRewindMode() : null;
+
+  if (mockMode) {
+    if (mockMode === 'premium_required') {
+      throw new ApiError('ConnectX Pro is required to rewind your last swipe.', 403, {
+        success: false,
+        message: 'ConnectX Pro is required to rewind your last swipe.',
+        error: {
+          code: 'DISCOVERY_REWIND_PREMIUM_REQUIRED',
+          details: {
+            requiredEntitlement: 'connectx_pro',
+          },
+        },
+      });
+    }
+
+    const historyEntry = options?.mockHistoryEntry;
+
+    if (mockMode === 'not_available' || !historyEntry) {
+      throw new ApiError('No swipe is available to rewind right now.', 409, {
+        success: false,
+        message: 'No swipe is available to rewind right now.',
+        error: {
+          code: 'DISCOVERY_REWIND_NOT_AVAILABLE',
+          details: {
+            profileId: historyEntry?.card.profileId ?? null,
+            rewoundAction: historyEntry?.action ?? null,
+            reason: 'EMPTY_HISTORY',
+          },
+        },
+      });
+    }
+
+    return {
+      success: true,
+      message: 'Last swipe rewound.',
+      data: {
+        profileId: historyEntry.card.profileId,
+        rewoundAction: historyEntry.action,
+        card: historyEntry.card,
+      },
+    } satisfies RewindActionSuccessResponse;
+  }
+
+  return apiFetch<RewindActionSuccessResponse>(DISCOVERY_API.REWIND, {
     body: payload as unknown as BodyInit,
     method: 'POST',
   });

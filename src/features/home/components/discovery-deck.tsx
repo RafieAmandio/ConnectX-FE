@@ -24,13 +24,18 @@ import {
   countAppliedDiscoveryFilters,
   useDiscoveryCards,
   useDiscoveryFilterOptions,
+  useRewindAction,
   useSwipeAction,
 } from '../hooks/use-discovery';
 import {
   mockDiscoveryCardsResponse,
   mockDiscoveryFilterOptionsByMode,
 } from '../mock/discovery.mock';
-import { isSuperLikeRequiresBoostError } from '../services/discovery-contract';
+import {
+  isRewindNotAvailableError,
+  isRewindPremiumRequiredError,
+  isSuperLikeRequiresBoostError,
+} from '../services/discovery-contract';
 import type {
   DiscoveryAppliedFilters,
   DiscoveryCard,
@@ -39,6 +44,7 @@ import type {
   DiscoveryFilterSection,
   DiscoveryGoalId,
   DiscoveryMode,
+  DiscoverySwipeHistoryEntry,
   SwipeActionRequest,
 } from '../types/discovery.types';
 import { DiscoveryFilterSheet } from './discovery-filter-sheet';
@@ -417,7 +423,7 @@ export function DiscoveryDeck() {
     useRevenueCat();
   const [fallbackCards, setFallbackCards] = React.useState(mockDiscoveryCardsResponse.data.items);
   const [restoredCards, setRestoredCards] = React.useState<DiscoveryCard[]>([]);
-  const [history, setHistory] = React.useState<DiscoveryCard[]>([]);
+  const [history, setHistory] = React.useState<DiscoverySwipeHistoryEntry[]>([]);
   const [lastSuccessfulCards, setLastSuccessfulCards] = React.useState<DiscoveryCard[]>([]);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [matchToastName, setMatchToastName] = React.useState<string | null>(null);
@@ -482,6 +488,7 @@ export function DiscoveryDeck() {
   }, [appliedMode, sanitizedAppliedFilters]);
 
   const discoveryQuery = useDiscoveryCards(discoveryRequest, DISCOVERY_PAGE_LIMIT);
+  const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
 
 
@@ -514,7 +521,7 @@ export function DiscoveryDeck() {
   usingFallbackRef.current = usingFallback;
 
   React.useEffect(() => {
-        if (usingFallbackRef.current) {
+    if (usingFallbackRef.current) {
       return;
     }
 
@@ -614,13 +621,7 @@ export function DiscoveryDeck() {
       try {
         let matched = false;
 
-        if (false) {
-          if (direction) {
-            triggerSwipeHaptic(direction);
-          } else {
-            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }
-
+        if (usingFallbackRef.current) {
           setFallbackCards((current) => current.filter((item) => item.id !== activeCard.id));
         } else {
           const response = await swipeAction.mutateAsync({
@@ -631,7 +632,11 @@ export function DiscoveryDeck() {
           matched = Boolean(response.data.isMatch);
         }
 
-        setHistory((current) => [...current.slice(-19), activeCard]);
+        // Rewound cards are restored from local state, so clear that copy once
+        // the backend accepts the new swipe.
+        setRestoredCards((current) => current.filter((card) => card.id !== activeCard.id));
+
+        setHistory((current) => [...current.slice(-19), { action, card: activeCard }]);
 
         if (direction) {
           triggerSwipeHaptic(direction);
@@ -675,12 +680,80 @@ export function DiscoveryDeck() {
       return;
     }
 
+    const lastEntry = history[history.length - 1];
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const lastCard = history[history.length - 1];
-    setHistory((current) => current.slice(0, -1));
-    setRestoredCards((current) => [lastCard, ...current]);
-  }, [history, isSubmitting]);
+    if (usingFallbackRef.current) {
+      setHistory((current) => current.slice(0, -1));
+      setRestoredCards((current) => [
+        lastEntry.card,
+        ...current.filter((card) => card.id !== lastEntry.card.id),
+      ]);
+      setActionError(null);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionError(null);
+
+    void rewindAction
+      .mutateAsync({
+        options: {
+          mockHistoryEntry: lastEntry,
+        },
+      })
+      .then(async (response) => {
+        setHistory((current) => current.slice(0, -1));
+        setRestoredCards((current) => [
+          response.data.card,
+          ...current.filter((card) => card.id !== response.data.card.id),
+        ]);
+        setActionError(null);
+      })
+      .catch(async (error) => {
+        if (isRewindPremiumRequiredError(error)) {
+          if (!supported) {
+            setActionError('Rewind is available in the native iOS and Android builds with ConnectX Pro.');
+            return;
+          }
+
+          try {
+            const result = await presentPaywallIfNeeded();
+            const unlockedPro =
+              isConnectXProActive ||
+              result === PAYWALL_RESULT.PURCHASED ||
+              result === PAYWALL_RESULT.RESTORED;
+
+            if (!unlockedPro) {
+              setActionError('ConnectX Pro is required to rewind your last swipe.');
+            }
+          } catch (paywallError) {
+            setActionError(
+              getErrorMessage(paywallError, 'Unable to open the ConnectX Pro upgrade flow.')
+            );
+          }
+
+          return;
+        }
+
+        if (isRewindNotAvailableError(error)) {
+          setActionError(getErrorMessage(error, 'No swipe is available to rewind right now.'));
+          return;
+        }
+
+        setActionError(getErrorMessage(error, 'Unable to rewind the last swipe right now.'));
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
+  }, [
+    history,
+    isConnectXProActive,
+    isSubmitting,
+    presentPaywallIfNeeded,
+    rewindAction,
+    supported,
+  ]);
 
   const beginSwipe = React.useCallback(
     (direction: SwipeDirection) => {

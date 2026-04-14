@@ -9,14 +9,18 @@ import {
 import {
   fetchDiscoveryCards,
   fetchDiscoveryFilterOptions,
+  postRewindAction,
   postSwipeAction,
 } from '../services/discovery-service';
 import type {
   DiscoveryAppliedFilters,
+  DiscoverySwipeHistoryEntry,
   DiscoveryCardsRequest,
   DiscoveryCardsResponse,
   DiscoveryFilterOptionsResponse,
   DiscoveryMode,
+  RewindActionRequest,
+  RewindActionSuccessResponse,
   SwipeActionRequest,
 } from '../types/discovery.types';
 
@@ -107,6 +111,21 @@ export function useSwipeAction() {
         (current) => removeCardFromPages(current, variables.profileId)
       );
     },
+  });
+}
+
+export function useRewindAction() {
+  return useMutation<
+    RewindActionSuccessResponse,
+    Error,
+    {
+      options?: {
+        mockHistoryEntry?: DiscoverySwipeHistoryEntry | null;
+      };
+      payload?: RewindActionRequest;
+    }
+  >({
+    mutationFn: ({ options, payload }) => postRewindAction(payload, options),
   });
 }
 

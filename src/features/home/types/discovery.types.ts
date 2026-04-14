@@ -217,6 +217,41 @@ export type SwipeActionDeniedResponse = {
 
 export type SwipeActionResponse = SwipeActionSuccessResponse;
 
+export type DiscoverySwipeHistoryEntry = {
+  action: SwipeActionRequest['action'];
+  card: DiscoveryCard;
+};
+
+export type RewindActionRequest = Record<string, never>;
+
+export type RewindActionSuccessResponse = {
+  success: true;
+  message: string;
+  data: {
+    profileId: string;
+    rewoundAction: SwipeActionRequest['action'];
+    card: DiscoveryCard;
+  };
+};
+
+export type RewindActionErrorCode =
+  | 'DISCOVERY_REWIND_PREMIUM_REQUIRED'
+  | 'DISCOVERY_REWIND_NOT_AVAILABLE';
+
+export type RewindActionDeniedResponse = {
+  success: false;
+  message: string;
+  error: {
+    code: RewindActionErrorCode;
+    details: {
+      profileId?: string | null;
+      requiredEntitlement?: 'connectx_pro';
+      rewoundAction?: SwipeActionRequest['action'] | null;
+      reason?: 'EMPTY_HISTORY' | 'ALREADY_REWOUND' | 'WINDOW_EXPIRED';
+    };
+  };
+};
+
 export type SpotlightActivationRequest = Record<string, never>;
 
 export type SpotlightActivationSuccessResponse = {

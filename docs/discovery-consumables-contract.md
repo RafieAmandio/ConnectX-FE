@@ -1,4 +1,4 @@
-# Discovery Consumables Contract (`CON-60`)
+# Discovery Actions Contract (`CON-60`)
 
 This document clarifies the discovery API contract for swipe actions, boost-backed `super_like`,
 and backend-managed spotlight activation.
@@ -169,6 +169,96 @@ When spotlight is already active:
 }
 ```
 
+## 5. Rewind Endpoint
+
+`POST /api/v1/discovery/swipes/rewind`
+
+Rewind is a premium-only discovery action. Backend decides whether the user can rewind and which
+last swipe is restored.
+
+### Rules
+
+- rewind is available only to premium users
+- rewind restores the most recent rewindable swipe for the current user
+- backend is the source of truth for whether a rewind is allowed
+- frontend may animate card restoration locally, but backend must confirm the undo
+
+### `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Last swipe rewound.",
+  "data": {
+    "profileId": "prof_123",
+    "rewoundAction": "pass",
+    "card": {
+      "id": "card_123",
+      "profileId": "prof_123",
+      "photoUrl": "https://example.com/photo.jpg",
+      "name": "Ardi Wijaya",
+      "age": 29,
+      "headline": "Founding Engineer",
+      "location": {
+        "city": "Jakarta",
+        "country": "Indonesia",
+        "display": "Jakarta, Indonesia"
+      },
+      "match": {
+        "score": 88
+      },
+      "badges": [],
+      "interests": [],
+      "skills": []
+    }
+  }
+}
+```
+
+Success fields:
+- `profileId`
+- `rewoundAction`
+- `card`
+
+### `403 Forbidden` premium required
+
+```json
+{
+  "success": false,
+  "message": "ConnectX Pro is required to rewind your last swipe.",
+  "error": {
+    "code": "DISCOVERY_REWIND_PREMIUM_REQUIRED",
+    "details": {
+      "requiredEntitlement": "connectx_pro"
+    }
+  }
+}
+```
+
+Behavior requirements:
+- frontend should open the premium paywall
+- no rewind is applied until backend confirms success
+
+### `409 Conflict` no rewind available
+
+```json
+{
+  "success": false,
+  "message": "No swipe is available to rewind right now.",
+  "error": {
+    "code": "DISCOVERY_REWIND_NOT_AVAILABLE",
+    "details": {
+      "profileId": null,
+      "rewoundAction": null,
+      "reason": "EMPTY_HISTORY"
+    }
+  }
+}
+```
+
+Use `DISCOVERY_REWIND_NOT_AVAILABLE` when there is nothing to rewind, the last swipe was already
+rewound, or the rewind window has expired.
+
 ## Optional Discovery State Payload
 
 If discovery bootstrap or profile-status payloads already exist, expose backend-owned consumables in
@@ -211,3 +301,6 @@ Recommended fields:
 - spotlight activation returns `409 DISCOVERY_SPOTLIGHT_REQUIRES_CREDIT` when inventory is `0`
 - spotlight activation returns `409 DISCOVERY_SPOTLIGHT_ALREADY_ACTIVE` when spotlight is already
   active
+- rewind succeeds with `200 OK` and returns the restored card payload
+- rewind returns `403 DISCOVERY_REWIND_PREMIUM_REQUIRED` for non-premium users
+- rewind returns `409 DISCOVERY_REWIND_NOT_AVAILABLE` when no last swipe can be restored
