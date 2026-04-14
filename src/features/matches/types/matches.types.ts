@@ -44,6 +44,7 @@ export type MatchesListResponse = {
     likesYou: {
       items: LikesYouListItem[];
       totalNew: number;
+      locked: boolean;
     };
     items: MatchListItem[];
     total: number;

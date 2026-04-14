@@ -27,13 +27,8 @@ export function useMatchesList(params: MatchesListQueryParams = {}) {
     enabled: !usingMockMatches,
     initialData: usingMockMatches
       ? {
-          ...mockMatchesListResponse,
-          data: {
-            ...mockMatchesListResponse.data,
-            limit: params.limit ?? mockMatchesListResponse.data.limit,
-            page: params.page ?? mockMatchesListResponse.data.page,
-          },
-        }
+        ...mockMatchesListResponse
+      }
       : undefined,
     queryKey: matchesQueryKeys.list(params),
     queryFn: () => fetchMatchesList(params),

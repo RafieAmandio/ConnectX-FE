@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
@@ -14,7 +14,7 @@ import {
   isSpotlightAlreadyActiveError,
   isSpotlightRequiresCreditError,
 } from '../services/spotlight-contract';
-import type { MatchListItem } from '../types/matches.types';
+import type { LikesYouListItem, MatchListItem } from '../types/matches.types';
 
 type SpotlightBannerState = {
   detail: string;
@@ -93,6 +93,41 @@ function LockedConnectCard({ photoUrl }: { photoUrl: string | null }) {
   );
 }
 
+function LikesYouPreviewCard({
+  item,
+  onPress,
+}: {
+  item: LikesYouListItem;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      className="h-[160px] flex-1 overflow-hidden rounded-[24px] border border-[#5E5037] bg-[#2B2B2D]"
+      onPress={onPress}>
+      {item.user.photoUrl ? (
+        <Image
+          contentFit="cover"
+          source={{ uri: item.user.photoUrl }}
+          style={{ height: '100%', width: '100%' }}
+        />
+      ) : (
+        <View className="h-full w-full bg-[#34343A]" />
+      )}
+
+      <View
+        className="absolute inset-x-0 bottom-0 px-3 pb-3 pt-10"
+        style={{ backgroundColor: 'rgba(24, 24, 27, 0.58)' }}>
+        <AppText className="text-[15px] text-[#F6F2EB]" variant="bodyStrong">
+          {item.user.name}
+        </AppText>
+        <AppText className="text-[12px] text-[#D8C6A5]">
+          {item.user.headline}
+        </AppText>
+      </View>
+    </Pressable>
+  );
+}
+
 function formatLikesYouCount(totalNew: number) {
   if (totalNew <= 0) {
     return '0 new';
@@ -158,21 +193,44 @@ function MatchRow({
 export function MatchesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { presentPaywallForOffering, supported } = useRevenueCat();
+  const { presentPaywallForOffering, presentPaywallIfNeeded, supported } = useRevenueCat();
   const matchesQuery = useMatchesList({ limit: 10, page: 1, status: 'active' });
   const usingMockMatches = isMatchesListMockEnabled();
   const spotlightActivation = useActivateSpotlight();
   const [spotlightBanner, setSpotlightBanner] = React.useState<SpotlightBannerState | null>(null);
   const [spotlightEndsAt, setSpotlightEndsAt] = React.useState<string | null>(null);
+  const [likesYouBanner, setLikesYouBanner] = React.useState<SpotlightBannerState | null>(null);
 
   const responseData = matchesQuery.data?.data;
   const matches = responseData?.items ?? [];
   const likesYou = responseData?.likesYou?.items ?? [];
+  const likesYouLocked = responseData?.likesYou?.locked
   const likesYouCount = responseData?.likesYou?.totalNew ?? likesYou.length;
-  const lockedConnects = Array.from({ length: 3 }, (_, index) => likesYou[index] ?? null);
+  const likesYouPreviewItems = Array.from({ length: 3 }, (_, index) => likesYou[index] ?? null);
   const matchCountLabel = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`;
   const likesYouCountLabel = formatLikesYouCount(likesYouCount);
   const spotlightEndsAtLabel = formatSpotlightTimestamp(spotlightEndsAt);
+
+  const maybePresentLikesYouPaywall = React.useCallback(async () => {
+    if (!supported) {
+      setLikesYouBanner({
+        detail: 'Likes You unlock is available in the native iOS and Android builds with ConnectX Pro.',
+        title: 'Premium unlock unavailable here',
+        tone: 'warning',
+      });
+      return;
+    }
+
+    try {
+      await presentPaywallIfNeeded();
+    } catch (error) {
+      setLikesYouBanner({
+        detail: error instanceof Error ? error.message : 'Unable to open the premium paywall.',
+        title: 'Could not open premium paywall',
+        tone: 'warning',
+      });
+    }
+  }, [presentPaywallIfNeeded, supported]);
 
   const maybePresentSpotlightPaywall = React.useCallback(async () => {
     if (!supported) {
@@ -245,6 +303,28 @@ export function MatchesScreen() {
     }
   }, [maybePresentSpotlightPaywall, spotlightActivation]);
 
+  const handleLikesYouPress = React.useCallback(
+    async (item: LikesYouListItem) => {
+      setLikesYouBanner(null);
+
+      if (likesYouLocked) {
+        setLikesYouBanner({
+          detail: 'Upgrade to ConnectX Pro to reveal who liked you.',
+          title: 'Likes You is locked',
+          tone: 'warning',
+        });
+        await maybePresentLikesYouPaywall();
+        return;
+      }
+
+      Alert.alert(
+        item.user.name,
+        `${item.user.headline} · ${item.user.location}\n\nA dedicated Likes You detail route is not wired yet.`
+      );
+    },
+    [likesYouLocked, maybePresentLikesYouPaywall]
+  );
+
   return (
     <View className="flex-1 bg-[#242322]" style={{ paddingTop: insets.top }}>
       <ScrollView
@@ -270,22 +350,90 @@ export function MatchesScreen() {
             </View>
 
             <View className="flex-row gap-4">
-              {lockedConnects.map((like, index) => (
-                <LockedConnectCard
-                  key={like ? `locked-${like.likeId}` : `locked-placeholder-${index}`}
-                  photoUrl={like?.user.photoUrl ?? null}
-                />
-              ))}
+              {likesYouPreviewItems.map((like, index) =>
+                likesYouLocked ? (
+                  <LockedConnectCard
+                    key={like ? `locked-${like.likeId}` : `locked-placeholder-${index}`}
+                    photoUrl={like?.user.photoUrl ?? null}
+                  />
+                ) : like ? (
+                  <LikesYouPreviewCard
+                    key={`likes-you-${like.likeId}`}
+                    item={like}
+                    onPress={() => {
+                      void handleLikesYouPress(like);
+                    }}
+                  />
+                ) : (
+                  <View
+                    key={`likes-you-placeholder-${index}`}
+                    className="h-[160px] flex-1 rounded-[24px] border border-[#424242] bg-[#2B2B2D]"
+                  />
+                )
+              )}
             </View>
 
             <Pressable
               className="flex-row items-center justify-center gap-3 rounded-[24px] border px-6 py-5"
+              onPress={() => {
+                if (likesYouLocked) {
+                  void maybePresentLikesYouPaywall();
+                  return;
+                }
+
+                const firstLike = likesYou[0];
+
+                if (firstLike) {
+                  void handleLikesYouPress(firstLike);
+                }
+              }}
               style={{ backgroundColor: '#5B4720', borderColor: '#AD8528' }}>
               <Ionicons color="#FFD33D" name="sparkles-outline" size={22} />
               <AppText className="text-[18px] text-[#FFD33D]" variant="subtitle">
-                Unlock Connects
+                {likesYouLocked ? 'Unlock Connects' : 'View Connects'}
               </AppText>
             </Pressable>
+
+            {likesYouBanner ? (
+              <View
+                className="mt-2 rounded-[18px] border px-4 py-3"
+                style={{
+                  backgroundColor:
+                    likesYouBanner.tone === 'success'
+                      ? '#1F3025'
+                      : likesYouBanner.tone === 'warning'
+                        ? '#35281D'
+                        : '#2C2C2F',
+                  borderColor:
+                    likesYouBanner.tone === 'success'
+                      ? '#2F6E45'
+                      : likesYouBanner.tone === 'warning'
+                        ? '#8A6125'
+                        : '#454548',
+                }}>
+                <AppText
+                  className={
+                    likesYouBanner.tone === 'success'
+                      ? 'text-[#D8F7E3]'
+                      : likesYouBanner.tone === 'warning'
+                        ? 'text-[#FFD9A3]'
+                        : 'text-[#F1F1F1]'
+                  }
+                  variant="bodyStrong">
+                  {likesYouBanner.title}
+                </AppText>
+                <AppText
+                  className={
+                    likesYouBanner.tone === 'success'
+                      ? 'text-[#A7E6BE]'
+                      : likesYouBanner.tone === 'warning'
+                        ? 'text-[#E9BD82]'
+                        : 'text-[#B4B4B7]'
+                  }>
+                  {likesYouBanner.detail}
+                </AppText>
+              </View>
+            ) : null}
 
             <Pressable
               className="flex-row items-center justify-between rounded-[24px] border px-5 py-4"

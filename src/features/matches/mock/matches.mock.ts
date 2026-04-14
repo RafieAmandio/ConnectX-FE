@@ -1,8 +1,8 @@
 import type {
+  LikesYouListItem,
   MatchAnalysisResponse,
   MatchListItem,
   MatchesListResponse,
-  LikesYouListItem,
 } from '../types/matches.types';
 
 const likesYouBlueprints = [
@@ -148,6 +148,7 @@ export const mockMatchesListResponse: MatchesListResponse = {
         },
       })),
       totalNew: likesYouBlueprints.length,
+      locked: true,
     },
     items: matchBlueprints.map<MatchListItem>((item) => ({
       matchId: item.matchId,
