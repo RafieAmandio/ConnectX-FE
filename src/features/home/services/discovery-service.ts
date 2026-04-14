@@ -6,6 +6,8 @@ import type {
   DiscoveryCardsResponse,
   DiscoveryFilterOptionsResponse,
   DiscoveryMode,
+  SpotlightActivationRequest,
+  SpotlightActivationSuccessResponse,
   SwipeActionRequest,
   SwipeActionResponse,
 } from '../types/discovery.types';
@@ -17,6 +19,7 @@ export const DISCOVERY_API = {
   CARDS: '/api/v1/discovery/cards',
   FILTER_OPTIONS: '/api/v1/discovery/filter-options',
   ACTION: (profileId: string) => `/api/v1/discovery/cards/${profileId}/action`,
+  SPOTLIGHT_ACTIVATE: '/api/v1/discovery/spotlight/activate',
 } as const;
 
 function normalizeLimit(limit?: number) {
@@ -68,6 +71,13 @@ export async function fetchDiscoveryFilterOptions(mode: DiscoveryMode) {
 
 export async function postSwipeAction(profileId: string, payload: SwipeActionRequest) {
   return apiFetch<SwipeActionResponse>(DISCOVERY_API.ACTION(profileId), {
+    body: payload as unknown as BodyInit,
+    method: 'POST',
+  });
+}
+
+export async function postSpotlightActivation(payload: SpotlightActivationRequest = {}) {
+  return apiFetch<SpotlightActivationSuccessResponse>(DISCOVERY_API.SPOTLIGHT_ACTIVATE, {
     body: payload as unknown as BodyInit,
     method: 'POST',
   });

@@ -160,11 +160,34 @@ export type DiscoveryAppliedSearch = {
   mode: DiscoveryMode | null;
 };
 
+export type DiscoveryConsumableType = 'boost' | 'spotlight';
+
+export type DiscoveryBoostsBalance = {
+  remaining: number;
+};
+
+export type DiscoverySpotlightWindow = {
+  active: boolean;
+  startedAt: string | null;
+  endsAt: string | null;
+  nextEligibleAt: string | null;
+};
+
+export type DiscoverySpotlightsBalance = {
+  remaining: number;
+  current: DiscoverySpotlightWindow;
+};
+
+export type DiscoveryConsumablesSnapshot = {
+  boosts: DiscoveryBoostsBalance;
+  spotlights: DiscoverySpotlightsBalance;
+};
+
 export type SwipeActionRequest = {
   action: 'like' | 'pass' | 'super_like';
 };
 
-export type SwipeActionResponse = {
+export type SwipeActionSuccessResponse = {
   success: boolean;
   message: string;
   data: {
@@ -172,5 +195,55 @@ export type SwipeActionResponse = {
     action: SwipeActionRequest['action'];
     isMatch: boolean;
     matchId: string | null;
+    consumables?: Pick<DiscoveryConsumablesSnapshot, 'boosts'>;
+  };
+};
+
+export type SwipeActionErrorCode = 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST';
+
+export type SwipeActionDeniedResponse = {
+  success: false;
+  message: string;
+  error: {
+    code: SwipeActionErrorCode;
+    details: {
+      profileId: string;
+      action: Extract<SwipeActionRequest['action'], 'super_like'>;
+      requiredConsumable: Extract<DiscoveryConsumableType, 'boost'>;
+      remaining: number;
+    };
+  };
+};
+
+export type SwipeActionResponse = SwipeActionSuccessResponse;
+
+export type SpotlightActivationRequest = Record<string, never>;
+
+export type SpotlightActivationSuccessResponse = {
+  success: true;
+  message: string;
+  data: {
+    active: true;
+    startedAt: string;
+    endsAt: string;
+    remainingSpotlights: number;
+  };
+};
+
+export type SpotlightActivationErrorCode =
+  | 'DISCOVERY_SPOTLIGHT_REQUIRES_CREDIT'
+  | 'DISCOVERY_SPOTLIGHT_ALREADY_ACTIVE';
+
+export type SpotlightActivationDeniedResponse = {
+  success: false;
+  message: string;
+  error: {
+    code: SpotlightActivationErrorCode;
+    details: {
+      remaining: number;
+      active: boolean;
+      endsAt: string | null;
+      nextEligibleAt: string | null;
+    };
   };
 };

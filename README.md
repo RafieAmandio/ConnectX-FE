@@ -212,3 +212,5 @@ order by created_at desc;
 - The shared API layer already supports bearer-token injection when auth exists.
 - The Products demo uses the exact same shared fetch/query foundation as future real endpoints.
 - The current app uses Expo Router, React Query, SecureStore, NativeWind, and feature barrels together.
+- The discovery consumables contract for `CON-60` is documented in
+  [docs/discovery-consumables-contract.md](/Users/dwiki/Development/connectx/docs/discovery-consumables-contract.md).
