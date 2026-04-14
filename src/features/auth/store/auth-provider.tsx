@@ -23,14 +23,14 @@ import {
   loginWithGoogleSupabase,
   registerWithApi,
   replaceStoredSession,
-  resendLoginOtp as resendLoginOtpRequest,
   resendEmailOtp as resendEmailOtpRequest,
+  resendLoginOtp as resendLoginOtpRequest,
   resendWhatsappOtp as resendWhatsappOtpRequest,
-  sendLoginOtp as sendLoginOtpRequest,
   sendEmailOtp as sendEmailOtpRequest,
+  sendLoginOtp as sendLoginOtpRequest,
   sendWhatsappOtp as sendWhatsappOtpRequest,
-  verifyLoginOtp as verifyLoginOtpRequest,
   verifyEmailOtp as verifyEmailOtpRequest,
+  verifyLoginOtp as verifyLoginOtpRequest,
   verifyWhatsappOtp as verifyWhatsappOtpRequest,
 } from '../services/auth-service';
 import { signInWithGoogleToken } from '../services/google-auth-service';
@@ -191,8 +191,8 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           const normalizedEmail = supabaseSession.user.email?.trim().toLowerCase() ?? null;
           const persistedGoogleSession =
             persistedState.session?.method === 'google' &&
-            normalizedEmail &&
-            persistedState.session.email === normalizedEmail
+              normalizedEmail &&
+              persistedState.session.email === normalizedEmail
               ? persistedState.session
               : null;
           const nextSession =
@@ -316,8 +316,8 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         const currentSession = sessionRef.current;
         const nextSession =
           currentSession?.method === 'google' &&
-          normalizedEmail &&
-          currentSession.email === normalizedEmail
+            normalizedEmail &&
+            currentSession.email === normalizedEmail
             ? currentSession
             : createGoogleAuthSessionFromSupabaseSession(nextSupabaseSession);
 

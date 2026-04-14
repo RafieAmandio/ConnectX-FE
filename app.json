@@ -12,7 +12,7 @@
       "bundleIdentifier": "com.dwiki.connectx",
       "googleServicesFile": "./ios/GoogleService-Info.plist",
       "appleTeamId": "6YQB49MLC8",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "infoPlist": {
         "UIBackgroundModes": [
           "fetch",
