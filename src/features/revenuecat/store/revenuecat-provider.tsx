@@ -109,6 +109,10 @@ async function fetchBootstrapState() {
 
 export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   const { session } = useAuth();
+  const desiredAppUserId = React.useMemo(
+    () => getRevenueCatAppUserId(session?.user?.id),
+    [session?.user?.id]
+  );
   const [isConfigured, setIsConfigured] = React.useState(!REVENUECAT_SUPPORTED_PLATFORM);
   const [isLoading, setIsLoading] = React.useState(REVENUECAT_SUPPORTED_PLATFORM);
   const [error, setError] = React.useState<string | null>(null);
@@ -116,6 +120,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   const [customerInfo, setCustomerInfo] = React.useState<CustomerInfo | null>(null);
   const [appUserId, setAppUserId] = React.useState<string | null>(null);
   const configuredRef = React.useRef(false);
+  const identitySyncPromiseRef = React.useRef<Promise<void> | null>(null);
 
   React.useEffect(() => {
     if (!REVENUECAT_SUPPORTED_PLATFORM || configuredRef.current) {
@@ -130,7 +135,6 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       });
     }
 
-    const configuredAppUserId = getRevenueCatAppUserId(session?.user?.id);
     const customerInfoListener: CustomerInfoUpdateListener = (nextCustomerInfo) => {
       React.startTransition(() => {
         setCustomerInfo(nextCustomerInfo);
@@ -140,7 +144,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     try {
       Purchases.configure({
         apiKey: getRevenueCatApiKey(),
-        appUserID: configuredAppUserId ?? undefined,
+        appUserID: desiredAppUserId ?? undefined,
       });
       Purchases.addCustomerInfoUpdateListener(customerInfoListener);
       setIsConfigured(true);
@@ -152,7 +156,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     return () => {
       Purchases.removeCustomerInfoUpdateListener(customerInfoListener);
     };
-  }, [session?.user?.id]);
+  }, [desiredAppUserId]);
 
   const refresh = React.useCallback(async () => {
     if (!REVENUECAT_SUPPORTED_PLATFORM || !configuredRef.current) {
@@ -181,46 +185,39 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     }
   }, []);
 
-  React.useEffect(() => {
-    if (!REVENUECAT_SUPPORTED_PLATFORM || !isConfigured) {
+  const syncRevenueCatIdentity = React.useCallback(async () => {
+    if (!REVENUECAT_SUPPORTED_PLATFORM || !configuredRef.current) {
       return;
     }
 
-    let isActive = true;
+    if (identitySyncPromiseRef.current) {
+      await identitySyncPromiseRef.current;
+      return;
+    }
 
-    const syncRevenueCatIdentity = async () => {
+    const syncTask = (async () => {
       setIsLoading(true);
 
       try {
-        const desiredAppUserId = getRevenueCatAppUserId(session?.user?.id);
-
         if (desiredAppUserId) {
           const currentAppUserId = await Purchases.getAppUserID();
 
           if (currentAppUserId !== desiredAppUserId) {
             const result = await Purchases.logIn(desiredAppUserId);
 
-            if (isActive) {
-              React.startTransition(() => {
-                setCustomerInfo(result.customerInfo);
-              });
-            }
+            React.startTransition(() => {
+              setCustomerInfo(result.customerInfo);
+            });
           }
         } else if (!(await Purchases.isAnonymous())) {
           const anonymousCustomerInfo = await Purchases.logOut();
 
-          if (isActive) {
-            React.startTransition(() => {
-              setCustomerInfo(anonymousCustomerInfo);
-            });
-          }
+          React.startTransition(() => {
+            setCustomerInfo(anonymousCustomerInfo);
+          });
         }
 
         const nextState = await fetchBootstrapState();
-
-        if (!isActive) {
-          return;
-        }
 
         React.startTransition(() => {
           setOfferings(nextState.offerings);
@@ -229,24 +226,53 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
           setError(null);
         });
       } catch (nextError) {
-        if (!isActive) {
-          return;
-        }
-
         setError(getErrorMessage(nextError));
+        throw nextError;
       } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
+        identitySyncPromiseRef.current = null;
       }
-    };
+    })();
 
-    void syncRevenueCatIdentity();
+    identitySyncPromiseRef.current = syncTask;
+    await syncTask;
+  }, [desiredAppUserId]);
 
-    return () => {
-      isActive = false;
-    };
-  }, [isConfigured, session?.user?.id]);
+  const ensureRevenueCatIdentityReady = React.useCallback(async () => {
+    if (!REVENUECAT_SUPPORTED_PLATFORM || !configuredRef.current) {
+      return;
+    }
+
+    const currentAppUserId = await Purchases.getAppUserID();
+
+    if (desiredAppUserId) {
+      if (currentAppUserId !== desiredAppUserId || appUserId !== desiredAppUserId) {
+        await syncRevenueCatIdentity();
+      }
+
+      const syncedAppUserId = await Purchases.getAppUserID();
+
+      if (syncedAppUserId !== desiredAppUserId) {
+        throw new Error('RevenueCat is still syncing your account. Please try again.');
+      }
+
+      return;
+    }
+
+    if (appUserId !== currentAppUserId) {
+      await syncRevenueCatIdentity();
+    }
+  }, [appUserId, desiredAppUserId, syncRevenueCatIdentity]);
+
+  React.useEffect(() => {
+    if (!REVENUECAT_SUPPORTED_PLATFORM || !isConfigured) {
+      return;
+    }
+
+    void syncRevenueCatIdentity().catch(() => {
+      return undefined;
+    });
+  }, [isConfigured, syncRevenueCatIdentity]);
 
   React.useEffect(() => {
     if (!REVENUECAT_SUPPORTED_PLATFORM || !isConfigured) {
@@ -272,13 +298,12 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   const packages = React.useMemo(() => getOfferPackages(currentOffering), [currentOffering]);
   const connectXProEntitlement =
     customerInfo?.entitlements.active[REVENUECAT_ENTITLEMENT_CONNECTX_PRO] ?? null;
-  console.log('connectXProEntitlement', customerInfo);
-
   const restorePurchases = React.useCallback(async () => {
     if (!REVENUECAT_SUPPORTED_PLATFORM || !configuredRef.current) {
       return null;
     }
 
+    await ensureRevenueCatIdentityReady();
     setIsLoading(true);
 
     try {
@@ -297,7 +322,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [ensureRevenueCatIdentityReady]);
 
   const purchasePackageById = React.useCallback(
     async (packageId: RevenueCatPackageId) => {
@@ -305,6 +330,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         return null;
       }
 
+      await ensureRevenueCatIdentityReady();
       const nextPackage = getOfferPackages(offerings?.current ?? null)[packageId];
 
       if (!nextPackage) {
@@ -334,13 +360,15 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         setIsLoading(false);
       }
     },
-    [offerings]
+    [ensureRevenueCatIdentityReady, offerings]
   );
 
   const presentPaywall = React.useCallback(async () => {
     if (!REVENUECAT_SUPPORTED_PLATFORM || !configuredRef.current) {
       return null;
     }
+
+    await ensureRevenueCatIdentityReady();
 
     try {
       const result = await RevenueCatUI.presentPaywall({
@@ -359,7 +387,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       setError(message);
       throw nextError;
     }
-  }, [currentOffering, refresh]);
+  }, [currentOffering, ensureRevenueCatIdentityReady, refresh]);
 
   const presentPaywallForOffering = React.useCallback(
     async (offeringId: string) => {
@@ -367,6 +395,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         return null;
       }
 
+      await ensureRevenueCatIdentityReady();
       const offering = getOfferingById(offerings, offeringId);
 
       if (!offering) {
@@ -395,13 +424,15 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         throw nextError;
       }
     },
-    [offerings, refresh]
+    [ensureRevenueCatIdentityReady, offerings, refresh]
   );
 
   const presentPaywallIfNeeded = React.useCallback(async () => {
     if (!REVENUECAT_SUPPORTED_PLATFORM || !configuredRef.current) {
       return null;
     }
+
+    await ensureRevenueCatIdentityReady();
 
     try {
       const result = await RevenueCatUI.presentPaywallIfNeeded({
@@ -421,12 +452,14 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       setError(message);
       throw nextError;
     }
-  }, [currentOffering, refresh]);
+  }, [currentOffering, ensureRevenueCatIdentityReady, refresh]);
 
   const presentCustomerCenter = React.useCallback(async () => {
     if (!REVENUECAT_SUPPORTED_PLATFORM || !configuredRef.current) {
       return;
     }
+
+    await ensureRevenueCatIdentityReady();
 
     try {
       await RevenueCatUI.presentCustomerCenter({
@@ -449,7 +482,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       setError(message);
       throw nextError;
     }
-  }, [refresh]);
+  }, [ensureRevenueCatIdentityReady, refresh]);
 
   const value = React.useMemo<RevenueCatContextValue>(
     () => ({
