@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 
 import { useAuth } from '@features/auth';
-import { AppButton, AppText } from '@shared/components';
+import { AppButton, AppText, AppTopBar } from '@shared/components';
 
 import type { ChatMessage, ChatRoom } from '../domain/models';
 import {
@@ -210,14 +210,17 @@ function ConversationSeparator() {
 
 function ChatExperimentNotice() {
   return (
-    <View className="flex-1 items-center justify-center gap-3 bg-[#111015] px-8">
-      <AppText className="text-white" variant="title">
-        Chat experiment requires Google login
-      </AppText>
-      <AppText align="center" tone="muted">
-        Sign in with Google to create a Supabase session, then seed a shared room in Supabase to
-        test realtime chat across two devices.
-      </AppText>
+    <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+      <AppTopBar />
+      <View className="flex-1 items-center justify-center gap-3 px-8">
+        <AppText className="text-white" variant="title">
+          Chat experiment requires Google login
+        </AppText>
+        <AppText align="center" tone="muted">
+          Sign in with Google to create a Supabase session, then seed a shared room in Supabase to
+          test realtime chat across two devices.
+        </AppText>
+      </View>
     </View>
   );
 }
@@ -690,8 +693,9 @@ export function ChatListScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View className="flex-1 bg-[#242322]">
-        <View className="px-4 pb-3 pt-14">
+      <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+        <AppTopBar />
+        <View className="px-4 pb-3 pt-4">
           <View className="mb-2 flex-row items-center justify-between">
             <AppText className="text-white" variant="display">
               Chats
@@ -765,7 +769,8 @@ export function ChatConversationScreen({ conversationId }: { conversationId: str
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1 bg-[#242322]"
+        className="flex-1"
+        style={{ backgroundColor: '#262626' }}
         keyboardVerticalOffset={0}>
         <ConversationPanel
           conversation={conversation}

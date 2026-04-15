@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
-import { AppCard, AppText } from '@shared/components';
+import { AppCard, AppText, AppTopBar } from '@shared/components';
 
 import { useActivateSpotlight, useMatchesList } from '../hooks/use-matches';
 import { isMatchesListMockEnabled } from '../services/matches-service';
@@ -326,195 +326,198 @@ export function MatchesScreen() {
   );
 
   return (
-    <View className="flex-1 bg-[#242322]" style={{ paddingTop: insets.top }}>
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 36, paddingHorizontal: 16, paddingTop: 10 }}
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}>
-        <View className="gap-8">
-          <View className="gap-4">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Ionicons color="#FF9F3F" name="heart" size={24} />
-                <AppText className="text-[18px] text-[#F1F1F1]" variant="title">
-                  Your Connects
-                </AppText>
-              </View>
-
-              <View className="rounded-full bg-[#5A3C23] px-4 py-2">
-                <AppText className="text-[14px] font-semibold uppercase tracking-[0.3px] text-[#FFB35E]">
-                  {likesYouCountLabel}
-                </AppText>
-              </View>
-            </View>
-
-            <View className="flex-row gap-4">
-              {likesYouPreviewItems.map((like, index) =>
-                likesYouLocked ? (
-                  <LockedConnectCard
-                    key={like ? `locked-${like.likeId}` : `locked-placeholder-${index}`}
-                    photoUrl={like?.user.photoUrl ?? null}
-                  />
-                ) : like ? (
-                  <LikesYouPreviewCard
-                    key={`likes-you-${like.likeId}`}
-                    item={like}
-                    onPress={() => {
-                      void handleLikesYouPress(like);
-                    }}
-                  />
-                ) : (
-                  <View
-                    key={`likes-you-placeholder-${index}`}
-                    className="h-[160px] flex-1 rounded-[24px] border border-[#424242] bg-[#2B2B2D]"
-                  />
-                )
-              )}
-            </View>
-
-            <Pressable
-              className="flex-row items-center justify-center gap-3 rounded-[24px] border px-6 py-5"
-              onPress={() => {
-                if (likesYouLocked) {
-                  void maybePresentLikesYouPaywall();
-                  return;
-                }
-
-                const firstLike = likesYou[0];
-
-                if (firstLike) {
-                  void handleLikesYouPress(firstLike);
-                }
-              }}
-              style={{ backgroundColor: '#5B4720', borderColor: '#AD8528' }}>
-              <Ionicons color="#FFD33D" name="sparkles-outline" size={22} />
-              <AppText className="text-[18px] text-[#FFD33D]" variant="subtitle">
-                {likesYouLocked ? 'Unlock Connects' : 'View Connects'}
-              </AppText>
-            </Pressable>
-
-            {likesYouBanner ? (
-              <View
-                className="mt-2 rounded-[18px] border px-4 py-3"
-                style={{
-                  backgroundColor:
-                    likesYouBanner.tone === 'success'
-                      ? '#1F3025'
-                      : likesYouBanner.tone === 'warning'
-                        ? '#35281D'
-                        : '#2C2C2F',
-                  borderColor:
-                    likesYouBanner.tone === 'success'
-                      ? '#2F6E45'
-                      : likesYouBanner.tone === 'warning'
-                        ? '#8A6125'
-                        : '#454548',
-                }}>
-                <AppText
-                  className={
-                    likesYouBanner.tone === 'success'
-                      ? 'text-[#D8F7E3]'
-                      : likesYouBanner.tone === 'warning'
-                        ? 'text-[#FFD9A3]'
-                        : 'text-[#F1F1F1]'
-                  }
-                  variant="bodyStrong">
-                  {likesYouBanner.title}
-                </AppText>
-                <AppText
-                  className={
-                    likesYouBanner.tone === 'success'
-                      ? 'text-[#A7E6BE]'
-                      : likesYouBanner.tone === 'warning'
-                        ? 'text-[#E9BD82]'
-                        : 'text-[#B4B4B7]'
-                  }>
-                  {likesYouBanner.detail}
-                </AppText>
-              </View>
-            ) : null}
-
-            <Pressable
-              className="flex-row items-center justify-between rounded-[24px] border px-5 py-4"
-              disabled={spotlightActivation.isPending}
-              onPress={handleActivateSpotlight}
-              style={{
-                backgroundColor: '#2E261F',
-                borderColor: spotlightEndsAtLabel ? '#FFD33D' : '#544126',
-              }}>
-              <View className="flex-row items-center gap-4">
-                <View className="h-11 w-11 items-center justify-center rounded-full bg-[#4A3820]">
-                  <Ionicons
-                    color="#FFD33D"
-                    name={spotlightEndsAtLabel ? 'star' : 'star-outline'}
-                    size={22}
-                  />
-                </View>
-                <View className="gap-0.5">
-                  <AppText className="text-[17px] text-[#F4E3C3]" variant="bodyStrong">
-                    {spotlightActivation.isPending ? 'Activating...' : 'Activate Spotlight'}
+    <>
+      <Stack.Screen options={{ headerShown: false, title: '' }} />
+      <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+        <AppTopBar />
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 36, paddingHorizontal: 16, paddingTop: 10 }}
+          contentInsetAdjustmentBehavior="automatic"
+          showsVerticalScrollIndicator={false}>
+          <View className="gap-8">
+            <View className="gap-4">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-3">
+                  <Ionicons color="#FF9F3F" name="heart" size={24} />
+                  <AppText className="text-[18px] text-[#F1F1F1]" variant="title">
+                    Your Connects
                   </AppText>
-                  <AppText className="text-[13px] text-[#D2B98D]">
-                    {spotlightEndsAtLabel
-                      ? `Active until ${spotlightEndsAtLabel}`
-                      : 'Feature your profile for 1 hour'}
+                </View>
+
+                <View className="rounded-full bg-[#5A3C23] px-4 py-2">
+                  <AppText className="text-[14px] font-semibold uppercase tracking-[0.3px] text-[#FFB35E]">
+                    {likesYouCountLabel}
                   </AppText>
                 </View>
               </View>
-              <Ionicons color="#FFD33D" name="chevron-forward" size={20} />
-            </Pressable>
 
-            {spotlightBanner ? (
-              <View
-                className="mt-2 rounded-[18px] border px-4 py-3"
-                style={{
-                  backgroundColor:
-                    spotlightBanner.tone === 'success'
-                      ? '#1F3025'
-                      : spotlightBanner.tone === 'warning'
-                        ? '#35281D'
-                        : '#2C2C2F',
-                  borderColor:
-                    spotlightBanner.tone === 'success'
-                      ? '#2F6E45'
-                      : spotlightBanner.tone === 'warning'
-                        ? '#8A6125'
-                        : '#454548',
-                }}>
-                <AppText
-                  className={
-                    spotlightBanner.tone === 'success'
-                      ? 'text-[#D8F7E3]'
-                      : spotlightBanner.tone === 'warning'
-                        ? 'text-[#FFD9A3]'
-                        : 'text-[#F1F1F1]'
-                  }
-                  variant="bodyStrong">
-                  {spotlightBanner.title}
-                </AppText>
-                <AppText
-                  className={
-                    spotlightBanner.tone === 'success'
-                      ? 'text-[#A7E6BE]'
-                      : spotlightBanner.tone === 'warning'
-                        ? 'text-[#E9BD82]'
-                        : 'text-[#B4B4B7]'
-                  }>
-                  {spotlightBanner.detail}
-                </AppText>
+              <View className="flex-row gap-4">
+                {likesYouPreviewItems.map((like, index) =>
+                  likesYouLocked ? (
+                    <LockedConnectCard
+                      key={like ? `locked-${like.likeId}` : `locked-placeholder-${index}`}
+                      photoUrl={like?.user.photoUrl ?? null}
+                    />
+                  ) : like ? (
+                    <LikesYouPreviewCard
+                      key={`likes-you-${like.likeId}`}
+                      item={like}
+                      onPress={() => {
+                        void handleLikesYouPress(like);
+                      }}
+                    />
+                  ) : (
+                    <View
+                      key={`likes-you-placeholder-${index}`}
+                      className="h-[160px] flex-1 rounded-[24px] border border-[#424242] bg-[#2B2B2D]"
+                    />
+                  )
+                )}
               </View>
-            ) : null}
-          </View>
 
-          <View className="gap-4">
-            <View className="flex-row items-center justify-between">
-              <AppText className="text-[24px] text-[#F1F1F1]" variant="title">
-                Your Matches
-              </AppText>
-              <AppText className="text-[15px] text-[#9F9C99]">{matchCountLabel}</AppText>
+              <Pressable
+                className="flex-row items-center justify-center gap-3 rounded-[24px] border px-6 py-5"
+                onPress={() => {
+                  if (likesYouLocked) {
+                    void maybePresentLikesYouPaywall();
+                    return;
+                  }
+
+                  const firstLike = likesYou[0];
+
+                  if (firstLike) {
+                    void handleLikesYouPress(firstLike);
+                  }
+                }}
+                style={{ backgroundColor: '#5B4720', borderColor: '#AD8528' }}>
+                <Ionicons color="#FFD33D" name="sparkles-outline" size={22} />
+                <AppText className="text-[18px] text-[#FFD33D]" variant="subtitle">
+                  {likesYouLocked ? 'Unlock Connects' : 'View Connects'}
+                </AppText>
+              </Pressable>
+
+              {likesYouBanner ? (
+                <View
+                  className="mt-2 rounded-[18px] border px-4 py-3"
+                  style={{
+                    backgroundColor:
+                      likesYouBanner.tone === 'success'
+                        ? '#1F3025'
+                        : likesYouBanner.tone === 'warning'
+                          ? '#35281D'
+                          : '#2C2C2F',
+                    borderColor:
+                      likesYouBanner.tone === 'success'
+                        ? '#2F6E45'
+                        : likesYouBanner.tone === 'warning'
+                          ? '#8A6125'
+                          : '#454548',
+                  }}>
+                  <AppText
+                    className={
+                      likesYouBanner.tone === 'success'
+                        ? 'text-[#D8F7E3]'
+                        : likesYouBanner.tone === 'warning'
+                          ? 'text-[#FFD9A3]'
+                          : 'text-[#F1F1F1]'
+                    }
+                    variant="bodyStrong">
+                    {likesYouBanner.title}
+                  </AppText>
+                  <AppText
+                    className={
+                      likesYouBanner.tone === 'success'
+                        ? 'text-[#A7E6BE]'
+                        : likesYouBanner.tone === 'warning'
+                          ? 'text-[#E9BD82]'
+                          : 'text-[#B4B4B7]'
+                    }>
+                    {likesYouBanner.detail}
+                  </AppText>
+                </View>
+              ) : null}
+
+              <Pressable
+                className="flex-row items-center justify-between rounded-[24px] border px-5 py-4"
+                disabled={spotlightActivation.isPending}
+                onPress={handleActivateSpotlight}
+                style={{
+                  backgroundColor: '#2E261F',
+                  borderColor: spotlightEndsAtLabel ? '#FFD33D' : '#544126',
+                }}>
+                <View className="flex-row items-center gap-4">
+                  <View className="h-11 w-11 items-center justify-center rounded-full bg-[#4A3820]">
+                    <Ionicons
+                      color="#FFD33D"
+                      name={spotlightEndsAtLabel ? 'star' : 'star-outline'}
+                      size={22}
+                    />
+                  </View>
+                  <View className="gap-0.5">
+                    <AppText className="text-[17px] text-[#F4E3C3]" variant="bodyStrong">
+                      {spotlightActivation.isPending ? 'Activating...' : 'Activate Spotlight'}
+                    </AppText>
+                    <AppText className="text-[13px] text-[#D2B98D]">
+                      {spotlightEndsAtLabel
+                        ? `Active until ${spotlightEndsAtLabel}`
+                        : 'Feature your profile for 1 hour'}
+                    </AppText>
+                  </View>
+                </View>
+                <Ionicons color="#FFD33D" name="chevron-forward" size={20} />
+              </Pressable>
+
+              {spotlightBanner ? (
+                <View
+                  className="mt-2 rounded-[18px] border px-4 py-3"
+                  style={{
+                    backgroundColor:
+                      spotlightBanner.tone === 'success'
+                        ? '#1F3025'
+                        : spotlightBanner.tone === 'warning'
+                          ? '#35281D'
+                          : '#2C2C2F',
+                    borderColor:
+                      spotlightBanner.tone === 'success'
+                        ? '#2F6E45'
+                        : spotlightBanner.tone === 'warning'
+                          ? '#8A6125'
+                          : '#454548',
+                  }}>
+                  <AppText
+                    className={
+                      spotlightBanner.tone === 'success'
+                        ? 'text-[#D8F7E3]'
+                        : spotlightBanner.tone === 'warning'
+                          ? 'text-[#FFD9A3]'
+                          : 'text-[#F1F1F1]'
+                    }
+                    variant="bodyStrong">
+                    {spotlightBanner.title}
+                  </AppText>
+                  <AppText
+                    className={
+                      spotlightBanner.tone === 'success'
+                        ? 'text-[#A7E6BE]'
+                        : spotlightBanner.tone === 'warning'
+                          ? 'text-[#E9BD82]'
+                          : 'text-[#B4B4B7]'
+                    }>
+                    {spotlightBanner.detail}
+                  </AppText>
+                </View>
+              ) : null}
             </View>
 
+            <View className="gap-4">
+              <View className="flex-row items-center justify-between">
+                <AppText className="text-[24px] text-[#F1F1F1]" variant="title">
+                  Your Matches
+                </AppText>
+                <AppText className="text-[15px] text-[#9F9C99]">{matchCountLabel}</AppText>
+              </View>
+            </View>
             {usingMockMatches ? (
               <AppCard
                 className="rounded-[20px] border-[#5A4726] bg-[#312A1E] p-4"
@@ -598,8 +601,8 @@ export function MatchesScreen() {
               ))}
             </View>
           </View>
-        </View>
-      </ScrollView >
-    </View >
+        </ScrollView>
+      </View>
+    </>
   );
 }

@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Stack } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
-import { AppCard, AppText } from '@shared/components';
+import { AppCard, AppText, AppTopBar } from '@shared/components';
 import { useAuthContext } from '@features/auth/store/auth-provider';
 
 import { useMyProfile } from '../hooks/use-profile';
@@ -216,93 +216,96 @@ export function ProfileScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false, title: '' }} />
-      <ScrollView
-        className="flex-1 bg-canvas"
-        contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
-        contentInsetAdjustmentBehavior="automatic">
-        <View className="flex-row items-center gap-2 self-center">
-          {myProfileQuery.isFetching ? <ActivityIndicator color="#F59E0B" size="small" /> : null}
-          <AppText className="text-[12px]" tone="muted" variant="label">
-            {myProfileQuery.isError
-              ? 'Using fallback profile'
-              : myProfileQuery.isFetching
-                ? 'Syncing profile'
-                : 'My profile'}
-          </AppText>
-        </View>
-
-        <Header profile={effectiveProfile} />
-
-        <Pressable
-          className="self-center flex-row items-center gap-1 rounded-full border px-4 py-2"
-          onPress={() => setIsEditModalVisible(true)}
-          style={{ backgroundColor: '#2A2117', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
-          <Ionicons color="#F59E0B" name="create-outline" size={14} />
-          <AppText className="text-[12px]" tone="signal" variant="bodyStrong">
-            Edit Profile
-          </AppText>
-        </Pressable>
-
-        <View className="flex-row gap-2">
-          <ProfileStatCard label="Connections" value={effectiveProfile.stats.connections} />
-          <ProfileStatCard label="Teams Joined" value={effectiveProfile.stats.teamsJoined} />
-          <ProfileStatCard label="Matches" value={effectiveProfile.stats.matches} />
-        </View>
-
-        <BadgeList badges={effectiveProfile.badges} />
-
-        {startupIdeaSection ? (
-          <AppCard
-            className="gap-2.5 rounded-[20px] px-3.5 py-4"
-            style={{ backgroundColor: '#231C13', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
-            <SectionTitle icon="bulb-outline" title={startupIdeaSection.title} />
-            <AppText className="text-[14px] leading-6" tone="muted">
-              {startupIdeaSection.value}
+      <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+        <AppTopBar />
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
+          contentInsetAdjustmentBehavior="automatic">
+          <View className="flex-row items-center gap-2 self-center">
+            {myProfileQuery.isFetching ? <ActivityIndicator color="#F59E0B" size="small" /> : null}
+            <AppText className="text-[12px]" tone="muted" variant="label">
+              {myProfileQuery.isError
+                ? 'Using fallback profile'
+                : myProfileQuery.isFetching
+                  ? 'Syncing profile'
+                  : 'My profile'}
             </AppText>
-          </AppCard>
-        ) : null}
-
-        {personalitySection ? (
-          <AppCard className="gap-3.5 rounded-[20px] px-3.5 py-4">
-            <SectionTitle icon="flash-outline" title={personalitySection.title} />
-            <NamedItemList items={personalitySection.items} />
-          </AppCard>
-        ) : null}
-
-        {(skillsSection || interestsSection) ? (
-          <View className="flex-row gap-2.5">
-            {skillsSection ? (
-              <AppCard className="min-h-[160px] flex-1 gap-3.5 rounded-[20px] px-3.5 py-4">
-                <AppText className="text-[12px] tracking-[1px]" tone="muted" variant="label">
-                  {skillsSection.title}
-                </AppText>
-                <NamedItemList items={skillsSection.items} tone="warning" />
-              </AppCard>
-            ) : null}
-
-            {interestsSection ? (
-              <AppCard className="min-h-[160px] flex-1 gap-3.5 rounded-[20px] px-3.5 py-4">
-                <AppText className="text-[12px] tracking-[1px]" tone="muted" variant="label">
-                  {interestsSection.title}
-                </AppText>
-                <NamedItemList items={interestsSection.items} />
-              </AppCard>
-            ) : null}
           </View>
-        ) : null}
 
-        {highlightsSection?.items?.length ? <HighlightList items={highlightsSection.items} /> : null}
+          <Header profile={effectiveProfile} />
 
-        <Pressable
-          className="mt-4 flex-row items-center justify-center gap-2 rounded-[16px] border py-4"
-          onPress={() => signOut()}
-          style={{ backgroundColor: '#1C1C21', borderColor: 'rgba(255, 90, 103, 0.2)' }}>
-          <Ionicons color="#FF5A67" name="log-out-outline" size={20} />
-          <AppText className="text-[15px] font-semibold" style={{ color: '#FF5A67' }}>
-            Sign Out
-          </AppText>
-        </Pressable>
-      </ScrollView>
+          <Pressable
+            className="self-center flex-row items-center gap-1 rounded-full border px-4 py-2"
+            onPress={() => setIsEditModalVisible(true)}
+            style={{ backgroundColor: '#2A2117', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
+            <Ionicons color="#F59E0B" name="create-outline" size={14} />
+            <AppText className="text-[12px]" tone="signal" variant="bodyStrong">
+              Edit Profile
+            </AppText>
+          </Pressable>
+
+          <View className="flex-row gap-2">
+            <ProfileStatCard label="Connections" value={effectiveProfile.stats.connections} />
+            <ProfileStatCard label="Teams Joined" value={effectiveProfile.stats.teamsJoined} />
+            <ProfileStatCard label="Matches" value={effectiveProfile.stats.matches} />
+          </View>
+
+          <BadgeList badges={effectiveProfile.badges} />
+
+          {startupIdeaSection ? (
+            <AppCard
+              className="gap-2.5 rounded-[20px] px-3.5 py-4"
+              style={{ backgroundColor: '#231C13', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
+              <SectionTitle icon="bulb-outline" title={startupIdeaSection.title} />
+              <AppText className="text-[14px] leading-6" tone="muted">
+                {startupIdeaSection.value}
+              </AppText>
+            </AppCard>
+          ) : null}
+
+          {personalitySection ? (
+            <AppCard className="gap-3.5 rounded-[20px] px-3.5 py-4">
+              <SectionTitle icon="flash-outline" title={personalitySection.title} />
+              <NamedItemList items={personalitySection.items} />
+            </AppCard>
+          ) : null}
+
+          {(skillsSection || interestsSection) ? (
+            <View className="flex-row gap-2.5">
+              {skillsSection ? (
+                <AppCard className="min-h-[160px] flex-1 gap-3.5 rounded-[20px] px-3.5 py-4">
+                  <AppText className="text-[12px] tracking-[1px]" tone="muted" variant="label">
+                    {skillsSection.title}
+                  </AppText>
+                  <NamedItemList items={skillsSection.items} tone="warning" />
+                </AppCard>
+              ) : null}
+
+              {interestsSection ? (
+                <AppCard className="min-h-[160px] flex-1 gap-3.5 rounded-[20px] px-3.5 py-4">
+                  <AppText className="text-[12px] tracking-[1px]" tone="muted" variant="label">
+                    {interestsSection.title}
+                  </AppText>
+                  <NamedItemList items={interestsSection.items} />
+                </AppCard>
+              ) : null}
+            </View>
+          ) : null}
+
+          {highlightsSection?.items?.length ? <HighlightList items={highlightsSection.items} /> : null}
+
+          <Pressable
+            className="mt-4 flex-row items-center justify-center gap-2 rounded-[16px] border py-4"
+            onPress={() => signOut()}
+            style={{ backgroundColor: '#1C1C21', borderColor: 'rgba(255, 90, 103, 0.2)' }}>
+            <Ionicons color="#FF5A67" name="log-out-outline" size={20} />
+            <AppText className="text-[15px] font-semibold" style={{ color: '#FF5A67' }}>
+              Sign Out
+            </AppText>
+          </Pressable>
+        </ScrollView>
+      </View>
 
       {isEditModalVisible ? (
         <EditProfileModal

@@ -8,6 +8,7 @@ import { AppText } from './app-text';
 
 const ACTIVE_COLOR = '#f59e0b'; // Signal/Orange color from design
 const INACTIVE_COLOR = '#667085';
+const TAB_BAR_BG = '#232323';
 
 const ICONS: Record<string, { outline: keyof typeof Ionicons.glyphMap; solid: keyof typeof Ionicons.glyphMap }> = {
   index: { outline: 'home-outline', solid: 'home' },
@@ -80,8 +81,8 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
 
   return (
     <View
-      className="flex-row items-center justify-between border-t border-border bg-canvas px-2"
-      style={{ paddingBottom: Math.max(insets.bottom, 12), paddingTop: 8 }}>
+      className="flex-row items-center justify-between border-t border-border px-2"
+      style={{ backgroundColor: TAB_BAR_BG, paddingBottom: Math.max(insets.bottom, 12), paddingTop: 8 }}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
 

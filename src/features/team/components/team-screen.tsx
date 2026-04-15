@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
-import { AppButton, AppCard, AppInput, AppText } from '@shared/components';
+import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
 import { Shadows } from '@shared/theme';
 
 import { useCreateStartupInvitation, useTeamOverview } from '../hooks/use-team';
@@ -197,23 +197,26 @@ export function TeamScreen() {
   if (teamOverviewQuery.isPending && !overview) {
     return (
       <>
-        <Stack.Screen options={{ title: 'Team' }} />
-        <ScrollView
-          className="flex-1 bg-canvas"
-          contentContainerStyle={{
-            paddingBottom: insets.bottom + 96,
-            paddingHorizontal: 20,
-            paddingTop: insets.top + 16,
-          }}
-          contentInsetAdjustmentBehavior="automatic">
+        <Stack.Screen options={{ title: 'Team', headerShown: false }} />
+        <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+          <AppTopBar />
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{
+              paddingBottom: insets.bottom + 96,
+              paddingHorizontal: 20,
+              paddingTop: 16,
+            }}
+            contentInsetAdjustmentBehavior="automatic">
 
-          <AppCard className="gap-3">
-            <AppText variant="subtitle">Loading team</AppText>
-            <AppText tone="muted">
-              Pulling the latest startup details and team structure.
-            </AppText>
-          </AppCard>
-        </ScrollView>
+            <AppCard className="gap-3">
+              <AppText variant="subtitle">Loading team</AppText>
+              <AppText tone="muted">
+                Pulling the latest startup details and team structure.
+              </AppText>
+            </AppCard>
+          </ScrollView>
+        </View>
       </>
     );
   }
@@ -223,40 +226,43 @@ export function TeamScreen() {
 
     return (
       <>
-        <Stack.Screen options={{ title: 'Team' }} />
-        <ScrollView
-          className="flex-1 bg-canvas"
-          contentContainerStyle={{
-            paddingBottom: insets.bottom + 96,
-            paddingHorizontal: 20,
-            paddingTop: insets.top + 16,
-          }}
-          contentInsetAdjustmentBehavior="automatic">
-          <AppCard className="gap-4">
-            <View className="flex-row items-center gap-3">
-              <Ionicons
-                color={isNoStartupState ? '#98A2B3' : '#FF9A3E'}
-                name={isNoStartupState ? 'people-outline' : 'alert-circle-outline'}
-                size={24}
-              />
-              <AppText variant="subtitle">
-                {isNoStartupState ? 'No startup team yet' : 'Unable to load team'}
+        <Stack.Screen options={{ title: 'Team', headerShown: false }} />
+        <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+          <AppTopBar />
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{
+              paddingBottom: insets.bottom + 96,
+              paddingHorizontal: 20,
+              paddingTop: 16,
+            }}
+            contentInsetAdjustmentBehavior="automatic">
+            <AppCard className="gap-4">
+              <View className="flex-row items-center gap-3">
+                <Ionicons
+                  color={isNoStartupState ? '#98A2B3' : '#FF9A3E'}
+                  name={isNoStartupState ? 'people-outline' : 'alert-circle-outline'}
+                  size={24}
+                />
+                <AppText variant="subtitle">
+                  {isNoStartupState ? 'No startup team yet' : 'Unable to load team'}
+                </AppText>
+              </View>
+              <AppText tone="muted">
+                {isNoStartupState
+                  ? 'This account is not linked to an active startup yet. Once you create or join a startup team, it will show up here.'
+                  : 'We could not load your startup team right now. Try again in a moment.'}
               </AppText>
-            </View>
-            <AppText tone="muted">
-              {isNoStartupState
-                ? 'This account is not linked to an active startup yet. Once you create or join a startup team, it will show up here.'
-                : 'We could not load your startup team right now. Try again in a moment.'}
-            </AppText>
-            <AppButton
-              label={teamOverviewQuery.isRefetching ? 'Refreshing...' : 'Try Again'}
-              onPress={() => {
-                void teamOverviewQuery.refetch();
-              }}
-              variant="secondary"
-            />
-          </AppCard>
-        </ScrollView>
+              <AppButton
+                label={teamOverviewQuery.isRefetching ? 'Refreshing...' : 'Try Again'}
+                onPress={() => {
+                  void teamOverviewQuery.refetch();
+                }}
+                variant="secondary"
+              />
+            </AppCard>
+          </ScrollView>
+        </View>
       </>
     );
   }
@@ -271,10 +277,11 @@ export function TeamScreen() {
     <>
       <Stack.Screen options={{ title: '', headerShown: false }} />
       <View
-        className="flex-1 bg-[#11131A]"
-        style={{ paddingTop: insets.top }}>
+        className="flex-1"
+        style={{ backgroundColor: '#262626' }}>
+        <AppTopBar />
 
-        <View className="flex-row items-center gap-3 px-5 pb-6">
+        <View className="flex-row items-center gap-3 px-5 pb-6 pt-2">
           <Ionicons color="#FF9A3E" name="rocket" size={28} />
           <AppText className="text-2xl font-bold text-text">Startup Team Builder</AppText>
         </View>
