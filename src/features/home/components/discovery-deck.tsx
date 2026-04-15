@@ -303,11 +303,7 @@ function withDeviceCoordinates(
     return filters;
   }
 
-  const locationAvailability = filters.locationAvailability;
-
-  if (!isRecordValue(locationAvailability)) {
-    return filters;
-  }
+  const locationAvailability = isRecordValue(filters.locationAvailability) ? filters.locationAvailability : {};
 
   return {
     ...filters,
@@ -912,6 +908,7 @@ export function DiscoveryDeck() {
   const currentCardRef = React.useRef<DiscoveryCard | null>(null);
   const usingFallbackRef = React.useRef(false);
   const matchToastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasRequestedDeviceCoordinatesRef = React.useRef(false);
 
   const filterSections = React.useMemo(() => getDiscoveryFilterSections(sheetMode), [sheetMode]);
   const goalOptions = getGoalOptions(filterSections, sheetMode);
@@ -931,8 +928,16 @@ export function DiscoveryDeck() {
   );
 
   const discoveryRequest = React.useMemo<Omit<DiscoveryCardsRequest, 'pagination'>>(() => {
+    const hasRequestFilters = Object.keys(requestFilters).length > 0;
+
     if (!appliedMode) {
-      return {};
+      if (!hasRequestFilters) {
+        return {};
+      }
+
+      return {
+        filters: requestFilters,
+      };
     }
 
     return {
@@ -949,6 +954,62 @@ export function DiscoveryDeck() {
   const discoveryQuery = useDiscoveryCards(discoveryRequest, DISCOVERY_PAGE_LIMIT);
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
+
+  const loadDeviceCoordinates = React.useCallback(async (requestPermissionIfNeeded = true) => {
+    try {
+      const existingPermission = await Location.getForegroundPermissionsAsync();
+      const permission =
+        existingPermission.status === Location.PermissionStatus.GRANTED
+          ? existingPermission
+          : requestPermissionIfNeeded
+            ? await Location.requestForegroundPermissionsAsync()
+            : existingPermission;
+
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        return null;
+      }
+
+      const position =
+        (await Location.getLastKnownPositionAsync()) ??
+        (await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }));
+
+      if (!position?.coords) {
+        return null;
+      }
+
+      const nextCoordinates = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      };
+
+      setDeviceCoordinates((currentCoordinates) => {
+        if (
+          currentCoordinates?.latitude === nextCoordinates.latitude &&
+          currentCoordinates?.longitude === nextCoordinates.longitude
+        ) {
+          return currentCoordinates;
+        }
+
+        return nextCoordinates;
+      });
+
+      return nextCoordinates;
+    } catch (error) {
+      console.warn('Unable to load device coordinates for discovery.', error);
+      return null;
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (hasRequestedDeviceCoordinatesRef.current) {
+      return;
+    }
+
+    hasRequestedDeviceCoordinatesRef.current = true;
+    void loadDeviceCoordinates(true);
+  }, [loadDeviceCoordinates]);
 
 
   const liveCards = React.useMemo(() => flattenUniqueCards(discoveryQuery.data), [discoveryQuery.data]);
@@ -1282,32 +1343,8 @@ export function DiscoveryDeck() {
         );
         let nextDeviceCoordinates = deviceCoordinates;
 
-        if (isRecordValue(sanitizedNextFilters.locationAvailability)) {
-          try {
-            const existingPermission = await Location.getForegroundPermissionsAsync();
-            const permission =
-              existingPermission.status === Location.PermissionStatus.GRANTED
-                ? existingPermission
-                : await Location.requestForegroundPermissionsAsync();
-
-            if (permission.status === Location.PermissionStatus.GRANTED) {
-              const position =
-                (await Location.getLastKnownPositionAsync()) ??
-                (await Location.getCurrentPositionAsync({
-                  accuracy: Location.Accuracy.Balanced,
-                }));
-
-              if (position?.coords) {
-                nextDeviceCoordinates = {
-                  latitude: position.coords.latitude,
-                  longitude: position.coords.longitude,
-                };
-                setDeviceCoordinates(nextDeviceCoordinates);
-              }
-            }
-          } catch (error) {
-            console.warn('Unable to attach device coordinates to discovery filters.', error);
-          }
+        if (!nextDeviceCoordinates) {
+          nextDeviceCoordinates = await loadDeviceCoordinates(isRecordValue(sanitizedNextFilters.locationAvailability));
         }
 
         console.log('applyDiscoveryFilters payload', {
@@ -1331,7 +1368,7 @@ export function DiscoveryDeck() {
         setIsApplyingFilters(false);
       }
     },
-    [deviceCoordinates]
+    [deviceCoordinates, loadDeviceCoordinates]
   );
 
   const handleModeChange = React.useCallback((mode: DiscoveryMode) => {
