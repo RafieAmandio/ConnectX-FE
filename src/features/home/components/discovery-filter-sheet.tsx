@@ -45,34 +45,28 @@ const GOAL_MODE_MAP: Record<DiscoveryGoalId, DiscoveryMode> = {
   goal_joining_startups: 'joining_startups',
 };
 
-const DISABLED_DISCOVERY_FILTER_SECTION_IDS = new Set([
-  'aiMatchPrecision',
-  'founderBuilderQuality',
-  'cofounderReadiness',
-  'globalCompatibility',
-  'hiringReadiness',
-  'startupQuality',
-  'startupReadiness',
-  'opportunityFit',
-  'aiStartupFit',
-  'founderQuality',
-  'leadershipStrength',
-  'equityAndCommitment',
-  'executionQuality',
-  'aiTalentPrecision'
-]);
+function isPremiumDiscoverySection(section?: DiscoveryFilterSection) {
+  return Boolean(section?.access?.requiresEntitlement);
+}
 
-function isDisabledDiscoveryFilterSection(sectionId: string, hasConnectXPro = false) {
-  return DISABLED_DISCOVERY_FILTER_SECTION_IDS.has(sectionId) && !hasConnectXPro;
+function isDisabledDiscoveryFilterSection(section: DiscoveryFilterSection | undefined, hasConnectXPro = false) {
+  if (!section || !isPremiumDiscoverySection(section)) {
+    return false;
+  }
+
+  return !(section.access?.enabled || hasConnectXPro);
 }
 
 function stripDisabledDiscoveryFilters(
   filters: DiscoveryAppliedFilters,
+  sections: DiscoveryFilterSection[],
   hasConnectXPro = false
 ) {
+  const sectionMap = new Map(sections.map((section) => [section.id, section]));
+
   return Object.fromEntries(
     Object.entries(filters).filter(
-      ([sectionId]) => !isDisabledDiscoveryFilterSection(sectionId, hasConnectXPro)
+      ([sectionId]) => !isDisabledDiscoveryFilterSection(sectionMap.get(sectionId), hasConnectXPro)
     )
   );
 }
@@ -179,7 +173,7 @@ function buildInitialDraft(
   initialFilters: DiscoveryAppliedFilters,
   hasConnectXPro = false
 ) {
-  const enabledInitialFilters = stripDisabledDiscoveryFilters(initialFilters, hasConnectXPro);
+  const enabledInitialFilters = stripDisabledDiscoveryFilters(initialFilters, sections, hasConnectXPro);
 
   return sections.reduce<DiscoveryAppliedFilters>((draft, section) => {
     if (section.id === 'goal') {
@@ -564,13 +558,12 @@ export function DiscoveryFilterSheet({
     () => expandedByMode[currentMode] ?? {},
     [currentMode, expandedByMode]
   );
-
-  const basicSections = sections.filter(
-    (section) => section.id !== 'goal' && (section.type !== 'group' || section.id === 'locationAvailability')
+  const sectionById = React.useMemo(
+    () => new Map(sections.map((section) => [section.id, section])),
+    [sections]
   );
-  const advancedSections = sections.filter(
-    (section) => section.id !== 'goal' && section.type === 'group' && section.id !== 'locationAvailability'
-  );
+  const basicSections = sections.filter((section) => section.id !== 'goal' && !isPremiumDiscoverySection(section));
+  const advancedSections = sections.filter((section) => section.id !== 'goal' && isPremiumDiscoverySection(section));
 
   const updateDraft = React.useCallback(
     (updater: (current: DiscoveryAppliedFilters) => DiscoveryAppliedFilters) => {
@@ -619,7 +612,7 @@ export function DiscoveryFilterSheet({
 
   const handleFieldValueChange = React.useCallback(
     (sectionId: string, fieldId: string, value: unknown) => {
-      if (isDisabledDiscoveryFilterSection(sectionId, hasConnectXPro)) {
+      if (isDisabledDiscoveryFilterSection(sectionById.get(sectionId), hasConnectXPro)) {
         return;
       }
 
@@ -635,12 +628,12 @@ export function DiscoveryFilterSheet({
         };
       });
     },
-    [hasConnectXPro, updateDraft]
+    [hasConnectXPro, sectionById, updateDraft]
   );
 
   const handleToggleFieldOption = React.useCallback(
     (sectionId: string, field: DiscoveryFilterField, optionId: string) => {
-      if (isDisabledDiscoveryFilterSection(sectionId, hasConnectXPro)) {
+      if (isDisabledDiscoveryFilterSection(sectionById.get(sectionId), hasConnectXPro)) {
         return;
       }
 
@@ -672,7 +665,7 @@ export function DiscoveryFilterSheet({
         };
       });
     },
-    [hasConnectXPro, updateDraft]
+    [hasConnectXPro, sectionById, updateDraft]
   );
 
   const handleGoalPress = React.useCallback((goalId: string) => {
@@ -694,7 +687,7 @@ export function DiscoveryFilterSheet({
 
   const renderField = React.useCallback(
     (sectionId: string, field: DiscoveryFilterField) => {
-      const disabled = isDisabledDiscoveryFilterSection(sectionId, hasConnectXPro);
+      const disabled = isDisabledDiscoveryFilterSection(sectionById.get(sectionId), hasConnectXPro);
       const sectionValue = isRecordValue(currentDraft[sectionId]) ? currentDraft[sectionId] : {};
       const fieldValue = sectionValue[field.id] ?? getDefaultFieldValue(field);
       const searchKey = `${currentMode}:${sectionId}:${field.id}`;
@@ -789,12 +782,12 @@ export function DiscoveryFilterSheet({
         </View>
       );
     },
-    [currentDraft, currentMode, handleFieldValueChange, handleToggleFieldOption, hasConnectXPro, searchTerms]
+    [currentDraft, currentMode, handleFieldValueChange, handleToggleFieldOption, hasConnectXPro, searchTerms, sectionById]
   );
 
   const renderSectionContent = React.useCallback(
     (section: DiscoveryFilterSection) => {
-      const disabled = isDisabledDiscoveryFilterSection(section.id, hasConnectXPro);
+      const disabled = isDisabledDiscoveryFilterSection(section, hasConnectXPro);
       const sectionValue = currentDraft[section.id];
       const searchKey = `${currentMode}:${section.id}`;
       const searchTerm = searchTerms[searchKey] ?? '';
@@ -849,7 +842,7 @@ export function DiscoveryFilterSheet({
   const renderAccordionSection = React.useCallback(
     (section: DiscoveryFilterSection) => {
       const expanded = currentExpanded[section.id] ?? false;
-      const disabled = isDisabledDiscoveryFilterSection(section.id, hasConnectXPro);
+      const disabled = isDisabledDiscoveryFilterSection(section, hasConnectXPro);
 
       return (
         <View
@@ -869,7 +862,7 @@ export function DiscoveryFilterSheet({
             <>
               {disabled ? (
                 <AppText className="pb-1 text-[12px]" tone="muted">
-                  Locked for now. You can still generate candidates with the enabled filters above.
+                  ConnectX Pro is required to use this advanced filter section.
                 </AppText>
               ) : null}
               {renderSectionContent(section)}
@@ -967,7 +960,7 @@ export function DiscoveryFilterSheet({
               className="flex-1"
               disabled={isApplying}
               label={isApplying ? 'Generating...' : 'Generate Candidates'}
-              onPress={() => onApply(currentMode, stripDisabledDiscoveryFilters(currentDraft, hasConnectXPro))}
+              onPress={() => onApply(currentMode, stripDisabledDiscoveryFilters(currentDraft, sections, hasConnectXPro))}
             />
           </View>
         </View>

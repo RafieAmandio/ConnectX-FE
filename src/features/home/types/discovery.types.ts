@@ -180,6 +180,14 @@ export type DiscoveryFilterOption = {
   description?: string;
 };
 
+export type DiscoveryEntitlement = 'connectx_pro';
+
+export type DiscoveryFilterAccess = {
+  requiresEntitlement?: DiscoveryEntitlement;
+  enabled?: boolean;
+  errorCode?: 'PREMIUM_REQUIRED' | string;
+};
+
 export type DiscoveryFilterField = {
   id: string;
   title: string;
@@ -196,22 +204,11 @@ export type DiscoveryFilterSection = {
   id: string;
   title: string;
   type: 'single_select' | 'multi_select' | 'group' | string;
+  access?: DiscoveryFilterAccess;
   ui: DiscoveryFilterUiConfig;
   options?: DiscoveryFilterOption[];
   fields?: DiscoveryFilterField[];
   defaultValue?: string | string[] | number | boolean;
-};
-
-export type DiscoveryFilterOptionsResponse = {
-  success: boolean;
-  message?: string;
-  data: {
-    context: {
-      mode: DiscoveryMode;
-      isPremium: boolean;
-    };
-    sections: DiscoveryFilterSection[];
-  };
 };
 
 export type DiscoveryAppliedFilters = Record<string, unknown>;
@@ -254,6 +251,8 @@ export type SwipeActionSuccessResponse = {
   data: {
     id: string;
     profileId?: string | null;
+    startupId?: string | null;
+    targetId?: string | null;
     action: SwipeActionRequest['action'];
     isMatch: boolean;
     matchId: string | null;
@@ -271,6 +270,8 @@ export type SwipeActionDeniedResponse = {
     details: {
       id: string;
       profileId?: string | null;
+      startupId?: string | null;
+      targetId?: string | null;
       action: Extract<SwipeActionRequest['action'], 'super_like'>;
       requiredConsumable: Extract<DiscoveryConsumableType, 'boost'>;
       remaining: number;

@@ -21,27 +21,23 @@ import { AppCard, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 import { Shadows } from '@shared/theme';
 
+import { getDiscoveryFilterSections } from '../config/discovery-filters';
 import {
   countAppliedDiscoveryFilters,
   useDiscoveryCards,
-  useDiscoveryFilterOptions,
   useRewindAction,
   useSwipeAction,
 } from '../hooks/use-discovery';
 import {
   mockDiscoveryCardsResponse,
   mockDiscoveryCardsResponsesByMode,
-  mockDiscoveryFilterOptionsByMode,
 } from '../mock/discovery.mock';
 import {
   isRewindNotAvailableError,
   isRewindPremiumRequiredError,
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
-import {
-  isDiscoveryCardsMockEnabled,
-  isDiscoveryFilterOptionsMockEnabled,
-} from '../services/discovery-service';
+import { isDiscoveryCardsMockEnabled } from '../services/discovery-service';
 import type {
   DiscoveryAppliedFilters,
   DiscoveryCard,
@@ -80,14 +76,6 @@ const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
 
 function hasUsableCards(items: DiscoveryCard[]) {
   return items.length > 0;
-}
-
-function hasUsableFilterSections(sections?: DiscoveryFilterSection[]) {
-  return Boolean(sections?.length);
-}
-
-function getFallbackFilterOptions(mode: DiscoveryMode) {
-  return mockDiscoveryFilterOptionsByMode[mode];
 }
 
 function getFallbackCards(mode: DiscoveryMode | null) {
@@ -339,9 +327,7 @@ function getGoalOptions(sections: DiscoveryFilterSection[], mode: DiscoveryMode)
     return goalSection.options;
   }
 
-  return (
-    getFallbackFilterOptions(mode).data.sections.find((section) => section.id === 'goal')?.options ?? []
-  );
+  return getDiscoveryFilterSections(mode).find((section) => section.id === 'goal')?.options ?? [];
 }
 
 function shouldShowMockMatchToast(card: DiscoveryCard) {
@@ -870,7 +856,6 @@ export function DiscoveryDeck() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const usingMockCards = isDiscoveryCardsMockEnabled();
-  const usingMockFilterOptions = isDiscoveryFilterOptionsMockEnabled();
   const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
     useRevenueCat();
   const [mockCards, setMockCards] = React.useState<DiscoveryCard[]>(getFallbackCards(null));
@@ -894,33 +879,13 @@ export function DiscoveryDeck() {
   const usingFallbackRef = React.useRef(false);
   const matchToastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filterOptionsQuery = useDiscoveryFilterOptions(sheetMode, isFilterVisible);
-  const liveFilterOptions = filterOptionsQuery.data;
-  const usingFilterFallback =
-    !usingMockFilterOptions && !hasUsableFilterSections(liveFilterOptions?.data.sections);
-  const activeFilterOptions = usingMockFilterOptions
-    ? mockDiscoveryFilterOptionsByMode[sheetMode]
-    : usingFilterFallback
-      ? getFallbackFilterOptions(sheetMode)
-      : liveFilterOptions ?? getFallbackFilterOptions(sheetMode);
-  const filterSections = activeFilterOptions.data.sections;
+  const filterSections = React.useMemo(() => getDiscoveryFilterSections(sheetMode), [sheetMode]);
   const goalOptions = getGoalOptions(filterSections, sheetMode);
 
-  const appliedSections = React.useMemo(() => {
-    if (!appliedMode) {
-      return getFallbackFilterOptions(DEFAULT_FILTER_MODE).data.sections;
-    }
-
-    if (
-      appliedMode === sheetMode &&
-      liveFilterOptions?.data.context.mode === appliedMode &&
-      hasUsableFilterSections(liveFilterOptions.data.sections)
-    ) {
-      return liveFilterOptions.data.sections;
-    }
-
-    return getFallbackFilterOptions(appliedMode).data.sections;
-  }, [appliedMode, liveFilterOptions, sheetMode]);
+  const appliedSections = React.useMemo(
+    () => getDiscoveryFilterSections(appliedMode ?? DEFAULT_FILTER_MODE),
+    [appliedMode]
+  );
 
   const sanitizedAppliedFilters = React.useMemo(
     () => sanitizeDiscoveryFilters(appliedFilters, appliedSections),
@@ -1279,7 +1244,7 @@ export function DiscoveryDeck() {
       try {
         const sanitizedNextFilters = sanitizeDiscoveryFilters(
           nextFilters,
-          getFallbackFilterOptions(mode).data.sections
+          getDiscoveryFilterSections(mode)
         );
         let nextDeviceCoordinates = deviceCoordinates;
 
@@ -1390,14 +1355,7 @@ export function DiscoveryDeck() {
   const filterSheet = (
     <DiscoveryFilterSheet
       currentMode={sheetMode}
-      errorMessage={
-        filterError ??
-        (usingMockFilterOptions
-          ? 'Using development mock filter options.'
-          : usingFilterFallback
-            ? 'Showing fallback filter options while the API is unavailable.'
-            : null)
-      }
+      errorMessage={filterError}
       goalOptions={goalOptions}
       hasConnectXPro={isConnectXProActive}
       initialAppliedMode={appliedMode}

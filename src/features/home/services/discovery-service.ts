@@ -3,13 +3,11 @@ import { ApiError, apiFetch } from '@shared/services/api';
 import {
   mockDiscoveryCardsResponse,
   mockDiscoveryCardsResponsesByMode,
-  mockDiscoveryFilterOptionsByMode,
 } from '../mock/discovery.mock';
 import type {
   DiscoveryCardFeedInput,
   DiscoveryCardsRequest,
   DiscoveryCardsResponse,
-  DiscoveryFilterOptionsResponse,
   DiscoveryMode,
   DiscoverySwipeHistoryEntry,
   RewindActionRequest,
@@ -99,14 +97,9 @@ export function isDiscoveryCardsMockEnabled() {
   return __DEV__;
 }
 
-export function isDiscoveryFilterOptionsMockEnabled() {
-  return __DEV__;
-}
-
 export const DISCOVERY_API = {
   CARDS: '/api/v1/discovery/cards',
-  FILTER_OPTIONS: '/api/v1/discovery/filter-options',
-  ACTION: (profileId: string) => `/api/v1/discovery/cards/${profileId}/action`,
+  ACTION: (targetId: string) => `/api/v1/discovery/cards/${targetId}/action`,
   REWIND: '/api/v1/discovery/swipes/rewind',
   SPOTLIGHT_ACTIVATE: '/api/v1/discovery/spotlight/activate',
 } as const;
@@ -156,17 +149,7 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
   });
 }
 
-export async function fetchDiscoveryFilterOptions(mode: DiscoveryMode) {
-  if (isDiscoveryFilterOptionsMockEnabled()) {
-    return mockDiscoveryFilterOptionsByMode[mode];
-  }
-
-  const params = new URLSearchParams({ mode });
-
-  return apiFetch<DiscoveryFilterOptionsResponse>(`${DISCOVERY_API.FILTER_OPTIONS}?${params.toString()}`);
-}
-
-export async function postSwipeAction(profileId: string, payload: SwipeActionRequest) {
+export async function postSwipeAction(targetId: string, payload: SwipeActionRequest) {
   if (__DEV__ && payload.action === 'super_like' && shouldMockSuperLikeRequiresBoost()) {
 
     throw new ApiError('No boosts remaining.', 409, {
@@ -175,8 +158,8 @@ export async function postSwipeAction(profileId: string, payload: SwipeActionReq
       error: {
         code: 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST',
         details: {
-          id: profileId,
-          profileId,
+          id: targetId,
+          targetId,
           action: 'super_like',
           requiredConsumable: 'boost',
           remaining: 0,
@@ -185,7 +168,7 @@ export async function postSwipeAction(profileId: string, payload: SwipeActionReq
     });
   }
 
-  return apiFetch<SwipeActionResponse>(DISCOVERY_API.ACTION(profileId), {
+  return apiFetch<SwipeActionResponse>(DISCOVERY_API.ACTION(targetId), {
     body: payload as unknown as BodyInit,
     method: 'POST',
   });

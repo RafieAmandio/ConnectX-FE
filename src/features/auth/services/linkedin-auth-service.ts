@@ -33,7 +33,7 @@ export async function signInWithLinkedInToken(): Promise<LinkedInAuthResult> {
     throw new Error('LinkedIn Sign-In is only enabled in the native iOS and Android builds.');
   }
 
-  const authUrl = 'https://easytrip-backend-nhud.onrender.com/auth/linkedin';
+  const authUrl = 'https://getconnectxapp.vercel.app/api/v1/auth/oauth/linkedin/callback';
   const callbackUrl = Linking.createURL(LINKEDIN_CALLBACK_PATH);
   const result = await WebBrowser.openAuthSessionAsync(authUrl, callbackUrl);
 
