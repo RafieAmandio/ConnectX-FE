@@ -34,6 +34,7 @@ import type {
   LoginOtpVerifyPayload,
   LoginOtpVerifySuccessResponse,
   LoginPasswordSuccessResponse,
+  OAuthAuthMethod,
   OtpMessageResponse,
   OtpRateLimitResponse,
   RegisterPayload,
@@ -56,6 +57,7 @@ const AUTH_API = {
   EMAIL_RESEND_OTP: '/api/v1/auth/email/resend-otp',
   EMAIL_SEND_OTP: '/api/v1/auth/email/send-otp',
   GOOGLE_OAUTH_VERIFY: '/api/v1/auth/oauth/google/verify-token',
+  LINKEDIN_OAUTH_VERIFY: '/api/v1/auth/oauth/linkedin/verify-token',
   LOGIN: '/api/v1/auth/login/password',
   LOGIN_OTP_SEND: '/api/v1/auth/login/otp/send',
   LOGIN_OTP_VERIFY: '/api/v1/auth/login/otp/verify',
@@ -77,7 +79,7 @@ const AUTH_PHASES = new Set([
   'pending_onboarding',
   'authenticated',
 ]);
-const AUTH_METHODS = new Set(['email', 'google', 'apple', 'developer-bypass']);
+const AUTH_METHODS = new Set(['email', 'google', 'linkedin', 'apple', 'developer-bypass']);
 
 type PersistedAuthState = {
   session: AuthSession | null;
@@ -107,6 +109,17 @@ export type GoogleOAuthLoginPayload = {
 export type GoogleSupabaseLoginResponse = AuthSuccessResponse & {
   data: AuthSuccessResponse['data'] & {
     oauth_provider: 'google';
+  };
+};
+
+export type LinkedInOAuthLoginPayload = {
+  providerToken: string;
+  fcmToken?: string | null;
+};
+
+export type LinkedInOAuthVerifyResponse = AuthSuccessResponse & {
+  data: AuthSuccessResponse['data'] & {
+    oauth_provider?: 'linkedin';
   };
 };
 
@@ -181,7 +194,7 @@ function isStoredSessionShape(value: unknown): value is AuthSession {
 
 function resolveAuthPhase(user: AuthUser, nextStep?: AuthNextStep): AuthPhase {
   if (nextStep === 'LOGIN_SUCCESS') {
-    return 'authenticated';
+    return user.is_onboarded === false ? 'pending_onboarding' : 'authenticated'
   }
 
   if (nextStep === 'NEED_LOGIN_OTP') {
@@ -281,7 +294,7 @@ function createPendingLoginOtpSession(email: string): AuthSession {
   };
 }
 
-function createGoogleFallbackUser(user: SupabaseUser): AuthUser {
+function createOAuthFallbackUser(user: SupabaseUser): AuthUser {
   const now = new Date().toISOString();
   const normalizedEmail = normalizeEmail(user.email ?? 'connectx-member@local.dev');
 
@@ -574,30 +587,33 @@ export async function clearPersistedAuth() {
   ]);
 }
 
-export function createGoogleAuthSessionFromSupabaseUser(
+export function createOAuthAuthSessionFromSupabaseUser(
   user: SupabaseUser,
+  method: OAuthAuthMethod,
   displayName?: string | null,
   backendUser?: AuthUser | null,
   nextStep?: AuthNextStep
 ): AuthSession {
-  const resolvedUser = backendUser ?? createGoogleFallbackUser(user);
+  const resolvedUser = backendUser ?? createOAuthFallbackUser(user);
 
   return createAuthSession({
     displayName: buildDisplayNameFromSupabaseUser(user, displayName),
-    method: 'google',
+    method,
     nextStep: nextStep ?? 'REGISTRATION_COMPLETE',
     user: resolvedUser,
   });
 }
 
-export function createGoogleAuthSessionFromSupabaseSession(
+export function createOAuthAuthSessionFromSupabaseSession(
   session: SupabaseSession,
+  method: OAuthAuthMethod,
   displayName?: string | null,
   backendUser?: AuthUser | null,
   nextStep?: AuthNextStep
 ) {
-  return createGoogleAuthSessionFromSupabaseUser(
+  return createOAuthAuthSessionFromSupabaseUser(
     session.user,
+    method,
     displayName,
     backendUser,
     nextStep
@@ -673,6 +689,18 @@ async function verifyGoogleOAuthWithApi(
   });
 }
 
+async function verifyLinkedInOAuthWithApi(
+  payload: LinkedInOAuthLoginPayload
+): Promise<LinkedInOAuthVerifyResponse> {
+  return apiFetch<LinkedInOAuthVerifyResponse>(AUTH_API.LINKEDIN_OAUTH_VERIFY, {
+    method: 'POST',
+    body: {
+      fcm_token: payload.fcmToken ?? '',
+      provider_token: payload.providerToken,
+    } as any,
+  });
+}
+
 export async function loginWithGoogleApi(
   payload: GoogleOAuthLoginPayload
 ): Promise<SessionActionResult<GoogleOAuthVerifyResponse>> {
@@ -686,6 +714,33 @@ export async function loginWithGoogleApi(
   const session = createAuthSession({
     displayName: payload.displayName,
     method: 'google',
+    nextStep: response.next_step,
+    user: response.data.user,
+  });
+
+  await Promise.all([
+    persistAuthSession(session, token),
+    applySupabaseAuthResponse(response),
+  ]);
+
+  return {
+    response,
+    session,
+  };
+}
+
+export async function loginWithLinkedInApi(
+  payload: LinkedInOAuthLoginPayload
+): Promise<SessionActionResult<LinkedInOAuthVerifyResponse>> {
+  const response = await verifyLinkedInOAuthWithApi(payload);
+  const token = response.token.trim();
+
+  if (!token) {
+    throw new Error('LinkedIn login succeeded, but no API token was returned.');
+  }
+
+  const session = createAuthSession({
+    method: 'linkedin',
     nextStep: response.next_step,
     user: response.data.user,
   });

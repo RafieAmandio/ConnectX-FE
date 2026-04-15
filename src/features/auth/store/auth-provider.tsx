@@ -15,12 +15,13 @@ import { isAuthBypassEnabled } from '../config/auth-config';
 import type { LoginPayload } from '../services/auth-service';
 import {
   clearPersistedAuth,
-  createGoogleAuthSessionFromSupabaseSession,
+  createOAuthAuthSessionFromSupabaseSession,
   enterWithDevBypassSession,
   getPersistedAuthState,
   getStoredToken,
   loginWithApi,
   loginWithGoogleApi,
+  loginWithLinkedInApi,
   registerWithApi,
   replaceStoredSession,
   resendEmailOtp as resendEmailOtpRequest,
@@ -34,6 +35,7 @@ import {
   verifyWhatsappOtp as verifyWhatsappOtpRequest,
 } from '../services/auth-service';
 import { signInWithGoogleToken, signOutGoogle } from '../services/google-auth-service';
+import { signInWithLinkedInToken } from '../services/linkedin-auth-service';
 import type {
   AuthPhase,
   AuthSession,
@@ -61,6 +63,7 @@ type AuthContextValue = {
   sendEmailOtp: () => ReturnType<typeof sendEmailOtpRequest>;
   sendWhatsappOtp: (payload: WhatsappOtpPayload) => ReturnType<typeof sendWhatsappOtpRequest>;
   signInWithGoogle: (payload?: { fcmToken?: string | null }) => ReturnType<typeof loginWithGoogleApi>;
+  signInWithLinkedIn: (payload?: { fcmToken?: string | null }) => ReturnType<typeof loginWithLinkedInApi>;
   signOut: () => Promise<void>;
   verifyLoginOtp: (payload: LoginOtpVerifyPayload) => ReturnType<typeof verifyLoginOtpRequest>;
   verifyEmailOtp: (payload: VerifyEmailPayload) => ReturnType<typeof verifyEmailOtpRequest>;
@@ -90,6 +93,10 @@ function isRecoverableSupabaseSessionError(error: unknown) {
 
 function canRestoreWithoutToken(authPhase: AuthPhase) {
   return authPhase === 'pending_login_otp';
+}
+
+function isExternalOAuthMethod(method?: AuthSession['method'] | null) {
+  return method === 'google' || method === 'linkedin';
 }
 
 export function AuthProvider({ children }: React.PropsWithChildren) {
@@ -198,14 +205,20 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
         if (supabaseSession?.user) {
           const normalizedEmail = supabaseSession.user.email?.trim().toLowerCase() ?? null;
-          const persistedGoogleSession =
-            persistedState.session?.method === 'google' &&
+          const persistedSession = persistedState.session;
+          const persistedOAuthSession =
+            persistedSession &&
+            isExternalOAuthMethod(persistedSession.method) &&
               normalizedEmail &&
-              persistedState.session.email === normalizedEmail
-              ? persistedState.session
+              persistedSession.email === normalizedEmail
+              ? persistedSession
               : null;
+          const oauthMethod = persistedSession && isExternalOAuthMethod(persistedSession.method)
+            ? persistedSession.method
+            : 'google';
           const nextSession =
-            persistedGoogleSession ?? createGoogleAuthSessionFromSupabaseSession(supabaseSession);
+            persistedOAuthSession ??
+            createOAuthAuthSessionFromSupabaseSession(supabaseSession, oauthMethod);
 
           await Promise.all([
             replaceStoredSession(nextSession),
@@ -304,7 +317,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       if (event === 'SIGNED_OUT') {
         await supabaseChatRepository.clearRealtimeSubscriptions();
 
-        if (sessionRef.current?.method === 'google') {
+        if (isExternalOAuthMethod(sessionRef.current?.method)) {
           await clearPersistedAuth();
           setSession(null);
           setAuthPhase('signed_out');
@@ -319,12 +332,16 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       ) {
         const normalizedEmail = nextSupabaseSession.user.email?.trim().toLowerCase() ?? null;
         const currentSession = sessionRef.current;
+        const oauthMethod = currentSession && isExternalOAuthMethod(currentSession.method)
+          ? currentSession.method
+          : 'google';
         const nextSession =
-          currentSession?.method === 'google' &&
+          currentSession &&
+          isExternalOAuthMethod(currentSession.method) &&
             normalizedEmail &&
             currentSession.email === normalizedEmail
             ? currentSession
-            : createGoogleAuthSessionFromSupabaseSession(nextSupabaseSession);
+            : createOAuthAuthSessionFromSupabaseSession(nextSupabaseSession, oauthMethod);
 
         await Promise.all([
           replaceStoredSession(nextSession),
@@ -359,6 +376,19 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       email: googleResult.email,
       fcmToken: payload?.fcmToken ?? '',
       idToken: googleResult.idToken,
+    });
+
+    setSession(result.session);
+    setAuthPhase(result.session.authPhase);
+
+    return result;
+  }, []);
+
+  const signInWithLinkedIn = React.useCallback(async (payload?: { fcmToken?: string | null }) => {
+    const linkedInResult = await signInWithLinkedInToken();
+    const result = await loginWithLinkedInApi({
+      providerToken: linkedInResult.providerToken,
+      fcmToken: payload?.fcmToken ?? '',
     });
 
     setSession(result.session);
@@ -464,6 +494,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       sendWhatsappOtp,
       session,
       signInWithGoogle,
+      signInWithLinkedIn,
       signOut,
       verifyLoginOtp,
       verifyEmailOtp,
@@ -486,6 +517,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       sendWhatsappOtp,
       session,
       signInWithGoogle,
+      signInWithLinkedIn,
       signOut,
       verifyLoginOtp,
       verifyEmailOtp,

@@ -14,7 +14,7 @@ import { getEmailError, getPasswordError } from '../utils/auth-validation';
 
 export function LoginScreen() {
   const router = useRouter();
-  const { authPhase, isHydrated, login, session, signInWithGoogle } = useAuth();
+  const { authPhase, isHydrated, login, session, signInWithGoogle, signInWithLinkedIn } = useAuth();
   const fcmToken = useFcmToken();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -25,6 +25,7 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
+  const [isLinkedInSubmitting, setIsLinkedInSubmitting] = React.useState(false);
 
   React.useEffect(() => {
     if (fcmToken) {
@@ -48,7 +49,7 @@ export function LoginScreen() {
     setPasswordError(nextPasswordError);
     setStatusMessage(null);
 
-    if (nextEmailError || nextPasswordError || isSubmitting) {
+    if (nextEmailError || nextPasswordError || isSubmitting || isGoogleSubmitting || isLinkedInSubmitting) {
       return;
     }
 
@@ -95,7 +96,7 @@ export function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
-    if (isGoogleSubmitting || isSubmitting) {
+    if (isGoogleSubmitting || isSubmitting || isLinkedInSubmitting) {
       return;
     }
 
@@ -126,6 +127,40 @@ export function LoginScreen() {
       );
     } finally {
       setIsGoogleSubmitting(false);
+    }
+  };
+
+  const handleLinkedInLogin = async () => {
+    if (isLinkedInSubmitting || isSubmitting || isGoogleSubmitting) {
+      return;
+    }
+
+    setEmailError(null);
+    setPasswordError(null);
+    setStatusMessage(null);
+    setIsLinkedInSubmitting(true);
+
+    try {
+      const result = await signInWithLinkedIn({
+        fcmToken,
+      });
+
+      console.info('LinkedIn OAuth backend login successful.', {
+        authPhase: result.session.authPhase,
+        email: result.session.email,
+        nextStep: result.response.next_step ?? null,
+      });
+
+      router.replace(getRouteForAuthPhase(result.session.authPhase));
+    } catch (error) {
+      setStatusTone('danger');
+      setStatusMessage(
+        error instanceof Error
+          ? error.message
+          : 'LinkedIn Sign-In failed. Please try again.'
+      );
+    } finally {
+      setIsLinkedInSubmitting(false);
     }
   };
 
@@ -208,7 +243,7 @@ export function LoginScreen() {
 
             <View className="flex-1 justify-end shrink-0 pt-8 gap-4">
               <AppButton
-                disabled={isSubmitting || isGoogleSubmitting}
+                disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
                 label={isSubmitting ? 'Signing in...' : 'Sign In'}
                 onPress={handleLogin}
                 size="lg"
@@ -216,7 +251,7 @@ export function LoginScreen() {
               />
 
               <AppButton
-                disabled={isSubmitting || isGoogleSubmitting}
+                disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
                 label="Preview onboarding"
                 onPress={() => {
                   router.push({
@@ -238,12 +273,12 @@ export function LoginScreen() {
                   </View>
 
                   <TouchableOpacity
-                    disabled={isSubmitting || isGoogleSubmitting}
+                    disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
                     onPress={handleGoogleLogin}
                     className={cn(
                       "flex-row items-center justify-center gap-3 w-full h-[56px] rounded-[16px]",
                       "border border-border-strong bg-surface",
-                      (isSubmitting || isGoogleSubmitting) && "opacity-50"
+                      (isSubmitting || isGoogleSubmitting || isLinkedInSubmitting) && "opacity-50"
                     )}
                   >
                     {isGoogleSubmitting ? (
@@ -252,6 +287,25 @@ export function LoginScreen() {
                       <>
                         <AntDesign color="#FFFFFF" name="google" size={20} />
                         <AppText variant="bodyStrong">Continue with Google</AppText>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
+                    onPress={handleLinkedInLogin}
+                    className={cn(
+                      "flex-row items-center justify-center gap-3 w-full h-[56px] rounded-[16px]",
+                      "border border-border-strong bg-surface",
+                      (isSubmitting || isGoogleSubmitting || isLinkedInSubmitting) && "opacity-50"
+                    )}
+                  >
+                    {isLinkedInSubmitting ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <AntDesign color="#0A66C2" name="linkedin" size={20} />
+                        <AppText variant="bodyStrong">Continue with LinkedIn</AppText>
                       </>
                     )}
                   </TouchableOpacity>
