@@ -472,10 +472,17 @@ function StartupJourney({ card }: { card: DiscoveryStartupCard }) {
   );
 }
 
-function ProfileCardContent({ card }: { card: DiscoveryProfileCard }) {
+function ProfileCardContent({
+  card,
+  scrollEnabled = true,
+}: {
+  card: DiscoveryProfileCard;
+  scrollEnabled?: boolean;
+}) {
   return (
-    <>
-      <View className="h-[400px] overflow-hidden">
+    <View className="flex-1">
+      <View className="shrink-0">
+        <View className="overflow-hidden" style={{ height: 260 }}>
         {card.photoUrl ? (
           <Image
             key={card.id}
@@ -486,8 +493,6 @@ function ProfileCardContent({ card }: { card: DiscoveryProfileCard }) {
         ) : (
           <View className="h-full w-full bg-surface-muted" />
         )}
-
-        <View className="absolute inset-0" style={{ backgroundColor: 'rgba(17, 19, 26, 0.24)' }} />
 
         <View
           className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
@@ -511,7 +516,7 @@ function ProfileCardContent({ card }: { card: DiscoveryProfileCard }) {
 
       <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
         <View className="flex-row items-center gap-3">
-          <View className="items-center justify-center rounded-full border-2 border-[#FFCD38] p-2.5">
+          <View className="h-[52px] w-[52px] items-center justify-center rounded-full border-[2.5px] border-[#FFCD38]">
             <AppText className="text-[16px] font-bold" style={{ color: '#FFCD38' }}>
               {card.match.score}%
             </AppText>
@@ -544,8 +549,14 @@ function ProfileCardContent({ card }: { card: DiscoveryProfileCard }) {
           ) : null}
         </View>
       </View>
+      </View>
 
-      <View className="gap-5 px-4 py-4">
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
+        contentContainerStyle={{ paddingBottom: 24 }}>
+        <View className="gap-5 px-4 py-4">
         {card.bio ? (
           <AppText className="text-[16px] leading-7" tone="muted">
             {card.bio}
@@ -628,17 +639,25 @@ function ProfileCardContent({ card }: { card: DiscoveryProfileCard }) {
             </AppText>
           </View>
         ) : null}
-      </View>
-    </>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
-function StartupCardContent({ card }: { card: DiscoveryStartupCard }) {
+function StartupCardContent({
+  card,
+  scrollEnabled = true,
+}: {
+  card: DiscoveryStartupCard;
+  scrollEnabled?: boolean;
+}) {
   return (
-    <>
-      <View
-        className="overflow-hidden rounded-t-[24px] px-4 pb-5 pt-4"
-        style={{ backgroundColor: '#5A4226' }}>
+    <View className="flex-1">
+      <View className="shrink-0">
+        <View
+          className="overflow-hidden rounded-t-[24px] px-4 pb-5 pt-4"
+          style={{ backgroundColor: '#5A4226' }}>
         <View className="items-end">
           {card.badge ? (
             <View
@@ -673,7 +692,7 @@ function StartupCardContent({ card }: { card: DiscoveryStartupCard }) {
 
       <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
         <View className="flex-row items-center gap-3">
-          <View className="items-center justify-center rounded-full border-2 border-[#31D47A] p-2.5">
+          <View className="h-[52px] w-[52px] items-center justify-center rounded-full border-[2.5px] border-[#31D47A]">
             <AppText className="text-[16px] font-bold" style={{ color: '#58EA93' }}>
               {card.match.score}%
             </AppText>
@@ -700,8 +719,14 @@ function StartupCardContent({ card }: { card: DiscoveryStartupCard }) {
           </View>
         </View>
       </View>
+      </View>
 
-      <View className="gap-5 px-4 py-4">
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
+        contentContainerStyle={{ paddingBottom: 24 }}>
+        <View className="gap-5 px-4 py-4">
         <AppText className="text-[16px] leading-7" tone="muted">
           {card.summary}
         </AppText>
@@ -772,13 +797,24 @@ function StartupCardContent({ card }: { card: DiscoveryStartupCard }) {
         </View>
 
         <StartupJourney card={card} />
-      </View>
-    </>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
-function DiscoveryCardContent({ card }: { card: DiscoveryCard }) {
-  return isDiscoveryProfileCard(card) ? <ProfileCardContent card={card} /> : <StartupCardContent card={card} />;
+function DiscoveryCardContent({
+  card,
+  scrollEnabled = true,
+}: {
+  card: DiscoveryCard;
+  scrollEnabled?: boolean;
+}) {
+  return isDiscoveryProfileCard(card) ? (
+    <ProfileCardContent card={card} scrollEnabled={scrollEnabled} />
+  ) : (
+    <StartupCardContent card={card} scrollEnabled={scrollEnabled} />
+  );
 }
 
 function DeckActionButton({
@@ -1471,21 +1507,17 @@ export function DiscoveryDeck() {
           <View className="h-full w-full">
             {nextItem ? (
               <Animated.View
-                className="absolute inset-0 overflow-hidden rounded-[24px] border border-border bg-background"
-                style={[Shadows.card, nextCardStyle]}>
-                <ScrollView className="flex-1" scrollEnabled={false} showsVerticalScrollIndicator={false}>
-                  <DiscoveryCardContent card={nextItem} />
-                </ScrollView>
+                className="absolute inset-0 overflow-hidden rounded-[24px] border border-border"
+                style={[Shadows.card, nextCardStyle, { backgroundColor: '#232323' }]}>
+                <DiscoveryCardContent card={nextItem} scrollEnabled={false} />
               </Animated.View>
             ) : null}
 
             <GestureDetector gesture={panGesture}>
               <Animated.View
-                className="absolute inset-0 overflow-hidden rounded-[24px] border border-border bg-surface"
-                style={[Shadows.card, topCardStyle]}>
-                <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                  <DiscoveryCardContent card={currentItem} />
-                </ScrollView>
+                className="absolute inset-0 overflow-hidden rounded-[24px] border border-border"
+                style={[Shadows.card, topCardStyle, { backgroundColor: '#232323' }]}>
+                <DiscoveryCardContent card={currentItem} />
 
                 <Animated.View
                   className="absolute left-4 top-5 rounded-full border border-signal bg-signal-tint px-3 py-1.5"
