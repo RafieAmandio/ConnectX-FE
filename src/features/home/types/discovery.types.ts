@@ -10,8 +10,10 @@ export type DiscoveryGoalId =
   | 'goal_explore_startups'
   | 'goal_joining_startups';
 
+export type DiscoveryEntityType = 'profile' | 'startup';
+
 export type DiscoveryCardBadge = {
-  id: string;
+  id?: string;
   label: string;
   icon?: string;
 };
@@ -35,11 +37,28 @@ export type DiscoveryCardEducation = {
   school: string;
 };
 
-export type DiscoveryCard = {
+export type DiscoveryStageJourneyState = 'completed' | 'current' | 'upcoming';
+
+export type DiscoveryStartupJourneyStage = {
   id: string;
+  label: string;
+  state: DiscoveryStageJourneyState;
+};
+
+export type DiscoveryBaseCard = {
+  entityType: DiscoveryEntityType;
+  id: string;
+  name: string;
+  match: {
+    score: number;
+    label?: string;
+  };
+};
+
+export type DiscoveryProfileCard = DiscoveryBaseCard & {
+  entityType: 'profile';
   profileId: string;
   photoUrl: string | null;
-  name: string;
   age: number | null;
   headline: string;
   location: {
@@ -47,10 +66,6 @@ export type DiscoveryCard = {
     country: string;
     display: string;
     distanceKm?: number;
-  };
-  match: {
-    score: number;
-    label?: string;
   };
   badges: DiscoveryCardBadge[];
   bio?: string;
@@ -61,6 +76,52 @@ export type DiscoveryCard = {
   education?: DiscoveryCardEducation[];
   languages?: string[];
 };
+
+export type DiscoveryStartupCard = DiscoveryBaseCard & {
+  entityType: 'startup';
+  startupId: string;
+  logoUrl: string | null;
+  badge?: DiscoveryCardBadge;
+  founder: {
+    name: string;
+    title?: string;
+  };
+  industry: {
+    primary: string;
+    secondary?: string;
+    display: string;
+  };
+  team: {
+    memberCount: number;
+    display: string;
+  };
+  summary: string;
+  openRoles: {
+    id: string;
+    title: string;
+  }[];
+  lookingFor: string[];
+  teamStage: {
+    teamSize: number;
+    stage: string;
+    industry: string;
+    hiringCount: number;
+  };
+  journey: {
+    currentStage: string;
+    stages: DiscoveryStartupJourneyStage[];
+  };
+};
+
+export type DiscoveryCard = DiscoveryProfileCard | DiscoveryStartupCard;
+
+export function isDiscoveryProfileCard(card: DiscoveryCard): card is DiscoveryProfileCard {
+  return card.entityType === 'profile';
+}
+
+export function isDiscoveryStartupCard(card: DiscoveryCard): card is DiscoveryStartupCard {
+  return card.entityType === 'startup';
+}
 
 export type DiscoveryCardsResponse = {
   success: boolean;
@@ -191,7 +252,8 @@ export type SwipeActionSuccessResponse = {
   success: boolean;
   message: string;
   data: {
-    profileId: string;
+    id: string;
+    profileId?: string | null;
     action: SwipeActionRequest['action'];
     isMatch: boolean;
     matchId: string | null;
@@ -207,7 +269,8 @@ export type SwipeActionDeniedResponse = {
   error: {
     code: SwipeActionErrorCode;
     details: {
-      profileId: string;
+      id: string;
+      profileId?: string | null;
       action: Extract<SwipeActionRequest['action'], 'super_like'>;
       requiredConsumable: Extract<DiscoveryConsumableType, 'boost'>;
       remaining: number;
@@ -228,7 +291,8 @@ export type RewindActionSuccessResponse = {
   success: true;
   message: string;
   data: {
-    profileId: string;
+    id: string;
+    profileId?: string | null;
     rewoundAction: SwipeActionRequest['action'];
     card: DiscoveryCard;
   };
@@ -244,6 +308,7 @@ export type RewindActionDeniedResponse = {
   error: {
     code: RewindActionErrorCode;
     details: {
+      id?: string | null;
       profileId?: string | null;
       requiredEntitlement?: 'connectx_pro';
       rewoundAction?: SwipeActionRequest['action'] | null;

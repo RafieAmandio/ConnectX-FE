@@ -1,11 +1,12 @@
 import type {
+  DiscoveryCard,
   DiscoveryCardsResponse,
   DiscoveryFilterOptionsResponse,
   DiscoveryGoalId,
   DiscoveryMode,
 } from '../types/discovery.types';
 
-type MockDiscoveryCardBlueprint = {
+type MockDiscoveryProfileCardBlueprint = {
   id: string;
   profileId: string;
   photoUrl: string;
@@ -47,7 +48,31 @@ type MockDiscoveryCardBlueprint = {
   languages?: string[];
 };
 
-const cardBlueprints: MockDiscoveryCardBlueprint[] = [
+type MockDiscoveryStartupCardBlueprint = {
+  id: string;
+  startupId: string;
+  name: string;
+  logoUrl?: string | null;
+  badgeLabel: string;
+  founderName: string;
+  founderTitle: string;
+  score: number;
+  matchLabel: string;
+  industryPrimary: string;
+  industrySecondary?: string;
+  memberCount: number;
+  summary: string;
+  openRoles: string[];
+  lookingFor: string[];
+  journeyCurrentStage: string;
+  journeyStages: {
+    id: string;
+    label: string;
+    state: 'completed' | 'current' | 'upcoming';
+  }[];
+};
+
+const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
   {
     id: 'card_001',
     profileId: 'usr_ardi_001',
@@ -412,40 +437,220 @@ const cardBlueprints: MockDiscoveryCardBlueprint[] = [
   },
 ];
 
-export const mockDiscoveryCardsResponse: DiscoveryCardsResponse = {
-  success: true,
-  message: 'Discovery cards fetched successfully',
-  data: {
-    items: cardBlueprints.map((card) => ({
-      id: card.id,
-      profileId: card.profileId,
-      photoUrl: card.photoUrl,
-      name: card.name,
-      age: card.age,
-      headline: card.headline,
-      location: {
-        city: card.city,
-        country: card.country,
-        display: `${card.city}, ${card.country}`,
-        distanceKm: card.distanceKm,
-      },
-      match: {
-        score: card.score,
-        label: card.matchLabel,
-      },
-      badges: [card.badge],
-      bio: card.bio,
-      startupIdea: card.startupIdea,
-      interests: [...card.interests],
-      skills: [...card.skills],
-      experience: card.experience ? [...card.experience] : undefined,
-      education: card.education ? [...card.education] : undefined,
-      languages: card.languages ? [...card.languages] : undefined,
-    })),
-    nextCursor: null,
-    hasMore: false,
+const startupCardBlueprints: MockDiscoveryStartupCardBlueprint[] = [
+  {
+    id: 'startup_card_payflow_ai',
+    startupId: 'startup_payflow_ai',
+    name: 'PayFlow AI',
+    badgeLabel: 'MVP',
+    founderName: 'Sarah Chen',
+    founderTitle: 'Founder',
+    score: 94,
+    matchLabel: 'Perfect Match',
+    industryPrimary: 'Fintech',
+    industrySecondary: 'AI',
+    memberCount: 2,
+    summary: 'Building an AI-powered payment infrastructure for Southeast Asian SMEs.',
+    openRoles: ['Technical Co-Founder', 'Backend Engineer'],
+    lookingFor: ['Co-Founder', 'Team members'],
+    journeyCurrentStage: 'mvp',
+    journeyStages: [
+      { id: 'idea', label: 'Idea', state: 'completed' },
+      { id: 'mvp', label: 'MVP', state: 'current' },
+      { id: 'pre_seed', label: 'Pre-Seed', state: 'upcoming' },
+      { id: 'seed', label: 'Seed', state: 'upcoming' },
+    ],
   },
+  {
+    id: 'startup_card_solidarity_health',
+    startupId: 'startup_solidarity_health',
+    name: 'Solidarity Health',
+    badgeLabel: 'Pre-Seed',
+    founderName: 'Nadia Rahman',
+    founderTitle: 'Founder',
+    score: 91,
+    matchLabel: 'Strong Match',
+    industryPrimary: 'Healthtech',
+    industrySecondary: 'Ops',
+    memberCount: 4,
+    summary: 'Creating AI-assisted clinic workflows for underserved primary care operators.',
+    openRoles: ['Founding Product Designer', 'Clinical Ops Lead'],
+    lookingFor: ['Design partner', 'Operator'],
+    journeyCurrentStage: 'pre_seed',
+    journeyStages: [
+      { id: 'idea', label: 'Idea', state: 'completed' },
+      { id: 'mvp', label: 'MVP', state: 'completed' },
+      { id: 'pre_seed', label: 'Pre-Seed', state: 'current' },
+      { id: 'seed', label: 'Seed', state: 'upcoming' },
+    ],
+  },
+  {
+    id: 'startup_card_cargo_os',
+    startupId: 'startup_cargo_os',
+    name: 'Cargo OS',
+    badgeLabel: 'Seed',
+    founderName: 'Miguel Santos',
+    founderTitle: 'Founder',
+    score: 89,
+    matchLabel: 'High Potential',
+    industryPrimary: 'Logistics',
+    industrySecondary: 'SaaS',
+    memberCount: 7,
+    summary: 'Building workflow software for fragmented freight operators across APAC.',
+    openRoles: ['Founding Engineer', 'Growth Lead'],
+    lookingFor: ['Early operator', 'Full-time builder'],
+    journeyCurrentStage: 'seed',
+    journeyStages: [
+      { id: 'idea', label: 'Idea', state: 'completed' },
+      { id: 'mvp', label: 'MVP', state: 'completed' },
+      { id: 'pre_seed', label: 'Pre-Seed', state: 'completed' },
+      { id: 'seed', label: 'Seed', state: 'current' },
+    ],
+  },
+  {
+    id: 'startup_card_aurora_stack',
+    startupId: 'startup_aurora_stack',
+    name: 'Aurora Stack',
+    badgeLabel: 'MVP',
+    founderName: 'Jules Bennett',
+    founderTitle: 'Founder',
+    score: 93,
+    matchLabel: 'Perfect Match',
+    industryPrimary: 'Climate',
+    industrySecondary: 'DevTools',
+    memberCount: 3,
+    summary: 'Shipping internal data tools that help climate startups operate with smaller teams.',
+    openRoles: ['Technical Co-Founder', 'Platform Engineer'],
+    lookingFor: ['Co-Founder', 'Infra builder'],
+    journeyCurrentStage: 'mvp',
+    journeyStages: [
+      { id: 'idea', label: 'Idea', state: 'completed' },
+      { id: 'mvp', label: 'MVP', state: 'current' },
+      { id: 'pre_seed', label: 'Pre-Seed', state: 'upcoming' },
+      { id: 'seed', label: 'Seed', state: 'upcoming' },
+    ],
+  },
+  {
+    id: 'startup_card_people_os',
+    startupId: 'startup_people_os',
+    name: 'People OS',
+    badgeLabel: 'MVP',
+    founderName: 'Chloe Bennett',
+    founderTitle: 'Founder',
+    score: 90,
+    matchLabel: 'Strong Fit',
+    industryPrimary: 'HR Tech',
+    industrySecondary: 'AI',
+    memberCount: 5,
+    summary: 'Designing an operating system for distributed startup teams and people leaders.',
+    openRoles: ['Founding Recruiter', 'People Ops Partner'],
+    lookingFor: ['Team members', 'People operator'],
+    journeyCurrentStage: 'mvp',
+    journeyStages: [
+      { id: 'idea', label: 'Idea', state: 'completed' },
+      { id: 'mvp', label: 'MVP', state: 'current' },
+      { id: 'pre_seed', label: 'Pre-Seed', state: 'upcoming' },
+      { id: 'seed', label: 'Seed', state: 'upcoming' },
+    ],
+  },
+];
+
+function createProfileCards(): DiscoveryCard[] {
+  return profileCardBlueprints.map((card) => ({
+    entityType: 'profile',
+    id: card.id,
+    profileId: card.profileId,
+    photoUrl: card.photoUrl,
+    name: card.name,
+    age: card.age,
+    headline: card.headline,
+    location: {
+      city: card.city,
+      country: card.country,
+      display: `${card.city}, ${card.country}`,
+      distanceKm: card.distanceKm,
+    },
+    match: {
+      score: card.score,
+      label: card.matchLabel,
+    },
+    badges: [card.badge],
+    bio: card.bio,
+    startupIdea: card.startupIdea,
+    interests: [...card.interests],
+    skills: [...card.skills],
+    experience: card.experience ? [...card.experience] : undefined,
+    education: card.education ? [...card.education] : undefined,
+    languages: card.languages ? [...card.languages] : undefined,
+  }));
+}
+
+function createStartupCards(): DiscoveryCard[] {
+  return startupCardBlueprints.map((card) => ({
+    entityType: 'startup',
+    id: card.id,
+    startupId: card.startupId,
+    name: card.name,
+    logoUrl: card.logoUrl ?? null,
+    badge: {
+      label: card.badgeLabel,
+    },
+    founder: {
+      name: card.founderName,
+      title: card.founderTitle,
+    },
+    match: {
+      score: card.score,
+      label: card.matchLabel,
+    },
+    industry: {
+      primary: card.industryPrimary,
+      secondary: card.industrySecondary,
+      display: [card.industryPrimary, card.industrySecondary].filter(Boolean).join(' / '),
+    },
+    team: {
+      memberCount: card.memberCount,
+      display: `${card.memberCount} members`,
+    },
+    summary: card.summary,
+    openRoles: card.openRoles.map((title) => ({
+      id: `${card.startupId}_${title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
+      title,
+    })),
+    lookingFor: [...card.lookingFor],
+    teamStage: {
+      teamSize: card.memberCount,
+      stage: card.badgeLabel,
+      industry: [card.industryPrimary, card.industrySecondary].filter(Boolean).join(' / '),
+      hiringCount: card.openRoles.length,
+    },
+    journey: {
+      currentStage: card.journeyCurrentStage,
+      stages: [...card.journeyStages],
+    },
+  }));
+}
+
+function createCardsResponse(items: DiscoveryCard[]): DiscoveryCardsResponse {
+  return {
+    success: true,
+    message: 'Discovery cards fetched successfully',
+    data: {
+      items,
+      nextCursor: null,
+      hasMore: false,
+    },
+  };
+}
+
+export const mockDiscoveryCardsResponsesByMode: Record<DiscoveryMode, DiscoveryCardsResponse> = {
+  finding_cofounder: createCardsResponse(createProfileCards()),
+  building_team: createCardsResponse(createProfileCards()),
+  explore_startups: createCardsResponse(createStartupCards()),
+  joining_startups: createCardsResponse(createStartupCards()),
 };
+
+export const mockDiscoveryCardsResponse = mockDiscoveryCardsResponsesByMode.joining_startups;
 
 function createGoalSection(defaultGoal: DiscoveryGoalId) {
   return {

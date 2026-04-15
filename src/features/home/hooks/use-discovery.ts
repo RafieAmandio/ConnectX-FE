@@ -51,7 +51,7 @@ function normalizeLimit(limit?: number) {
 
 function removeCardFromPages(
   data: InfiniteData<DiscoveryCardsResponse, string | undefined> | undefined,
-  profileId: string
+  cardId: string
 ) {
   if (!data) {
     return data;
@@ -63,7 +63,7 @@ function removeCardFromPages(
       ...page,
       data: {
         ...page.data,
-        items: page.data.items.filter((item) => item.profileId !== profileId),
+        items: page.data.items.filter((item) => item.id !== cardId),
       },
     })),
   };
@@ -81,7 +81,7 @@ export function useDiscoveryCards(
     initialData: usingMockCards
       ? {
         pageParams: [undefined as string | undefined],
-        pages: [getMockDiscoveryCardsResponse(normalizedLimit)],
+        pages: [getMockDiscoveryCardsResponse(normalizedLimit, undefined, request)],
       }
       : undefined,
     queryKey: discoveryQueryKeys.feed(request, normalizedLimit),
@@ -113,16 +113,18 @@ export function useSwipeAction() {
 
   return useMutation({
     mutationFn: ({
+      cardId,
       payload,
-      profileId,
+      targetId,
     }: {
+      cardId: string;
       payload: SwipeActionRequest;
-      profileId: string;
-    }) => postSwipeAction(profileId, payload),
+      targetId: string;
+    }) => postSwipeAction(targetId, payload),
     onSuccess: (_response, variables) => {
       queryClient.setQueriesData<InfiniteData<DiscoveryCardsResponse, string | undefined>>(
         { queryKey: discoveryQueryKeys.cards },
-        (current) => removeCardFromPages(current, variables.profileId)
+        (current) => removeCardFromPages(current, variables.cardId)
       );
     },
   });

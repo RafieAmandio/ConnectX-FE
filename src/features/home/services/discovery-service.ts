@@ -1,6 +1,10 @@
 import { ApiError, apiFetch } from '@shared/services/api';
 
-import { mockDiscoveryCardsResponse, mockDiscoveryFilterOptionsByMode } from '../mock/discovery.mock';
+import {
+  mockDiscoveryCardsResponse,
+  mockDiscoveryCardsResponsesByMode,
+  mockDiscoveryFilterOptionsByMode,
+} from '../mock/discovery.mock';
 import type {
   DiscoveryCardFeedInput,
   DiscoveryCardsRequest,
@@ -18,6 +22,7 @@ import type {
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 20;
+const DEFAULT_MOCK_MODE: DiscoveryMode = 'joining_startups';
 
 function parseBooleanEnv(value: string | undefined) {
   if (!value) {
@@ -63,17 +68,26 @@ function getMockRewindMode(): MockRewindMode | null {
   return null;
 }
 
-export function getMockDiscoveryCardsResponse(limit = DEFAULT_LIMIT, cursor?: string) {
-  const items = mockDiscoveryCardsResponse.data.items;
+function resolveMockMode(request?: Omit<DiscoveryCardsRequest, 'pagination'>) {
+  return request?.context?.mode ?? DEFAULT_MOCK_MODE;
+}
+
+export function getMockDiscoveryCardsResponse(
+  limit = DEFAULT_LIMIT,
+  cursor?: string,
+  request?: Omit<DiscoveryCardsRequest, 'pagination'>
+) {
+  const response = mockDiscoveryCardsResponsesByMode[resolveMockMode(request)] ?? mockDiscoveryCardsResponse;
+  const items = response.data.items;
   const startIndex = cursor ? Number.parseInt(cursor, 10) || 0 : 0;
   const normalizedStartIndex = Math.max(0, startIndex);
   const endIndex = Math.min(items.length, normalizedStartIndex + normalizeLimit(limit));
   const nextCursor = endIndex < items.length ? String(endIndex) : null;
 
   return {
-    ...mockDiscoveryCardsResponse,
+    ...response,
     data: {
-      ...mockDiscoveryCardsResponse.data,
+      ...response.data,
       items: items.slice(normalizedStartIndex, endIndex),
       nextCursor,
       hasMore: nextCursor !== null,
@@ -133,7 +147,7 @@ function buildDiscoveryCardsPayload({
 
 export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
   if (isDiscoveryCardsMockEnabled()) {
-    return getMockDiscoveryCardsResponse(input.limit, input.cursor);
+    return getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
   }
 
   return apiFetch<DiscoveryCardsResponse>(DISCOVERY_API.CARDS, {
@@ -161,6 +175,7 @@ export async function postSwipeAction(profileId: string, payload: SwipeActionReq
       error: {
         code: 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST',
         details: {
+          id: profileId,
           profileId,
           action: 'super_like',
           requiredConsumable: 'boost',
@@ -207,7 +222,9 @@ export async function postRewindAction(
         error: {
           code: 'DISCOVERY_REWIND_NOT_AVAILABLE',
           details: {
-            profileId: historyEntry?.card.profileId ?? null,
+            id: historyEntry?.card.id ?? null,
+            profileId:
+              historyEntry?.card.entityType === 'profile' ? historyEntry.card.profileId : null,
             rewoundAction: historyEntry?.action ?? null,
             reason: 'EMPTY_HISTORY',
           },
@@ -219,7 +236,8 @@ export async function postRewindAction(
       success: true,
       message: 'Last swipe rewound.',
       data: {
-        profileId: historyEntry.card.profileId,
+        id: historyEntry.card.id,
+        profileId: historyEntry.card.entityType === 'profile' ? historyEntry.card.profileId : null,
         rewoundAction: historyEntry.action,
         card: historyEntry.card,
       },

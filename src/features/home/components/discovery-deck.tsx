@@ -30,6 +30,7 @@ import {
 } from '../hooks/use-discovery';
 import {
   mockDiscoveryCardsResponse,
+  mockDiscoveryCardsResponsesByMode,
   mockDiscoveryFilterOptionsByMode,
 } from '../mock/discovery.mock';
 import {
@@ -49,9 +50,12 @@ import type {
   DiscoveryFilterSection,
   DiscoveryGoalId,
   DiscoveryMode,
+  DiscoveryProfileCard,
+  DiscoveryStartupCard,
   DiscoverySwipeHistoryEntry,
   SwipeActionRequest,
 } from '../types/discovery.types';
+import { isDiscoveryProfileCard } from '../types/discovery.types';
 import { DiscoveryFilterSheet } from './discovery-filter-sheet';
 
 type SwipeDirection = 'left' | 'right';
@@ -84,6 +88,10 @@ function hasUsableFilterSections(sections?: DiscoveryFilterSection[]) {
 
 function getFallbackFilterOptions(mode: DiscoveryMode) {
   return mockDiscoveryFilterOptionsByMode[mode];
+}
+
+function getFallbackCards(mode: DiscoveryMode | null) {
+  return (mockDiscoveryCardsResponsesByMode[mode ?? DEFAULT_FILTER_MODE] ?? mockDiscoveryCardsResponse).data.items;
 }
 
 function flattenUniqueCards(response?: { pages: { data: { items: DiscoveryCard[] } }[] }) {
@@ -340,6 +348,10 @@ function shouldShowMockMatchToast(card: DiscoveryCard) {
   return false
 }
 
+function getCardActionTargetId(card: DiscoveryCard) {
+  return isDiscoveryProfileCard(card) ? card.profileId : card.startupId;
+}
+
 function DiscoveryTag({
   item,
   tone = 'default',
@@ -380,6 +392,408 @@ function SectionLabel({
       </AppText>
     </View>
   );
+}
+
+function StartupLogo({
+  card,
+  size = 96,
+}: {
+  card: DiscoveryStartupCard;
+  size?: number;
+}) {
+  const initials = card.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+
+  if (card.logoUrl) {
+    return (
+      <Image
+        contentFit="cover"
+        source={{ uri: card.logoUrl }}
+        style={{ borderRadius: 24, height: size, width: size }}
+      />
+    );
+  }
+
+  return (
+    <View
+      className="items-center justify-center rounded-[24px]"
+      style={{
+        backgroundColor: '#FFBE3D',
+        height: size,
+        width: size,
+      }}>
+      <AppText className="text-[24px] font-bold" style={{ color: '#1E1A12' }}>
+        {initials}
+      </AppText>
+    </View>
+  );
+}
+
+function StartupRoleChip({ title }: { title: string }) {
+  return (
+    <View
+      className="rounded-full border px-3 py-1.5"
+      style={{
+        backgroundColor: '#2A2117',
+        borderColor: 'rgba(255, 154, 62, 0.35)',
+      }}>
+      <AppText className="text-[12px]" style={{ color: '#FF9A3E' }} variant="bodyStrong">
+        {title}
+      </AppText>
+    </View>
+  );
+}
+
+function StartupJourney({ card }: { card: DiscoveryStartupCard }) {
+  return (
+    <View
+      className="gap-4 rounded-[22px] border px-4 py-4"
+      style={{
+        backgroundColor: '#261C15',
+        borderColor: 'rgba(255, 154, 62, 0.28)',
+      }}>
+      <SectionLabel icon="rocket-outline" title="Startup Journey" />
+      <View className="gap-2">
+        <View className="flex-row gap-2">
+          {card.journey.stages.map((stage, index) => {
+            const isCurrent = stage.state === 'current';
+            const isCompleted = stage.state === 'completed';
+
+            return (
+              <View key={stage.id} className="flex-1 gap-2">
+                <View
+                  className="h-1.5 rounded-full"
+                  style={{
+                    backgroundColor: isCurrent || isCompleted ? '#FF9A3E' : 'rgba(152, 162, 179, 0.18)',
+                  }}
+                />
+                <AppText
+                  className="text-[11px]"
+                  style={{
+                    color: isCurrent ? '#FFB05B' : isCompleted ? '#D0D5DD' : '#667085',
+                    textAlign: index === card.journey.stages.length - 1 ? 'right' : 'left',
+                  }}>
+                  {stage.label}
+                </AppText>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ProfileCardContent({ card }: { card: DiscoveryProfileCard }) {
+  return (
+    <>
+      <View className="h-[400px] overflow-hidden">
+        {card.photoUrl ? (
+          <Image
+            key={card.id}
+            contentFit="cover"
+            source={{ uri: card.photoUrl }}
+            style={{ height: '100%', width: '100%' }}
+          />
+        ) : (
+          <View className="h-full w-full bg-surface-muted" />
+        )}
+
+        <View className="absolute inset-0" style={{ backgroundColor: 'rgba(17, 19, 26, 0.24)' }} />
+
+        <View
+          className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
+          style={{ backgroundColor: 'rgba(17, 19, 26, 0.52)' }}>
+          <AppText className="text-[28px] leading-[34px]" variant="hero">
+            {card.age ? `${card.name}, ${card.age}` : card.name}
+          </AppText>
+          <View className="mt-1 flex-row items-center gap-1.5">
+            <Ionicons color="#98A2B3" name="location-outline" size={16} />
+            <AppText className="text-[14px]" tone="muted">
+              {card.location.display}
+            </AppText>
+            {typeof card.location.distanceKm === 'number' ? (
+              <AppText className="text-[14px]" tone="signal">
+                • {card.location.distanceKm} km
+              </AppText>
+            ) : null}
+          </View>
+        </View>
+      </View>
+
+      <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
+        <View className="flex-row items-center gap-3">
+          <View className="items-center justify-center rounded-full border-2 border-[#FFCD38] p-2.5">
+            <AppText className="text-[16px] font-bold" style={{ color: '#FFCD38' }}>
+              {card.match.score}%
+            </AppText>
+          </View>
+
+          <View className="gap-0.5">
+            <View className="flex-row items-center gap-1">
+              <Ionicons color="#FFCD38" name="star" size={14} />
+              <AppText className="text-[14px]" style={{ color: '#FFCD38' }} variant="bodyStrong">
+                {card.match.label ?? 'Strong Match'}
+              </AppText>
+            </View>
+            <AppText className="text-[12px]" tone="muted">
+              Match quality
+            </AppText>
+          </View>
+        </View>
+
+        <View className="items-end gap-1">
+          <AppText className="text-[17px] leading-tight" align="right" variant="title">
+            {card.headline}
+          </AppText>
+          {card.badges[0] ? (
+            <View className="flex-row items-center gap-1">
+              <Ionicons color="#FF9A3E" name={getBadgeIcon(card.badges[0].icon)} size={12} />
+              <AppText className="text-[13px]" tone="muted">
+                {card.badges[0].label}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      <View className="gap-5 px-4 py-4">
+        {card.bio ? (
+          <AppText className="text-[16px] leading-7" tone="muted">
+            {card.bio}
+          </AppText>
+        ) : null}
+
+        {card.startupIdea ? (
+          <View
+            className="gap-2.5 rounded-[20px] border px-4 py-4"
+            style={{
+              backgroundColor: '#2A2117',
+              borderColor: 'rgba(255, 154, 62, 0.25)',
+            }}>
+            <SectionLabel icon="bulb-outline" title="Startup Idea" />
+            <AppText className="text-[16px] leading-6">{card.startupIdea}</AppText>
+          </View>
+        ) : null}
+
+        <View className="gap-2.5">
+          <SectionLabel title="Industries & Interests" />
+          <View className="flex-row flex-wrap gap-2">
+            {card.interests.map((item) => (
+              <DiscoveryTag
+                key={item.id}
+                item={item}
+                tone={item.type === 'availability' ? 'availability' : 'default'}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View className="gap-2.5">
+          <SectionLabel title="Skills" />
+          <View className="flex-row flex-wrap gap-2">
+            {card.skills.map((item) => (
+              <DiscoveryTag key={item.id} item={item} />
+            ))}
+          </View>
+        </View>
+
+        {card.experience?.length ? (
+          <View className="gap-3">
+            <SectionLabel icon="briefcase-outline" title="Experience" />
+            {card.experience.map((item) => (
+              <AppCard key={item.id} className="gap-1.5 rounded-[16px] p-4">
+                <AppText className="text-[16px]" variant="title">
+                  {item.title}
+                </AppText>
+                <AppText className="text-[13px]" tone="signal">
+                  {item.organization} · {item.period}
+                </AppText>
+              </AppCard>
+            ))}
+          </View>
+        ) : null}
+
+        {card.education?.length ? (
+          <View className="gap-3">
+            {card.education.map((item) => (
+              <AppCard key={item.id} className="flex-row items-center gap-3.5 rounded-[16px] p-4">
+                <Ionicons color="#FFCD38" name="school-outline" size={24} />
+                <View className="flex-1 gap-0.5">
+                  <AppText className="text-[16px]" variant="title">
+                    {item.degree}
+                  </AppText>
+                  <AppText className="text-[13px]" style={{ color: '#FFCD38' }}>
+                    {item.school}
+                  </AppText>
+                </View>
+              </AppCard>
+            ))}
+          </View>
+        ) : null}
+
+        {card.languages?.length ? (
+          <View className="flex-row items-center gap-2 pb-1">
+            <Ionicons color="#FF9A3E" name="globe-outline" size={20} />
+            <AppText className="text-[14px]" tone="muted">
+              {card.languages.join(' · ')}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+    </>
+  );
+}
+
+function StartupCardContent({ card }: { card: DiscoveryStartupCard }) {
+  return (
+    <>
+      <View
+        className="overflow-hidden rounded-t-[24px] px-4 pb-5 pt-4"
+        style={{ backgroundColor: '#5A4226' }}>
+        <View className="items-end">
+          {card.badge ? (
+            <View
+              className="rounded-full border px-3 py-1"
+              style={{
+                backgroundColor: '#7B5A30',
+                borderColor: 'rgba(255, 190, 61, 0.35)',
+              }}>
+              <AppText className="text-[11px] uppercase" style={{ color: '#FFD06A' }} variant="label">
+                {card.badge.label}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+
+        <View className="mt-3 items-center">
+          <StartupLogo card={card} />
+        </View>
+
+        <View className="mt-5 gap-1">
+          <AppText className="text-[30px] leading-[34px]" variant="hero">
+            {card.name}
+          </AppText>
+          <View className="flex-row items-center gap-1.5">
+            <Ionicons color="#C7CCD4" name="briefcase-outline" size={15} />
+            <AppText className="text-[14px]" tone="muted">
+              {card.founder.title ? `${card.founder.title} by ${card.founder.name}` : card.founder.name}
+            </AppText>
+          </View>
+        </View>
+      </View>
+
+      <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
+        <View className="flex-row items-center gap-3">
+          <View className="items-center justify-center rounded-full border-2 border-[#31D47A] p-2.5">
+            <AppText className="text-[16px] font-bold" style={{ color: '#58EA93' }}>
+              {card.match.score}%
+            </AppText>
+          </View>
+          <View className="gap-0.5">
+            <View className="flex-row items-center gap-1">
+              <Ionicons color="#58EA93" name="star" size={14} />
+              <AppText className="text-[14px]" style={{ color: '#58EA93' }} variant="bodyStrong">
+                {card.match.label ?? 'Strong Match'}
+              </AppText>
+            </View>
+          </View>
+        </View>
+
+        <View className="items-end gap-1">
+          <AppText className="text-[17px] leading-tight" align="right" variant="title">
+            {card.industry.display}
+          </AppText>
+          <View className="flex-row items-center gap-1">
+            <Ionicons color="#98A2B3" name="people-outline" size={14} />
+            <AppText className="text-[13px]" tone="muted">
+              {card.team.display}
+            </AppText>
+          </View>
+        </View>
+      </View>
+
+      <View className="gap-5 px-4 py-4">
+        <AppText className="text-[16px] leading-7" tone="muted">
+          {card.summary}
+        </AppText>
+
+        {card.openRoles.length ? (
+          <View className="gap-3">
+            <SectionLabel icon="briefcase-outline" title="Open Roles" />
+            <View className="flex-row flex-wrap gap-2">
+              {card.openRoles.map((role) => (
+                <StartupRoleChip key={role.id} title={role.title} />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {card.lookingFor.length ? (
+          <View
+            className="gap-2.5 rounded-[20px] border px-4 py-4"
+            style={{
+              backgroundColor: '#2A261B',
+              borderColor: 'rgba(255, 190, 61, 0.28)',
+            }}>
+            <SectionLabel icon="sparkles-outline" title="Looking For" />
+            <AppText className="text-[16px] leading-6">
+              {card.lookingFor.join(' & ')}
+            </AppText>
+          </View>
+        ) : null}
+
+        <View className="gap-3">
+          <SectionLabel icon="people-outline" title="Team & Stage" />
+          <AppCard className="rounded-[18px] p-4">
+            <View className="flex-row flex-wrap gap-y-4">
+              <View className="w-1/2 gap-1 pr-2">
+                <AppText className="text-[12px]" tone="muted">
+                  Team Size
+                </AppText>
+                <AppText className="text-[18px]" variant="title">
+                  {card.teamStage.teamSize} members
+                </AppText>
+              </View>
+              <View className="w-1/2 gap-1 pl-2">
+                <AppText className="text-[12px]" tone="muted">
+                  Stage
+                </AppText>
+                <AppText className="text-[18px]" variant="title">
+                  {card.teamStage.stage}
+                </AppText>
+              </View>
+              <View className="w-1/2 gap-1 pr-2">
+                <AppText className="text-[12px]" tone="muted">
+                  Industry
+                </AppText>
+                <AppText className="text-[18px]" variant="title">
+                  {card.teamStage.industry}
+                </AppText>
+              </View>
+              <View className="w-1/2 gap-1 pl-2">
+                <AppText className="text-[12px]" tone="muted">
+                  Hiring
+                </AppText>
+                <AppText className="text-[18px]" variant="title">
+                  {card.teamStage.hiringCount} roles
+                </AppText>
+              </View>
+            </View>
+          </AppCard>
+        </View>
+
+        <StartupJourney card={card} />
+      </View>
+    </>
+  );
+}
+
+function DiscoveryCardContent({ card }: { card: DiscoveryCard }) {
+  return isDiscoveryProfileCard(card) ? <ProfileCardContent card={card} /> : <StartupCardContent card={card} />;
 }
 
 function DeckActionButton({
@@ -431,12 +845,12 @@ function EmptyState({
   return (
     <AppCard className="gap-3 rounded-[24px] p-4">
       <AppText variant="title">
-        {isLoadingMore ? 'Loading more founders...' : 'No more discovery cards right now.'}
+        {isLoadingMore ? 'Loading more cards...' : 'No more discovery cards right now.'}
       </AppText>
       <AppText tone="muted">
         {isLoadingMore
-          ? 'Hang tight while the next page of profiles loads into the deck.'
-          : 'You reached the end of the current stack. Check back later for fresh profiles.'}
+          ? 'Hang tight while the next page of discovery cards loads into the deck.'
+          : 'You reached the end of the current stack. Check back later for fresh matches.'}
       </AppText>
       {usingMockData ? (
         <Pressable
@@ -459,7 +873,7 @@ export function DiscoveryDeck() {
   const usingMockFilterOptions = isDiscoveryFilterOptionsMockEnabled();
   const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
     useRevenueCat();
-  const [mockCards, setMockCards] = React.useState(mockDiscoveryCardsResponse.data.items);
+  const [mockCards, setMockCards] = React.useState<DiscoveryCard[]>(getFallbackCards(null));
   const [restoredCards, setRestoredCards] = React.useState<DiscoveryCard[]>([]);
   const [history, setHistory] = React.useState<DiscoverySwipeHistoryEntry[]>([]);
   const [lastSuccessfulCards, setLastSuccessfulCards] = React.useState<DiscoveryCard[]>([]);
@@ -599,7 +1013,7 @@ export function DiscoveryDeck() {
   }, [discoveryQuery.error, discoveryQuery.isError]);
 
   React.useEffect(() => {
-    setMockCards(mockDiscoveryCardsResponse.data.items);
+    setMockCards(getFallbackCards(appliedMode));
     setRestoredCards([]);
     setHistory([]);
     setActionError(null);
@@ -607,7 +1021,7 @@ export function DiscoveryDeck() {
     translateX.value = 0;
     translateY.value = 0;
     nextCardScale.value = 0.96;
-  }, [discoveryRequest, nextCardScale, translateX, translateY]);
+  }, [appliedMode, discoveryRequest, nextCardScale, translateX, translateY]);
 
   React.useEffect(() => {
     return () => {
@@ -674,8 +1088,9 @@ export function DiscoveryDeck() {
 
         } else {
           const response = await swipeAction.mutateAsync({
+            cardId: activeCard.id,
             payload: { action },
-            profileId: activeCard.profileId,
+            targetId: getCardActionTargetId(activeCard),
           });
 
           matched = Boolean(response.data.isMatch);
@@ -1019,7 +1434,7 @@ export function DiscoveryDeck() {
         <AppCard className="gap-3 rounded-[24px] p-4">
           <AppText variant="title">Loading discovery deck...</AppText>
           <AppText tone="muted">
-            Pulling the latest founder cards and match signals for this account.
+            Pulling the latest discovery cards and match signals for this account.
           </AppText>
         </AppCard>
         {filterSheet}
@@ -1032,7 +1447,7 @@ export function DiscoveryDeck() {
       <View className="flex-1 justify-center px-4" style={{ paddingTop: insets.top }}>
         <EmptyState
           isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
-          onResetFallback={() => setMockCards(mockDiscoveryCardsResponse.data.items)}
+          onResetFallback={() => setMockCards(getFallbackCards(appliedMode))}
           usingMockData={usingLocalMockCards}
         />
         <View className="mt-8 flex-row items-center justify-center gap-6">
@@ -1119,127 +1534,7 @@ export function DiscoveryDeck() {
               className="absolute inset-0 overflow-hidden rounded-[24px] border border-border bg-background"
               style={[Shadows.card, nextCardStyle]}>
               <ScrollView className="flex-1" scrollEnabled={false} showsVerticalScrollIndicator={false}>
-                <View className="h-[400px] overflow-hidden">
-                  {nextItem.photoUrl ? (
-                    <Image
-                      key={nextItem.id}
-                      contentFit="cover"
-                      source={{ uri: nextItem.photoUrl }}
-                      style={{ height: '100%', width: '100%' }}
-                    />
-                  ) : (
-                    <View className="h-full w-full bg-surface-muted" />
-                  )}
-
-                  <View
-                    className="absolute inset-0"
-                    style={{ backgroundColor: 'rgba(17, 19, 26, 0.24)' }}
-                  />
-
-                  <View
-                    className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
-                    style={{ backgroundColor: 'rgba(17, 19, 26, 0.52)' }}>
-                    <AppText className="text-[28px] leading-[34px]" variant="hero">
-                      {nextItem.age ? `${nextItem.name}, ${nextItem.age}` : nextItem.name}
-                    </AppText>
-                    <View className="mt-1 flex-row items-center gap-1.5">
-                      <Ionicons color="#98A2B3" name="location-outline" size={16} />
-                      <AppText className="text-[14px]" tone="muted">
-                        {nextItem.location.display}
-                      </AppText>
-                      {typeof nextItem.location.distanceKm === 'number' ? (
-                        <AppText className="text-[14px]" tone="signal">
-                          • {nextItem.location.distanceKm} km
-                        </AppText>
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-
-                <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
-                  <View className="flex-row items-center gap-3">
-                    <View className="items-center justify-center rounded-full border-2 border-[#FFCD38] p-2.5">
-                      <AppText className="text-[16px] font-bold" style={{ color: '#FFCD38' }}>
-                        {nextItem.match.score}%
-                      </AppText>
-                    </View>
-
-                    <View className="gap-0.5">
-                      <View className="flex-row items-center gap-1">
-                        <Ionicons color="#FFCD38" name="star" size={14} />
-                        <AppText
-                          className="text-[14px]"
-                          style={{ color: '#FFCD38' }}
-                          variant="bodyStrong">
-                          {nextItem.match.label ?? 'Strong Match'}
-                        </AppText>
-                      </View>
-                      <AppText className="text-[12px]" tone="muted">
-                        Match quality
-                      </AppText>
-                    </View>
-                  </View>
-
-                  <View className="items-end gap-1">
-                    <AppText className="text-[17px] leading-tight" align="right" variant="title">
-                      {nextItem.headline}
-                    </AppText>
-                    {nextItem.badges[0] ? (
-                      <View className="flex-row items-center gap-1">
-                        <Ionicons
-                          color="#FF9A3E"
-                          name={getBadgeIcon(nextItem.badges[0].icon)}
-                          size={12}
-                        />
-                        <AppText className="text-[13px]" tone="muted">
-                          {nextItem.badges[0].label}
-                        </AppText>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-
-                <View className="gap-5 px-4 py-4">
-                  {nextItem.bio ? (
-                    <AppText className="text-[16px] leading-7" tone="muted">
-                      {nextItem.bio}
-                    </AppText>
-                  ) : null}
-
-                  {nextItem.startupIdea ? (
-                    <View
-                      className="gap-2.5 rounded-[20px] border px-4 py-4"
-                      style={{
-                        backgroundColor: '#2A2117',
-                        borderColor: 'rgba(255, 154, 62, 0.25)',
-                      }}>
-                      <SectionLabel icon="bulb-outline" title="Startup Idea" />
-                      <AppText className="text-[16px] leading-6">{nextItem.startupIdea}</AppText>
-                    </View>
-                  ) : null}
-
-                  <View className="gap-2.5">
-                    <SectionLabel title="Industries & Interests" />
-                    <View className="flex-row flex-wrap gap-2">
-                      {nextItem.interests.map((item) => (
-                        <DiscoveryTag
-                          key={item.id}
-                          item={item}
-                          tone={item.type === 'availability' ? 'availability' : 'default'}
-                        />
-                      ))}
-                    </View>
-                  </View>
-
-                  <View className="gap-2.5">
-                    <SectionLabel title="Skills" />
-                    <View className="flex-row flex-wrap gap-2">
-                      {nextItem.skills.map((item) => (
-                        <DiscoveryTag key={item.id} item={item} />
-                      ))}
-                    </View>
-                  </View>
-                </View>
+                <DiscoveryCardContent card={nextItem} />
               </ScrollView>
             </Animated.View>
           ) : null}
@@ -1249,172 +1544,7 @@ export function DiscoveryDeck() {
               className="absolute inset-0 overflow-hidden rounded-[24px] border border-border bg-surface"
               style={[Shadows.card, topCardStyle]}>
               <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="h-[400px] overflow-hidden">
-                  {currentItem.photoUrl ? (
-                    <Image
-                      key={currentItem.id}
-                      contentFit="cover"
-                      source={{ uri: currentItem.photoUrl }}
-                      style={{ height: '100%', width: '100%' }}
-                    />
-                  ) : (
-                    <View className="h-full w-full bg-surface-muted" />
-                  )}
-
-                  <View
-                    className="absolute inset-0"
-                    style={{ backgroundColor: 'rgba(17, 19, 26, 0.24)' }}
-                  />
-
-                  <View
-                    className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
-                    style={{ backgroundColor: 'rgba(17, 19, 26, 0.52)' }}>
-                    <AppText className="text-[28px] leading-[34px]" variant="hero">
-                      {currentItem.age ? `${currentItem.name}, ${currentItem.age}` : currentItem.name}
-                    </AppText>
-                    <View className="mt-1 flex-row items-center gap-1.5">
-                      <Ionicons color="#98A2B3" name="location-outline" size={16} />
-                      <AppText className="text-[14px]" tone="muted">
-                        {currentItem.location.display}
-                      </AppText>
-                      {typeof currentItem.location.distanceKm === 'number' ? (
-                        <AppText className="text-[14px]" tone="signal">
-                          • {currentItem.location.distanceKm} km
-                        </AppText>
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-
-                <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
-                  <View className="flex-row items-center gap-3">
-                    <View className="items-center justify-center rounded-full border-2 border-[#FFCD38] p-2.5">
-                      <AppText className="text-[16px] font-bold" style={{ color: '#FFCD38' }}>
-                        {currentItem.match.score}%
-                      </AppText>
-                    </View>
-
-                    <View className="gap-0.5">
-                      <View className="flex-row items-center gap-1">
-                        <Ionicons color="#FFCD38" name="star" size={14} />
-                        <AppText
-                          className="text-[14px]"
-                          style={{ color: '#FFCD38' }}
-                          variant="bodyStrong">
-                          {currentItem.match.label ?? 'Strong Match'}
-                        </AppText>
-                      </View>
-                      <AppText className="text-[12px]" tone="muted">
-                        Match quality
-                      </AppText>
-                    </View>
-                  </View>
-
-                  <View className="items-end gap-1">
-                    <AppText className="text-[17px] leading-tight" align="right" variant="title">
-                      {currentItem.headline}
-                    </AppText>
-                    {currentItem.badges[0] ? (
-                      <View className="flex-row items-center gap-1">
-                        <Ionicons
-                          color="#FF9A3E"
-                          name={getBadgeIcon(currentItem.badges[0].icon)}
-                          size={12}
-                        />
-                        <AppText className="text-[13px]" tone="muted">
-                          {currentItem.badges[0].label}
-                        </AppText>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-
-                <View className="gap-5 px-4 py-4">
-                  {currentItem.bio ? (
-                    <AppText className="text-[16px] leading-7" tone="muted">
-                      {currentItem.bio}
-                    </AppText>
-                  ) : null}
-
-                  {currentItem.startupIdea ? (
-                    <View
-                      className="gap-2.5 rounded-[20px] border px-4 py-4"
-                      style={{
-                        backgroundColor: '#2A2117',
-                        borderColor: 'rgba(255, 154, 62, 0.25)',
-                      }}>
-                      <SectionLabel icon="bulb-outline" title="Startup Idea" />
-                      <AppText className="text-[16px] leading-6">{currentItem.startupIdea}</AppText>
-                    </View>
-                  ) : null}
-
-                  <View className="gap-2.5">
-                    <SectionLabel title="Industries & Interests" />
-                    <View className="flex-row flex-wrap gap-2">
-                      {currentItem.interests.map((item) => (
-                        <DiscoveryTag
-                          key={item.id}
-                          item={item}
-                          tone={item.type === 'availability' ? 'availability' : 'default'}
-                        />
-                      ))}
-                    </View>
-                  </View>
-
-                  <View className="gap-2.5">
-                    <SectionLabel title="Skills" />
-                    <View className="flex-row flex-wrap gap-2">
-                      {currentItem.skills.map((item) => (
-                        <DiscoveryTag key={item.id} item={item} />
-                      ))}
-                    </View>
-                  </View>
-
-                  {currentItem.experience?.length ? (
-                    <View className="gap-3">
-                      <SectionLabel icon="briefcase-outline" title="Experience" />
-                      {currentItem.experience.map((item) => (
-                        <AppCard key={item.id} className="gap-1.5 rounded-[16px] p-4">
-                          <AppText className="text-[16px]" variant="title">
-                            {item.title}
-                          </AppText>
-                          <AppText className="text-[13px]" tone="signal">
-                            {item.organization} · {item.period}
-                          </AppText>
-                        </AppCard>
-                      ))}
-                    </View>
-                  ) : null}
-
-                  {currentItem.education?.length ? (
-                    <View className="gap-3">
-                      {currentItem.education.map((item) => (
-                        <AppCard
-                          key={item.id}
-                          className="flex-row items-center gap-3.5 rounded-[16px] p-4">
-                          <Ionicons color="#FFCD38" name="school-outline" size={24} />
-                          <View className="flex-1 gap-0.5">
-                            <AppText className="text-[16px]" variant="title">
-                              {item.degree}
-                            </AppText>
-                            <AppText className="text-[13px]" style={{ color: '#FFCD38' }}>
-                              {item.school}
-                            </AppText>
-                          </View>
-                        </AppCard>
-                      ))}
-                    </View>
-                  ) : null}
-
-                  {currentItem.languages?.length ? (
-                    <View className="flex-row items-center gap-2 pb-1">
-                      <Ionicons color="#FF9A3E" name="globe-outline" size={20} />
-                      <AppText className="text-[14px]" tone="muted">
-                        {currentItem.languages.join(' · ')}
-                      </AppText>
-                    </View>
-                  ) : null}
-                </View>
+                <DiscoveryCardContent card={currentItem} />
               </ScrollView>
 
               <Animated.View
