@@ -250,20 +250,6 @@ export function LoginScreen() {
                 className="w-full bg-[#0066FF] rounded-[16px] border-none"
               />
 
-              <AppButton
-                disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
-                label="Preview onboarding"
-                onPress={() => {
-                  router.push({
-                    pathname: '/onboarding',
-                    params: { mode: 'preview' },
-                  });
-                }}
-                size="lg"
-                variant="secondary"
-                className="w-full rounded-[16px] border-border-strong bg-surface"
-              />
-
               {process.env.EXPO_OS !== 'web' && (
                 <>
                   <View className="flex-row items-center gap-4 py-2 opacity-50">

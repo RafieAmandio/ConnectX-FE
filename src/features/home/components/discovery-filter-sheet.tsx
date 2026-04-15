@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton, AppCard, AppText } from '@shared/components';
+import { AppCard, AppText } from '@shared/components';
 
 import type {
   DiscoveryAppliedFilters,
@@ -492,7 +492,6 @@ export function DiscoveryFilterSheet({
   onApply,
   onClose,
   onModeChange,
-  onReset,
   sections,
   visible,
 }: DiscoveryFilterSheetProps) {
@@ -677,13 +676,6 @@ export function DiscoveryFilterSheet({
 
     onModeChange(nextMode);
   }, [currentMode, onModeChange]);
-
-  const handleResetPress = React.useCallback(() => {
-    setDraftByMode({});
-    setExpandedByMode({});
-    setSearchTerms({});
-    onReset();
-  }, [onReset]);
 
   const renderField = React.useCallback(
     (sectionId: string, field: DiscoveryFilterField) => {
@@ -948,20 +940,22 @@ export function DiscoveryFilterSheet({
             ) : null}
           </ScrollView>
 
-          <View className="mt-5 flex-row gap-3">
-            <AppButton
-              className="flex-1"
+          <View className="mt-5">
+            <Pressable
               disabled={isApplying}
-              label="Reset"
-              onPress={handleResetPress}
-              variant="secondary"
-            />
-            <AppButton
-              className="flex-1"
-              disabled={isApplying}
-              label={isApplying ? 'Generating...' : 'Generate Candidates'}
               onPress={() => onApply(currentMode, stripDisabledDiscoveryFilters(currentDraft, sections, hasConnectXPro))}
-            />
+              className="h-14 flex-row items-center justify-center gap-3 rounded-[18px]"
+              style={{
+                backgroundColor: '#FF9A3E',
+                borderCurve: 'continuous',
+                opacity: isApplying ? 0.5 : 1,
+              }}
+              android_ripple={{ color: 'rgba(0,0,0,0.12)' }}>
+              <AppText variant="subtitle" className="text-[16px] text-[#1A1208]">
+                <Ionicons color="" name="flash-outline" size={18} />
+                {isApplying ? 'Generating...' : 'Generate Candidate'}
+              </AppText>
+            </Pressable>
           </View>
         </View>
       </View>
