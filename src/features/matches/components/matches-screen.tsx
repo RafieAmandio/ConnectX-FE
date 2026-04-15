@@ -43,25 +43,25 @@ function formatSpotlightTimestamp(value: string | null) {
 
 function MatchAvatar({ match }: { match: MatchListItem }) {
   return (
-    <View className="relative h-[76px] w-[76px]">
+    <View className="relative h-[56px] w-[56px]">
       {match.user.photoUrl ? (
         <Image
           contentFit="cover"
           source={{ uri: match.user.photoUrl }}
-          style={{ borderRadius: 38, height: 76, width: 76 }}
+          style={{ borderRadius: 28, height: 56, width: 56 }}
         />
       ) : (
-        <View className="h-[76px] w-[76px] items-center justify-center rounded-full bg-[#2B2F39]">
-          <AppText className="text-[24px]" tone="signal" variant="title">
+        <View className="h-[56px] w-[56px] items-center justify-center rounded-full bg-[#2B2F39]">
+          <AppText className="text-[18px]" tone="signal" variant="title">
             {match.user.name.charAt(0).toUpperCase()}
           </AppText>
         </View>
       )}
 
-      <View className="absolute inset-0 rounded-full border-[3px] border-[#6B4A2C]" />
+      <View className="absolute inset-0 rounded-full border-[2px] border-[#6B4A2C]" />
 
       {match.isOnline ? (
-        <View className="absolute bottom-0 right-0 h-5 w-5 rounded-full border-[3px] border-[#2A2927] bg-[#4ADE80]" />
+        <View className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-[2px] border-[#2A2927] bg-[#4ADE80]" />
       ) : null}
     </View>
   );
@@ -150,39 +150,39 @@ function MatchRow({
 
   return (
     <AppCard
-      className="rounded-[26px] border-[#414141] bg-[#2E2C2B] px-5 py-5"
+      className="rounded-[20px] border-[#414141] bg-[#2E2C2B] px-4 py-3.5"
       style={{ shadowColor: 'transparent' }}>
-      <View className="flex-row items-center gap-4">
+      <View className="flex-row items-center gap-3">
         <MatchAvatar match={match} />
 
-        <View className="flex-1 gap-1">
-          <AppText className="text-[22px] leading-[28px] text-[#F1F1F1]" variant="title">
+        <View className="flex-1 gap-0.5">
+          <AppText className="text-[18px] leading-[24px] text-[#F1F1F1]" variant="title">
             {match.user.name}
           </AppText>
-          <AppText className="text-[15px] leading-[22px] text-[#9F9C99]">
+          <AppText className="text-[13px] leading-[18px] text-[#9F9C99]">
             {match.user.headline} · {match.user.location}
           </AppText>
-          <View className="mt-1 flex-row items-center gap-2">
-            <Ionicons color="#FFD33D" name="time-outline" size={17} />
-            <AppText className="text-[14px] font-semibold text-[#FFD33D]">{expiresLabel}</AppText>
+          <View className="mt-0.5 flex-row items-center gap-1.5">
+            <Ionicons color="#FFD33D" name="time-outline" size={14} />
+            <AppText className="text-[12px] font-semibold text-[#FFD33D]">{expiresLabel}</AppText>
           </View>
         </View>
 
-        <View className="ml-2 flex-row items-center gap-4">
+        <View className="ml-1 flex-row items-center gap-1">
           <Pressable
-            className="h-11 w-11 items-center justify-center rounded-full"
+            className="h-10 w-10 items-center justify-center rounded-full"
             disabled={!canChat}
             onPress={onOpenChat}
             style={{ opacity: canChat ? 1 : 0.45 }}>
-            <Ionicons color="#FF9F3F" name="chatbubble-outline" size={25} />
+            <Ionicons color="#FF9F3F" name="chatbubble-outline" size={20} />
           </Pressable>
 
           <Pressable
-            className="h-11 w-11 items-center justify-center rounded-full"
+            className="h-10 w-10 items-center justify-center rounded-full"
             disabled={!match.actions.canViewAnalysis}
             onPress={onOpenAnalysis}
             style={{ opacity: match.actions.canViewAnalysis ? 1 : 0.45 }}>
-            <Ionicons color="#8B8B8B" name="eye-outline" size={26} />
+            <Ionicons color="#8B8B8B" name="eye-outline" size={22} />
           </Pressable>
         </View>
       </View>
