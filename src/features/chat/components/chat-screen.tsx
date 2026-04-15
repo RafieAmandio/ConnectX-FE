@@ -214,11 +214,11 @@ function ChatExperimentNotice() {
       <AppTopBar />
       <View className="flex-1 items-center justify-center gap-3 px-8">
         <AppText className="text-white" variant="title">
-          Chat experiment requires Google login
+          Chat is unavailable
         </AppText>
         <AppText align="center" tone="muted">
-          Sign in with Google to create a Supabase session, then seed a shared room in Supabase to
-          test realtime chat across two devices.
+          Chat requires an active Supabase-backed session. Sign in again if needed, then seed a
+          shared room in Supabase to test realtime chat across two devices.
         </AppText>
       </View>
     </View>
@@ -308,10 +308,9 @@ function ConversationPanel({
   showBackButton?: boolean;
   onBack?: () => void;
 }) {
-  const { session } = useAuth();
+  const { isChatEnabled, session } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const isChatEnabled = session?.method === 'google';
   const [draftMessage, setDraftMessage] = React.useState('');
   const roomId = conversation?.id ?? null;
   const messagesQuery = useRoomMessages(roomId, isChatEnabled && Boolean(roomId));
@@ -662,8 +661,7 @@ function ConversationPanel({
 
 export function ChatListScreen() {
   const router = useRouter();
-  const { session } = useAuth();
-  const isChatEnabled = session?.method === 'google';
+  const { isChatEnabled } = useAuth();
   const conversationsQuery = useChatRooms(isChatEnabled);
   const conversations = React.useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
 
@@ -729,7 +727,7 @@ export function ChatListScreen() {
             </AppText>
             <AppText align="center" tone="muted">
               No Supabase rooms are available for this user yet. Seed a test room and add both
-              Google users to `chat_room_members`.
+              participants to `chat_room_members`.
             </AppText>
           </View>
         ) : null}
@@ -750,8 +748,7 @@ export function ChatListScreen() {
 
 export function ChatConversationScreen({ conversationId }: { conversationId: string }) {
   const router = useRouter();
-  const { session } = useAuth();
-  const isChatEnabled = session?.method === 'google';
+  const { isChatEnabled } = useAuth();
   const conversationsQuery = useChatRooms(isChatEnabled);
   const conversation = conversationsQuery.data?.find((room) => room.id === conversationId) ?? null;
 

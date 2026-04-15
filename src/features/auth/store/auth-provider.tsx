@@ -50,6 +50,7 @@ type AuthContextValue = {
   authPhase: AuthPhase;
   completeOnboarding: () => Promise<void>;
   enterPendingOnboarding: () => Promise<void>;
+  isChatEnabled: boolean;
   isHydrated: boolean;
   isAuthBypassEnabled: boolean;
   session: AuthSession | null;
@@ -101,6 +102,7 @@ function isExternalOAuthMethod(method?: AuthSession['method'] | null) {
 
 export function AuthProvider({ children }: React.PropsWithChildren) {
   const [isHydrated, setIsHydrated] = React.useState(false);
+  const [isChatEnabled, setIsChatEnabled] = React.useState(false);
   const [authPhase, setAuthPhase] = React.useState<AuthPhase>('signed_out');
   const [session, setSession] = React.useState<AuthSession | null>(null);
   const authBypassEnabled = React.useMemo(() => isAuthBypassEnabled(), []);
@@ -138,6 +140,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       }
     }
 
+    setIsChatEnabled(false);
     setAuthPhase('signed_out');
     setSession(null);
   }, [session?.method]);
@@ -229,6 +232,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
             return;
           }
 
+          setIsChatEnabled(true);
           setSession(nextSession);
           setAuthPhase(nextSession.authPhase);
           setIsHydrated(true);
@@ -241,10 +245,12 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         }
 
         if ((token && storedSession) || (storedSession && canRestoreWithoutToken(storedSession.authPhase))) {
+          setIsChatEnabled(false);
           setSession(storedSession);
           setAuthPhase(storedSession.authPhase);
         } else {
           await clearPersistedAuth();
+          setIsChatEnabled(false);
           setSession(null);
           setAuthPhase('signed_out');
         }
@@ -270,6 +276,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           return;
         }
 
+        setIsChatEnabled(false);
         setSession(null);
         setAuthPhase('signed_out');
         setIsHydrated(true);
@@ -316,6 +323,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     } = supabase.auth.onAuthStateChange(async (event, nextSupabaseSession) => {
       if (event === 'SIGNED_OUT') {
         await supabaseChatRepository.clearRealtimeSubscriptions();
+        setIsChatEnabled(false);
 
         if (isExternalOAuthMethod(sessionRef.current?.method)) {
           await clearPersistedAuth();
@@ -347,6 +355,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           replaceStoredSession(nextSession),
           syncSupabaseRealtimeAuth(nextSupabaseSession),
         ]);
+        setIsChatEnabled(true);
         setSession(nextSession);
         setAuthPhase(nextSession.authPhase);
         reconnectChatRealtime();
@@ -482,6 +491,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       completeOnboarding,
       enterWithDevBypass,
       enterPendingOnboarding,
+      isChatEnabled,
       isHydrated,
       isAuthBypassEnabled: authBypassEnabled,
       login,
@@ -506,6 +516,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       completeOnboarding,
       enterWithDevBypass,
       enterPendingOnboarding,
+      isChatEnabled,
       isHydrated,
       login,
       register,

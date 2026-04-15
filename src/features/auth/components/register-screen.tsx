@@ -82,7 +82,7 @@ export function RegisterScreen() {
             passwordRules={null}
             placeholder="Use at least 8 characters"
             secureTextEntry
-            textContentType="none"
+            textContentType="oneTimeCode"
             value={password}
           />
 
@@ -103,7 +103,7 @@ export function RegisterScreen() {
             passwordRules={null}
             placeholder="Repeat your password"
             secureTextEntry
-            textContentType="none"
+            textContentType="oneTimeCode"
             value={passwordConfirmation}
           />
 
