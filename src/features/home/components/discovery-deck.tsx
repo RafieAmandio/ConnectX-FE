@@ -1440,7 +1440,7 @@ export function DiscoveryDeck() {
   return (
     <View className="flex-1">
       <AppTopBar rightAccessory={filterButton} />
-      <View className="flex-1 gap-2 px-4 pb-1">
+      <View className="flex-1 gap-2 px-2 pb-1">
         {matchToastName ? (
           <View className="absolute inset-x-4 top-2 z-20" pointerEvents="none">
             <AppCard
@@ -1467,7 +1467,7 @@ export function DiscoveryDeck() {
         ) : null}
 
 
-        <View className="flex-1 mt-6">
+        <View className="flex-1 mt-2">
           <View className="h-full w-full">
             {nextItem ? (
               <Animated.View
