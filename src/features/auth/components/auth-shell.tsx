@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, View } from 'react-native';
 
-import { AppCard, AppListItem, AppPill, AppText, AppTopBar } from '@shared/components';
+import { AppCard, AppListItem, AppPill, AppText } from '@shared/components';
 
 type AuthShellProps = React.PropsWithChildren<{
   description?: string;
@@ -27,7 +27,6 @@ export function AuthShell({
       className="flex-1 bg-canvas"
       contentContainerClassName="gap-6 pb-24"
       contentInsetAdjustmentBehavior="automatic">
-      <AppTopBar />
 
       <View className="gap-4 px-5">
         <View className="gap-3">
