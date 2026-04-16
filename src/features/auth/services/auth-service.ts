@@ -8,6 +8,7 @@ import {
   setSupabaseRealtimeToken,
   setSupabaseSession,
 } from '@shared/services/supabase/client';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import { getMockAuthFlowMode } from '../config/auth-config';
 import {
@@ -702,7 +703,7 @@ async function applySupabaseAuthResponse(response: AuthSupabaseSessionPayload) {
   const realtimeToken =
     response.supabase_token?.trim() || accessToken || refreshToken || null;
   const usesMockTokens =
-    __DEV__ &&
+    isExpoDevModeEnabled() &&
     [accessToken, refreshToken, realtimeToken].some((token) => token?.startsWith('mock-supabase'));
 
   if (accessToken && refreshToken) {
@@ -863,7 +864,7 @@ export async function sendLoginOtp(): Promise<
       otpCode: MOCK_LOGIN_OTP,
     });
 
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       console.log('[auth:mock] login otp', MOCK_LOGIN_OTP);
     }
 
@@ -911,7 +912,7 @@ export async function resendLoginOtp(): Promise<
       otpCode: MOCK_LOGIN_OTP,
     });
 
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       console.log('[auth:mock] login otp', MOCK_LOGIN_OTP);
     }
 
@@ -1093,7 +1094,7 @@ export async function sendEmailOtp(): Promise<
       otpCode: MOCK_EMAIL_OTP,
     });
 
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       console.log('[auth:mock] email otp', MOCK_EMAIL_OTP);
     }
 
@@ -1155,7 +1156,7 @@ export async function resendEmailOtp(): Promise<
       otpCode: MOCK_EMAIL_OTP,
     });
 
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       console.log('[auth:mock] email otp', MOCK_EMAIL_OTP);
     }
 
@@ -1255,7 +1256,7 @@ export async function sendWhatsappOtp(
   if (isMockAuthFlowEnabled()) {
     const nextSession = withFreshWhatsappOtpSession(session, payload.whatsapp_number);
 
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       console.log('[auth:mock] whatsapp otp', MOCK_WHATSAPP_OTP);
     }
 
@@ -1282,7 +1283,7 @@ export async function resendWhatsappOtp(): Promise<SessionActionResult<WhatsappO
   if (isMockAuthFlowEnabled()) {
     const nextSession = withFreshWhatsappOtpSession(session, whatsappNumber);
 
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       console.log('[auth:mock] whatsapp otp', MOCK_WHATSAPP_OTP);
     }
 

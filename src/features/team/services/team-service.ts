@@ -1,4 +1,5 @@
 import { ApiError, apiFetch } from '@shared/services/api';
+import { isExpoDevModeEnabled, parseBooleanEnv } from '@shared/utils/env';
 
 import {
   createMockStartupInvitationResponse,
@@ -132,7 +133,27 @@ function shouldUseMockInvitationFallback(error: unknown) {
   return error.status === 0 || error.status === 404 || error.status >= 500;
 }
 
+function shouldMockNoActiveStartup() {
+  return (
+    isExpoDevModeEnabled() &&
+    parseBooleanEnv(process.env.EXPO_PUBLIC_MOCK_NO_ACTIVE_STARTUP) === true
+  );
+}
+
 export async function fetchTeamOverview() {
+  if (shouldMockNoActiveStartup()) {
+    const acceptedStartupId = getMockAcceptedStartupId();
+
+    if (acceptedStartupId) {
+      return getMockTeamOverviewResponse(acceptedStartupId);
+    }
+
+    throw new ApiError('No active startup.', 404, {
+      code: 'NO_ACTIVE_STARTUP',
+      message: 'No active startup.',
+    });
+  }
+
   try {
     const response = await apiFetch<TeamOverviewResponse>(TEAM_API.OVERVIEW);
 

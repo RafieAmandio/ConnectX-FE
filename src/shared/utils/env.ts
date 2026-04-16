@@ -1,4 +1,4 @@
-function parseBooleanEnv(value: string | undefined) {
+export function parseBooleanEnv(value: string | undefined) {
   if (!value) {
     return null;
   }
@@ -17,5 +17,5 @@ function parseBooleanEnv(value: string | undefined) {
 }
 
 export function isExpoDevModeEnabled() {
-  return parseBooleanEnv(process.env.EXPO_PUBLIC_DEV_MODE) ?? false;
+  return parseBooleanEnv(process.env.EXPO_PUBLIC_DEV_MODE) ?? __DEV__;
 }

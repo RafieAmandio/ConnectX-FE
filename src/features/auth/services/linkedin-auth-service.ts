@@ -1,6 +1,8 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
+import { isExpoDevModeEnabled } from '@shared/utils/env';
+
 import type { LinkedInAuthResult, LinkedInCallbackNextStep } from '../types/auth.types';
 
 const LINKEDIN_CALLBACK_HOST = 'auth';
@@ -85,7 +87,7 @@ export async function signInWithLinkedInToken(): Promise<LinkedInAuthResult> {
   const callbackUrl = Linking.createURL(LINKEDIN_CALLBACK_PATH);
   const result = await WebBrowser.openAuthSessionAsync(authUrl, callbackUrl);
 
-  if (__DEV__) {
+  if (isExpoDevModeEnabled()) {
     console.log('[linkedin] auth session result', result);
   }
 
@@ -96,7 +98,7 @@ export async function signInWithLinkedInToken(): Promise<LinkedInAuthResult> {
   const parsedUrl = Linking.parse(result.url);
   const callbackPayload = getLinkedInCallbackPayload(result.url);
 
-  if (__DEV__) {
+  if (isExpoDevModeEnabled()) {
     console.log('[linkedin] callback url', result.url);
     console.log('[linkedin] parsed callback', {
       hostname: parsedUrl.hostname ?? null,

@@ -4,6 +4,8 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin';
 
+import { isExpoDevModeEnabled } from '@shared/utils/env';
+
 import { getGoogleAuthConfig } from '../config/auth-config';
 import type { GoogleAuthResult } from '../types/auth.types';
 
@@ -115,7 +117,7 @@ export async function signOutGoogle() {
     ensureGoogleSignInConfigured();
     await GoogleSignin.signOut();
   } catch (error) {
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       console.warn('[auth] failed to clear native Google session', error);
     }
   }

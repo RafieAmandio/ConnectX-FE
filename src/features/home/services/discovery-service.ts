@@ -1,4 +1,5 @@
 import { ApiError, apiFetch } from '@shared/services/api';
+import { isExpoDevModeEnabled, parseBooleanEnv } from '@shared/utils/env';
 
 import {
   mockDiscoveryCardsResponse,
@@ -21,24 +22,6 @@ import type {
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 20;
 const DEFAULT_MOCK_MODE: DiscoveryMode = 'joining_startups';
-
-function parseBooleanEnv(value: string | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const normalized = value.trim().toLowerCase();
-
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
-    return true;
-  }
-
-  if (['0', 'false', 'no', 'off'].includes(normalized)) {
-    return false;
-  }
-
-  return null;
-}
 
 function shouldMockSuperLikeRequiresBoost() {
   const envValue = parseBooleanEnv(process.env.EXPO_PUBLIC_MOCK_SUPERLIKE_NO_BOOST);
@@ -94,7 +77,7 @@ export function getMockDiscoveryCardsResponse(
 }
 
 export function isDiscoveryCardsMockEnabled() {
-  return __DEV__;
+  return isExpoDevModeEnabled();
 }
 
 export const DISCOVERY_API = {
@@ -141,7 +124,7 @@ function buildDiscoveryCardsPayload({
 export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
   const payload = buildDiscoveryCardsPayload(input);
 
-  if (__DEV__) {
+  if (isExpoDevModeEnabled()) {
     console.log('[Discovery] fetch cards payload', payload);
   }
 
@@ -156,7 +139,7 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
 }
 
 export async function postSwipeAction(targetId: string, payload: SwipeActionRequest) {
-  if (__DEV__ && payload.action === 'super_like' && shouldMockSuperLikeRequiresBoost()) {
+  if (isExpoDevModeEnabled() && payload.action === 'super_like' && shouldMockSuperLikeRequiresBoost()) {
 
     throw new ApiError('No boosts remaining.', 409, {
       success: false,
@@ -186,7 +169,7 @@ export async function postRewindAction(
     mockHistoryEntry?: DiscoverySwipeHistoryEntry | null;
   }
 ) {
-  const mockMode = __DEV__ ? getMockRewindMode() : null;
+  const mockMode = isExpoDevModeEnabled() ? getMockRewindMode() : null;
 
   if (mockMode) {
     if (mockMode === 'premium_required') {

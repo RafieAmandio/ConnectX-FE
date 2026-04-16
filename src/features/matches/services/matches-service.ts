@@ -1,4 +1,5 @@
 import { ApiError, apiFetch } from '@shared/services/api';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import { mockMatchesListResponse } from '../mock/matches.mock';
 import type {
@@ -31,7 +32,7 @@ export function getMockMatchesListMode(): MockMatchesListMode | null {
 }
 
 export function isMatchesListMockEnabled() {
-  return __DEV__ && getMockMatchesListMode() === 'success';
+  return isExpoDevModeEnabled() && getMockMatchesListMode() === 'success';
 }
 
 function getMockSpotlightActivationMode(): MockSpotlightActivationMode | null {
@@ -89,7 +90,7 @@ export async function fetchMatchAnalysis(matchId: string) {
 }
 
 export async function activateSpotlight() {
-  const mockMode = __DEV__ ? getMockSpotlightActivationMode() : null;
+  const mockMode = isExpoDevModeEnabled() ? getMockSpotlightActivationMode() : null;
 
   if (mockMode) {
     const startedAt = new Date();

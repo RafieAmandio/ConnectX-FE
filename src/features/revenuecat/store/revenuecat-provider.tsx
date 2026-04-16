@@ -11,6 +11,7 @@ import Purchases, {
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 import { useAuth } from '@features/auth';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import {
   REVENUECAT_ENABLED,
@@ -132,7 +133,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
     configuredRef.current = true;
 
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       void Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG).catch(() => {
         return undefined;
       });

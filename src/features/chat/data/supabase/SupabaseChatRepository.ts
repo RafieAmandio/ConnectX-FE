@@ -6,6 +6,7 @@ import {
   getSupabaseSession,
   supabaseData,
 } from '@shared/services/supabase/client';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import type { ChatRepository } from '../../domain/ChatRepository';
 import type {
@@ -352,7 +353,7 @@ class SupabaseChatRepository implements ChatRepository {
           throw error;
         }
 
-        if (__DEV__) {
+        if (isExpoDevModeEnabled()) {
           console.warn('[chat] backend send failed, falling back to Supabase direct insert', error);
         }
       }
@@ -388,7 +389,7 @@ class SupabaseChatRepository implements ChatRepository {
           throw error;
         }
 
-        if (__DEV__) {
+        if (isExpoDevModeEnabled()) {
           console.warn('[chat] backend image upload failed, falling back to mock upload', error);
         }
       }

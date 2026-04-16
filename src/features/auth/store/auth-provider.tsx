@@ -12,6 +12,7 @@ import {
   supabase,
   syncSupabaseRealtimeAuth,
 } from '@shared/services/supabase/client';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import { isAuthBypassEnabled } from '../config/auth-config';
 import type { LoginPayload } from '../services/auth-service';
@@ -117,7 +118,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   }, [session]);
 
   React.useEffect(() => {
-    if (!__DEV__) {
+    if (!isExpoDevModeEnabled()) {
       return;
     }
 
@@ -167,7 +168,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
       setIsChatEnabled(false);
 
-      if (__DEV__) {
+      if (isExpoDevModeEnabled()) {
         console.warn('[auth] failed to resolve chat availability', error);
       }
     });
@@ -179,7 +180,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
   const reconnectChatRealtime = React.useCallback(() => {
     void supabaseChatRepository.reconnectRealtime().catch((error) => {
-      if (__DEV__) {
+      if (isExpoDevModeEnabled()) {
         console.warn('[chat] failed to reconnect realtime subscriptions', error);
       }
     });
@@ -197,7 +198,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       ...(shouldSignOutGoogle ? [signOutGoogle()] : []),
     ]);
 
-    if (__DEV__) {
+    if (isExpoDevModeEnabled()) {
       const rejectedCleanup = cleanupResults.find((result) => result.status === 'rejected');
 
       if (rejectedCleanup?.status === 'rejected') {
@@ -326,7 +327,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           throw error;
         }
 
-        if (__DEV__) {
+        if (isExpoDevModeEnabled()) {
           console.warn('[auth] cleared stale Supabase session during hydrate', error);
         }
 

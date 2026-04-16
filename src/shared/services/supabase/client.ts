@@ -4,6 +4,8 @@ import 'react-native-url-polyfill/auto';
 import * as SecureStore from 'expo-secure-store';
 import { createClient, type Session } from '@supabase/supabase-js';
 
+import { isExpoDevModeEnabled } from '@shared/utils/env';
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
 const SUPABASE_TOKEN_KEY = 'connectx.supabase.access-token';
@@ -47,7 +49,7 @@ function isMissingSupabaseAuthUserError(error: unknown) {
 function createRealtimeOptions() {
   return {
     heartbeatCallback: (status: string, latency?: number | null) => {
-      if (!__DEV__) {
+      if (!isExpoDevModeEnabled()) {
         return;
       }
 
@@ -57,7 +59,7 @@ function createRealtimeOptions() {
       });
     },
     logger: (kind: string, msg: string, data?: unknown) => {
-      if (!__DEV__) {
+      if (!isExpoDevModeEnabled()) {
         return;
       }
 
@@ -304,7 +306,7 @@ export async function getStoredSupabaseIdentity() {
 }
 
 export async function debugLogSupabaseUsersProbe() {
-  if (!__DEV__) {
+  if (!isExpoDevModeEnabled()) {
     return;
   }
 
