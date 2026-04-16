@@ -178,7 +178,8 @@ function CheckBox({ checked }: { checked: boolean }) {
 
 export function LoginScreen() {
   const router = useRouter();
-  const { authPhase, isHydrated, login, session, signInWithGoogle } = useAuth();
+  const { authPhase, isHydrated, login, session, signInWithGoogle, signInWithLinkedIn } =
+    useAuth();
   const fcmToken = useFcmToken();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -189,6 +190,7 @@ export function LoginScreen() {
   const [rememberMe, setRememberMe] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
+  const [isLinkedInSubmitting, setIsLinkedInSubmitting] = React.useState(false);
 
   if (!isHydrated) {
     return null;
@@ -244,7 +246,7 @@ export function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
-    if (isGoogleSubmitting || isSubmitting) {
+    if (isGoogleSubmitting || isLinkedInSubmitting || isSubmitting) {
       return;
     }
 
@@ -262,6 +264,28 @@ export function LoginScreen() {
       );
     } finally {
       setIsGoogleSubmitting(false);
+    }
+  };
+
+  const handleLinkedInLogin = async () => {
+    if (isLinkedInSubmitting || isGoogleSubmitting || isSubmitting) {
+      return;
+    }
+
+    setEmailError(null);
+    setPasswordError(null);
+    setStatusMessage(null);
+    setIsLinkedInSubmitting(true);
+
+    try {
+      const result = await signInWithLinkedIn();
+      router.replace(getRouteForAuthPhase(result.session.authPhase));
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error ? error.message : 'LinkedIn Sign-In failed. Please try again.'
+      );
+    } finally {
+      setIsLinkedInSubmitting(false);
     }
   };
 
@@ -307,21 +331,35 @@ export function LoginScreen() {
             entering={FadeInUp.delay(140).duration(360)}
             className="gap-3">
             {Platform.OS !== 'web' ? (
-              <SocialCta
-                disabled={isSubmitting || isGoogleSubmitting}
-                icon={
-                  isGoogleSubmitting ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <AntDesign color="#FFFFFF" name="google" size={18} />
-                  )
-                }
-                label="Sign in with Google"
-                onPress={handleGoogleLogin}
-              />
+              <>
+                <SocialCta
+                  disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
+                  icon={
+                    isGoogleSubmitting ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <AntDesign color="#FFFFFF" name="google" size={18} />
+                    )
+                  }
+                  label="Sign in with Google"
+                  onPress={handleGoogleLogin}
+                />
+                <SocialCta
+                  disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
+                  icon={
+                    isLinkedInSubmitting ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Ionicons color="#FFFFFF" name="logo-linkedin" size={18} />
+                    )
+                  }
+                  label="Sign in with LinkedIn"
+                  onPress={handleLinkedInLogin}
+                />
+              </>
             ) : null}
             <SocialCta
-              disabled={isSubmitting || isGoogleSubmitting}
+              disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
               icon={<Ionicons color="#FFFFFF" name="eye-outline" size={18} />}
               label="Preview onboarding"
               onPress={() => {
@@ -418,11 +456,11 @@ export function LoginScreen() {
 
           <Animated.View entering={FadeIn.delay(220).duration(360)}>
             <Pressable
-              disabled={isSubmitting || isGoogleSubmitting}
+              disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
               onPress={handleLogin}
               className={cn(
                 'h-14 flex-row items-center justify-center gap-3 rounded-[18px]',
-                (isSubmitting || isGoogleSubmitting) && 'opacity-50'
+                (isSubmitting || isGoogleSubmitting || isLinkedInSubmitting) && 'opacity-50'
               )}
               style={{ backgroundColor: ACCENT, borderCurve: 'continuous' }}
               android_ripple={{ color: 'rgba(0,0,0,0.12)' }}>
