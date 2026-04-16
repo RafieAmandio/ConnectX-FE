@@ -1,0 +1,110 @@
+{
+  "_description": "All step templates shown to EVERY user regardless of path. These are returned in order from start-session/submit-answer/get-current-step.",
+  "_endpoint": "GET /sessions/:id/current  (or  next_step field in /answer response)",
+  "steps": [
+    {
+      "id": "step_welcome",
+      "flow_key": "common_data_diri",
+      "section": "Let's get started",
+      "section_progress": "1/1",
+      "overall_progress": { "current": 1, "total": 9 },
+      "title": "Find the right people to build with",
+      "subtitle": "ConnectX matches you with co-founders, teammates, and startups based on skills, goals, and compatibility.",
+      "questions": [],
+      "cta": { "label": "Get Started", "enabled_when": "always" },
+      "can_go_back": false
+    },
+    {
+      "id": "step_data_diri",
+      "flow_key": "common_data_diri",
+      "section": "Let's build your general profile",
+      "section_progress": "1/3",
+      "overall_progress": { "current": 2, "total": 9 },
+      "title": "Tell us about yourself",
+      "subtitle": "The basics we need to personalize your matches.",
+      "questions": [
+        {
+          "id": "q_first_name",
+          "type": "text",
+          "label": "First name",
+          "placeholder": "Your first name",
+          "required": true,
+          "validation": { "min_length": 1, "max_length": 50 }
+        },
+        {
+          "id": "q_last_name",
+          "type": "text",
+          "label": "Last name",
+          "placeholder": "Your last name",
+          "helper_text": "Optional, only shared after a connection.",
+          "required": false,
+          "validation": { "max_length": 50 }
+        },
+        {
+          "id": "q_date_of_birth",
+          "type": "date",
+          "label": "Date of birth",
+          "placeholder": "YYYY-MM-DD",
+          "required": true,
+          "validation": { "min_length": 10 }
+        },
+        {
+          "id": "q_city",
+          "type": "searchable_dropdown",
+          "label": "Where are you based?",
+          "placeholder": "Search a city",
+          "required": true,
+          "meta": { "searchable": true },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_city_jakarta", "value": "jakarta", "label": "Jakarta, Indonesia", "group": "Indonesia", "sub_label": null, "icon": null },
+            { "id": "opt_city_bandung", "value": "bandung", "label": "Bandung, Indonesia", "group": "Indonesia", "sub_label": null, "icon": null },
+            { "id": "opt_city_yogyakarta", "value": "yogyakarta", "label": "Yogyakarta, Indonesia", "group": "Indonesia", "sub_label": null, "icon": null },
+            { "id": "opt_city_singapore", "value": "singapore", "label": "Singapore, Singapore", "group": "Singapore", "sub_label": null, "icon": null },
+            { "id": "opt_city_bangalore", "value": "bangalore", "label": "Bangalore, India", "group": "India", "sub_label": null, "icon": null },
+            { "id": "opt_city_hcmc", "value": "hcmc", "label": "Ho Chi Minh City, Vietnam", "group": "Vietnam", "sub_label": null, "icon": null },
+            { "id": "opt_city_dubai", "value": "dubai", "label": "Dubai, United Arab Emirates", "group": "United Arab Emirates", "sub_label": null, "icon": null }
+          ]
+        },
+        {
+          "id": "q_gender",
+          "type": "single_select_chip",
+          "label": "Gender",
+          "required": true,
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_gender_female", "value": "female", "label": "Female", "icon": "female", "sub_label": null, "group": null },
+            { "id": "opt_gender_male", "value": "male", "label": "Male", "icon": "male", "sub_label": null, "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_use_connectx",
+      "flow_key": "common_data_diri",
+      "section": "Let's build your general profile",
+      "section_progress": "2/3",
+      "overall_progress": { "current": 3, "total": 9 },
+      "title": "How do you want to use ConnectX?",
+      "subtitle": "This shapes your entire experience",
+      "questions": [
+        {
+          "id": "q_use_connectx",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "meta": { "auto_advance": true, "layout": "list" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_builder", "value": "builder", "label": "I'm a Builder", "sub_label": "Founder, co-founder, or team member", "icon": "team", "group": null },
+            { "id": "opt_startup", "value": "startup", "label": "I represent a Startup", "sub_label": "Building a team or hiring co-founders", "icon": "rocket", "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    }
+  ]
+}

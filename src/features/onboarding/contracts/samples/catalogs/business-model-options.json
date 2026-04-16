@@ -1,0 +1,44 @@
+{
+  "_description": "Full option list for q_business_model (searchable grouped single-select). Used only by startup path.",
+  "_count": 36,
+  "options": [
+    { "id": "opt_business_model_saas", "value": "saas", "label": "SaaS (Subscription software)", "group": "Digital & Software", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_marketplace", "value": "marketplace", "label": "Marketplace (2-sided platform)", "group": "Digital & Software", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_ecommerce", "value": "ecommerce", "label": "E-commerce (Online store)", "group": "Digital & Software", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_dtc", "value": "dtc", "label": "Direct-to-Consumer (DTC brand)", "group": "Digital & Software", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_mobile_app", "value": "mobile_app", "label": "Mobile App (freemium / paid)", "group": "Digital & Software", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_api_infra", "value": "api_infra", "label": "API / Infrastructure (B2B tech)", "group": "Digital & Software", "sub_label": null, "icon": null },
+
+    { "id": "opt_business_model_fintech", "value": "fintech", "label": "FinTech (payments, lending, etc.)", "group": "Financial & Transactional", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_transaction_fees", "value": "transaction_fees", "label": "Transaction Fees (per use / commission)", "group": "Financial & Transactional", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_brokerage", "value": "brokerage", "label": "Brokerage / Commission-based", "group": "Financial & Transactional", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_subscription_transaction_hybrid", "value": "subscription_transaction_hybrid", "label": "Subscription + Transaction Hybrid", "group": "Financial & Transactional", "sub_label": null, "icon": null },
+
+    { "id": "opt_business_model_advertising", "value": "advertising", "label": "Advertising-based", "group": "Media & Attention", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_content_media", "value": "content_media", "label": "Content / Media Platform", "group": "Media & Attention", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_creator_economy", "value": "creator_economy", "label": "Creator Economy (subscriptions, tips, content)", "group": "Media & Attention", "sub_label": null, "icon": null },
+
+    { "id": "opt_business_model_service_based", "value": "service_based", "label": "Service-based (agency, consulting)", "group": "Services & Offline", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_fnb", "value": "fnb", "label": "F&B (restaurant, cafe, cloud kitchen)", "group": "Services & Offline", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_retail", "value": "retail", "label": "Retail (offline / omnichannel)", "group": "Services & Offline", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_hospitality", "value": "hospitality", "label": "Hospitality (hotel, lodging)", "group": "Services & Offline", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_events_experiences", "value": "events_experiences", "label": "Events / Experiences", "group": "Services & Offline", "sub_label": null, "icon": null },
+
+    { "id": "opt_business_model_real_estate", "value": "real_estate", "label": "Real Estate / Property", "group": "Asset-Heavy / Industry", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_construction", "value": "construction", "label": "Construction / Infrastructure", "group": "Asset-Heavy / Industry", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_manufacturing", "value": "manufacturing", "label": "Manufacturing", "group": "Asset-Heavy / Industry", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_logistics_supply_chain", "value": "logistics_supply_chain", "label": "Logistics / Supply Chain", "group": "Asset-Heavy / Industry", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_energy_climate", "value": "energy_climate", "label": "Energy / Climate", "group": "Asset-Heavy / Industry", "sub_label": null, "icon": null },
+
+    { "id": "opt_business_model_web3_blockchain", "value": "web3_blockchain", "label": "Web3 / Blockchain", "group": "Emerging / Tech-Forward", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_token_crypto", "value": "token_crypto", "label": "Token-based / Crypto economy", "group": "Emerging / Tech-Forward", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_ai_first", "value": "ai_first", "label": "AI-first product", "group": "Emerging / Tech-Forward", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_deeptech_rd", "value": "deeptech_rd", "label": "DeepTech / R&D", "group": "Emerging / Tech-Forward", "sub_label": null, "icon": null },
+
+    { "id": "opt_business_model_franchise", "value": "franchise", "label": "Franchise Model", "group": "Hybrid / Other", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_licensing", "value": "licensing", "label": "Licensing", "group": "Hybrid / Other", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_aggregator", "value": "aggregator", "label": "Aggregator", "group": "Hybrid / Other", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_platform_service_hybrid", "value": "platform_service_hybrid", "label": "Platform + Service hybrid", "group": "Hybrid / Other", "sub_label": null, "icon": null },
+    { "id": "opt_business_model_other", "value": "other", "label": "Other", "group": "Hybrid / Other", "sub_label": null, "icon": null }
+  ]
+}

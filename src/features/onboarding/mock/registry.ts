@@ -1,18 +1,31 @@
-import { builderFlowSteps } from './builder-flows';
 import {
   availabilityStep,
   builderIdentityDetailsStep,
+  businessModelStep,
+  cashEquityStep,
+  cofounderTypeStep,
+  credibilityStep,
   dataDiriStep,
   experienceStep,
   founderGoalStep,
+  founderSetupStep,
   industriesInterestStep,
-  locationPreferencesStep,
+  onlinePresenceStep,
+  openToRemoteStep,
+  ownCofounderTypeStep,
   primaryRoleStep,
+  problemSolutionStep,
+  rolesNeededStep,
+  skillsNeededStep,
+  skillsStep,
   startupIdentityDetailsStep,
+  startupIndustriesStep,
+  teamPresenceStep,
+  tractionStep,
   useConnectxStep,
   welcomeStep,
+  willingToRelocateStep,
 } from './common-steps';
-import { startupFinishStep, startupMatchingStep } from './startup-flow';
 import type {
   LocalizedOnboardingOption,
   LocalizedOnboardingQuestion,
@@ -32,23 +45,105 @@ export const ONBOARDING_STEP_ORDER: OnboardingStepId[] = [
   'step_data_diri',
   'step_use_connectx',
   'step_identity_details',
-  'step_founder_goal',
-  'step_location_preferences',
-  'step_experience',
-  'step_industries_interest',
-  'step_availability',
+  'step_problem_solution',
+  'step_startup_industries',
+  'step_business_model',
+  'step_traction',
+  'step_online_presence',
+  'step_founder_setup',
+  'step_team_presence',
   'step_primary_role',
-  'step_matching_preferences',
-  'step_compensation_and_profile_finish',
+  'step_experience',
+  'step_founder_goal',
+  'step_industries_interest',
+  'step_own_cofounder_type',
+  'step_skills',
+  'step_cofounder_type',
+  'step_roles_needed',
+  'step_skills_needed',
+  'step_availability',
+  'step_cash_equity',
+  'step_open_to_remote',
+  'step_willing_to_relocate',
+  'step_credibility',
 ];
 
 export function getEffectiveStepOrder(answers: OnboardingAnswers): OnboardingStepId[] {
-  const isFounderPath =
-    answers.q_use_connectx === 'builder' && answers.q_builder_type === 'founder';
+  const isBuilderPath = answers.q_use_connectx === 'builder';
+  const isStartupPath = answers.q_use_connectx === 'startup';
+  const isFounderPath = isBuilderPath && answers.q_builder_type === 'founder';
+  const founderGoal = answers.q_founder_goal;
+  const wantsCofounder = founderGoal === 'cofounder' || founderGoal === 'both';
+  const wantsTeamMembers =
+    founderGoal === 'team_members' || founderGoal === 'both';
+  const needsCofounderType =
+    (isFounderPath && wantsCofounder) || (isStartupPath && wantsCofounder);
+  const needsTeamRoles = isFounderPath && wantsTeamMembers;
+  const isJoiningCofounderPath =
+    isBuilderPath && answers.q_builder_type === 'cofounder';
+  const isJoiningTeamPath =
+    isBuilderPath && answers.q_builder_type === 'team_member';
 
   return ONBOARDING_STEP_ORDER.filter((stepId) => {
+    if (stepId === 'step_problem_solution') {
+      return isStartupPath;
+    }
+    if (stepId === 'step_startup_industries') {
+      return isStartupPath;
+    }
+    if (stepId === 'step_business_model') {
+      return isStartupPath;
+    }
+    if (stepId === 'step_traction') {
+      return isStartupPath;
+    }
+    if (stepId === 'step_online_presence') {
+      return isStartupPath;
+    }
+    if (stepId === 'step_founder_setup') {
+      return isStartupPath;
+    }
+    if (stepId === 'step_team_presence') {
+      return isStartupPath;
+    }
+    if (stepId === 'step_skills_needed') {
+      return isStartupPath;
+    }
     if (stepId === 'step_founder_goal') {
-      return isFounderPath;
+      return isFounderPath || isStartupPath;
+    }
+    if (stepId === 'step_cofounder_type') {
+      return needsCofounderType;
+    }
+    if (stepId === 'step_roles_needed') {
+      return needsTeamRoles;
+    }
+    if (stepId === 'step_own_cofounder_type') {
+      return isJoiningCofounderPath;
+    }
+    if (stepId === 'step_skills') {
+      return isJoiningTeamPath;
+    }
+    if (stepId === 'step_cash_equity') {
+      return isJoiningCofounderPath || isJoiningTeamPath;
+    }
+    if (stepId === 'step_industries_interest') {
+      return !isStartupPath;
+    }
+    if (stepId === 'step_availability') {
+      return isBuilderPath;
+    }
+    if (stepId === 'step_open_to_remote') {
+      return isBuilderPath;
+    }
+    if (stepId === 'step_willing_to_relocate') {
+      return isBuilderPath;
+    }
+    if (stepId === 'step_credibility') {
+      return isBuilderPath;
+    }
+    if (stepId === 'step_primary_role' || stepId === 'step_experience') {
+      return isBuilderPath;
     }
     return true;
   });
@@ -130,38 +225,6 @@ export function resolveFlowKey(answers: OnboardingAnswers): OnboardingFlowKey | 
   return null;
 }
 
-function getMatchingStep(flowKey: OnboardingFlowKey | null): LocalizedOnboardingStepTemplate {
-  if (flowKey === 'startup_representative') {
-    return startupMatchingStep;
-  }
-
-  if (
-    flowKey &&
-    flowKey !== 'common_data_diri' &&
-    flowKey in builderFlowSteps
-  ) {
-    return builderFlowSteps[flowKey].matching;
-  }
-
-  return builderFlowSteps.builder_founder_cofounder.matching;
-}
-
-function getFinishStep(flowKey: OnboardingFlowKey | null): LocalizedOnboardingStepTemplate {
-  if (flowKey === 'startup_representative') {
-    return startupFinishStep;
-  }
-
-  if (
-    flowKey &&
-    flowKey !== 'common_data_diri' &&
-    flowKey in builderFlowSteps
-  ) {
-    return builderFlowSteps[flowKey].finish;
-  }
-
-  return builderFlowSteps.builder_founder_cofounder.finish;
-}
-
 export function getStepTemplate(
   stepId: OnboardingStepId,
   answers: OnboardingAnswers
@@ -179,8 +242,16 @@ export function getStepTemplate(
         : builderIdentityDetailsStep;
     case 'step_founder_goal':
       return founderGoalStep;
-    case 'step_location_preferences':
-      return locationPreferencesStep;
+    case 'step_cofounder_type':
+      return cofounderTypeStep;
+    case 'step_own_cofounder_type':
+      return ownCofounderTypeStep;
+    case 'step_roles_needed':
+      return rolesNeededStep;
+    case 'step_open_to_remote':
+      return openToRemoteStep;
+    case 'step_willing_to_relocate':
+      return willingToRelocateStep;
     case 'step_experience':
       return experienceStep;
     case 'step_industries_interest':
@@ -189,10 +260,28 @@ export function getStepTemplate(
       return availabilityStep;
     case 'step_primary_role':
       return primaryRoleStep;
-    case 'step_matching_preferences':
-      return getMatchingStep(resolveFlowKey(answers));
-    case 'step_compensation_and_profile_finish':
-      return getFinishStep(resolveFlowKey(answers));
+    case 'step_skills':
+      return skillsStep;
+    case 'step_skills_needed':
+      return skillsNeededStep;
+    case 'step_problem_solution':
+      return problemSolutionStep;
+    case 'step_startup_industries':
+      return startupIndustriesStep;
+    case 'step_business_model':
+      return businessModelStep;
+    case 'step_traction':
+      return tractionStep;
+    case 'step_online_presence':
+      return onlinePresenceStep;
+    case 'step_founder_setup':
+      return founderSetupStep;
+    case 'step_team_presence':
+      return teamPresenceStep;
+    case 'step_cash_equity':
+      return cashEquityStep;
+    case 'step_credibility':
+      return credibilityStep;
     default:
       return welcomeStep;
   }

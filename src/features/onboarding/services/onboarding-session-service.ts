@@ -24,8 +24,8 @@ import type {
   OnboardingValidationErrorResponse,
 } from '../types/onboarding.types';
 
-const SESSION_KEY_PREFIX = 'connectx.onboarding.session.v2.';
-const ACTIVE_SESSION_KEY_PREFIX = 'connectx.onboarding.active.v2.';
+const SESSION_KEY_PREFIX = 'connectx.onboarding.session.v15.';
+const ACTIVE_SESSION_KEY_PREFIX = 'connectx.onboarding.active.v15.';
 const FIRST_STEP_ID: OnboardingStepId = 'step_welcome';
 
 function getSessionStorageKey(sessionId: string) {
@@ -135,7 +135,8 @@ function normalizeAnswerValue(
 ): OnboardingAnswerValue {
   switch (question.type) {
     case 'multi_select_card':
-    case 'multi_select_chip': {
+    case 'multi_select_chip':
+    case 'searchable_multi_select': {
       if (!Array.isArray(value)) {
         return [];
       }
@@ -185,7 +186,11 @@ function getQuestionValue(
 }
 
 function hasValue(question: OnboardingQuestion, value: OnboardingAnswerValue) {
-  if (question.type === 'multi_select_card' || question.type === 'multi_select_chip') {
+  if (
+    question.type === 'multi_select_card' ||
+    question.type === 'multi_select_chip' ||
+    question.type === 'searchable_multi_select'
+  ) {
     return Array.isArray(value) && value.length > 0;
   }
 

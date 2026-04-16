@@ -1,10 +1,20 @@
-import { AntDesign } from '@expo/vector-icons';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Keyboard, Platform, Pressable, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
+import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 
-import { AppButton, AppInput, AppText } from '@shared/components';
+import { AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 import { cn } from '@shared/utils/cn';
 
@@ -12,6 +22,159 @@ import { useAuth } from '../hooks/use-auth';
 import { useFcmToken } from '../hooks/use-fcm-token';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
 import { getEmailError, getPasswordError } from '../utils/auth-validation';
+
+const CONNECTX_LOGO = require('../../../../assets/images/connectx-logo.png');
+
+const CANVAS_BG = '#212121';
+const ACCENT = '#FF9A3E';
+const ACCENT_SOFT = '#2A2117';
+const FIELD_BG = '#292929';
+const FIELD_BORDER = '#383838';
+const TEXT_MUTED = '#98A2B3';
+const TEXT_SOFT = '#667085';
+
+type DarkFieldProps = {
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoCorrect?: boolean;
+  error?: string | null;
+  keyboardType?: 'default' | 'email-address';
+  label: string;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  secureTextEntry?: boolean;
+  trailing?: React.ReactNode;
+  value: string;
+};
+
+function DarkField({
+  autoCapitalize = 'sentences',
+  autoCorrect = true,
+  error,
+  keyboardType = 'default',
+  label,
+  onChangeText,
+  placeholder,
+  secureTextEntry,
+  trailing,
+  value,
+}: DarkFieldProps) {
+  const [isFocused, setIsFocused] = React.useState(false);
+  const borderColor = error ? '#F97066' : isFocused ? ACCENT : FIELD_BORDER;
+
+  return (
+    <View className="gap-2">
+      <AppText
+        className="text-[12px] uppercase"
+        style={{
+          color: isFocused ? ACCENT : TEXT_MUTED,
+          letterSpacing: 1,
+        }}>
+        {label}
+      </AppText>
+      <View
+        className="flex-row items-center gap-3 rounded-[16px] border px-4"
+        style={{
+          backgroundColor: FIELD_BG,
+          borderColor,
+          borderCurve: 'continuous',
+          borderWidth: isFocused || error ? 1.5 : 1,
+          height: 56,
+        }}>
+        <TextInput
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          keyboardType={keyboardType}
+          onBlur={() => setIsFocused(false)}
+          onChangeText={onChangeText}
+          onFocus={() => setIsFocused(true)}
+          placeholder={placeholder}
+          placeholderTextColor={TEXT_SOFT}
+          secureTextEntry={secureTextEntry}
+          value={value}
+          className="flex-1 font-body text-[15px] text-white"
+          style={{ paddingVertical: 0 }}
+        />
+        {trailing}
+      </View>
+      {error ? (
+        <AppText className="px-1 text-[12px]" tone="danger">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function LogoHero() {
+  return (
+    <View className="items-center gap-3">
+      <View
+        className="h-16 w-16 items-center justify-center rounded-[20px]"
+        style={{
+          backgroundColor: ACCENT_SOFT,
+          borderCurve: 'continuous',
+        }}>
+        <View
+          className="h-12 w-12 items-center justify-center overflow-hidden rounded-[14px] bg-white"
+          style={{ borderCurve: 'continuous' }}>
+          <Image
+            source={CONNECTX_LOGO}
+            style={{ width: 34, height: 34 }}
+            contentFit="contain"
+          />
+        </View>
+      </View>
+      <AppText variant="bodyStrong" className="text-[16px] text-white">
+        ConnectX
+      </AppText>
+    </View>
+  );
+}
+
+function SocialCta({
+  disabled,
+  icon,
+  label,
+  onPress,
+}: {
+  disabled?: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      className={cn(
+        'h-14 flex-row items-center justify-center gap-3 rounded-[16px] border',
+        disabled && 'opacity-50'
+      )}
+      style={{
+        backgroundColor: FIELD_BG,
+        borderColor: FIELD_BORDER,
+        borderCurve: 'continuous',
+      }}>
+      {icon}
+      <AppText variant="subtitle" className="text-[15px] text-white">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+function CheckBox({ checked }: { checked: boolean }) {
+  return (
+    <View
+      className="h-5 w-5 items-center justify-center rounded-[6px] border-2"
+      style={{
+        backgroundColor: checked ? ACCENT : 'transparent',
+        borderColor: checked ? ACCENT : '#5A6074',
+      }}>
+      {checked ? <Ionicons color="#1A1208" name="checkmark" size={12} /> : null}
+    </View>
+  );
+}
 
 export function LoginScreen() {
   const router = useRouter();
@@ -22,16 +185,10 @@ export function LoginScreen() {
   const [emailError, setEmailError] = React.useState<string | null>(null);
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
-  const [statusTone, setStatusTone] = React.useState<'danger' | 'signal'>('danger');
   const [showPassword, setShowPassword] = React.useState(false);
+  const [rememberMe, setRememberMe] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
-
-  React.useEffect(() => {
-    if (fcmToken) {
-      console.log('FCM token obtained:', fcmToken);
-    }
-  }, [fcmToken]);
 
   if (!isHydrated) {
     return null;
@@ -67,27 +224,18 @@ export function LoginScreen() {
       if (error instanceof ApiError && error.payload) {
         const payload = error.payload as {
           message?: string;
-          errors?: {
-            email?: string[];
-            password?: string[];
-          };
+          errors?: { email?: string[]; password?: string[] };
         };
         const fieldErrors = payload.errors;
 
-        if (fieldErrors?.email?.[0]) {
-          setEmailError(fieldErrors.email[0]);
-        }
-        if (fieldErrors?.password?.[0]) {
-          setPasswordError(fieldErrors.password[0]);
-        }
+        if (fieldErrors?.email?.[0]) setEmailError(fieldErrors.email[0]);
+        if (fieldErrors?.password?.[0]) setPasswordError(fieldErrors.password[0]);
         if (!fieldErrors) {
-          setStatusTone('danger');
           setStatusMessage(payload.message ?? error.message);
         }
       } else {
-        setStatusTone('danger');
         setStatusMessage(
-          error instanceof Error ? error.message : 'Login gagal. Silakan coba lagi.'
+          error instanceof Error ? error.message : 'Login failed. Please try again.'
         );
       }
     } finally {
@@ -107,20 +255,10 @@ export function LoginScreen() {
 
     try {
       const result = await signInWithGoogle();
-
-      console.info('Google OAuth backend login successful.', {
-        authPhase: result.session.authPhase,
-        email: result.session.email,
-        nextStep: result.response.next_step ?? null,
-      });
-
       router.replace(getRouteForAuthPhase(result.session.authPhase));
     } catch (error) {
-      setStatusTone('danger');
       setStatusMessage(
-        error instanceof Error
-          ? error.message
-          : 'Google Sign-In failed. Please try again.'
+        error instanceof Error ? error.message : 'Google Sign-In failed. Please try again.'
       );
     } finally {
       setIsGoogleSubmitting(false);
@@ -128,138 +266,188 @@ export function LoginScreen() {
   };
 
   return (
-    <View
-      className="flex-1 bg-canvas"
-    >
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1"
+      style={{ backgroundColor: CANVAS_BG }}>
       <Stack.Screen options={{ headerShown: false }} />
       <Pressable className="flex-1" onPress={Keyboard.dismiss} accessible={false}>
-        <View className="flex-1 px-5 pt-20 pb-8">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: 24,
+            paddingTop: 72,
+            paddingBottom: 40,
+            gap: 24,
+          }}
+          keyboardShouldPersistTaps="handled">
+          <Animated.View entering={FadeIn.duration(360)}>
+            <LogoHero />
+          </Animated.View>
 
-          <View className="flex-1 pt-8">
-            <View className="gap-2 shrink-0">
-              <AppText variant="hero" className="text-[32px] font-bold tracking-tight">
-                Welcome back
+          <Animated.View
+            entering={FadeInDown.delay(80).duration(360)}
+            className="items-center gap-2 pt-2">
+            <AppText
+              align="center"
+              variant="hero"
+              className="text-[32px] leading-[38px]"
+              style={{ color: ACCENT }}>
+              Get Started now
+            </AppText>
+            <AppText
+              align="center"
+              className="text-[14px] leading-[20px] text-text-muted">
+              Create an account or log in to explore ConnectX.
+            </AppText>
+          </Animated.View>
+
+          <Animated.View
+            entering={FadeInUp.delay(140).duration(360)}
+            className="gap-3">
+            {Platform.OS !== 'web' ? (
+              <SocialCta
+                disabled={isSubmitting || isGoogleSubmitting}
+                icon={
+                  isGoogleSubmitting ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <AntDesign color="#FFFFFF" name="google" size={18} />
+                  )
+                }
+                label="Sign in with Google"
+                onPress={handleGoogleLogin}
+              />
+            ) : null}
+            <SocialCta
+              disabled={isSubmitting || isGoogleSubmitting}
+              icon={<Ionicons color="#FFFFFF" name="eye-outline" size={18} />}
+              label="Preview onboarding"
+              onPress={() => {
+                router.push({
+                  pathname: '/onboarding',
+                  params: { mode: 'preview' },
+                });
+              }}
+            />
+
+            <View className="flex-row items-center gap-3 py-1">
+              <View
+                className="h-[1px] flex-1"
+                style={{ backgroundColor: FIELD_BORDER }}
+              />
+              <AppText
+                className="text-[11px] uppercase text-text-soft"
+                style={{ letterSpacing: 1.2 }}>
+                or
               </AppText>
-              <AppText tone="muted" className="text-base">
-                Sign in to continue
-              </AppText>
+              <View
+                className="h-[1px] flex-1"
+                style={{ backgroundColor: FIELD_BORDER }}
+              />
             </View>
 
-            <View className="mt-12 gap-6 shrink-0">
-              <AppInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                error={emailError ?? undefined}
-                keyboardType="email-address"
-                onChangeText={(value) => {
-                  setEmail(value);
-                  if (emailError) setEmailError(null);
-                }}
-                placeholder="Email address"
-                value={email}
-                className="bg-transparent border-0 border-b border-border rounded-none px-0 text-lg h-14 min-h-14 font-medium"
-                placeholderTextColor="#64748B"
-              />
+            <DarkField
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={emailError}
+              keyboardType="email-address"
+              label="Email"
+              onChangeText={(value) => {
+                setEmail(value);
+                if (emailError) setEmailError(null);
+              }}
+              placeholder="you@company.com"
+              value={email}
+            />
+            <DarkField
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={passwordError}
+              label="Password"
+              onChangeText={(value) => {
+                setPassword(value);
+                if (passwordError) setPasswordError(null);
+              }}
+              placeholder="Enter your password"
+              secureTextEntry={!showPassword}
+              trailing={
+                <Pressable
+                  onPress={() => setShowPassword((current) => !current)}
+                  hitSlop={8}>
+                  <Ionicons
+                    color={TEXT_MUTED}
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={18}
+                  />
+                </Pressable>
+              }
+              value={password}
+            />
 
-              <View>
-                <AppInput
-                  error={passwordError ?? undefined}
-                  onChangeText={(value) => {
-                    setPassword(value);
-                    if (passwordError) setPasswordError(null);
-                  }}
-                  placeholder="Password"
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  className="bg-transparent border-0 border-b border-border rounded-none px-0 text-lg h-14 min-h-14 font-medium"
-                  placeholderTextColor="#64748B"
-                />
-                <TouchableOpacity
-                  className="absolute right-0 top-3 p-2"
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <AppText tone="muted" variant="label">{showPassword ? 'HIDE' : 'SHOW'}</AppText>
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity
-                className="self-end"
-                onPress={() => {
-                  setStatusTone('signal');
-                  setStatusMessage('Forgot password flow is not connected yet.');
-                }}>
-                <AppText className="text-[#0066FF] font-medium">
-                  Forgot password?
+            <View className="flex-row items-center justify-between pt-1">
+              <Pressable
+                className="flex-row items-center gap-2"
+                onPress={() => setRememberMe((current) => !current)}
+                hitSlop={8}>
+                <CheckBox checked={rememberMe} />
+                <AppText className="text-[13px] text-text-muted">
+                  Remember me
                 </AppText>
-              </TouchableOpacity>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  setStatusMessage('Forgot password flow is not connected yet.')
+                }>
+                <AppText
+                  variant="bodyStrong"
+                  className="text-[13px]"
+                  style={{ color: ACCENT }}>
+                  Forgot Password?
+                </AppText>
+              </Pressable>
             </View>
+          </Animated.View>
 
-            {statusMessage && (
-              <AppText tone={statusTone} className="mt-4">{statusMessage}</AppText>
-            )}
+          {statusMessage ? (
+            <AppText align="center" selectable tone="danger">
+              {statusMessage}
+            </AppText>
+          ) : null}
 
-            <View className="flex-1 justify-end shrink-0 pt-8 gap-4">
-              <AppButton
-                disabled={isSubmitting || isGoogleSubmitting}
-                label={isSubmitting ? 'Signing in...' : 'Sign In'}
-                onPress={handleLogin}
-                size="lg"
-                className="w-full bg-[#0066FF] rounded-[16px] border-none"
-              />
-
-              <AppButton
-                disabled={isSubmitting || isGoogleSubmitting}
-                label="Preview onboarding"
-                onPress={() => {
-                  router.push({
-                    pathname: '/onboarding',
-                    params: { mode: 'preview' },
-                  });
-                }}
-                size="lg"
-                variant="secondary"
-                className="w-full rounded-[16px] border-border-strong bg-surface"
-              />
-
-              {process.env.EXPO_OS !== 'web' && (
-                <>
-                  <View className="flex-row items-center gap-4 py-2 opacity-50">
-                    <View className="h-[1px] flex-1 bg-border-strong" />
-                    <AppText tone="muted" variant="label" className="tracking-widest">OR</AppText>
-                    <View className="h-[1px] flex-1 bg-border-strong" />
-                  </View>
-
-                  <TouchableOpacity
-                    disabled={isSubmitting || isGoogleSubmitting}
-                    onPress={handleGoogleLogin}
-                    className={cn(
-                      "flex-row items-center justify-center gap-3 w-full h-[56px] rounded-[16px]",
-                      "border border-border-strong bg-surface",
-                      (isSubmitting || isGoogleSubmitting) && "opacity-50"
-                    )}
-                  >
-                    {isGoogleSubmitting ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <>
-                        <AntDesign color="#FFFFFF" name="google" size={20} />
-                        <AppText variant="bodyStrong">Continue with Google</AppText>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </>
+          <Animated.View entering={FadeIn.delay(220).duration(360)}>
+            <Pressable
+              disabled={isSubmitting || isGoogleSubmitting}
+              onPress={handleLogin}
+              className={cn(
+                'h-14 flex-row items-center justify-center gap-3 rounded-[18px]',
+                (isSubmitting || isGoogleSubmitting) && 'opacity-50'
               )}
+              style={{ backgroundColor: ACCENT, borderCurve: 'continuous' }}
+              android_ripple={{ color: 'rgba(0,0,0,0.12)' }}>
+              <AppText variant="subtitle" className="text-[16px] text-[#1A1208]">
+                {isSubmitting ? 'Signing in...' : 'Log In'}
+              </AppText>
+              <AntDesign color="#1A1208" name="arrow-right" size={18} />
+            </Pressable>
+          </Animated.View>
 
-              <View className="flex-row items-center justify-center gap-2 mt-4">
-                <AppText tone="muted">Don&apos;t have an account?</AppText>
-                <TouchableOpacity onPress={() => router.push('/register')}>
-                  <AppText className="text-[#0066FF] font-medium">Sign up</AppText>
-                </TouchableOpacity>
-              </View>
-            </View>
+          <View className="flex-row items-center justify-center gap-2 pt-2">
+            <AppText className="text-[14px] text-text-muted">
+              Don&apos;t have an account?
+            </AppText>
+            <Pressable onPress={() => router.push('/register')}>
+              <AppText
+                variant="bodyStrong"
+                className="text-[14px]"
+                style={{ color: ACCENT }}>
+                Sign Up
+              </AppText>
+            </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </Pressable>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

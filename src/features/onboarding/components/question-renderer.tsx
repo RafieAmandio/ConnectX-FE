@@ -115,6 +115,163 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'people-outline',
     iconColor: '#CBD4E0',
   },
+  goal_cofounder: {
+    bg: '#3A2812',
+    border: '#5A3C18',
+    icon: 'handshake-outline',
+    iconColor: '#FF9A3E',
+    library: 'mci',
+  },
+  goal_team_members: {
+    bg: '#2C2712',
+    border: '#4A4218',
+    icon: 'people',
+    iconColor: '#D4B83A',
+  },
+  goal_both: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'disc-outline',
+    iconColor: '#E5E7EB',
+  },
+  yes: {
+    bg: '#3A2812',
+    border: '#5A3C18',
+    icon: 'checkmark-circle-outline',
+    iconColor: '#FF9A3E',
+  },
+  no: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'close-circle-outline',
+    iconColor: '#CBD4E0',
+  },
+  availability_full_time: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'rocket-outline',
+    iconColor: '#CBD4E0',
+  },
+  availability_part_time: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'time-outline',
+    iconColor: '#CBD4E0',
+  },
+  availability_flexible: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'globe-outline',
+    iconColor: '#CBD4E0',
+  },
+  exp_founded: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'flag',
+    iconColor: '#FF9A3E',
+  },
+  exp_built: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'construct',
+    iconColor: '#C48BFF',
+  },
+  exp_worked: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'people',
+    iconColor: '#4ADE80',
+  },
+  exp_none: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'leaf-outline',
+    iconColor: '#CBD4E0',
+  },
+  cofounder_technical: {
+    bg: '#1A2332',
+    border: '#2E3E5A',
+    icon: 'code-slash',
+    iconColor: '#6BB4FF',
+  },
+  cofounder_business: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'briefcase',
+    iconColor: '#FF9A3E',
+  },
+  cofounder_product: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'bulb',
+    iconColor: '#C48BFF',
+  },
+  cofounder_growth: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'trending-up',
+    iconColor: '#4ADE80',
+  },
+  cofounder_ai: {
+    bg: '#2B1224',
+    border: '#512244',
+    icon: 'sparkles',
+    iconColor: '#FF6FCF',
+  },
+  cofounder_operations: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'settings',
+    iconColor: '#7DD3FC',
+  },
+  cofounder_finance: {
+    bg: '#2A2312',
+    border: '#564518',
+    icon: 'cash',
+    iconColor: '#FFD166',
+  },
+  cofounder_partnerships: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'git-network',
+    iconColor: '#5EEAD4',
+  },
+  founder_solo: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'person',
+    iconColor: '#FF9A3E',
+  },
+  founder_two: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'people',
+    iconColor: '#C48BFF',
+  },
+  founder_three_plus: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'people-circle',
+    iconColor: '#4ADE80',
+  },
+  team_size_small: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'person-add',
+    iconColor: '#FF9A3E',
+  },
+  team_size_medium: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'people',
+    iconColor: '#C48BFF',
+  },
+  team_size_large: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'people-circle',
+    iconColor: '#4ADE80',
+  },
   default: {
     bg: '#2A2117',
     border: '#3A2E1E',
@@ -127,13 +284,13 @@ function getCardBadgeStyle(option: OnboardingOption): CardBadgeStyle {
   return CARD_BADGE_STYLES[option.icon ?? 'default'] ?? CARD_BADGE_STYLES.default;
 }
 
-function CardBadgeIcon({ badge }: { badge: CardBadgeStyle }) {
+function CardBadgeIcon({ badge, size = 26 }: { badge: CardBadgeStyle; size?: number }) {
   if (badge.library === 'mci') {
     return (
       <MaterialCommunityIcons
         color={badge.iconColor}
         name={badge.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
-        size={26}
+        size={size}
       />
     );
   }
@@ -142,7 +299,7 @@ function CardBadgeIcon({ badge }: { badge: CardBadgeStyle }) {
     <Ionicons
       color={badge.iconColor}
       name={badge.icon as React.ComponentProps<typeof Ionicons>['name']}
-      size={26}
+      size={size}
     />
   );
 }
@@ -202,6 +359,8 @@ function TextLikeQuestion({
   multiline?: boolean;
   value: string;
 }) {
+  const [isFocused, setIsFocused] = React.useState(false);
+
   return (
     <View className="gap-3">
       <QuestionHeader error={error} question={question} />
@@ -212,11 +371,17 @@ function TextLikeQuestion({
         keyboardType={keyboardType}
         multiline={multiline}
         numberOfLines={multiline ? 5 : 1}
+        onBlur={() => setIsFocused(false)}
         onChangeText={(nextValue) => onChange(nextValue)}
+        onFocus={() => setIsFocused(true)}
         placeholder={question.placeholder ?? undefined}
         textAlignVertical={multiline ? 'top' : 'center'}
         value={value}
-        className={cn(FIELD_CLASS, multiline && 'min-h-[140px] py-4')}
+        className={cn(
+          FIELD_BG,
+          isFocused ? 'border-[#FF9A3E]' : FIELD_BORDER,
+          multiline && 'min-h-[140px] py-4'
+        )}
       />
     </View>
   );
@@ -276,12 +441,13 @@ function SelectionCard({
         className={cn(
           'flex-row items-center gap-4 rounded-[22px] border px-4 py-4',
           isSelected
-            ? 'border-[#FF9A3E] bg-[#292929]'
+            ? 'border-[#FF9A3E] bg-[#1F1712]'
             : 'border-[#383838] bg-[#292929]'
         )}
         style={[
           {
             borderCurve: 'continuous',
+            borderWidth: isSelected ? 2 : 1,
             shadowColor: '#FF9A3E',
             shadowOffset: { width: 0, height: 0 },
           },
@@ -290,8 +456,8 @@ function SelectionCard({
         <View
           className="h-14 w-14 items-center justify-center rounded-[16px] border"
           style={{
-            backgroundColor: badge.bg,
-            borderColor: badge.border,
+            backgroundColor: isSelected ? '#2A1C10' : badge.bg,
+            borderColor: isSelected ? '#5A3C18' : badge.border,
             borderCurve: 'continuous',
           }}>
           <CardBadgeIcon badge={badge} />
@@ -306,6 +472,9 @@ function SelectionCard({
             </AppText>
           ) : null}
         </View>
+        {isSelected ? (
+          <Ionicons color="#FF9A3E" name="checkmark" size={24} />
+        ) : null}
       </Animated.View>
     </Pressable>
   );
@@ -356,17 +525,29 @@ function SingleSelectRadioQuestion({
               key={option.id}
               className={cn(
                 'flex-row items-center gap-3 rounded-[18px] border px-4 py-4',
-                isSelected ? 'border-accent bg-accent-tint' : 'border-border bg-surface'
+                isSelected
+                  ? 'border-[#FF9A3E] bg-[#1F1712]'
+                  : 'border-[#383838] bg-[#292929]'
               )}
+              style={{ borderWidth: isSelected ? 2 : 1 }}
               onPress={() => onChange(option.value)}>
               <View
                 className={cn(
-                  'h-5 w-5 rounded-full border-2',
-                  isSelected ? 'border-accent bg-accent' : 'border-border-strong bg-transparent'
-                )}
-              />
+                  'h-5 w-5 items-center justify-center rounded-full border-2',
+                  isSelected
+                    ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                    : 'border-[#5A6074] bg-transparent'
+                )}>
+                {isSelected ? (
+                  <Ionicons color="#1A1208" name="checkmark" size={12} />
+                ) : null}
+              </View>
               <View className="flex-1 gap-1">
-                <AppText variant="bodyStrong">{option.label}</AppText>
+                <AppText
+                  variant="bodyStrong"
+                  className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                  {option.label}
+                </AppText>
                 {option.sub_label ? (
                   <AppText tone="muted">{option.sub_label}</AppText>
                 ) : null}
@@ -390,30 +571,58 @@ function MultiSelectCardQuestion({
   return (
     <View className="gap-3">
       <QuestionHeader error={error} question={question} />
-      <View className="flex-row flex-wrap gap-3">
+      <View className="gap-3">
         {question.options?.map((option) => {
           const isSelected = currentValues.includes(option.value);
+          const badge = getCardBadgeStyle(option);
 
           return (
             <Pressable
               key={option.id}
-              className={cn(
-                'min-h-[92px] w-[48%] rounded-[20px] border px-4 py-4',
-                isSelected ? 'border-accent bg-accent-tint' : 'border-border bg-surface'
-              )}
               onPress={() => {
                 if (isSelected) {
                   onChange(currentValues.filter((item) => item !== option.value));
                   return;
                 }
-
                 onChange([...currentValues, option.value]);
               }}>
-              <View className="gap-2">
-                <AppText variant="bodyStrong">{option.label}</AppText>
-                {option.sub_label ? (
-                  <AppText tone="muted">{option.sub_label}</AppText>
-                ) : null}
+              <View
+                className={cn(
+                  'flex-row items-center gap-3 rounded-[20px] border px-4 py-3.5',
+                  isSelected
+                    ? 'border-[#FF9A3E] bg-[#1F1712]'
+                    : 'border-[#383838] bg-[#292929]'
+                )}
+                style={{ borderCurve: 'continuous', borderWidth: isSelected ? 2 : 1 }}>
+                <View
+                  className="h-9 w-9 items-center justify-center rounded-[10px]"
+                  style={{
+                    backgroundColor: badge.bg,
+                    borderCurve: 'continuous',
+                  }}>
+                  <CardBadgeIcon badge={badge} size={18} />
+                </View>
+                <View className="flex-1 gap-1">
+                  <AppText variant="subtitle" className="text-[16px] text-white">
+                    {option.label}
+                  </AppText>
+                  {option.sub_label ? (
+                    <AppText className="text-[13px] text-text-muted">
+                      {option.sub_label}
+                    </AppText>
+                  ) : null}
+                </View>
+                <View
+                  className={cn(
+                    'h-6 w-6 items-center justify-center rounded-[8px] border-2',
+                    isSelected
+                      ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                      : 'border-[#5A6074] bg-transparent'
+                  )}>
+                  {isSelected ? (
+                    <Ionicons color="#1A1208" name="checkmark" size={14} />
+                  ) : null}
+                </View>
               </View>
             </Pressable>
           );
@@ -434,20 +643,19 @@ function MultiSelectChipQuestion({
   return (
     <View className="gap-3">
       <QuestionHeader error={error} question={question} />
-      <View className="flex-row flex-wrap justify-center gap-2.5">
+      <View className="flex-row flex-wrap gap-2">
         {question.options?.map((option) => {
           const isSelected = currentValues.includes(option.value);
-          const showIcon = Boolean(option.icon);
 
           return (
             <Pressable
               key={option.id}
-              className={cn(
-                'flex-row items-center gap-2 rounded-full border px-4 py-3',
-                isSelected
-                  ? 'border-[#FF9A3E] bg-[#2A2117]'
-                  : 'border-border bg-surface'
-              )}
+              className="flex-row items-center gap-2 rounded-full px-4 py-2.5"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: isSelected ? '#FF9A3E' : '#383838',
+                borderWidth: isSelected ? 2 : 1,
+              }}
               onPress={() => {
                 if (isSelected) {
                   onChange(currentValues.filter((item) => item !== option.value));
@@ -456,13 +664,6 @@ function MultiSelectChipQuestion({
 
                 onChange([...currentValues, option.value]);
               }}>
-              {showIcon ? (
-                <MaterialCommunityIcons
-                  color={isSelected ? '#FF9A3E' : '#98A2B3'}
-                  name="target"
-                  size={18}
-                />
-              ) : null}
               <AppText
                 variant="bodyStrong"
                 className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
@@ -487,28 +688,30 @@ function SingleSelectChipQuestion({
   return (
     <View className="gap-3">
       <QuestionHeader error={error} question={question} />
-      <View className="flex-row flex-wrap gap-2.5">
+      <View className="flex-row flex-wrap gap-2">
         {question.options?.map((option) => {
           const isSelected = currentValue === option.value;
-          const iconName = (option.icon ?? 'ellipse-outline') as React.ComponentProps<
-            typeof Ionicons
-          >['name'];
+          const iconName = option.icon as
+            | React.ComponentProps<typeof Ionicons>['name']
+            | undefined;
 
           return (
             <Pressable
               key={option.id}
               onPress={() => onChange(option.value)}
-              className={cn(
-                'flex-row items-center gap-2 rounded-full border px-4 py-3',
-                isSelected
-                  ? 'border-[#FF9A3E] bg-[#292929]'
-                  : 'border-[#383838] bg-[#292929]'
-              )}>
-              <Ionicons
-                color={isSelected ? '#FF9A3E' : '#98A2B3'}
-                name={iconName}
-                size={18}
-              />
+              className="flex-row items-center gap-2 rounded-full px-4 py-2.5"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: isSelected ? '#FF9A3E' : '#383838',
+                borderWidth: isSelected ? 2 : 1,
+              }}>
+              {iconName ? (
+                <Ionicons
+                  color={isSelected ? '#FF9A3E' : '#98A2B3'}
+                  name={iconName}
+                  size={16}
+                />
+              ) : null}
               <AppText
                 variant="bodyStrong"
                 className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
@@ -742,6 +945,260 @@ function SearchableDropdownQuestion({
   );
 }
 
+function SearchableMultiSelectQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValues = getArrayValue(value);
+  const [query, setQuery] = React.useState('');
+  const maxSelections = question.validation?.max_selections ?? Infinity;
+  const atLimit = currentValues.length >= maxSelections;
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  const toggle = (optionValue: string) => {
+    if (currentValues.includes(optionValue)) {
+      onChange(currentValues.filter((item) => item !== optionValue));
+      return;
+    }
+
+    if (atLimit) {
+      return;
+    }
+
+    onChange([...currentValues, optionValue]);
+  };
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className="flex-row items-center justify-between">
+        <AppText className="text-[12px] text-text-soft">
+          {currentValues.length} / {Number.isFinite(maxSelections) ? maxSelections : '∞'} selected
+        </AppText>
+        {atLimit ? (
+          <AppText className="text-[12px]" style={{ color: '#FF9A3E' }}>
+            Max reached
+          </AppText>
+        ) : null}
+      </View>
+      <View
+        className={cn(
+          'flex-row items-center gap-2 rounded-[16px] border px-4',
+          query ? 'border-[#FF9A3E] bg-[#292929]' : FIELD_CLASS
+        )}
+        style={{ height: 56 }}>
+        <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setQuery}
+          placeholder={question.placeholder ?? 'Search'}
+          placeholderTextColor="#667085"
+          value={query}
+          className="flex-1 font-body text-[15px] text-white"
+          style={{ paddingVertical: 0 }}
+        />
+        {query ? (
+          <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <Ionicons color="#98A2B3" name="close-circle" size={18} />
+          </Pressable>
+        ) : null}
+      </View>
+      <View
+        className="rounded-[18px] border"
+        style={{
+          backgroundColor: '#212121',
+          borderColor: '#383838',
+          borderCurve: 'continuous',
+          maxHeight: 380,
+          overflow: 'hidden',
+        }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator>
+          {groupOptions(filteredOptions).map(([groupName, options]) => (
+            <View key={groupName} className="pb-1">
+              <AppText
+                className="px-4 pt-3 pb-1 text-[11px] uppercase text-text-soft"
+                style={{ letterSpacing: 1.2 }}>
+                {groupName}
+              </AppText>
+              {options.map((option) => {
+                const isSelected = currentValues.includes(option.value);
+                const isDisabled = !isSelected && atLimit;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    disabled={isDisabled}
+                    onPress={() => toggle(option.value)}
+                    className={cn(
+                      'flex-row items-center gap-3 px-4 py-3',
+                      isDisabled && 'opacity-40'
+                    )}>
+                    <View
+                      className={cn(
+                        'h-5 w-5 items-center justify-center rounded-[6px] border-2',
+                        isSelected
+                          ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                          : 'border-[#5A6074] bg-transparent'
+                      )}>
+                      {isSelected ? (
+                        <Ionicons color="#1A1208" name="checkmark" size={12} />
+                      ) : null}
+                    </View>
+                    <AppText
+                      className={cn(
+                        'flex-1 text-[15px]',
+                        isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                      )}>
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+          {filteredOptions.length === 0 ? (
+            <View className="px-4 py-6">
+              <AppText tone="muted" align="center">
+                No industries match "{query}"
+              </AppText>
+            </View>
+          ) : null}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+function SearchableSingleSelectQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValue = getStringValue(value);
+  const [query, setQuery] = React.useState('');
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View
+        className={cn(
+          'flex-row items-center gap-2 rounded-[16px] border px-4',
+          query ? 'border-[#FF9A3E] bg-[#292929]' : FIELD_CLASS
+        )}
+        style={{ height: 56 }}>
+        <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setQuery}
+          placeholder={question.placeholder ?? 'Search'}
+          placeholderTextColor="#667085"
+          value={query}
+          className="flex-1 font-body text-[15px] text-white"
+          style={{ paddingVertical: 0 }}
+        />
+        {query ? (
+          <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <Ionicons color="#98A2B3" name="close-circle" size={18} />
+          </Pressable>
+        ) : null}
+      </View>
+      <View
+        className="rounded-[18px] border"
+        style={{
+          backgroundColor: '#212121',
+          borderColor: '#383838',
+          borderCurve: 'continuous',
+          maxHeight: 420,
+          overflow: 'hidden',
+        }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator>
+          {groupOptions(filteredOptions).map(([groupName, options]) => (
+            <View key={groupName} className="pb-1">
+              <AppText
+                className="px-4 pt-3 pb-1 text-[11px] uppercase text-text-soft"
+                style={{ letterSpacing: 1.2 }}>
+                {groupName}
+              </AppText>
+              {options.map((option) => {
+                const isSelected = currentValue === option.value;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => onChange(option.value)}
+                    className="flex-row items-center gap-3 px-4 py-3">
+                    <View
+                      className={cn(
+                        'h-5 w-5 items-center justify-center rounded-full border-2',
+                        isSelected
+                          ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                          : 'border-[#5A6074] bg-transparent'
+                      )}>
+                      {isSelected ? (
+                        <Ionicons color="#1A1208" name="checkmark" size={12} />
+                      ) : null}
+                    </View>
+                    <AppText
+                      className={cn(
+                        'flex-1 text-[15px]',
+                        isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                      )}>
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+          {filteredOptions.length === 0 ? (
+            <View className="px-4 py-6">
+              <AppText tone="muted" align="center">
+                No results for "{query}"
+              </AppText>
+            </View>
+          ) : null}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
 function GroupedListQuestion({
   error,
   onChange,
@@ -753,25 +1210,39 @@ function GroupedListQuestion({
   return (
     <View className="gap-3">
       <QuestionHeader error={error} question={question} />
-      <View className="gap-4">
+      <View className="gap-5">
         {groupOptions(question.options).map(([groupName, options]) => (
-          <View key={groupName} className="gap-2">
-            <AppText tone="muted" variant="label">
+          <View key={groupName} className="gap-2.5">
+            <AppText
+              className="text-[11px] uppercase text-text-soft"
+              style={{ letterSpacing: 1.2 }}>
               {groupName}
             </AppText>
-            <View className="gap-2">
+            <View className="flex-row flex-wrap gap-2.5">
               {options.map((option) => {
                 const isSelected = currentValue === option.value;
 
                 return (
                   <Pressable
                     key={option.id}
+                    onPress={() => onChange(option.value)}
                     className={cn(
-                      'rounded-[18px] border px-4 py-4',
-                      isSelected ? 'border-accent bg-accent-tint' : 'border-border bg-surface'
-                    )}
-                    onPress={() => onChange(option.value)}>
-                    <AppText className={cn(isSelected && 'text-accent')} variant="bodyStrong">
+                      'flex-row items-center gap-2 rounded-full border px-4 py-3',
+                      isSelected
+                        ? 'border-[#FF9A3E] bg-[#1F1712]'
+                        : 'border-[#383838] bg-[#292929]'
+                    )}>
+                    <Ionicons
+                      color={isSelected ? '#FF9A3E' : '#98A2B3'}
+                      name={isSelected ? 'location' : 'location-outline'}
+                      size={15}
+                    />
+                    <AppText
+                      variant="bodyStrong"
+                      className={cn(
+                        'text-[14px]',
+                        isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                      )}>
                       {option.label}
                     </AppText>
                   </Pressable>
@@ -1049,6 +1520,16 @@ function DateSelectQuestion({
   );
 }
 
+function getSegmentedIconName(icon: string | null | undefined) {
+  if (icon === 'clock') {
+    return 'time-outline' as const;
+  }
+  if (icon === 'calendar') {
+    return 'calendar-outline' as const;
+  }
+  return null;
+}
+
 function SegmentedQuestion({
   error,
   onChange,
@@ -1060,24 +1541,36 @@ function SegmentedQuestion({
   return (
     <View className="gap-3">
       <QuestionHeader error={error} question={question} />
-      <View className="flex-row rounded-[20px] bg-surface p-1">
+      <View
+        className="flex-row rounded-[20px] p-1"
+        style={{ backgroundColor: '#1F1712', borderWidth: 1, borderColor: '#383838' }}>
         {question.options?.map((option) => {
           const isSelected = currentValue === option.value;
+          const iconName = getSegmentedIconName(option.icon);
 
           return (
             <Pressable
               key={option.id}
-              className={cn(
-                'flex-1 rounded-[16px] px-3 py-3',
-                isSelected ? 'bg-accent' : 'bg-transparent'
-              )}
+              className="flex-1 rounded-[16px] px-3 py-3"
+              style={{
+                backgroundColor: isSelected ? '#FF9A3E' : 'transparent',
+              }}
               onPress={() => onChange(option.value)}>
-              <AppText
-                align="center"
-                className={cn(isSelected ? 'text-text' : 'text-text-muted')}
-                variant="bodyStrong">
-                {option.label}
-              </AppText>
+              <View className="flex-row items-center justify-center gap-2">
+                {iconName ? (
+                  <Ionicons
+                    color={isSelected ? '#1A1208' : '#9CA3AF'}
+                    name={iconName}
+                    size={18}
+                  />
+                ) : null}
+                <AppText
+                  align="center"
+                  variant="bodyStrong"
+                  style={{ color: isSelected ? '#1A1208' : '#9CA3AF' }}>
+                  {option.label}
+                </AppText>
+              </View>
             </Pressable>
           );
         })}
@@ -1102,24 +1595,28 @@ function CurrencyAmountQuestion({
           <AppText tone="muted" variant="label">
             {question.meta?.currency_label ?? 'Currency'}
           </AppText>
-          <View className="flex-row gap-2">
+          <View className="flex-row flex-wrap gap-2">
             {question.options?.map((option) => {
               const isSelected = currentValue.currency === option.value;
 
               return (
                 <Pressable
                   key={option.id}
-                  className={cn(
-                    'rounded-full border px-4 py-2',
-                    isSelected ? 'border-accent bg-accent-tint' : 'border-border bg-surface'
-                  )}
+                  className="rounded-full px-4 py-2"
+                  style={{
+                    backgroundColor: isSelected ? '#1F1712' : '#292929',
+                    borderColor: isSelected ? '#FF9A3E' : '#383838',
+                    borderWidth: isSelected ? 2 : 1,
+                  }}
                   onPress={() =>
                     onChange({
                       ...currentValue,
                       currency: option.value,
                     })
                   }>
-                  <AppText className={cn(isSelected && 'text-accent')} variant="bodyStrong">
+                  <AppText
+                    variant="bodyStrong"
+                    style={{ color: isSelected ? '#FF9A3E' : '#FFFFFF' }}>
                     {option.label}
                   </AppText>
                 </Pressable>
@@ -1261,6 +1758,24 @@ export function QuestionRenderer({
     case 'multi_select_chip':
       return (
         <MultiSelectChipQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'searchable_multi_select':
+      return (
+        <SearchableMultiSelectQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'searchable_single_select':
+      return (
+        <SearchableSingleSelectQuestion
           error={error}
           onChange={onChange}
           question={question}

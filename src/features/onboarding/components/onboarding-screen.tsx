@@ -409,6 +409,19 @@ export function OnboardingScreen() {
     currentStep.questions.length === 1 &&
     currentStep.questions[0].type === 'single_select_card' &&
     Boolean(currentStep.questions[0].meta?.auto_advance);
+  const shouldTopAlignContent = currentStep.questions.some((question) =>
+    [
+      'searchable_dropdown',
+      'searchable_multi_select',
+      'searchable_single_select',
+      'dropdown',
+      'grouped_list',
+      'multi_select_chip',
+      'multi_select_card',
+      'single_select_radio',
+      'currency_amount',
+    ].includes(question.type)
+  );
 
   return (
     <KeyboardAvoidingView
@@ -444,8 +457,9 @@ export function OnboardingScreen() {
               className="flex-1"
               contentContainerStyle={{
                 flexGrow: 1,
-                justifyContent: 'center',
+                justifyContent: shouldTopAlignContent ? 'flex-start' : 'center',
                 paddingHorizontal: 20,
+                paddingTop: shouldTopAlignContent ? 8 : 0,
                 paddingBottom: 96,
                 gap: 28,
               }}
