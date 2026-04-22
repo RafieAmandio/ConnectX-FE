@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -13,7 +13,6 @@ import {
   ListRenderItemInfo,
   Platform,
   Pressable,
-  ScrollView,
   TextInput,
   View,
 } from 'react-native';
@@ -129,6 +128,14 @@ function formatBytes(value: number | null | undefined) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatConversationCount(value: number) {
+  return `${value} ${value === 1 ? 'conversation' : 'conversations'}`;
+}
+
+function getConversationPreview(conversation: ChatRoom) {
+  return conversation.headline?.trim() || conversation.preview?.trim() || 'Tap to open the conversation.';
+}
+
 const MessageBody = React.memo(function MessageBody({
   isOutgoing,
   message,
@@ -204,22 +211,29 @@ const MessageBody = React.memo(function MessageBody({
   );
 });
 
-function ConversationSeparator() {
-  return <View className="ml-[76px] h-px bg-[#3A3938]" />;
-}
-
 function ChatExperimentNotice() {
   return (
     <View className="flex-1" style={{ backgroundColor: '#262626' }}>
       <AppTopBar />
-      <View className="flex-1 items-center justify-center gap-3 px-8">
-        <AppText className="text-white" variant="title">
-          Chat is unavailable
-        </AppText>
-        <AppText align="center" tone="muted">
-          Chat requires an active Supabase-backed session. Sign in again if needed, then seed a
-          shared room in Supabase to test realtime chat across two devices.
-        </AppText>
+      <View className="flex-1 items-center justify-center px-5">
+        <View
+          className="w-full max-w-[360px] rounded-[28px] border px-6 py-7"
+          style={{ backgroundColor: '#2C2C2C', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+          <View className="items-center gap-5">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#3A2B1D]">
+              <Ionicons color="#FFB35E" name="chatbubble-ellipses-outline" size={28} />
+            </View>
+            <View className="gap-2">
+              <AppText align="center" className="text-white" variant="title">
+                Messages are getting ready
+              </AppText>
+              <AppText align="center" className="text-[#B8B2AB]">
+                Your inbox will show up here as soon as conversations are available. Check back in a
+                little while.
+              </AppText>
+            </View>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -264,40 +278,119 @@ const ConversationCard = React.memo(function ConversationCard({
 }) {
   return (
     <Pressable
-      className="flex-row items-center gap-4 px-4 py-4 active:bg-[#312C28]"
+      className="active:opacity-90"
       onPress={onPress}>
-      <View className="relative">
-        <ChatAvatar conversation={conversation} size={56} />
-        {conversation.unreadCount > 0 ? (
-          <View className="absolute -right-1 -top-1 min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#242322] bg-[#F59E0B] px-1">
-            <AppText className="text-[11px] text-[#1E1B16]" variant="label">
-              {conversation.unreadCount}
-            </AppText>
+      <View
+        className="rounded-[26px] border px-4 py-4"
+        style={{ backgroundColor: '#2C2C2C', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+        <View className="flex-row items-center gap-4">
+          <View className="relative">
+            <ChatAvatar conversation={conversation} size={58} />
+            {conversation.unreadCount > 0 ? (
+              <View className="absolute -right-1 -top-1 min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#2C2C2C] bg-[#F59E0B] px-1">
+                <AppText className="text-[11px] text-[#1E1B16]" variant="label">
+                  {conversation.unreadCount}
+                </AppText>
+              </View>
+            ) : null}
           </View>
-        ) : null}
-      </View>
 
-      <View className="flex-1 justify-center gap-1">
-        <View className="flex-row items-center justify-between gap-3">
-          <AppText className="flex-1 text-white" numberOfLines={1} variant="title">
-            {conversation.title}
-          </AppText>
-          <AppText
-            className={conversation.unreadCount > 0 ? 'text-[#F59E0B]' : 'text-[#8E8B87]'}
-            variant="code">
-            {formatRelativeTime(conversation.lastMessageAt)}
-          </AppText>
+          <View className="flex-1 gap-3">
+            <View className="flex-row items-center justify-between gap-3">
+              <AppText className="flex-1 text-white" numberOfLines={1} variant="subtitle">
+                {conversation.title}
+              </AppText>
+              <AppText
+                className={conversation.unreadCount > 0 ? 'text-[#F59E0B]' : 'text-[#8E8B87]'}
+                variant="code">
+                {formatRelativeTime(conversation.lastMessageAt)}
+              </AppText>
+            </View>
+
+            <AppText
+              className={conversation.unreadCount > 0 ? 'text-[#F3EEE8]' : 'text-[#AAA39B]'}
+              numberOfLines={2}>
+              {getConversationPreview(conversation)}
+            </AppText>
+
+            <View className="flex-row items-center gap-2">
+              <View className="rounded-full bg-[#232323] px-3 py-1.5">
+                <AppText className="text-[#BDB7AF]" variant="code">
+                  {conversation.kind === 'group' ? 'Group chat' : 'Direct message'}
+                </AppText>
+              </View>
+              {conversation.unreadCount > 0 ? (
+                <View className="rounded-full bg-[#5B4225] px-3 py-1.5">
+                  <AppText className="text-[#FFB35E]" variant="code">
+                    {conversation.unreadCount} new
+                  </AppText>
+                </View>
+              ) : (
+                <View className="rounded-full bg-[#202124] px-3 py-1.5">
+                  <AppText className="text-[#8E8B87]" variant="code">
+                    Up to date
+                  </AppText>
+                </View>
+              )}
+            </View>
+          </View>
         </View>
-
-        <AppText
-          className={conversation.unreadCount > 0 ? 'font-semibold text-[#D5D1CB]' : 'text-[#A5A19B]'}
-          numberOfLines={2}>
-          {conversation.headline ?? conversation.preview}
-        </AppText>
       </View>
     </Pressable>
   );
 });
+
+function ChatListEmptyState({
+  isRefreshing,
+  isUnavailable = false,
+  onRefresh,
+}: {
+  isRefreshing: boolean;
+  isUnavailable?: boolean;
+  onRefresh: () => void;
+}) {
+  const title = isUnavailable ? 'Messages are taking a break' : 'No messages yet';
+  const description = isUnavailable
+    ? 'We could not load your conversations right now. Try again in a moment.'
+    : 'When someone reaches out, your conversations will show up here. For now, you are all caught up.';
+
+  return (
+    <View className="flex-1 justify-center px-1 py-10">
+      <View
+        className="rounded-[32px] border px-6 py-8"
+        style={{ backgroundColor: '#2C2C2C', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+        <View className="items-center gap-6">
+          <View className="relative items-center justify-center">
+            <View className="h-24 w-24 rounded-full bg-[#332519]" />
+            <View className="absolute h-16 w-16 items-center justify-center rounded-full bg-[#FF9A3E]">
+              <Ionicons color="#23160A" name="chatbubble-ellipses-outline" size={30} />
+            </View>
+            <View className="absolute -right-1 top-1 h-8 w-8 items-center justify-center rounded-full bg-[#232323]">
+              <Ionicons color="#FFD08A" name="sparkles-outline" size={16} />
+            </View>
+          </View>
+
+          <View className="gap-2">
+            <AppText align="center" className="text-white" variant="title">
+              {title}
+            </AppText>
+            <AppText align="center" className="text-[#B8B2AB]">
+              {description}
+            </AppText>
+          </View>
+
+          <AppButton
+            className="w-full rounded-[20px] bg-[#5B4225]"
+            disabled={isRefreshing}
+            label={isRefreshing ? 'Refreshing...' : 'Refresh inbox'}
+            onPress={onRefresh}
+            variant="ghost"
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function ConversationPanel({
   conversation,
@@ -661,11 +754,13 @@ function ConversationPanel({
 
 export function ChatListScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isChatEnabled } = useAuth();
   const conversationsQuery = useChatRooms(isChatEnabled);
   const conversations = React.useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
-
+  const hasConversations = conversations.length > 0;
   const unreadTotal = conversations.reduce((sum, room) => sum + room.unreadCount, 0);
+  const loadingInitialState = conversationsQuery.isLoading && !hasConversations;
 
   const renderConversation = React.useCallback(
     ({ item: conversation }: { item: ChatRoom }) => (
@@ -688,59 +783,169 @@ export function ChatListScreen() {
     );
   }
 
+  const listHeader = (
+    <View className="gap-4 pb-5 pt-3">
+      <View className="flex-row items-center justify-between gap-4">
+        <View className="flex-1 gap-1">
+          <AppText className="text-white" variant="display">
+            Chats
+          </AppText>
+          <AppText className="text-[#A7A199]">
+            Keep conversations moving without losing the thread.
+          </AppText>
+        </View>
+
+        <View className="items-end gap-2">
+          <View className="rounded-full bg-[#5B4225] px-4 py-2">
+            <AppText className="text-[#FFB35E]" variant="bodyStrong">
+              {unreadTotal > 0 ? `${unreadTotal} unread` : 'All caught up'}
+            </AppText>
+          </View>
+          <AppText className="text-[#7E7972]" variant="code">
+            {formatConversationCount(conversations.length)}
+          </AppText>
+        </View>
+      </View>
+
+      <View
+        className="overflow-hidden rounded-[30px] border px-5 py-5"
+        style={{ backgroundColor: '#2C2C2C', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+        <View
+          className="absolute right-[-28px] top-[-24px] h-28 w-28 rounded-full"
+          style={{ backgroundColor: 'rgba(255, 154, 62, 0.14)' }}
+        />
+        <View
+          className="absolute bottom-[-42px] left-[-18px] h-32 w-32 rounded-full"
+          style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)' }}
+        />
+
+        <View className="gap-5">
+          <View className="flex-row items-start justify-between gap-4">
+            <View className="flex-1 gap-2">
+              <View className="self-start rounded-full bg-[#3B2A1C] px-3 py-1.5">
+                <AppText className="text-[#FFB35E]" variant="label">
+                  Inbox
+                </AppText>
+              </View>
+              <AppText className="text-white" variant="hero">
+                {hasConversations ? 'Pick up where you left off.' : 'Your next conversation starts here.'}
+              </AppText>
+              <AppText className="text-[#C6BFB7]">
+                {hasConversations
+                  ? 'Recent chats, unread updates, and quick replies all stay in one place.'
+                  : 'As new people reach out, they will land here in a clean, easy-to-scan inbox.'}
+              </AppText>
+            </View>
+
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-[#3A2B1D]">
+              <Ionicons color="#FFB35E" name="paper-plane-outline" size={24} />
+            </View>
+          </View>
+
+          <View className="flex-row gap-3">
+            <View className="flex-1 rounded-[20px] bg-[#232323] px-4 py-4">
+              <AppText className="text-[#7E7972]" variant="label">
+                Active
+              </AppText>
+              <AppText className="mt-2 text-white" variant="title">
+                {conversations.length}
+              </AppText>
+              <AppText className="text-[#A7A199]">
+                {hasConversations ? 'conversations in your inbox' : 'waiting for first conversation'}
+              </AppText>
+            </View>
+
+            <View className="flex-1 rounded-[20px] bg-[#232323] px-4 py-4">
+              <AppText className="text-[#7E7972]" variant="label">
+                New
+              </AppText>
+              <AppText className="mt-2 text-white" variant="title">
+                {unreadTotal}
+              </AppText>
+              <AppText className="text-[#A7A199]">
+                {unreadTotal > 0 ? 'messages waiting for you' : 'nothing urgent right now'}
+              </AppText>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {conversationsQuery.error instanceof Error && hasConversations ? (
+        <View
+          className="rounded-[22px] border px-4 py-4"
+          style={{ backgroundColor: '#30251E', borderColor: 'rgba(255, 179, 94, 0.2)' }}>
+          <View className="flex-row items-center gap-3">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-[#4A3423]">
+              <Ionicons color="#FFB35E" name="refresh-outline" size={18} />
+            </View>
+            <View className="flex-1 gap-1">
+              <AppText className="text-[#FFE0BA]" variant="bodyStrong">
+                Some chats may be out of date
+              </AppText>
+              <AppText className="text-[#D9B98E]">
+                We hit a snag while refreshing your inbox. Pull to retry or tap below.
+              </AppText>
+            </View>
+          </View>
+          <Pressable
+            className="mt-4 self-start rounded-full bg-[#5B4225] px-4 py-2 active:opacity-80"
+            onPress={() => {
+              void conversationsQuery.refetch();
+            }}>
+            <AppText className="text-[#FFB35E]" variant="bodyStrong">
+              Refresh now
+            </AppText>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {hasConversations ? (
+        <View className="flex-row items-center justify-between px-1 pt-1">
+          <AppText className="text-white" variant="subtitle">
+            Recent conversations
+          </AppText>
+          <AppText className="text-[#7E7972]" variant="code">
+            Latest activity first
+          </AppText>
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1" style={{ backgroundColor: '#262626' }}>
         <AppTopBar />
-        <View className="px-4 pb-3 pt-4">
-          <View className="mb-2 flex-row items-center justify-between">
-            <AppText className="text-white" variant="display">
-              Chats
-            </AppText>
-            {unreadTotal > 0 ? (
-              <View className="rounded-full bg-[#5B4225] px-4 py-2">
-                <AppText className="text-[#FFB35E]" variant="bodyStrong">
-                  {unreadTotal} unread
-                </AppText>
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        {conversationsQuery.isLoading && conversations.length === 0 ? (
+        {loadingInitialState ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color="#F59E0B" />
           </View>
-        ) : null}
-
-        {conversationsQuery.error instanceof Error ? (
-          <View className="px-4 py-6">
-            <AppText tone="danger">{conversationsQuery.error.message}</AppText>
-          </View>
-        ) : null}
-
-        {!conversationsQuery.isLoading && conversations.length === 0 ? (
-          <View className="flex-1 items-center justify-center gap-2 px-5">
-            <AppText className="text-[#555A67]" variant="display">
-              Chat
-            </AppText>
-            <AppText align="center" tone="muted">
-              No Supabase rooms are available for this user yet. Seed a test room and add both
-              participants to `chat_room_members`.
-            </AppText>
-          </View>
-        ) : null}
-
-        {conversations.length > 0 ? (
+        ) : (
           <FlatList
+            contentContainerStyle={{
+              flexGrow: hasConversations ? undefined : 1,
+              paddingBottom: Math.max(insets.bottom + 32, 32),
+              paddingHorizontal: 16,
+            }}
+            contentInsetAdjustmentBehavior="automatic"
             data={conversations}
+            ItemSeparatorComponent={() => <View className="h-3" />}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 32 }}
-            ItemSeparatorComponent={ConversationSeparator}
+            ListEmptyComponent={
+              <ChatListEmptyState
+                isRefreshing={conversationsQuery.isRefetching}
+                isUnavailable={conversationsQuery.error instanceof Error}
+                onRefresh={() => {
+                  void conversationsQuery.refetch();
+                }}
+              />
+            }
+            ListHeaderComponent={listHeader}
             renderItem={renderConversation}
+            showsVerticalScrollIndicator={false}
           />
-        ) : null}
+        )}
       </View>
     </>
   );
