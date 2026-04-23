@@ -22,6 +22,7 @@ export function AppInput({
   placeholderTextColor = '#667085',
   shellClassName,
   shellProps,
+  style,
   ...props
 }: AppInputProps) {
   const [isFocused, setIsFocused] = React.useState(false);
@@ -52,6 +53,7 @@ export function AppInput({
           props.onFocus?.(event);
         }}
         placeholderTextColor={placeholderTextColor}
+        style={[{ letterSpacing: 0 }, style]}
         {...props}
       />
       {error ? (

@@ -84,7 +84,7 @@ function DarkField({
           secureTextEntry={secureTextEntry}
           value={value}
           className="flex-1 font-body text-[15px] text-white"
-          style={{ paddingVertical: 0 }}
+          style={{ letterSpacing: 0, paddingVertical: 0 }}
         />
         {trailing}
       </View>
