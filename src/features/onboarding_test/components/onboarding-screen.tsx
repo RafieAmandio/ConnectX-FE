@@ -19,8 +19,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const CONNECTX_LOGO = require('../../../../assets/images/connectx-logo.png');
-
 import { useAuth, getRouteForAuthPhase } from '@features/auth';
 import { AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
@@ -39,6 +37,8 @@ import type {
   OnboardingValidationErrorResponse,
 } from '../types/onboarding.types';
 import { QuestionRenderer } from './question-renderer';
+
+const CONNECTX_LOGO = require('../../../../assets/images/connectx-logo.png');
 
 const ACCENT = '#FF9A3E';
 const ACCENT_SOFT = '#2A2117';
@@ -533,4 +533,3 @@ export function OnboardingScreen() {
     </KeyboardAvoidingView>
   );
 }
-

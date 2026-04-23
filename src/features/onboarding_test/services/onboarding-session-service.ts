@@ -1,49 +1,33 @@
-import * as SecureStore from 'expo-secure-store';
+import { apiFetch } from '@shared/services/api';
 
-import {
-  getNextStepId,
-  getVisibleQuestions,
-  materializeStep,
-  resolveFlowKey,
-} from '../mock/registry';
+import { getVisibleQuestions } from '../mock/registry';
 import type {
   CurrencyAmountValue,
   OnboardingAnswerPayload,
   OnboardingAnswerValue,
   OnboardingAnswers,
+  OnboardingBackResponse,
   OnboardingLocale,
-  OnboardingMode,
   OnboardingNextStepResponse,
   OnboardingQuestion,
   OnboardingSessionResponse,
-  OnboardingSessionState,
   OnboardingStartParams,
   OnboardingStartResponse,
   OnboardingStep,
-  OnboardingStepId,
-  OnboardingValidationErrorResponse,
 } from '../types/onboarding.types';
 
-const SESSION_KEY_PREFIX = 'connectx.onboarding.session.v15.';
-const ACTIVE_SESSION_KEY_PREFIX = 'connectx.onboarding.active.v15.';
-const FIRST_STEP_ID: OnboardingStepId = 'step_welcome';
+const ONBOARDING_API = {
+  BACK: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/back`,
+  CURRENT: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/current`,
+  SESSION: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}`,
+  SESSIONS: '/api/v1/onboarding/sessions',
+  SUBMIT_ANSWER: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/answer`,
+} as const;
 
-function getSessionStorageKey(sessionId: string) {
-  return `${SESSION_KEY_PREFIX}${sessionId}`;
-}
-
-function getActiveSessionStorageKey(mode: OnboardingMode) {
-  return `${ACTIVE_SESSION_KEY_PREFIX}${mode}`;
-}
-
-function generateSessionId() {
-  const randomPart = Math.random().toString(36).slice(2, 8);
-
-  return `onb_${Date.now().toString(36)}_${randomPart}`;
-}
-
-function generateProfileId(sessionId: string) {
-  return `prof_${sessionId.replace(/^onb_/, '')}`;
+function localeHeaders(locale: OnboardingLocale) {
+  return {
+    'Accept-Language': locale,
+  };
 }
 
 function isCurrencyAmountValue(value: OnboardingAnswerValue | undefined): value is CurrencyAmountValue {
@@ -54,71 +38,6 @@ function isCurrencyAmountValue(value: OnboardingAnswerValue | undefined): value 
   const candidate = value as Partial<CurrencyAmountValue>;
 
   return typeof candidate.amount === 'string' && typeof candidate.currency === 'string';
-}
-
-function isOnboardingSessionState(value: unknown): value is OnboardingSessionState {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const candidate = value as Partial<OnboardingSessionState>;
-
-  return (
-    typeof candidate.actorKey === 'string' &&
-    typeof candidate.id === 'string' &&
-    typeof candidate.locale === 'string' &&
-    typeof candidate.mode === 'string' &&
-    typeof candidate.startedAt === 'string' &&
-    typeof candidate.status === 'string' &&
-    Array.isArray(candidate.stepHistory)
-  );
-}
-
-async function readSession(sessionId: string) {
-  const rawValue = await SecureStore.getItemAsync(getSessionStorageKey(sessionId));
-
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    const parsedValue = JSON.parse(rawValue) as unknown;
-
-    if (!isOnboardingSessionState(parsedValue)) {
-      await SecureStore.deleteItemAsync(getSessionStorageKey(sessionId));
-      return null;
-    }
-
-    return parsedValue;
-  } catch {
-    await SecureStore.deleteItemAsync(getSessionStorageKey(sessionId));
-    return null;
-  }
-}
-
-async function persistSession(session: OnboardingSessionState) {
-  await SecureStore.setItemAsync(
-    getSessionStorageKey(session.id),
-    JSON.stringify(session)
-  );
-}
-
-async function setActiveSessionId(mode: OnboardingMode, sessionId: string) {
-  await SecureStore.setItemAsync(getActiveSessionStorageKey(mode), sessionId);
-}
-
-async function clearActiveSessionId(mode: OnboardingMode) {
-  await SecureStore.deleteItemAsync(getActiveSessionStorageKey(mode));
-}
-
-async function getActiveSession(mode: OnboardingMode) {
-  const sessionId = await SecureStore.getItemAsync(getActiveSessionStorageKey(mode));
-
-  if (!sessionId) {
-    return null;
-  }
-
-  return readSession(sessionId);
 }
 
 function normalizeStringValue(value: OnboardingAnswerValue | undefined) {
@@ -398,62 +317,6 @@ export function validateStepAnswers(
   return errors;
 }
 
-function buildValidationError(errors: Record<string, string>): OnboardingValidationErrorResponse {
-  return {
-    error: 'validation_failed',
-    errors,
-  };
-}
-
-function mergeAnswers(step: OnboardingStep, existingAnswers: OnboardingAnswers, incomingAnswers: OnboardingAnswers) {
-  const nextAnswers = { ...existingAnswers };
-
-  for (const question of step.questions) {
-    if (!(question.id in incomingAnswers)) {
-      continue;
-    }
-
-    nextAnswers[question.id] = normalizeAnswerValue(question, incomingAnswers[question.id]);
-  }
-
-  return nextAnswers;
-}
-
-function createInitialSession(params: OnboardingStartParams): OnboardingSessionState {
-  const now = new Date().toISOString();
-
-  return {
-    actorKey: params.actorKey,
-    answers: {},
-    completedAt: null,
-    currentStepId: FIRST_STEP_ID,
-    flowKey: null,
-    id: generateSessionId(),
-    locale: params.locale,
-    mode: params.mode,
-    profileId: null,
-    redirectTo: null,
-    startedAt: now,
-    status: 'in_progress',
-    stepHistory: [FIRST_STEP_ID],
-    updatedAt: now,
-  };
-}
-
-async function requireSession(sessionId: string) {
-  const session = await readSession(sessionId);
-
-  if (!session) {
-    throw new Error(`Onboarding session ${sessionId} was not found.`);
-  }
-
-  return session;
-}
-
-function getCompletionRedirect(mode: OnboardingMode) {
-  return mode === 'preview' ? '/login' : '/(tabs)';
-}
-
 export function resolveDeviceOnboardingLocale(localeCandidate?: string | null): OnboardingLocale {
   if (!localeCandidate) {
     return 'en';
@@ -462,167 +325,54 @@ export function resolveDeviceOnboardingLocale(localeCandidate?: string | null): 
   return localeCandidate.toLowerCase().startsWith('id') ? 'id' : 'en';
 }
 
-export async function startMockOnboardingSession(
+export async function startOnboardingSession(
   params: OnboardingStartParams
 ): Promise<OnboardingStartResponse> {
-  const activeSession = await getActiveSession(params.mode);
-
-  if (
-    activeSession &&
-    activeSession.status === 'in_progress' &&
-    activeSession.actorKey === params.actorKey &&
-    activeSession.currentStepId
-  ) {
-    return {
-      current_step: materializeStep(
-        activeSession.currentStepId,
-        activeSession.answers,
-        activeSession.locale
-      ),
-      session_id: activeSession.id,
-      status: 'in_progress',
-    };
-  }
-
-  const session = createInitialSession(params);
-
-  await Promise.all([persistSession(session), setActiveSessionId(session.mode, session.id)]);
-
-  return {
-    current_step: materializeStep(session.currentStepId as OnboardingStepId, session.answers, session.locale),
-    session_id: session.id,
-    status: 'in_progress',
-  };
+  return apiFetch<OnboardingStartResponse>(ONBOARDING_API.SESSIONS, {
+    body: {
+      actor_key: params.actorKey,
+      locale: params.locale,
+      mode: params.mode,
+    } as unknown as BodyInit,
+    headers: localeHeaders(params.locale),
+    method: 'POST',
+  });
 }
 
-export async function getMockCurrentStep(sessionId: string) {
-  const session = await requireSession(sessionId);
-
-  if (!session.currentStepId) {
-    throw new Error('This onboarding session has no current step.');
-  }
-
-  return materializeStep(session.currentStepId, session.answers, session.locale);
+export async function getCurrentOnboardingStep(sessionId: string, locale: OnboardingLocale) {
+  return apiFetch<OnboardingStep>(ONBOARDING_API.CURRENT(sessionId), {
+    headers: localeHeaders(locale),
+  });
 }
 
-export async function getMockOnboardingSession(
-  sessionId: string
-): Promise<OnboardingSessionResponse> {
-  const session = await requireSession(sessionId);
-
-  return {
-    current_step: session.currentStepId
-      ? materializeStep(session.currentStepId, session.answers, session.locale)
-      : null,
-    session,
-  };
-}
-
-export async function submitMockOnboardingAnswers(
+export async function getOnboardingSession(
   sessionId: string,
-  payload: OnboardingAnswerPayload
-): Promise<OnboardingNextStepResponse | OnboardingValidationErrorResponse> {
-  const session = await requireSession(sessionId);
-
-  if (!session.currentStepId) {
-    return {
-      can_go_back: false,
-      completed: true,
-      next_step: null,
-      profile_id: session.profileId ?? undefined,
-      redirect_to: session.redirectTo ?? undefined,
-    };
-  }
-
-  if (payload.step_id !== session.currentStepId) {
-    throw new Error('Attempted to submit answers for a non-current onboarding step.');
-  }
-
-  const currentStep = materializeStep(session.currentStepId, session.answers, session.locale);
-  const nextAnswers = mergeAnswers(currentStep, session.answers, payload.answers);
-  const nextStepSnapshot = materializeStep(session.currentStepId, nextAnswers, session.locale);
-  const validationErrors = validateStepAnswers(nextStepSnapshot, nextAnswers, session.locale);
-
-  if (Object.keys(validationErrors).length > 0) {
-    return buildValidationError(validationErrors);
-  }
-
-  const nextStepId = getNextStepId(session.currentStepId, nextAnswers);
-  const updatedAt = new Date().toISOString();
-  const updatedSession: OnboardingSessionState = {
-    ...session,
-    answers: nextAnswers,
-    flowKey: resolveFlowKey(nextAnswers),
-    updatedAt,
-  };
-
-  if (!nextStepId) {
-    const completedSession: OnboardingSessionState = {
-      ...updatedSession,
-      completedAt: updatedAt,
-      currentStepId: null,
-      profileId: generateProfileId(session.id),
-      redirectTo: getCompletionRedirect(session.mode),
-      status: 'completed',
-    };
-
-    await Promise.all([
-      persistSession(completedSession),
-      clearActiveSessionId(completedSession.mode),
-    ]);
-
-    return {
-      can_go_back: true,
-      completed: true,
-      next_step: null,
-      profile_id: completedSession.profileId ?? undefined,
-      redirect_to: completedSession.redirectTo ?? undefined,
-    };
-  }
-
-  const stepHistory = [...updatedSession.stepHistory];
-
-  if (stepHistory[stepHistory.length - 1] !== nextStepId) {
-    stepHistory.push(nextStepId);
-  }
-
-  const inProgressSession: OnboardingSessionState = {
-    ...updatedSession,
-    currentStepId: nextStepId,
-    stepHistory,
-  };
-
-  await Promise.all([
-    persistSession(inProgressSession),
-    setActiveSessionId(inProgressSession.mode, inProgressSession.id),
-  ]);
-
-  const nextStep = materializeStep(nextStepId, inProgressSession.answers, inProgressSession.locale);
-
-  return {
-    can_go_back: nextStep.can_go_back,
-    next_step: nextStep,
-    progress: nextStep.overall_progress,
-  };
+  locale: OnboardingLocale
+): Promise<OnboardingSessionResponse> {
+  return apiFetch<OnboardingSessionResponse>(ONBOARDING_API.SESSION(sessionId), {
+    headers: localeHeaders(locale),
+  });
 }
 
-export async function goBackMockOnboardingSession(sessionId: string) {
-  const session = await requireSession(sessionId);
+export async function submitOnboardingAnswers(
+  sessionId: string,
+  payload: OnboardingAnswerPayload,
+  locale: OnboardingLocale
+): Promise<OnboardingNextStepResponse> {
+  return apiFetch<OnboardingNextStepResponse>(ONBOARDING_API.SUBMIT_ANSWER(sessionId), {
+    body: payload as unknown as BodyInit,
+    headers: localeHeaders(locale),
+    method: 'POST',
+  });
+}
 
-  if (!session.currentStepId || session.stepHistory.length <= 1) {
-    return materializeStep(FIRST_STEP_ID, session.answers, session.locale);
-  }
-
-  const nextHistory = session.stepHistory.slice(0, -1);
-  const previousStepId = nextHistory[nextHistory.length - 1] ?? FIRST_STEP_ID;
-  const updatedSession: OnboardingSessionState = {
-    ...session,
-    currentStepId: previousStepId,
-    stepHistory: nextHistory,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await persistSession(updatedSession);
-
-  return materializeStep(previousStepId, updatedSession.answers, updatedSession.locale);
+export async function goBackOnboardingSession(
+  sessionId: string,
+  locale: OnboardingLocale
+): Promise<OnboardingBackResponse> {
+  return apiFetch<OnboardingBackResponse>(ONBOARDING_API.BACK(sessionId), {
+    body: {} as unknown as BodyInit,
+    headers: localeHeaders(locale),
+    method: 'POST',
+  });
 }

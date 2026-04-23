@@ -2,18 +2,55 @@
   "_endpoint": "POST /api/v1/onboarding/sessions",
   "_status": 201,
   "_description": "Creates (or resumes) an onboarding session for the authenticated user and returns the first step the FE should render.",
-  "session_id": "ses_01HSXYZABC123",
+  "session_id": "ses_Q2QwI9c0Lk",
   "status": "in_progress",
   "current_step": {
-    "id": "step_welcome",
-    "flow_key": "common_data_diri",
-    "section": "Let's get started",
-    "section_progress": "1/1",
-    "overall_progress": { "current": 1, "total": 9 },
-    "title": "Find the right people to build with",
-    "subtitle": "ConnectX matches you with co-founders, teammates, and startups based on skills, goals, and compatibility.",
-    "questions": [],
-    "cta": { "label": "Get Started", "enabled_when": "always" },
-    "can_go_back": false
+    "id": "step_personal_name",
+    "flow_key": "flow_common",
+    "section": "Data Diri",
+    "section_progress": "1/4",
+    "overall_progress": {
+      "current": 1,
+      "total": 12
+    },
+    "title": "Siapa nama Anda?",
+    "subtitle": null,
+    "questions": [
+      {
+        "id": "q_first_name",
+        "type": "text",
+        "label": "Nama Depan",
+        "sub_label": null,
+        "helper_text": null,
+        "placeholder": null,
+        "required": true,
+        "validation": {
+          "max_length": 50,
+          "min_length": 1
+        },
+        "depends_on": null,
+        "meta": null,
+        "options": []
+      },
+      {
+        "id": "q_last_name",
+        "type": "text",
+        "label": "Nama Belakang",
+        "sub_label": null,
+        "helper_text": null,
+        "placeholder": null,
+        "required": false,
+        "validation": null,
+        "depends_on": null,
+        "meta": null,
+        "options": []
+      }
+    ],
+    "cta": {
+      "label": "Continue",
+      "enabled_when": "valid"
+    },
+    "can_go_back": true,
+    "auto_advance": false
   }
 }

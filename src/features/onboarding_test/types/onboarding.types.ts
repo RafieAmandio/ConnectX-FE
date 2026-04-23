@@ -5,6 +5,7 @@ export type OnboardingMode = 'preview' | 'post_auth';
 export type OnboardingStatus = 'in_progress' | 'completed';
 
 export type OnboardingFlowKey =
+  | string
   | 'common_data_diri'
   | 'builder_founder_cofounder'
   | 'builder_founder_team_members'
@@ -14,6 +15,7 @@ export type OnboardingFlowKey =
   | 'startup_representative';
 
 export type OnboardingStepId =
+  | string
   | 'step_welcome'
   | 'step_data_diri'
   | 'step_use_connectx'
@@ -117,20 +119,21 @@ export type OnboardingOption = {
 };
 
 export type OnboardingQuestion = {
-  depends_on?: OnboardingDependsOn;
+  depends_on?: OnboardingDependsOn | null;
   helper_text?: string | null;
   id: string;
   label: string;
-  meta?: OnboardingQuestionMeta;
+  meta?: OnboardingQuestionMeta | null;
   options?: OnboardingOption[];
   placeholder?: string | null;
   required: boolean;
   sub_label?: string | null;
   type: OnboardingQuestionType;
-  validation?: OnboardingValidation;
+  validation?: OnboardingValidation | null;
 };
 
 export type OnboardingStep = {
+  auto_advance?: boolean;
   can_go_back: boolean;
   cta: {
     enabled_when: 'always' | 'valid';
@@ -184,25 +187,33 @@ export type OnboardingValidationErrorResponse = {
 };
 
 export type OnboardingSessionState = {
-  actorKey: string;
   answers: OnboardingAnswers;
-  completedAt: string | null;
-  currentStepId: OnboardingStepId | null;
-  flowKey: OnboardingFlowKey | null;
+  completed_at: string | null;
+  current_step_id: OnboardingStepId | null;
+  flow_key: OnboardingFlowKey | null;
   id: string;
   locale: OnboardingLocale;
-  mode: OnboardingMode;
-  profileId: string | null;
-  redirectTo: string | null;
-  startedAt: string;
+  mode?: OnboardingMode;
+  profile_id: string | null;
+  redirect_to?: string | null;
+  started_at: string;
   status: OnboardingStatus;
-  stepHistory: OnboardingStepId[];
-  updatedAt: string;
+  step_history: OnboardingStepId[];
+  updated_at: string;
+  user_id?: string;
 };
 
 export type OnboardingSessionResponse = {
   current_step: OnboardingStep | null;
   session: OnboardingSessionState;
+};
+
+export type OnboardingBackResponse = {
+  previous_step: OnboardingStep;
+  progress?: {
+    current: number;
+    total: number;
+  };
 };
 
 export type LocalizedOnboardingOption = Omit<OnboardingOption, 'group' | 'label' | 'sub_label'> & {
@@ -235,4 +246,3 @@ export type LocalizedOnboardingStepTemplate = Omit<
   subtitle?: LocalizedText | null;
   title: LocalizedText;
 };
-

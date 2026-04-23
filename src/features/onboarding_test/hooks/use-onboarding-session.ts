@@ -1,11 +1,12 @@
 import React from 'react';
 
+import { ApiError } from '@shared/services/api';
+
 import { getVisibleQuestions } from '../mock/registry';
 import {
-  getMockOnboardingSession,
-  goBackMockOnboardingSession,
-  startMockOnboardingSession,
-  submitMockOnboardingAnswers,
+  goBackOnboardingSession,
+  startOnboardingSession,
+  submitOnboardingAnswers,
   validateStepAnswers,
 } from '../services/onboarding-session-service';
 import type {
@@ -13,10 +14,8 @@ import type {
   OnboardingAnswers,
   OnboardingLocale,
   OnboardingMode,
-  OnboardingNextStepResponse,
   OnboardingQuestion,
   OnboardingSessionState,
-  OnboardingStartResponse,
   OnboardingStep,
   OnboardingValidationErrorResponse,
 } from '../types/onboarding.types';
@@ -29,9 +28,26 @@ type UseOnboardingSessionParams = {
 };
 
 function isValidationErrorResponse(
-  value: OnboardingNextStepResponse | OnboardingValidationErrorResponse
+  value: unknown
 ): value is OnboardingValidationErrorResponse {
-  return 'error' in value;
+  const errors = (value as Partial<OnboardingValidationErrorResponse> | null)?.errors;
+
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    (value as Partial<OnboardingValidationErrorResponse>).error === 'validation_failed' &&
+    Boolean(errors) &&
+    typeof errors === 'object' &&
+    !Array.isArray(errors)
+  );
+}
+
+function isStepMismatchResponse(value: unknown) {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    (value as { error?: unknown }).error === 'step_mismatch'
+  );
 }
 
 function pickStepAnswers(step: OnboardingStep | null, answers: OnboardingAnswers) {
@@ -65,12 +81,12 @@ export function useOnboardingSession({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isGoingBack, setIsGoingBack] = React.useState(false);
 
-  const hydrateFromSession = React.useCallback(
-    (nextSession: OnboardingSessionState, nextStep: OnboardingStep | null) => {
-      setSessionState(nextSession);
+  const hydrateFromStep = React.useCallback(
+    (nextStep: OnboardingStep | null, nextAnswers: OnboardingAnswers = {}) => {
+      setSessionState(null);
       setCurrentStep(nextStep);
-      setAllAnswers(nextSession.answers);
-      setDraftAnswers(pickStepAnswers(nextStep, nextSession.answers));
+      setAllAnswers(nextAnswers);
+      setDraftAnswers(pickStepAnswers(nextStep, nextAnswers));
       setFieldErrors({});
     },
     []
@@ -86,15 +102,17 @@ export function useOnboardingSession({
     setStatusMessage(null);
 
     try {
-      const startResponse: OnboardingStartResponse = await startMockOnboardingSession({
+      const startResponse = await startOnboardingSession({
         actorKey,
         locale,
         mode,
       });
-      const sessionResponse = await getMockOnboardingSession(startResponse.session_id);
 
       setSessionId(startResponse.session_id);
-      hydrateFromSession(sessionResponse.session, sessionResponse.current_step);
+      // GET /api/v1/onboarding/sessions/:session_id does not exist yet.
+      // Use the current_step returned by POST /sessions to render the first screen.
+      // const sessionResponse = await getOnboardingSession(startResponse.session_id, locale);
+      hydrateFromStep(startResponse.current_step);
     } catch (error) {
       setStatusMessage(
         error instanceof Error
@@ -104,7 +122,7 @@ export function useOnboardingSession({
     } finally {
       setIsLoading(false);
     }
-  }, [actorKey, enabled, hydrateFromSession, locale, mode]);
+  }, [actorKey, enabled, hydrateFromStep, locale, mode]);
 
   React.useEffect(() => {
     void bootstrap();
@@ -171,21 +189,30 @@ export function useOnboardingSession({
       setStatusMessage(null);
 
       try {
-        const response = await submitMockOnboardingAnswers(sessionId, {
-          answers: answersOverride ?? draftAnswers,
+        const submittedAnswers = answersOverride ?? draftAnswers;
+        const response = await submitOnboardingAnswers(sessionId, {
+          answers: submittedAnswers,
           step_id: currentStep.id,
-        });
+        }, locale);
+        const nextAnswers = {
+          ...allAnswers,
+          ...submittedAnswers,
+        };
 
-        if (isValidationErrorResponse(response)) {
-          setFieldErrors(response.errors);
-          return response;
-        }
-
-        const sessionResponse = await getMockOnboardingSession(sessionId);
-        hydrateFromSession(sessionResponse.session, sessionResponse.current_step);
+        hydrateFromStep(response.completed ? null : response.next_step, nextAnswers);
 
         return response;
       } catch (error) {
+        if (error instanceof ApiError && error.status === 422 && isValidationErrorResponse(error.payload)) {
+          setFieldErrors(error.payload.errors);
+          return error.payload;
+        }
+
+        if (error instanceof ApiError && error.status === 409 && isStepMismatchResponse(error.payload)) {
+          setStatusMessage('This step changed. Please restart onboarding and try again.');
+          return null;
+        }
+
         setStatusMessage(
           error instanceof Error
             ? error.message
@@ -197,7 +224,7 @@ export function useOnboardingSession({
         setIsSubmitting(false);
       }
     },
-    [currentStep, draftAnswers, hydrateFromSession, isSubmitting, sessionId]
+    [allAnswers, currentStep, draftAnswers, hydrateFromStep, isSubmitting, locale, sessionId]
   );
 
   const goBack = React.useCallback(async () => {
@@ -209,10 +236,10 @@ export function useOnboardingSession({
     setStatusMessage(null);
 
     try {
-      const previousStep = await goBackMockOnboardingSession(sessionId);
+      const backResponse = await goBackOnboardingSession(sessionId, locale);
 
-      setCurrentStep(previousStep);
-      setDraftAnswers(pickStepAnswers(previousStep, allAnswers));
+      setCurrentStep(backResponse.previous_step);
+      setDraftAnswers(pickStepAnswers(backResponse.previous_step, allAnswers));
       setFieldErrors({});
     } catch (error) {
       setStatusMessage(
@@ -223,7 +250,7 @@ export function useOnboardingSession({
     } finally {
       setIsGoingBack(false);
     }
-  }, [allAnswers, currentStep, isGoingBack, sessionId]);
+  }, [allAnswers, currentStep, isGoingBack, locale, sessionId]);
 
   return {
     allAnswers,

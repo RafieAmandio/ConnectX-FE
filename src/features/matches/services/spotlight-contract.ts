@@ -2,6 +2,10 @@ import { ApiError } from '@shared/services/api';
 
 import type { SpotlightActivationDeniedResponse } from '../types/matches.types';
 
+type SpotlightActivationApiError = ApiError & {
+  payload: SpotlightActivationDeniedResponse;
+};
+
 export function isSpotlightActivationDeniedResponse(
   payload: unknown
 ): payload is SpotlightActivationDeniedResponse {
@@ -21,7 +25,9 @@ export function isSpotlightActivationDeniedResponse(
   );
 }
 
-export function isSpotlightRequiresCreditError(error: unknown): error is ApiError {
+export function isSpotlightRequiresCreditError(
+  error: unknown
+): error is SpotlightActivationApiError {
   if (!(error instanceof ApiError) || error.status !== 409 || !isSpotlightActivationDeniedResponse(error.payload)) {
     return false;
   }
@@ -29,7 +35,9 @@ export function isSpotlightRequiresCreditError(error: unknown): error is ApiErro
   return error.payload.error.code === 'DISCOVERY_SPOTLIGHT_REQUIRES_CREDIT';
 }
 
-export function isSpotlightAlreadyActiveError(error: unknown): error is ApiError {
+export function isSpotlightAlreadyActiveError(
+  error: unknown
+): error is SpotlightActivationApiError {
   if (!(error instanceof ApiError) || error.status !== 409 || !isSpotlightActivationDeniedResponse(error.payload)) {
     return false;
   }

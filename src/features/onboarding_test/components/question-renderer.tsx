@@ -1077,7 +1077,7 @@ function SearchableMultiSelectQuestion({
           {filteredOptions.length === 0 ? (
             <View className="px-4 py-6">
               <AppText tone="muted" align="center">
-                No industries match "{query}"
+                {`No industries match "${query}"`}
               </AppText>
             </View>
           ) : null}
@@ -1189,7 +1189,7 @@ function SearchableSingleSelectQuestion({
           {filteredOptions.length === 0 ? (
             <View className="px-4 py-6">
               <AppText tone="muted" align="center">
-                No results for "{query}"
+                {`No results for "${query}"`}
               </AppText>
             </View>
           ) : null}
