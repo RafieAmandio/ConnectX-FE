@@ -1,0 +1,10 @@
+{
+  "_endpoint": "POST /api/v1/onboarding/sessions/:session_id/answer",
+  "_status": 200,
+  "_description": "Final step accepted: BE has built the user profile and tells FE where to navigate next.",
+  "next_step": null,
+  "completed": true,
+  "profile_id": "prof_01HSXYZABC123",
+  "redirect_to": "/(tabs)",
+  "can_go_back": false
+}

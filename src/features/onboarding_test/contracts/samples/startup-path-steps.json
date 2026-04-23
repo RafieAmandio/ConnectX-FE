@@ -1,0 +1,433 @@
+{
+  "_description": "All step templates used by the startup path (q_use_connectx === 'startup'). Gating rules are in BACKEND_CONTRACT.md §5.3. Big catalogs (industries, business_model, skills) are referenced by _options_source — BE substitutes the full array from catalogs/*.json.",
+  "steps": [
+    {
+      "id": "step_identity_details",
+      "_variant": "startup",
+      "flow_key": "startup_representative",
+      "section": "Startup basics",
+      "section_progress": "1/1",
+      "overall_progress": { "current": 4, "total": 13 },
+      "title": "Tell us about your startup",
+      "subtitle": "Give us a quick introduction to your company.",
+      "questions": [
+        {
+          "id": "q_startup_name",
+          "type": "text",
+          "label": "What's your startup called?",
+          "placeholder": "Startup name",
+          "required": true,
+          "validation": { "min_length": 2, "max_length": 80 }
+        },
+        {
+          "id": "q_startup_tagline",
+          "type": "text",
+          "label": "Tagline",
+          "placeholder": "e.g. The fastest way to find co-founders",
+          "required": true,
+          "validation": { "min_length": 2, "max_length": 120 }
+        },
+        {
+          "id": "q_startup_stage",
+          "type": "single_select_chip",
+          "label": "Stage",
+          "required": true,
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_stage_idea", "value": "idea", "label": "Idea", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_stage_mvp", "value": "mvp", "label": "MVP", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_stage_live", "value": "live", "label": "Live", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_stage_scale", "value": "scale", "label": "Scale (Seed / Series A)", "sub_label": null, "icon": null, "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_problem_solution",
+      "flow_key": "startup_representative",
+      "section": "Your vision",
+      "section_progress": "1/1",
+      "overall_progress": { "current": 5, "total": 13 },
+      "title": "What are you building?",
+      "subtitle": "Help us understand the problem and solution.",
+      "questions": [
+        {
+          "id": "q_problem",
+          "type": "textarea",
+          "label": "Problem you're solving",
+          "placeholder": "Who hurts, and why?",
+          "required": true,
+          "validation": { "min_length": 2, "max_length": 400 }
+        },
+        {
+          "id": "q_solution",
+          "type": "textarea",
+          "label": "Your solution",
+          "placeholder": "How does your product solve it?",
+          "required": true,
+          "validation": { "min_length": 2, "max_length": 400 }
+        },
+        {
+          "id": "q_target_users",
+          "type": "textarea",
+          "label": "Target users",
+          "placeholder": "Describe the people you are building for",
+          "required": true,
+          "validation": { "min_length": 2, "max_length": 300 }
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_startup_industries",
+      "flow_key": "startup_representative",
+      "section": "Your industry",
+      "section_progress": "1/2",
+      "overall_progress": { "current": 6, "total": 13 },
+      "title": "Which industries are you in?",
+      "subtitle": "Pick up to 5 industries that describe your startup.",
+      "questions": [
+        {
+          "id": "q_industries_interest",
+          "type": "searchable_multi_select",
+          "label": "",
+          "placeholder": "Search industries",
+          "required": true,
+          "meta": { "searchable": true },
+          "validation": { "min_selections": 1, "max_selections": 5 },
+          "_options_source": "catalogs/industry-options.json",
+          "options": []
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_business_model",
+      "flow_key": "startup_representative",
+      "section": "Business model",
+      "section_progress": "2/2",
+      "overall_progress": { "current": 7, "total": 13 },
+      "title": "What's your business model?",
+      "subtitle": "Pick the model that best describes how you make money.",
+      "questions": [
+        {
+          "id": "q_business_model",
+          "type": "searchable_single_select",
+          "label": "",
+          "placeholder": "Search a business model",
+          "required": true,
+          "meta": { "searchable": true },
+          "validation": { "min_length": 1 },
+          "_options_source": "catalogs/business-model-options.json",
+          "options": []
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_traction",
+      "_dynamic": "Questions are filtered by q_startup_stage via depends_on. BE returns ALL questions; FE/BE hide based on current stage answer.",
+      "flow_key": "startup_representative",
+      "section": "Traction & milestones",
+      "section_progress": "1/1",
+      "overall_progress": { "current": 8, "total": 13 },
+      "title": "Your traction so far",
+      "subtitle": "Share where you stand today.",
+      "questions": [
+        {
+          "id": "q_has_prototype",
+          "type": "single_select_chip",
+          "label": "Do you have a prototype?",
+          "required": true,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "idea" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_yes", "value": "yes", "label": "Yes", "icon": "yes", "sub_label": null, "group": null },
+            { "id": "opt_no", "value": "no", "label": "No", "icon": "no", "sub_label": null, "group": null }
+          ]
+        },
+        {
+          "id": "q_prototype_link",
+          "type": "url",
+          "label": "Prototype link",
+          "placeholder": "https://figma.com/...",
+          "required": true,
+          "depends_on": { "question_id": "q_has_prototype", "operator": "equals", "value": "yes" },
+          "validation": { "min_length": 8, "max_length": 200 }
+        },
+        {
+          "id": "q_waitlist_size",
+          "type": "number",
+          "label": "Waitlist size",
+          "placeholder": "0",
+          "required": false,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "idea" },
+          "validation": { "min": 0, "max": 10000000 }
+        },
+        {
+          "id": "q_validation_methods",
+          "type": "textarea",
+          "label": "Validation so far",
+          "placeholder": "Interviews, surveys, landing page tests...",
+          "required": false,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "idea" },
+          "validation": { "max_length": 300 }
+        },
+        {
+          "id": "q_user_count",
+          "type": "number",
+          "label": "Users",
+          "placeholder": "0",
+          "required": true,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "mvp" },
+          "validation": { "min": 0, "max": 10000000 }
+        },
+        {
+          "id": "q_mau",
+          "type": "number",
+          "label": "Monthly active users",
+          "placeholder": "0",
+          "required": false,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "mvp" },
+          "validation": { "min": 0, "max": 10000000 }
+        },
+        {
+          "id": "q_mvp_revenue",
+          "type": "text",
+          "label": "Revenue (if any)",
+          "placeholder": "e.g. $500 MRR",
+          "required": false,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "mvp" },
+          "validation": { "max_length": 80 }
+        },
+        {
+          "id": "q_growth_rate",
+          "type": "text",
+          "label": "Growth rate",
+          "placeholder": "e.g. 20% MoM",
+          "required": false,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "mvp" },
+          "validation": { "max_length": 80 }
+        },
+        {
+          "id": "q_mrr",
+          "type": "text",
+          "label": "MRR",
+          "placeholder": "e.g. $5,000",
+          "required": true,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "live" },
+          "validation": { "min_length": 1, "max_length": 80 }
+        },
+        {
+          "id": "q_live_users",
+          "type": "number",
+          "label": "Users / customers",
+          "placeholder": "0",
+          "required": true,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "live" },
+          "validation": { "min": 0, "max": 100000000 }
+        },
+        {
+          "id": "q_retention",
+          "type": "text",
+          "label": "Retention",
+          "placeholder": "e.g. 80% 3-month retention",
+          "required": false,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "live" },
+          "validation": { "max_length": 120 }
+        },
+        {
+          "id": "q_key_metrics",
+          "type": "textarea",
+          "label": "Key metrics (GMV, etc.)",
+          "placeholder": "Anything else worth highlighting?",
+          "required": false,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "live" },
+          "validation": { "max_length": 300 }
+        },
+        {
+          "id": "q_funding_raised",
+          "type": "text",
+          "label": "Funding raised",
+          "placeholder": "e.g. $2M seed",
+          "required": true,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "scale" },
+          "validation": { "min_length": 1, "max_length": 120 }
+        },
+        {
+          "id": "q_investors",
+          "type": "text",
+          "label": "Investors (optional)",
+          "placeholder": "e.g. East Ventures, Alpha JWC",
+          "required": false,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "scale" },
+          "validation": { "max_length": 200 }
+        },
+        {
+          "id": "q_scale_team_size",
+          "type": "number",
+          "label": "Team size",
+          "placeholder": "0",
+          "required": true,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "scale" },
+          "validation": { "min": 1, "max": 10000 }
+        },
+        {
+          "id": "q_arr",
+          "type": "text",
+          "label": "Revenue / ARR",
+          "placeholder": "e.g. $1.2M ARR",
+          "required": true,
+          "depends_on": { "question_id": "q_startup_stage", "operator": "equals", "value": "scale" },
+          "validation": { "min_length": 1, "max_length": 120 }
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_online_presence",
+      "flow_key": "startup_representative",
+      "section": "Online presence",
+      "section_progress": "1/1",
+      "overall_progress": { "current": 9, "total": 13 },
+      "title": "Where can people find you?",
+      "subtitle": "Drop any links you want to share.",
+      "questions": [
+        { "id": "q_website", "type": "url", "label": "Website", "placeholder": "https://yourstartup.com", "required": false, "validation": { "max_length": 200 } },
+        { "id": "q_startup_linkedin", "type": "url", "label": "LinkedIn", "placeholder": "https://linkedin.com/company/...", "required": false, "validation": { "max_length": 200 } },
+        { "id": "q_twitter", "type": "text", "label": "Twitter / X", "placeholder": "@yourhandle", "required": false, "validation": { "max_length": 80 } },
+        { "id": "q_instagram", "type": "text", "label": "Instagram", "placeholder": "@yourhandle", "required": false, "validation": { "max_length": 80 } },
+        { "id": "q_pitch_deck", "type": "url", "label": "Pitch deck", "placeholder": "https://pitch.com/...", "helper_text": "Optional, but founders love seeing your deck.", "required": false, "validation": { "max_length": 200 } }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "always" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_founder_setup",
+      "flow_key": "startup_representative",
+      "section": "Founder setup",
+      "section_progress": "1/2",
+      "overall_progress": { "current": 10, "total": 13 },
+      "title": "How many founders are you?",
+      "subtitle": "Tell us how your founding team looks today.",
+      "questions": [
+        {
+          "id": "q_founder_count",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_founder_solo", "value": "solo", "label": "Solo Founder", "sub_label": "It's just me for now", "icon": "founder_solo", "group": null },
+            { "id": "opt_founder_two", "value": "two", "label": "2 Founders", "sub_label": "Me and one co-founder", "icon": "founder_two", "group": null },
+            { "id": "opt_founder_three_plus", "value": "three_plus", "label": "3+ Founders", "sub_label": "Three or more co-founders", "icon": "founder_three_plus", "group": null }
+          ]
+        },
+        {
+          "id": "q_covered_roles",
+          "type": "multi_select_chip",
+          "label": "What roles are already covered?",
+          "required": true,
+          "depends_on": { "question_id": "q_founder_count", "operator": "not_equals", "value": "solo" },
+          "validation": { "min_selections": 1 },
+          "options": [
+            { "id": "opt_covered_technical", "value": "technical", "label": "Technical", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_covered_product", "value": "product", "label": "Product", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_covered_business", "value": "business", "label": "Business", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_covered_growth", "value": "growth", "label": "Growth", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_covered_operations", "value": "operations", "label": "Operations", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_covered_finance", "value": "finance", "label": "Finance", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_covered_design", "value": "design", "label": "Design", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_covered_other", "value": "other", "label": "Other", "sub_label": null, "icon": null, "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_team_presence",
+      "flow_key": "startup_representative",
+      "section": "Team presence",
+      "section_progress": "2/2",
+      "overall_progress": { "current": 11, "total": 13 },
+      "title": "Do you have a team beyond founders?",
+      "subtitle": "Is there anyone beyond the founders?",
+      "questions": [
+        {
+          "id": "q_has_team",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_yes", "value": "yes", "label": "Yes", "icon": "yes", "sub_label": null, "group": null },
+            { "id": "opt_no", "value": "no", "label": "No", "icon": "no", "sub_label": null, "group": null }
+          ]
+        },
+        {
+          "id": "q_team_size",
+          "type": "single_select_card",
+          "label": "Team size",
+          "required": true,
+          "depends_on": { "question_id": "q_has_team", "operator": "equals", "value": "yes" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_team_size_small", "value": "small", "label": "1 to 3", "sub_label": "Tight early team", "icon": "team_size_small", "group": null },
+            { "id": "opt_team_size_medium", "value": "medium", "label": "4 to 10", "sub_label": "Small but growing", "icon": "team_size_medium", "group": null },
+            { "id": "opt_team_size_large", "value": "large", "label": "10+", "sub_label": "Already a real team", "icon": "team_size_large", "group": null }
+          ]
+        },
+        {
+          "id": "q_team_roles",
+          "type": "multi_select_chip",
+          "label": "Team roles",
+          "required": true,
+          "depends_on": { "question_id": "q_has_team", "operator": "equals", "value": "yes" },
+          "validation": { "min_selections": 1 },
+          "options": [
+            { "id": "opt_startup_team_engineering", "value": "engineering", "label": "Engineering", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_startup_team_marketing", "value": "marketing", "label": "Marketing", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_startup_team_sales", "value": "sales", "label": "Sales", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_startup_team_operations", "value": "operations", "label": "Operations", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_startup_team_design", "value": "design", "label": "Design", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_startup_team_finance", "value": "finance", "label": "Finance", "sub_label": null, "icon": null, "group": null },
+            { "id": "opt_startup_team_other", "value": "other", "label": "Other", "sub_label": null, "icon": null, "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_skills_needed",
+      "flow_key": "startup_representative",
+      "section": "Skills you need",
+      "section_progress": "1/1",
+      "overall_progress": { "current": 13, "total": 13 },
+      "title": "What skills are you missing?",
+      "subtitle": "Pick the skills your team is missing.",
+      "questions": [
+        {
+          "id": "q_skills_needed",
+          "type": "searchable_multi_select",
+          "label": "",
+          "placeholder": "Search skills",
+          "required": true,
+          "meta": { "searchable": true },
+          "validation": { "min_selections": 1, "max_selections": 10 },
+          "_options_source": "catalogs/skill-options.json",
+          "options": []
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    }
+  ]
+}

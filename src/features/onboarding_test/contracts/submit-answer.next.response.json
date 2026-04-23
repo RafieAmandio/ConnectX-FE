@@ -1,0 +1,46 @@
+{
+  "_endpoint": "POST /api/v1/onboarding/sessions/:session_id/answer",
+  "_status": 200,
+  "_description": "Happy path: answers accepted, BE advances and returns the next step.",
+  "next_step": {
+    "id": "step_use_connectx",
+    "flow_key": "common_data_diri",
+    "section": "Let's build your general profile",
+    "section_progress": "2/3",
+    "overall_progress": { "current": 3, "total": 9 },
+    "title": "How do you want to use ConnectX?",
+    "subtitle": "This shapes the rest of your onboarding.",
+    "questions": [
+      {
+        "id": "q_use_connectx",
+        "type": "single_select_card",
+        "label": "How do you want to use ConnectX?",
+        "sub_label": "Pick the path that best matches today.",
+        "helper_text": "This choice shapes the rest of your onboarding.",
+        "required": true,
+        "meta": { "auto_advance": true, "layout": "list" },
+        "options": [
+          {
+            "id": "opt_builder",
+            "label": "I'm a Builder",
+            "sub_label": "Founder, co-founder, or team member",
+            "value": "builder",
+            "icon": "team"
+          },
+          {
+            "id": "opt_startup",
+            "label": "I represent a Startup",
+            "sub_label": "Building a team or hiring co-founders",
+            "value": "startup",
+            "icon": "rocket"
+          }
+        ],
+        "validation": { "min_length": 1 }
+      }
+    ],
+    "cta": { "label": "Continue", "enabled_when": "valid" },
+    "can_go_back": true
+  },
+  "progress": { "current": 3, "total": 9 },
+  "can_go_back": true
+}

@@ -1,0 +1,14 @@
+{
+  "_description": "Expected JSON payloads for the Dynamic Onboarding Engine (Linear CON-48). Each file in this folder is a self-contained example of one endpoint request or response. FE should use these as the source of truth for BE expectations until the real API is live.",
+  "base_url": "/api/v1/onboarding",
+  "endpoints": [
+    { "method": "POST",  "path": "/sessions",                      "file": "start-session.response.json",          "notes": "Creates or resumes a session, returns first step." },
+    { "method": "GET",   "path": "/sessions/:session_id/current",  "file": "get-current-step.response.json",       "notes": "Current step only — cheap to call on reload." },
+    { "method": "POST",  "path": "/sessions/:session_id/answer",   "file": "submit-answer.request.json",            "notes": "Request body for submitting answers." },
+    { "method": "POST",  "path": "/sessions/:session_id/answer",   "file": "submit-answer.next.response.json",      "notes": "200 — advances to next step." },
+    { "method": "POST",  "path": "/sessions/:session_id/answer",   "file": "submit-answer.completed.response.json", "notes": "200 — final step, onboarding done." },
+    { "method": "POST",  "path": "/sessions/:session_id/answer",   "file": "submit-answer.error.response.json",     "notes": "422 — field-level validation errors." },
+    { "method": "POST",  "path": "/sessions/:session_id/back",     "file": "go-back.response.json",                 "notes": "Rewinds one step." },
+    { "method": "GET",   "path": "/sessions/:session_id",          "file": "get-session.response.json",             "notes": "Full session state + current step." }
+  ]
+}

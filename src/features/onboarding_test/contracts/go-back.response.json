@@ -1,0 +1,53 @@
+{
+  "_endpoint": "POST /api/v1/onboarding/sessions/:session_id/back",
+  "_status": 200,
+  "_description": "Rewinds the session to the previous step. Response mirrors a step object so the FE can re-render.",
+  "previous_step": {
+    "id": "step_data_diri",
+    "flow_key": "common_data_diri",
+    "section": "Let's build your general profile",
+    "section_progress": "1/3",
+    "overall_progress": { "current": 2, "total": 9 },
+    "title": "Tell us about yourself",
+    "subtitle": "The basics we need to personalize your matches.",
+    "questions": [
+      {
+        "id": "q_first_name",
+        "type": "text",
+        "label": "First name",
+        "required": true,
+        "validation": { "min_length": 1, "max_length": 50 }
+      },
+      {
+        "id": "q_last_name",
+        "type": "text",
+        "label": "Last name",
+        "required": false,
+        "helper_text": "Only shared after a connection.",
+        "validation": { "max_length": 50 }
+      },
+      {
+        "id": "q_date_of_birth",
+        "type": "date",
+        "label": "Date of birth",
+        "required": true
+      },
+      {
+        "id": "q_city",
+        "type": "searchable_dropdown",
+        "label": "Where are you based?",
+        "required": true,
+        "meta": { "searchable": true }
+      },
+      {
+        "id": "q_gender",
+        "type": "segmented",
+        "label": "Gender",
+        "required": true
+      }
+    ],
+    "cta": { "label": "Continue", "enabled_when": "valid" },
+    "can_go_back": true
+  },
+  "progress": { "current": 2, "total": 9 }
+}

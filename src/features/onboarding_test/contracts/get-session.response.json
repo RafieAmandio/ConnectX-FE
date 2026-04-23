@@ -1,0 +1,54 @@
+{
+  "_endpoint": "GET /api/v1/onboarding/sessions/:session_id",
+  "_status": 200,
+  "_description": "Full session state. Useful for resume-from-anywhere, admin/debug views, and answer review.",
+  "session": {
+    "id": "ses_01HSXYZABC123",
+    "user_id": "usr_abc123",
+    "status": "in_progress",
+    "flow_key": "common_data_diri",
+    "locale": "en",
+    "started_at": "2026-04-12T08:45:00.000Z",
+    "updated_at": "2026-04-12T08:47:20.000Z",
+    "completed_at": null,
+    "profile_id": null,
+    "current_step_id": "step_use_connectx",
+    "step_history": [
+      "step_welcome",
+      "step_data_diri",
+      "step_use_connectx"
+    ],
+    "answers": {
+      "q_first_name": "Dio",
+      "q_last_name": "Pratama",
+      "q_date_of_birth": "1998-05-12",
+      "q_city": "jakarta",
+      "q_gender": "male"
+    }
+  },
+  "current_step": {
+    "id": "step_use_connectx",
+    "flow_key": "common_data_diri",
+    "section": "Let's build your general profile",
+    "section_progress": "2/3",
+    "overall_progress": { "current": 3, "total": 9 },
+    "title": "How do you want to use ConnectX?",
+    "subtitle": "This shapes the rest of your onboarding.",
+    "questions": [
+      {
+        "id": "q_use_connectx",
+        "type": "single_select_card",
+        "label": "How do you want to use ConnectX?",
+        "required": true,
+        "meta": { "auto_advance": true, "layout": "list" },
+        "options": [
+          { "id": "opt_builder", "label": "I'm a Builder", "value": "builder", "icon": "team" },
+          { "id": "opt_startup", "label": "I represent a Startup", "value": "startup", "icon": "rocket" }
+        ],
+        "validation": { "min_length": 1 }
+      }
+    ],
+    "cta": { "label": "Continue", "enabled_when": "valid" },
+    "can_go_back": true
+  }
+}
