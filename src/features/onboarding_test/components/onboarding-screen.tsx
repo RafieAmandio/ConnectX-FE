@@ -25,12 +25,10 @@ import { AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
 
 import { useOnboardingSession } from '../hooks/use-onboarding-session';
-import {
-  resolveDeviceOnboardingLocale,
-  validateStepAnswers,
-} from '../services/onboarding-session-service';
+import { validateStepAnswers } from '../services/onboarding-session-service';
 import type {
   OnboardingAnswerValue,
+  OnboardingLocale,
   OnboardingMode,
   OnboardingNextStepResponse,
   OnboardingQuestion,
@@ -231,13 +229,7 @@ export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const mode: OnboardingMode = params.mode === 'preview' ? 'preview' : 'post_auth';
   const { authPhase, completeOnboarding, isHydrated, session } = useAuth();
-  const locale = React.useMemo(
-    () =>
-      resolveDeviceOnboardingLocale(
-        Intl.DateTimeFormat().resolvedOptions().locale
-      ),
-    []
-  );
+  const locale: OnboardingLocale = 'en';
 
   const actorKey =
     mode === 'preview'

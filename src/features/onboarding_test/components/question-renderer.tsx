@@ -1,6 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -75,6 +75,54 @@ function groupOptions(options: OnboardingOption[] | undefined) {
   }
 
   return Array.from(groupedOptions.entries());
+}
+
+function DropdownOverlay({
+  children,
+  header,
+  maxHeight,
+  onClose,
+  visible,
+}: {
+  children: React.ReactNode;
+  header?: React.ReactNode;
+  maxHeight: number;
+  onClose: () => void;
+  visible: boolean;
+}) {
+  return (
+    <Modal
+      animationType="fade"
+      onRequestClose={onClose}
+      transparent
+      visible={visible}>
+      <View
+        className="flex-1 justify-end px-5 pb-8"
+        style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onClose}
+          style={{
+            bottom: 0,
+            left: 0,
+            position: 'absolute',
+            right: 0,
+            top: 0,
+          }}
+        />
+        <AppCard className="p-1" style={{ maxHeight }}>
+          {header}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            style={{ maxHeight: header ? maxHeight - 72 : maxHeight }}>
+            {children}
+          </ScrollView>
+        </AppCard>
+      </View>
+    </Modal>
+  );
 }
 
 type CardBadgeStyle = {
@@ -763,58 +811,49 @@ function MultiSelectDropdownQuestion({
           </View>
         </Pressable>
 
-        {isOpen ? (
-          <View
-            className="absolute left-0 right-0"
-            style={{ top: 64, zIndex: 40, elevation: 12 }}>
-            <AppCard className="p-1" style={{ maxHeight: 320 }}>
-              <ScrollView
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator
-                style={{ maxHeight: 320 }}>
-                {question.options?.map((option) => {
-                  const isSelected = currentValues.includes(option.value);
-                  const isDisabled = !isSelected && atLimit;
+        <DropdownOverlay
+          maxHeight={420}
+          onClose={() => setIsOpen(false)}
+          visible={isOpen}>
+          {question.options?.map((option) => {
+            const isSelected = currentValues.includes(option.value);
+            const isDisabled = !isSelected && atLimit;
 
-                  return (
-                    <Pressable
-                      key={option.id}
-                      disabled={isDisabled}
-                      className={cn(
-                        'flex-row items-center gap-3 rounded-[12px] px-3 py-3',
-                        isSelected ? 'bg-[#2A2117]' : 'bg-transparent',
-                        isDisabled && 'opacity-40'
-                      )}
-                      onPress={() => toggle(option.value)}>
-                      <View
-                        className={cn(
-                          'h-5 w-5 items-center justify-center rounded-[6px] border-2',
-                          isSelected
-                            ? 'border-[#FF9A3E] bg-[#FF9A3E]'
-                            : 'border-[#5A6074] bg-transparent'
-                        )}>
-                        {isSelected ? (
-                          <Ionicons color="#1A1208" name="checkmark" size={12} />
-                        ) : null}
-                      </View>
-                      <View className="flex-1 gap-1">
-                        <AppText
-                          variant="bodyStrong"
-                          className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
-                          {option.label}
-                        </AppText>
-                        {option.sub_label ? (
-                          <AppText tone="muted">{option.sub_label}</AppText>
-                        ) : null}
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </AppCard>
-          </View>
-        ) : null}
+            return (
+              <Pressable
+                key={option.id}
+                disabled={isDisabled}
+                className={cn(
+                  'flex-row items-center gap-3 rounded-[12px] px-3 py-3',
+                  isSelected ? 'bg-[#2A2117]' : 'bg-transparent',
+                  isDisabled && 'opacity-40'
+                )}
+                onPress={() => toggle(option.value)}>
+                <View
+                  className={cn(
+                    'h-5 w-5 items-center justify-center rounded-[6px] border-2',
+                    isSelected
+                      ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                      : 'border-[#5A6074] bg-transparent'
+                  )}>
+                  {isSelected ? (
+                    <Ionicons color="#1A1208" name="checkmark" size={12} />
+                  ) : null}
+                </View>
+                <View className="flex-1 gap-1">
+                  <AppText
+                    variant="bodyStrong"
+                    className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                    {option.label}
+                  </AppText>
+                  {option.sub_label ? (
+                    <AppText tone="muted">{option.sub_label}</AppText>
+                  ) : null}
+                </View>
+              </Pressable>
+            );
+          })}
+        </DropdownOverlay>
       </View>
     </View>
   );
@@ -908,45 +947,36 @@ function DropdownQuestion({
           </AppText>
         </Pressable>
 
-        {isOpen ? (
-          <View
-            className="absolute left-0 right-0"
-            style={{ top: 64, zIndex: 40, elevation: 12 }}>
-            <AppCard className="p-1" style={{ maxHeight: 280 }}>
-              <ScrollView
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator
-                style={{ maxHeight: 280 }}>
-                {question.options?.map((option) => {
-                  const isSelected = currentValue === option.value;
+        <DropdownOverlay
+          maxHeight={360}
+          onClose={() => setIsOpen(false)}
+          visible={isOpen}>
+          {question.options?.map((option) => {
+            const isSelected = currentValue === option.value;
 
-                  return (
-                    <Pressable
-                      key={option.id}
-                      className={cn(
-                        'rounded-[12px] px-3 py-3',
-                        isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
-                      )}
-                      onPress={() => {
-                        onChange(option.value);
-                        setIsOpen(false);
-                      }}>
-                      <AppText
-                        variant="bodyStrong"
-                        className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
-                        {option.label}
-                      </AppText>
-                      {option.sub_label ? (
-                        <AppText tone="muted">{option.sub_label}</AppText>
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </AppCard>
-          </View>
-        ) : null}
+            return (
+              <Pressable
+                key={option.id}
+                className={cn(
+                  'rounded-[12px] px-3 py-3',
+                  isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+                )}
+                onPress={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}>
+                <AppText
+                  variant="bodyStrong"
+                  className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                  {option.label}
+                </AppText>
+                {option.sub_label ? (
+                  <AppText tone="muted">{option.sub_label}</AppText>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </DropdownOverlay>
       </View>
     </View>
   );
@@ -1011,27 +1041,14 @@ function SearchableDropdownQuestion({
             isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
           )}>
           <View className="flex-1">
-            {isOpen ? (
-              <TextInput
-                ref={inputRef}
-                autoCapitalize="words"
-                autoCorrect={false}
-                onChangeText={setQuery}
-                placeholder={question.placeholder ?? 'Search'}
-                placeholderTextColor="#667085"
-                value={query}
-                className="font-body text-[15px] text-white"
-                style={{ paddingVertical: 0 }}
-              />
-            ) : (
-              <AppText
-                className={cn(
-                  currentLabel ? 'text-white' : 'text-text-soft'
-                )}
-                numberOfLines={1}>
-                {currentLabel || question.placeholder || 'Select one'}
-              </AppText>
-            )}
+            <AppText
+              className={cn(
+                currentLabel ? 'text-white' : 'text-text-soft',
+                isOpen && 'text-[#FF9A3E]'
+              )}
+              numberOfLines={1}>
+              {currentLabel || question.placeholder || 'Select one'}
+            </AppText>
           </View>
           <AppText
             variant="label"
@@ -1041,54 +1058,74 @@ function SearchableDropdownQuestion({
           </AppText>
         </Pressable>
 
-        {shouldRenderResults ? (
-          <View
-            className="absolute left-0 right-0"
-            style={{ top: 64, zIndex: 40, elevation: 12 }}>
-            <AppCard className="p-1" style={{ maxHeight: 320 }}>
-              <ScrollView
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator
-                style={{ maxHeight: 320 }}>
-                {groupOptions(filteredOptions).map(([groupName, options]) => (
-                  <View key={groupName} className="gap-1 pb-2">
-                    <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
-                      {groupName}
-                    </AppText>
-                    {options.map((option) => {
-                      const isSelected = currentValue === option.value;
+        <DropdownOverlay
+          header={
+            <View
+              className="mb-1 flex-row items-center gap-2 rounded-[14px] border px-3"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: query ? '#FF9A3E' : '#383838',
+                height: 52,
+              }}>
+              <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+              <TextInput
+                ref={inputRef}
+                autoCapitalize="words"
+                autoCorrect={false}
+                onChangeText={setQuery}
+                placeholder={question.placeholder ?? 'Search'}
+                placeholderTextColor="#667085"
+                value={query}
+                className="flex-1 font-body text-[15px] text-white"
+                style={{ paddingVertical: 0 }}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons color="#98A2B3" name="close-circle" size={18} />
+                </Pressable>
+              ) : null}
+            </View>
+          }
+          maxHeight={460}
+          onClose={closeDropdown}
+          visible={isOpen}>
+          {shouldRenderResults
+            ? groupOptions(filteredOptions).map(([groupName, options]) => (
+              <View key={groupName} className="gap-1 pb-2">
+                <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
+                  {groupName}
+                </AppText>
+                {options.map((option) => {
+                  const isSelected = currentValue === option.value;
 
-                      return (
-                        <Pressable
-                          key={option.id}
-                          className={cn(
-                            'rounded-[12px] px-3 py-3',
-                            isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
-                          )}
-                          onPress={() => {
-                            onChange(option.value);
-                            closeDropdown();
-                          }}>
-                          <AppText
-                            variant="bodyStrong"
-                            className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
-                            {option.label}
-                          </AppText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                ))}
-                {filteredOptions.length === 0 ? (
-                  <View className="px-3 py-4">
-                    <AppText tone="muted">No results</AppText>
-                  </View>
-                ) : null}
-              </ScrollView>
-            </AppCard>
-          </View>
-        ) : null}
+                  return (
+                    <Pressable
+                      key={option.id}
+                      className={cn(
+                        'rounded-[12px] px-3 py-3',
+                        isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+                      )}
+                      onPress={() => {
+                        onChange(option.value);
+                        closeDropdown();
+                      }}>
+                      <AppText
+                        variant="bodyStrong"
+                        className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                        {option.label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))
+            : null}
+          {shouldRenderResults && filteredOptions.length === 0 ? (
+            <View className="px-3 py-4">
+              <AppText tone="muted">No results</AppText>
+            </View>
+          ) : null}
+        </DropdownOverlay>
       </View>
     </View>
   );
@@ -1498,43 +1535,27 @@ function DateDropdown({
         </AppText>
       </Pressable>
 
-      {isOpen ? (
-        <View
-          className="absolute left-0 right-0"
-          style={{
-            top: 84,
-            zIndex: 30,
-            elevation: 12,
-          }}>
-          <AppCard className="p-1" style={{ maxHeight: 240 }}>
-            <ScrollView
-              nestedScrollEnabled
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator
-              style={{ maxHeight: 240 }}>
-              {options.map((option) => {
-                const isSelected = option.value === selectedValue;
+      <DropdownOverlay maxHeight={320} onClose={onToggle} visible={isOpen}>
+        {options.map((option) => {
+          const isSelected = option.value === selectedValue;
 
-                return (
-                  <Pressable
-                    key={option.value}
-                    className={cn(
-                      'rounded-[12px] px-3 py-3',
-                      isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
-                    )}
-                    onPress={() => onSelect(option.value)}>
-                    <AppText
-                      variant="bodyStrong"
-                      className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
-                      {option.label}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </AppCard>
-        </View>
-      ) : null}
+          return (
+            <Pressable
+              key={option.value}
+              className={cn(
+                'rounded-[12px] px-3 py-3',
+                isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+              )}
+              onPress={() => onSelect(option.value)}>
+              <AppText
+                variant="bodyStrong"
+                className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </DropdownOverlay>
     </View>
   );
 }
