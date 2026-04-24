@@ -21,9 +21,11 @@ import type {
 
 type QuestionRendererProps = {
   error?: string;
+  hideSearchableDropdownResultsUntilQuery?: boolean;
   onChange: (value: OnboardingAnswerValue) => void;
   question: OnboardingQuestion;
   value: OnboardingAnswerValue | undefined;
+  variant?: 'default' | 'dropdown_multi_select';
 };
 
 function getStringValue(value: OnboardingAnswerValue | undefined) {
@@ -677,6 +679,146 @@ function MultiSelectChipQuestion({
   );
 }
 
+function MultiSelectDropdownQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const currentValues = getArrayValue(value);
+  const maxSelections = question.validation?.max_selections ?? Infinity;
+  const atLimit = currentValues.length >= maxSelections;
+
+  const selectedLabels = React.useMemo(
+    () =>
+      currentValues
+        .map((currentValue) => getSelectedLabel(question.options, currentValue))
+        .filter(Boolean),
+    [currentValues, question.options]
+  );
+
+  const displayLabel =
+    selectedLabels.length === 0
+      ? question.placeholder ?? 'Select options'
+      : selectedLabels.length === 1
+        ? selectedLabels[0]
+        : `${selectedLabels.length} selected`;
+
+  const toggle = (optionValue: string) => {
+    if (currentValues.includes(optionValue)) {
+      onChange(currentValues.filter((item) => item !== optionValue));
+      return;
+    }
+
+    if (atLimit) {
+      return;
+    }
+
+    onChange([...currentValues, optionValue]);
+  };
+
+  return (
+    <View
+      className="gap-3"
+      style={{ zIndex: isOpen ? 40 : 1, elevation: isOpen ? 12 : 0 }}>
+      <QuestionHeader error={error} question={question} />
+      <View>
+        <Pressable
+          style={{ height: 56 }}
+          className={cn(
+            'flex-row items-center justify-between rounded-[16px] border px-4',
+            isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
+          )}
+          onPress={() => setIsOpen((currentState) => !currentState)}>
+          <View className="flex-1">
+            <AppText
+              className={cn(
+                selectedLabels.length > 0 ? 'text-white' : 'text-text-soft',
+                isOpen && 'text-[#FF9A3E]'
+              )}
+              numberOfLines={1}>
+              {displayLabel}
+            </AppText>
+          </View>
+          <View className="ml-3 flex-row items-center gap-2">
+            {selectedLabels.length > 1 ? (
+              <View
+                className="min-w-6 items-center rounded-full px-2 py-0.5"
+                style={{ backgroundColor: '#FF9A3E' }}>
+                <AppText
+                  variant="label"
+                  className="text-[10px]"
+                  style={{ color: '#1A1208', fontVariant: ['tabular-nums'] }}>
+                  {selectedLabels.length}
+                </AppText>
+              </View>
+            ) : null}
+            <AppText
+              variant="label"
+              className="text-[10px]"
+              style={{ color: isOpen ? '#FF9A3E' : '#98A2B3' }}>
+              {isOpen ? '▲' : '▼'}
+            </AppText>
+          </View>
+        </Pressable>
+
+        {isOpen ? (
+          <View
+            className="absolute left-0 right-0"
+            style={{ top: 64, zIndex: 40, elevation: 12 }}>
+            <AppCard className="p-1" style={{ maxHeight: 320 }}>
+              <ScrollView
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator>
+                {question.options?.map((option) => {
+                  const isSelected = currentValues.includes(option.value);
+                  const isDisabled = !isSelected && atLimit;
+
+                  return (
+                    <Pressable
+                      key={option.id}
+                      disabled={isDisabled}
+                      className={cn(
+                        'flex-row items-center gap-3 rounded-[12px] px-3 py-3',
+                        isSelected ? 'bg-[#2A2117]' : 'bg-transparent',
+                        isDisabled && 'opacity-40'
+                      )}
+                      onPress={() => toggle(option.value)}>
+                      <View
+                        className={cn(
+                          'h-5 w-5 items-center justify-center rounded-[6px] border-2',
+                          isSelected
+                            ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                            : 'border-[#5A6074] bg-transparent'
+                        )}>
+                        {isSelected ? (
+                          <Ionicons color="#1A1208" name="checkmark" size={12} />
+                        ) : null}
+                      </View>
+                      <View className="flex-1 gap-1">
+                        <AppText
+                          variant="bodyStrong"
+                          className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                          {option.label}
+                        </AppText>
+                        {option.sub_label ? (
+                          <AppText tone="muted">{option.sub_label}</AppText>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </AppCard>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 function SingleSelectChipQuestion({
   error,
   onChange,
@@ -810,6 +952,7 @@ function DropdownQuestion({
 
 function SearchableDropdownQuestion({
   error,
+  hideSearchableDropdownResultsUntilQuery,
   onChange,
   question,
   value,
@@ -821,6 +964,9 @@ function SearchableDropdownQuestion({
   const currentLabel = currentValue
     ? getSelectedLabel(question.options, currentValue)
     : '';
+  const hasQuery = query.trim().length > 0;
+  const shouldRenderResults =
+    isOpen && (!hideSearchableDropdownResultsUntilQuery || hasQuery);
 
   const filteredOptions = React.useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -893,7 +1039,7 @@ function SearchableDropdownQuestion({
           </AppText>
         </Pressable>
 
-        {isOpen ? (
+        {shouldRenderResults ? (
           <View
             className="absolute left-0 right-0"
             style={{ top: 64, zIndex: 40, elevation: 12 }}>
@@ -1647,8 +1793,10 @@ function CurrencyAmountQuestion({
 
 export function QuestionRenderer({
   error,
+  hideSearchableDropdownResultsUntilQuery,
   onChange,
   question,
+  variant = 'default',
   value,
 }: QuestionRendererProps) {
   switch (question.type) {
@@ -1756,6 +1904,17 @@ export function QuestionRenderer({
         />
       );
     case 'multi_select_chip':
+      if (variant === 'dropdown_multi_select') {
+        return (
+          <MultiSelectDropdownQuestion
+            error={error}
+            onChange={onChange}
+            question={question}
+            value={value}
+          />
+        );
+      }
+
       return (
         <MultiSelectChipQuestion
           error={error}
@@ -1795,6 +1954,9 @@ export function QuestionRenderer({
       return (
         <SearchableDropdownQuestion
           error={error}
+          hideSearchableDropdownResultsUntilQuery={
+            hideSearchableDropdownResultsUntilQuery
+          }
           onChange={onChange}
           question={question}
           value={value}

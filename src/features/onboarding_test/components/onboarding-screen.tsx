@@ -45,6 +45,13 @@ const ACCENT_SOFT = '#2A2117';
 const BORDER_SOFT = '#2A2E38';
 const CANVAS_BG = '#212121';
 const HEADER_BG = '#232323';
+const MULTI_SELECT_DROPDOWN_STEP_IDS = new Set([
+  'step_su_biz',
+  'step_fdr_industry',
+]);
+const SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS = new Set([
+  'step_personal_location',
+]);
 
 function isCompletedResponse(
   response:
@@ -492,10 +499,22 @@ export function OnboardingScreen() {
                   <QuestionRenderer
                     key={question.id}
                     error={fieldErrors[question.id]}
+                    hideSearchableDropdownResultsUntilQuery={
+                      currentStep &&
+                      SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS.has(currentStep.id) &&
+                      question.type === 'searchable_dropdown'
+                    }
                     onChange={(value) => {
                       void handleAnswerChange(question, value);
                     }}
                     question={question}
+                    variant={
+                      currentStep &&
+                      MULTI_SELECT_DROPDOWN_STEP_IDS.has(currentStep.id) &&
+                      question.type === 'multi_select_chip'
+                        ? 'dropdown_multi_select'
+                        : 'default'
+                    }
                     value={mergedAnswers[question.id]}
                   />
                 ))}
