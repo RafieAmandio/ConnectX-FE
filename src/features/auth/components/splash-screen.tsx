@@ -4,25 +4,22 @@ import { ActivityIndicator, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { AppText } from '@shared/components';
+import { Colors } from '@shared/theme';
 
 const CONNECTX_LOGO = require('../../../../assets/images/connectx-logo.png');
-
-const CANVAS_BG = '#212121';
-const ACCENT = '#FF9A3E';
-const ACCENT_SOFT = '#2A2117';
 
 export function SplashScreen() {
   return (
     <View
       className="flex-1 items-center justify-center"
-      style={{ backgroundColor: CANVAS_BG }}>
+      style={{ backgroundColor: Colors.dark.canvas }}>
       <Animated.View
         entering={FadeIn.duration(420)}
         className="items-center gap-6">
         <View
           className="h-24 w-24 items-center justify-center rounded-[28px]"
           style={{
-            backgroundColor: ACCENT_SOFT,
+            backgroundColor: Colors.dark.accentTint,
             borderCurve: 'continuous',
           }}>
           <View
@@ -40,12 +37,12 @@ export function SplashScreen() {
             variant="hero"
             align="center"
             className="text-[32px] leading-[38px] text-white">
-            ConnectX
+            Connectx
           </AppText>
         </Animated.View>
       </Animated.View>
       <View className="absolute bottom-16">
-        <ActivityIndicator color={ACCENT} />
+        <ActivityIndicator color={Colors.dark.accent} />
       </View>
     </View>
   );

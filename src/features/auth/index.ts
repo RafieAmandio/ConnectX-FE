@@ -3,6 +3,7 @@ export { ForgotPasswordScreen } from './components/forgot-password-screen';
 export { LoginScreen } from './components/login-screen';
 export { RegisterScreen } from './components/register-screen';
 export { SplashScreen } from './components/splash-screen';
+export { WelcomeScreen } from './components/welcome-screen';
 export { VerifyEmailScreen } from './components/verify-email-screen';
 export { VerifyLoginOtpScreen } from './components/verify-login-otp-screen';
 export { VerifyOtpScreen } from './components/verify-otp-screen';

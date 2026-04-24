@@ -14,7 +14,7 @@ export function getRouteForAuthPhase(authPhase: AuthPhase) {
       return '/verify-whatsapp' as const;
     case 'signed_out':
     default:
-      return '/login' as const;
+      return '/welcome' as const;
   }
 }
 
