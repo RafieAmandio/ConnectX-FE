@@ -16,6 +16,7 @@ import { AppCard, AppText, AppTopBar } from '@shared/components';
 import { useMyProfile } from '../hooks/use-profile';
 import { mockMyProfileResponse } from '../mock/profile.mock';
 import type {
+  ProfileAboutKind,
   MyProfileData,
   MyProfileResponse,
   ProfileBadge,
@@ -87,6 +88,14 @@ function getProfileStatusCopy({
     label: 'My profile',
     tone: '#98A2B3',
   };
+}
+
+function getAboutSectionDescription(kind: ProfileAboutKind) {
+  if (kind === 'personalDescription') {
+    return 'A quick summary of who this person is and what they are looking for.';
+  }
+
+  return 'A quick summary of what this profile is building right now.';
 }
 
 function SectionHeader({
@@ -425,7 +434,7 @@ export function ProfileScreen() {
       ? myProfileResponse.data
       : mockMyProfileResponse.data;
 
-  const startupIdeaSection = effectiveProfile.sections.startupIdea;
+  const aboutSection = effectiveProfile.sections.about;
   const personalitySection = effectiveProfile.sections.personalityAndHobbies;
   const skillsSection = effectiveProfile.sections.skills;
   const interestsSection = effectiveProfile.sections.interests;
@@ -451,16 +460,16 @@ export function ProfileScreen() {
 
           <StatsOverview stats={effectiveProfile.stats} />
 
-          {startupIdeaSection ? (
+          {aboutSection ? (
             <SectionCard>
               <SectionHeader
-                description="A quick summary of what this profile is building right now."
+                description={getAboutSectionDescription(aboutSection.kind)}
                 eyebrow="About"
                 icon="bulb-outline"
-                title={startupIdeaSection.title}
+                title={aboutSection.title}
               />
               <AppText className="text-[15px] leading-7" selectable tone="muted">
-                {startupIdeaSection.value}
+                {aboutSection.value}
               </AppText>
             </SectionCard>
           ) : null}

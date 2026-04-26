@@ -37,7 +37,7 @@ function mergeProfileResponse(
       location: updateResponse.data.location,
       sections: {
         ...baseResponse.data.sections,
-        startupIdea: updateResponse.data.sections.startupIdea,
+        about: updateResponse.data.sections.about,
         personalityAndHobbies: updateResponse.data.sections.personalityAndHobbies,
       },
       updatedAt: updateResponse.data.updatedAt,

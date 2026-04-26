@@ -27,6 +27,12 @@ export type ProfileTextSection = {
   value: string;
 };
 
+export type ProfileAboutKind = 'startupIdea' | 'personalDescription';
+
+export type ProfileAboutSection = ProfileTextSection & {
+  kind: ProfileAboutKind;
+};
+
 export type ProfileListSection = {
   title: string;
   items: ProfileNamedItem[];
@@ -37,7 +43,7 @@ export type ProfileHighlightsSection = {
 };
 
 export type MyProfileSections = {
-  startupIdea?: ProfileTextSection;
+  about?: ProfileAboutSection;
   personalityAndHobbies?: ProfileListSection;
   skills?: ProfileListSection;
   interests?: ProfileListSection;
@@ -69,7 +75,7 @@ export type UpdateMyProfileRequest = {
   name: string;
   headline: string;
   location: string;
-  startupIdea: string;
+  about: string;
   personalityAndHobbyIds: string[];
 };
 
@@ -83,7 +89,7 @@ export type UpdateMyProfileResponse = {
     photoUrl: string | null;
     location: ProfileLocation;
     sections: {
-      startupIdea: ProfileTextSection;
+      about: ProfileAboutSection;
       personalityAndHobbies: ProfileListSection;
     };
     updatedAt: string;

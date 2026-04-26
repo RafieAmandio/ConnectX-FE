@@ -17,6 +17,7 @@ import { useProfileOptions, useUpdateMyProfile } from '../hooks/use-profile';
 import { mockProfileOptionsResponse } from '../mock/profile.mock';
 import type {
   MyProfileData,
+  ProfileAboutKind,
   ProfileOptionsResponse,
   UpdateMyProfileRequest,
 } from '../types/profile.types';
@@ -49,13 +50,29 @@ function buildInitialFormState(profile: MyProfileData): UpdateMyProfileRequest {
     name: profile.name,
     headline: profile.headline,
     location: profile.location.display,
-    startupIdea: profile.sections.startupIdea?.value ?? '',
+    about: profile.sections.about?.value ?? '',
     personalityAndHobbyIds:
       profile.sections.personalityAndHobbies?.items.map((item) => item.id) ?? [],
   };
 }
 
-function validateForm(formState: UpdateMyProfileRequest): FormErrors {
+function getAboutCopy(kind: ProfileAboutKind | undefined) {
+  if (kind === 'startupIdea') {
+    return {
+      errorLabel: 'Startup idea',
+      label: 'Startup Idea',
+      placeholder: 'Describe your startup idea',
+    };
+  }
+
+  return {
+    errorLabel: 'Description',
+    label: 'Description',
+    placeholder: 'Describe yourself and what you are looking for',
+  };
+}
+
+function validateForm(formState: UpdateMyProfileRequest, aboutErrorLabel: string): FormErrors {
   const nextErrors: FormErrors = {};
 
   if (!formState.name.trim()) {
@@ -76,10 +93,10 @@ function validateForm(formState: UpdateMyProfileRequest): FormErrors {
     nextErrors.location = 'Location must be 120 characters or fewer.';
   }
 
-  if (!formState.startupIdea.trim()) {
-    nextErrors.startupIdea = 'Startup idea is required.';
-  } else if (formState.startupIdea.trim().length > 500) {
-    nextErrors.startupIdea = 'Startup idea must be 500 characters or fewer.';
+  if (!formState.about.trim()) {
+    nextErrors.about = `${aboutErrorLabel} is required.`;
+  } else if (formState.about.trim().length > 500) {
+    nextErrors.about = `${aboutErrorLabel} must be 500 characters or fewer.`;
   }
 
   if (formState.personalityAndHobbyIds.length > MAX_PERSONALITY_SELECTIONS) {
@@ -131,6 +148,7 @@ export function EditProfileModal({ onClose, profile, visible }: EditProfileModal
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const profileOptionsResponse = optionsQuery.data;
+  const aboutCopy = getAboutCopy(profile.sections.about?.kind);
 
   React.useEffect(() => {
     if (!visible) {
@@ -190,11 +208,11 @@ export function EditProfileModal({ onClose, profile, visible }: EditProfileModal
       name: formState.name.trim(),
       headline: formState.headline.trim(),
       location: formState.location.trim(),
-      startupIdea: formState.startupIdea.trim(),
+      about: formState.about.trim(),
       personalityAndHobbyIds: formState.personalityAndHobbyIds,
     };
 
-    const validationErrors = validateForm(payload);
+    const validationErrors = validateForm(payload, aboutCopy.errorLabel);
 
     if (Object.keys(validationErrors).length > 0) {
       setFormErrors(validationErrors);
@@ -302,13 +320,13 @@ export function EditProfileModal({ onClose, profile, visible }: EditProfileModal
 
               <AppInput
                 className="min-h-[100px] py-3 text-[14px]"
-                error={formErrors.startupIdea}
-                label="Startup Idea"
+                error={formErrors.about}
+                label={aboutCopy.label}
                 multiline
-                onChangeText={(value) => updateField('startupIdea', value)}
-                placeholder="Describe your startup idea"
+                onChangeText={(value) => updateField('about', value)}
+                placeholder={aboutCopy.placeholder}
                 textAlignVertical="top"
-                value={formState.startupIdea}
+                value={formState.about}
               />
 
               <View className="gap-3 border-t border-border pt-4">

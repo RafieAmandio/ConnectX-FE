@@ -35,7 +35,8 @@ export const mockMyProfileResponse: MyProfileResponse = {
       },
     ],
     sections: {
-      startupIdea: {
+      about: {
+        kind: 'startupIdea',
         title: 'Startup Idea',
         value:
           'AI-powered supply chain platform that optimizes logistics for SMEs across Southeast Asia.',

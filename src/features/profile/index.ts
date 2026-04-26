@@ -12,6 +12,8 @@ export {
   updateMyProfile,
 } from './services/profile-service';
 export type {
+  ProfileAboutKind,
+  ProfileAboutSection,
   ProfileBadge,
   ProfileHighlightsSection,
   ProfileListSection,
