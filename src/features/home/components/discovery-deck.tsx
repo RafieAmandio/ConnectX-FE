@@ -12,6 +12,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -76,10 +77,6 @@ const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
   explore_startups: 'goal_explore_startups',
   joining_startups: 'goal_joining_startups',
 };
-
-function hasUsableCards(items: DiscoveryCard[]) {
-  return items.length > 0;
-}
 
 function getFallbackCards(mode: DiscoveryMode | null) {
   return (mockDiscoveryCardsResponsesByMode[mode ?? DEFAULT_FILTER_MODE] ?? mockDiscoveryCardsResponse).data.items;
@@ -349,6 +346,65 @@ function withAlpha(hexColor: string, alpha: number) {
   const blue = parseInt(normalized.slice(4, 6), 16);
 
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function SkeletonBlock({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.ComponentProps<typeof Animated.View>['style'];
+}) {
+  const progress = useSharedValue(0);
+
+  React.useEffect(() => {
+    progress.value = withRepeat(withTiming(1, { duration: 920 }), -1, true);
+  }, [progress]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0.42, 0.86]),
+  }));
+
+  return (
+    <Animated.View
+      className={className}
+      style={[{ backgroundColor: withAlpha('#FFFFFF', 0.12) }, animatedStyle, style]}
+    />
+  );
+}
+
+function DiscoveryDeckSkeleton() {
+  return (
+    <View className="flex-1 px-2 pb-1">
+      <View
+        className="mt-2 flex-1 overflow-hidden rounded-[24px] border border-border p-4"
+        style={[Shadows.card, { backgroundColor: '#232323' }]}>
+        <SkeletonBlock className="h-[48%] rounded-[20px]" />
+
+        <View className="mt-5 gap-3">
+          <SkeletonBlock className="h-4 w-24 rounded-full" style={{ backgroundColor: withAlpha('#FF9A3E', 0.26) }} />
+          <SkeletonBlock className="h-8 w-[78%] rounded-[10px]" />
+          <SkeletonBlock className="h-4 w-[92%] rounded-full" />
+          <SkeletonBlock className="h-4 w-[68%] rounded-full" />
+        </View>
+
+        <View className="mt-5 flex-row flex-wrap gap-2">
+          <SkeletonBlock className="h-8 w-28 rounded-full" />
+          <SkeletonBlock className="h-8 w-24 rounded-full" />
+          <SkeletonBlock className="h-8 w-32 rounded-full" />
+        </View>
+
+        <View className="mt-auto gap-3">
+          <SkeletonBlock className="h-16 rounded-[16px]" />
+          <View className="flex-row justify-center gap-5">
+            <SkeletonBlock className="h-14 w-14 rounded-full" />
+            <SkeletonBlock className="h-16 w-16 rounded-full" style={{ backgroundColor: withAlpha('#FF9A3E', 0.22) }} />
+            <SkeletonBlock className="h-14 w-14 rounded-full" />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 function DiscoveryTag({
@@ -874,33 +930,86 @@ function DeckActionButton({
 }
 
 function EmptyState({
+  hasActiveFilters,
   isLoadingMore,
+  onOpenFilters,
   onResetFallback,
+  onResetFilters,
   usingMockData,
 }: {
+  hasActiveFilters: boolean;
   isLoadingMore: boolean;
+  onOpenFilters: () => void;
   onResetFallback: () => void;
+  onResetFilters: () => void;
   usingMockData: boolean;
 }) {
+  const title = isLoadingMore
+    ? 'Loading more cards...'
+    : hasActiveFilters
+      ? 'No cards match these filters'
+      : 'No discovery cards right now';
+  const description = isLoadingMore
+    ? 'Hang tight while the next page of discovery cards loads into the deck.'
+    : hasActiveFilters
+      ? 'Try widening the role, location, or availability filters to bring more people into the deck.'
+      : 'You are all caught up for now. Fresh matches will appear here when they are available.';
+
   return (
-    <AppCard className="gap-3 rounded-[24px] p-4">
-      <AppText variant="title">
-        {isLoadingMore ? 'Loading more cards...' : 'No more discovery cards right now.'}
-      </AppText>
-      <AppText tone="muted">
-        {isLoadingMore
-          ? 'Hang tight while the next page of discovery cards loads into the deck.'
-          : 'You reached the end of the current stack. Check back later for fresh matches.'}
-      </AppText>
-      {usingMockData ? (
-        <Pressable
-          className="self-start rounded-full border px-3 py-1.5"
-          onPress={onResetFallback}
-          style={{ backgroundColor: '#2A2117', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
-          <AppText tone="signal" variant="bodyStrong">
-            Reload Mock Deck
-          </AppText>
-        </Pressable>
+    <AppCard className="items-center gap-4 rounded-[24px] p-5">
+      <View
+        className="h-16 w-16 items-center justify-center rounded-full border"
+        style={{ backgroundColor: '#2A2117', borderColor: 'rgba(255, 154, 62, 0.28)' }}>
+        <Ionicons color="#FF9A3E" name={hasActiveFilters ? 'options-outline' : 'albums-outline'} size={28} />
+      </View>
+
+      <View className="items-center gap-2">
+        <AppText className="text-center" variant="title">
+          {title}
+        </AppText>
+        <AppText className="max-w-[300px] text-center" tone="muted">
+          {description}
+        </AppText>
+      </View>
+
+      {!isLoadingMore ? (
+        <View className="w-full gap-2">
+          {hasActiveFilters ? (
+            <Pressable
+              className="h-11 flex-row items-center justify-center gap-2 rounded-full"
+              onPress={onOpenFilters}
+              style={{ backgroundColor: '#FF9A3E' }}>
+              <Ionicons color="#1A120B" name="options-outline" size={18} />
+              <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
+                Adjust filters
+              </AppText>
+            </Pressable>
+          ) : null}
+
+          {hasActiveFilters ? (
+            <Pressable
+              className="h-11 flex-row items-center justify-center gap-2 rounded-full border"
+              onPress={onResetFilters}
+              style={{ backgroundColor: '#1E1E1E', borderColor: 'rgba(255, 255, 255, 0.16)' }}>
+              <Ionicons color="#D0D5DD" name="close-circle-outline" size={18} />
+              <AppText tone="muted" variant="bodyStrong">
+                Clear filters
+              </AppText>
+            </Pressable>
+          ) : null}
+
+          {usingMockData ? (
+            <Pressable
+              className="h-11 flex-row items-center justify-center gap-2 rounded-full border"
+              onPress={onResetFallback}
+              style={{ backgroundColor: '#2A2117', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
+              <Ionicons color="#FF9A3E" name="refresh-outline" size={18} />
+              <AppText tone="signal" variant="bodyStrong">
+                Reload Mock Deck
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </AppCard>
   );
@@ -1085,11 +1194,11 @@ export function DiscoveryDeck() {
     }
   }, [liveCards]);
 
-  const effectiveLiveCards = liveCards.length > 0 ? liveCards : lastSuccessfulCards;
-  const usingFallback =
-    !usingMockCards &&
-    !hasUsableCards(effectiveLiveCards) && (discoveryQuery.isError || discoveryQuery.isSuccess);
-  const usingLocalMockCards = usingMockCards || usingFallback;
+  const shouldKeepLastSuccessfulCards =
+    !discoveryQuery.isSuccess && (discoveryQuery.isLoading || discoveryQuery.isFetching);
+  const effectiveLiveCards =
+    liveCards.length > 0 ? liveCards : shouldKeepLastSuccessfulCards ? lastSuccessfulCards : [];
+  const usingLocalMockCards = usingMockCards;
   const baseCards = usingLocalMockCards ? mockCards : effectiveLiveCards;
   const cards = React.useMemo(() => {
     const baseIds = new Set(baseCards.map((card) => card.id));
@@ -1556,14 +1665,7 @@ export function DiscoveryDeck() {
     return (
       <View className="flex-1">
         <AppTopBar rightAccessory={filterButton} />
-        <View className="flex-1 justify-center px-4">
-          <AppCard className="gap-3 rounded-[24px] p-4">
-            <AppText variant="title">Loading discovery deck...</AppText>
-            <AppText tone="muted">
-              Pulling the latest discovery cards and match signals for this account.
-            </AppText>
-          </AppCard>
-        </View>
+        <DiscoveryDeckSkeleton />
         {filterSheet}
       </View>
     );
@@ -1575,8 +1677,11 @@ export function DiscoveryDeck() {
         <AppTopBar rightAccessory={filterButton} />
         <View className="flex-1 justify-center px-4">
           <EmptyState
+            hasActiveFilters={appliedFilterCount > 0 || Boolean(appliedMode)}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
+            onOpenFilters={handleOpenFilters}
             onResetFallback={() => setMockCards(getFallbackCards(appliedMode))}
+            onResetFilters={handleResetFilters}
             usingMockData={usingLocalMockCards}
           />
           <View className="mt-8 flex-row items-center justify-center gap-6">
