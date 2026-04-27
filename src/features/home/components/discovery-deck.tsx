@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import React from 'react';
-import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import Animated, {
@@ -1204,6 +1204,14 @@ export function DiscoveryDeck() {
     const baseIds = new Set(baseCards.map((card) => card.id));
     return [...restoredCards.filter((card) => !baseIds.has(card.id)), ...baseCards];
   }, [baseCards, restoredCards]);
+  const handleRefreshDiscovery = React.useCallback(async () => {
+    if (usingLocalMockCards) {
+      setMockCards(getFallbackCards(appliedMode));
+      return;
+    }
+
+    await discoveryQuery.refetch();
+  }, [appliedMode, discoveryQuery, usingLocalMockCards]);
 
   const currentItem = cards[0] ?? null;
   const nextItem = cards[1] ?? null;
@@ -1661,7 +1669,11 @@ export function DiscoveryDeck() {
     </Pressable>
   );
 
-  if (!currentItem && discoveryQuery.isLoading && !usingLocalMockCards) {
+  if (
+    !currentItem &&
+    !usingLocalMockCards &&
+    (discoveryQuery.isLoading || discoveryQuery.isRefetching)
+  ) {
     return (
       <View className="flex-1">
         <AppTopBar rightAccessory={filterButton} />
@@ -1675,7 +1687,16 @@ export function DiscoveryDeck() {
     return (
       <View className="flex-1">
         <AppTopBar rightAccessory={filterButton} />
-        <View className="flex-1 justify-center px-4">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="flex-grow justify-center px-4 py-8"
+          refreshControl={
+            <RefreshControl
+              refreshing={discoveryQuery.isRefetching}
+              tintColor="#FF9A3E"
+              onRefresh={handleRefreshDiscovery}
+            />
+          }>
           <EmptyState
             hasActiveFilters={appliedFilterCount > 0 || Boolean(appliedMode)}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
@@ -1684,16 +1705,7 @@ export function DiscoveryDeck() {
             onResetFilters={handleResetFilters}
             usingMockData={usingLocalMockCards}
           />
-          <View className="mt-8 flex-row items-center justify-center gap-6">
-            <DeckActionButton
-              color="#FFCD38"
-              disabled={history.length === 0}
-              icon="refresh"
-              onPress={handleRewind}
-              size="medium"
-            />
-          </View>
-        </View>
+        </ScrollView>
         {filterSheet}
       </View>
     );
