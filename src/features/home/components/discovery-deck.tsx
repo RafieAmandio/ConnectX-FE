@@ -16,6 +16,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
@@ -77,6 +78,10 @@ const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
   explore_startups: 'goal_explore_startups',
   joining_startups: 'goal_joining_startups',
 };
+
+function hasUsableCards(items: DiscoveryCard[]) {
+  return items.length > 0;
+}
 
 function getFallbackCards(mode: DiscoveryMode | null) {
   return (mockDiscoveryCardsResponsesByMode[mode ?? DEFAULT_FILTER_MODE] ?? mockDiscoveryCardsResponse).data.items;
@@ -1017,6 +1022,7 @@ function EmptyState({
 
 export function DiscoveryDeck() {
   const { height, width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const usingMockCards = isDiscoveryCardsMockEnabled();
   const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
     useRevenueCat();
@@ -1198,7 +1204,11 @@ export function DiscoveryDeck() {
     !discoveryQuery.isSuccess && (discoveryQuery.isLoading || discoveryQuery.isFetching);
   const effectiveLiveCards =
     liveCards.length > 0 ? liveCards : shouldKeepLastSuccessfulCards ? lastSuccessfulCards : [];
-  const usingLocalMockCards = usingMockCards;
+  const usingFallback =
+    !usingMockCards &&
+    !hasUsableCards(effectiveLiveCards) &&
+    (discoveryQuery.isError || discoveryQuery.isSuccess);
+  const usingLocalMockCards = usingMockCards || usingFallback;
   const baseCards = usingLocalMockCards ? mockCards : effectiveLiveCards;
   const cards = React.useMemo(() => {
     const baseIds = new Set(baseCards.map((card) => card.id));
@@ -1216,6 +1226,13 @@ export function DiscoveryDeck() {
   const currentItem = cards[0] ?? null;
   const nextItem = cards[1] ?? null;
   const remainingCards = cards.length;
+  const floatingActionsBottomOffset = Math.max(
+    insets.bottom + 8,
+    FLOATING_ACTIONS_BOTTOM_OFFSET
+  );
+  const floatingActionsContentPadding =
+    FLOATING_ACTIONS_CONTENT_PADDING +
+    Math.max(floatingActionsBottomOffset - FLOATING_ACTIONS_BOTTOM_OFFSET, 0);
   const appliedFilterCount = React.useMemo(
     () => countAppliedDiscoveryFilters(sanitizedAppliedFilters),
     [sanitizedAppliedFilters]
@@ -1747,7 +1764,7 @@ export function DiscoveryDeck() {
                 className="absolute inset-0 overflow-hidden rounded-[24px] border border-border"
                 style={[Shadows.card, nextCardStyle, { backgroundColor: '#232323' }]}>
                 <DiscoveryCardContent
-                  bottomInset={FLOATING_ACTIONS_CONTENT_PADDING}
+                  bottomInset={floatingActionsContentPadding}
                   card={nextItem}
                   scrollEnabled={false}
                 />
@@ -1759,7 +1776,7 @@ export function DiscoveryDeck() {
                 className="absolute inset-0 overflow-hidden rounded-[24px] border border-border"
                 style={[Shadows.card, topCardStyle, { backgroundColor: '#232323' }]}>
                 <DiscoveryCardContent
-                  bottomInset={FLOATING_ACTIONS_CONTENT_PADDING}
+                  bottomInset={floatingActionsContentPadding}
                   card={currentItem}
                 />
 
@@ -1821,7 +1838,7 @@ export function DiscoveryDeck() {
           <View
             className="absolute inset-x-0 z-10 items-center"
             pointerEvents="box-none"
-            style={{ bottom: FLOATING_ACTIONS_BOTTOM_OFFSET }}>
+            style={{ bottom: floatingActionsBottomOffset }}>
             <View
               className="flex-row items-center justify-center gap-4 px-2 py-3"
               style={{ backgroundColor: 'transparent' }}>

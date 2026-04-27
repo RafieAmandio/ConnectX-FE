@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
@@ -40,6 +41,7 @@ function maskWhatsappNumber(value: string) {
 
 export function VerifyOtpScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     authPhase,
     isHydrated,
@@ -155,7 +157,9 @@ export function VerifyOtpScreen() {
     >
       <Stack.Screen options={{ headerShown: false }} />
       <Pressable className="flex-1" onPress={Keyboard.dismiss} accessible={false}>
-        <View className="flex-1 px-5 pt-16 pb-8">
+        <View
+          className="flex-1 px-5 pt-16"
+          style={{ paddingBottom: Math.max(insets.bottom + 24, 32) }}>
 
           <TouchableOpacity
             onPress={() => router.replace({ pathname: '/verify-whatsapp', params: { reset: 'true' } })}

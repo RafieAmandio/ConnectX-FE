@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
@@ -156,6 +157,7 @@ function CheckBox({ checked }: { checked: boolean }) {
 
 export function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { authPhase, isHydrated, login, session, signInWithGoogle, signInWithLinkedIn } =
     useAuth();
   const searchParams = useLocalSearchParams<{
@@ -311,7 +313,7 @@ export function LoginScreen() {
             justifyContent: 'space-between',
             paddingHorizontal: 24,
             paddingTop: 88,
-            paddingBottom: 40,
+            paddingBottom: Math.max(insets.bottom + 24, 40),
             gap: 32,
           }}
           keyboardShouldPersistTaps="handled">

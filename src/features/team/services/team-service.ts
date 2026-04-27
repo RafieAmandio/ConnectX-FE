@@ -4,6 +4,7 @@ import { isExpoDevModeEnabled, parseBooleanEnv } from '@shared/utils/env';
 import {
   createMockStartupInvitationResponse,
   getMockAcceptedStartupId,
+  getMockPersonTeamOverviewResponse,
   getMockStartupInvitationsResponse,
   getMockTeamOverviewResponse,
   respondToMockStartupInvitation,
@@ -15,6 +16,9 @@ import type {
   RespondToStartupInvitationRequest,
   RespondToStartupInvitationResponse,
   StartupInvitation,
+  StartupTeamOverview,
+  TeamCompleteness,
+  TeamMember,
   TeamOverviewResponse,
   UpdateRequiredRolesRequest,
   UpdateRequiredRolesResponse,
@@ -35,6 +39,52 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isTeamEntityOption(value: unknown) {
   return isRecord(value) && typeof value.id === 'string' && typeof value.label === 'string';
+}
+
+function isStringArray(value: unknown) {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isTeamMember(payload: unknown) {
+  if (!isRecord(payload)) {
+    return false;
+  }
+
+  return (
+    typeof payload.id === 'string' &&
+    typeof payload.userId === 'string' &&
+    typeof payload.name === 'string' &&
+    isTeamEntityOption(payload.role) &&
+    typeof payload.commitment === 'string' &&
+    typeof payload.equityPercent === 'number' &&
+    (payload.avatarUrl === null || typeof payload.avatarUrl === 'string') &&
+    typeof payload.status === 'string' &&
+    (!('availableActions' in payload) || isStringArray(payload.availableActions))
+  );
+}
+
+function isRequiredRole(payload: unknown) {
+  return isTeamEntityOption(payload) && isRecord(payload) && typeof payload.status === 'string';
+}
+
+function isTeamCompleteness(payload: unknown) {
+  return (
+    isRecord(payload) &&
+    typeof payload.percent === 'number' &&
+    typeof payload.filledRoles === 'number' &&
+    typeof payload.targetRoles === 'number'
+  );
+}
+
+function isStartupOverview(payload: unknown) {
+  return (
+    isRecord(payload) &&
+    typeof payload.id === 'string' &&
+    typeof payload.name === 'string' &&
+    typeof payload.description === 'string' &&
+    isTeamEntityOption(payload.industry) &&
+    isTeamEntityOption(payload.stage)
+  );
 }
 
 function hasUsableStartupInvitation(payload: unknown): payload is StartupInvitation {
@@ -63,22 +113,131 @@ function hasUsableStartupInvitation(payload: unknown): payload is StartupInvitat
   );
 }
 
-function hasUsableTeamOverviewResponse(payload: unknown): payload is TeamOverviewResponse {
-  if (!isRecord(payload) || !('data' in payload)) {
-    return false;
+function normalizeTeamOverviewResponse(payload: unknown): TeamOverviewResponse | null {
+  if (!isRecord(payload) || !('data' in payload) || !isRecord(payload.data)) {
+    return null;
   }
 
   const data = payload.data;
 
-  if (!isRecord(data)) {
-    return false;
+  if (
+    isRecord(data.viewerContext) &&
+    typeof data.viewerContext.kind === 'string' &&
+    typeof data.viewerContext.hasActiveStartup === 'boolean' &&
+    (data.viewerContext.startupId === null || typeof data.viewerContext.startupId === 'string') &&
+    (data.viewerContext.membershipId === null || typeof data.viewerContext.membershipId === 'string') &&
+    (data.startup === null || isStartupOverview(data.startup)) &&
+    isRecord(data.teamRoster) &&
+    typeof data.teamRoster.title === 'string' &&
+    Array.isArray(data.teamRoster.members) &&
+    data.teamRoster.members.every((member) => isTeamMember(member)) &&
+    isRecord(data.teamRoster.actions) &&
+    typeof data.teamRoster.actions.inviteViaLink === 'boolean' &&
+    typeof data.teamRoster.actions.addFromMatches === 'boolean' &&
+    isRecord(data.myApplications) &&
+    typeof data.myApplications.title === 'string' &&
+    isRecord(data.myApplications.stats) &&
+    typeof data.myApplications.stats.applied === 'number' &&
+    typeof data.myApplications.stats.inReview === 'number' &&
+    typeof data.myApplications.stats.interviews === 'number' &&
+    Array.isArray(data.myApplications.items) &&
+    data.myApplications.items.every(
+      (application) =>
+        isRecord(application) &&
+        typeof application.id === 'string' &&
+        typeof application.startupId === 'string' &&
+        typeof application.startupName === 'string' &&
+        isTeamEntityOption(application.role) &&
+        typeof application.appliedAt === 'string' &&
+        typeof application.status === 'string' &&
+        typeof application.statusLabel === 'string'
+    ) &&
+    isRecord(data.myApplications.actions) &&
+    typeof data.myApplications.actions.browseStartups === 'boolean' &&
+    typeof data.myApplications.actions.discoverMoreStartups === 'boolean' &&
+    isRecord(data.teamInvites) &&
+    typeof data.teamInvites.title === 'string' &&
+    Array.isArray(data.teamInvites.items) &&
+    data.teamInvites.items.every(
+      (invitation) =>
+        isRecord(invitation) &&
+        typeof invitation.id === 'string' &&
+        (invitation.direction === 'sent' || invitation.direction === 'received') &&
+        typeof invitation.startupId === 'string' &&
+        typeof invitation.startupName === 'string' &&
+        isTeamEntityOption(invitation.role) &&
+        typeof invitation.email === 'string' &&
+        typeof invitation.sentAt === 'string' &&
+        typeof invitation.status === 'string' &&
+        isStringArray(invitation.availableActions)
+    ) &&
+    isTeamCompleteness(data.teamCompleteness) &&
+    Array.isArray(data.requiredRoles) &&
+    data.requiredRoles.every((role) => isRequiredRole(role)) &&
+    Array.isArray(data.missingRoles) &&
+    data.missingRoles.every((role) => isTeamEntityOption(role))
+  ) {
+    return payload as TeamOverviewResponse;
   }
 
-  if (!('startup' in data) || !isRecord(data.startup)) {
-    return false;
+  if (
+    isStartupOverview(data.startup) &&
+    isTeamCompleteness(data.teamCompleteness) &&
+    Array.isArray(data.members) &&
+    data.members.every((member) => isTeamMember(member)) &&
+    Array.isArray(data.requiredRoles) &&
+    data.requiredRoles.every((role) => isRequiredRole(role)) &&
+    Array.isArray(data.missingRoles) &&
+    data.missingRoles.every((role) => isTeamEntityOption(role))
+  ) {
+    const startup = data.startup as StartupTeamOverview;
+    const teamCompleteness = data.teamCompleteness as TeamCompleteness;
+    const members = data.members as TeamMember[];
+
+    return {
+      success: Boolean(payload.success),
+      data: {
+        viewerContext: {
+          kind: 'startup_member',
+          hasActiveStartup: true,
+          startupId: startup.id,
+          membershipId: null,
+        },
+        startup,
+        teamRoster: {
+          title: 'Your Team',
+          members,
+          actions: {
+            inviteViaLink: true,
+            addFromMatches: true,
+          },
+        },
+        myApplications: {
+          title: 'My Applications',
+          stats: {
+            applied: 0,
+            inReview: 0,
+            interviews: 0,
+          },
+          items: [],
+          actions: {
+            browseStartups: false,
+            discoverMoreStartups: false,
+          },
+        },
+        teamInvites: {
+          title: 'Team Invites',
+          items: [],
+        },
+        teamCompleteness,
+        members,
+        requiredRoles: data.requiredRoles,
+        missingRoles: data.missingRoles,
+      },
+    };
   }
 
-  return typeof data.startup.id === 'string' && typeof data.startup.name === 'string';
+  return null;
 }
 
 function hasUsableStartupInvitationsResponse(payload: unknown): payload is FetchStartupInvitationsResponse {
@@ -148,20 +307,18 @@ export async function fetchTeamOverview() {
       return getMockTeamOverviewResponse(acceptedStartupId);
     }
 
-    throw new ApiError('No active startup.', 404, {
-      code: 'NO_ACTIVE_STARTUP',
-      message: 'No active startup.',
-    });
+    return getMockPersonTeamOverviewResponse();
   }
 
   try {
     const response = await apiFetch<TeamOverviewResponse>(TEAM_API.OVERVIEW);
+    const normalizedResponse = normalizeTeamOverviewResponse(response);
 
-    if (!hasUsableTeamOverviewResponse(response)) {
+    if (!normalizedResponse) {
       return getMockTeamOverviewResponse();
     }
 
-    return response;
+    return normalizedResponse;
   } catch (error) {
     if (isNoActiveStartupError(error)) {
       const acceptedStartupId = getMockAcceptedStartupId();
@@ -170,7 +327,7 @@ export async function fetchTeamOverview() {
         return getMockTeamOverviewResponse(acceptedStartupId);
       }
 
-      throw error;
+      return getMockPersonTeamOverviewResponse();
     }
 
     return getMockTeamOverviewResponse();

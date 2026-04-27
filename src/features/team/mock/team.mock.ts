@@ -15,6 +15,12 @@ function cloneValue<T>(value: T): T {
 const initialMockResponse: TeamOverviewResponse = {
   success: true,
   data: {
+    viewerContext: {
+      kind: 'startup_owner',
+      hasActiveStartup: true,
+      startupId: 'stp_local_demo',
+      membershipId: 'tm_founder',
+    },
     startup: {
       id: 'stp_local_demo',
       name: 'My Startup',
@@ -47,6 +53,8 @@ const initialMockResponse: TeamOverviewResponse = {
         isCurrentUser: true,
         avatarUrl: null,
         status: 'active',
+        statusLabel: 'Active',
+        availableActions: ['edit_role'],
       },
       {
         id: 'tm_ardi',
@@ -62,8 +70,51 @@ const initialMockResponse: TeamOverviewResponse = {
         avatarUrl:
           'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=240&q=80',
         status: 'active',
+        statusLabel: 'Active',
+        availableActions: ['edit_role', 'remove'],
       },
     ],
+    teamRoster: {
+      title: 'Your Team',
+      members: [],
+      actions: {
+        inviteViaLink: true,
+        addFromMatches: true,
+      },
+    },
+    myApplications: {
+      title: 'My Applications',
+      stats: {
+        applied: 0,
+        inReview: 0,
+        interviews: 0,
+      },
+      items: [],
+      actions: {
+        browseStartups: false,
+        discoverMoreStartups: false,
+      },
+    },
+    teamInvites: {
+      title: 'Team Invites',
+      items: [
+        {
+          id: 'inv_sent_maya',
+          direction: 'sent',
+          startupId: 'stp_local_demo',
+          startupName: 'My Startup',
+          role: {
+            id: 'product_designer',
+            label: 'Product Designer',
+          },
+          email: 'maya@example.com',
+          sentAt: '2026-04-23T12:00:00.000Z',
+          status: 'pending',
+          statusLabel: 'Pending',
+          availableActions: ['revoke'],
+        },
+      ],
+    },
     requiredRoles: [
       {
         id: 'product_designer',
@@ -86,6 +137,122 @@ const initialMockResponse: TeamOverviewResponse = {
         label: 'Growth Marketer',
       },
     ],
+  },
+};
+
+initialMockResponse.data.teamRoster.members = cloneValue(initialMockResponse.data.members ?? []);
+
+const initialMockPersonResponse: TeamOverviewResponse = {
+  success: true,
+  data: {
+    viewerContext: {
+      kind: 'person',
+      hasActiveStartup: false,
+      startupId: null,
+      membershipId: null,
+    },
+    startup: null,
+    teamCompleteness: {
+      percent: 0,
+      filledRoles: 0,
+      targetRoles: 0,
+    },
+    members: [],
+    teamRoster: {
+      title: 'Your Team',
+      members: [],
+      actions: {
+        inviteViaLink: false,
+        addFromMatches: false,
+      },
+    },
+    myApplications: {
+      title: 'My Applications',
+      stats: {
+        applied: 3,
+        inReview: 1,
+        interviews: 1,
+      },
+      items: [
+        {
+          id: 'app_atlas_cto',
+          startupId: 'stp_atlas_commerce',
+          startupName: 'Atlas Commerce',
+          role: {
+            id: 'technical_cofounder',
+            label: 'Technical Co-Founder',
+          },
+          appliedAt: '2026-04-20T08:30:00.000Z',
+          status: 'in_review',
+          statusLabel: 'In Review',
+        },
+        {
+          id: 'app_klinik_growth',
+          startupId: 'stp_klinik_ops',
+          startupName: 'KlinikOps',
+          role: {
+            id: 'growth_marketer',
+            label: 'Growth Marketer',
+          },
+          appliedAt: '2026-04-22T10:00:00.000Z',
+          status: 'interview',
+          statusLabel: 'Interview',
+        },
+        {
+          id: 'app_nusa_product',
+          startupId: 'stp_nusa_ai',
+          startupName: 'Nusa AI',
+          role: {
+            id: 'product_cofounder',
+            label: 'Product Co-Founder',
+          },
+          appliedAt: '2026-04-24T14:15:00.000Z',
+          status: 'applied',
+          statusLabel: 'Applied',
+        },
+      ],
+      actions: {
+        browseStartups: true,
+        discoverMoreStartups: true,
+      },
+    },
+    teamInvites: {
+      title: 'Team Invites',
+      items: [
+        {
+          id: 'inv_atlas_cto',
+          direction: 'received',
+          startupId: 'stp_atlas_commerce',
+          startupName: 'Atlas Commerce',
+          role: {
+            id: 'technical_cofounder',
+            label: 'Technical Co-Founder',
+          },
+          email: 'builder@connectx.app',
+          sentAt: '2026-04-12T09:30:00.000Z',
+          status: 'pending',
+          statusLabel: 'Pending',
+          availableActions: ['accept', 'decline'],
+        },
+        {
+          id: 'inv_klinik_ops',
+          direction: 'received',
+          startupId: 'stp_klinik_ops',
+          startupName: 'KlinikOps',
+          role: {
+            id: 'growth_marketer',
+            label: 'Growth Marketer',
+          },
+          email: 'builder@connectx.app',
+          sentAt: '2026-04-14T03:15:00.000Z',
+          status: 'pending',
+          statusLabel: 'Pending',
+          availableActions: ['accept', 'decline'],
+        },
+      ],
+    },
+    requiredRoles: [],
+    missingRoles: [],
   },
 };
 
@@ -149,13 +316,23 @@ const initialMockInvitations: StartupInvitation[] = [
 ];
 
 let mockTeamOverviewState = cloneValue(initialMockResponse);
+let mockPersonOverviewState = cloneValue(initialMockPersonResponse);
 let mockStartupInvitationsState = cloneValue(initialMockInvitations);
 let mockAcceptedStartupId: string | null = null;
 
 export function getMockTeamOverviewResponse(startupId = 'stp_local_demo'): TeamOverviewResponse {
   const nextResponse = cloneValue(mockTeamOverviewState);
-  nextResponse.data.startup.id = startupId;
+  nextResponse.data.viewerContext.startupId = startupId;
+
+  if (nextResponse.data.startup) {
+    nextResponse.data.startup.id = startupId;
+  }
+
   return nextResponse;
+}
+
+export function getMockPersonTeamOverviewResponse(): TeamOverviewResponse {
+  return cloneValue(mockPersonOverviewState);
 }
 
 export function getMockStartupInvitationsResponse(): FetchStartupInvitationsResponse {
@@ -187,6 +364,12 @@ function syncMockOverviewFromInvitation(invitation: StartupInvitation) {
     data: {
       ...mockTeamOverviewState.data,
       startup: cloneValue(invitation.startup),
+      viewerContext: {
+        kind: 'startup_member',
+        hasActiveStartup: true,
+        startupId: invitation.startup.id,
+        membershipId: 'tm_joined_mock',
+      },
     },
   };
 }
@@ -222,6 +405,26 @@ export function respondToMockStartupInvitation(
     mockAcceptedStartupId = invitation.startup.id;
     syncMockOverviewFromInvitation(invitation);
   }
+
+  mockPersonOverviewState = {
+    ...mockPersonOverviewState,
+    data: {
+      ...mockPersonOverviewState.data,
+      teamInvites: {
+        ...mockPersonOverviewState.data.teamInvites,
+        items: mockPersonOverviewState.data.teamInvites.items.map((currentInvitation) =>
+          currentInvitation.id === invitationId
+            ? {
+                ...currentInvitation,
+                status: nextStatus,
+                statusLabel: nextStatus === 'accepted' ? 'Accepted' : 'Declined',
+                availableActions: [],
+              }
+            : currentInvitation
+        ),
+      },
+    },
+  };
 
   return {
     success: true,

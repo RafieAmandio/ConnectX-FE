@@ -1,6 +1,7 @@
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppInput, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
@@ -57,6 +58,7 @@ function getWhatsappNumberError(value: string) {
 
 export function VerifyWhatsappScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     authPhase,
     isHydrated,
@@ -144,7 +146,9 @@ export function VerifyWhatsappScreen() {
     >
       <Stack.Screen options={{ headerShown: false }} />
       <Pressable className="flex-1" onPress={Keyboard.dismiss} accessible={false}>
-        <View className="flex-1 px-5 pt-16 pb-8">
+        <View
+          className="flex-1 px-5 pt-16"
+          style={{ paddingBottom: Math.max(insets.bottom + 24, 32) }}>
 
           <View className="flex-row justify-end items-center h-12">
             <TouchableOpacity onPress={() => signOut()} className="py-2">

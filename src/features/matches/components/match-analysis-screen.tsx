@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppPill, AppText } from '@shared/components';
 
@@ -54,6 +55,7 @@ function AnalysisCard({
 
 export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const analysisQuery = useMatchAnalysis(matchId);
   const usingFallback = analysisQuery.isError || !analysisQuery.data?.data;
   const response = analysisQuery.data?.data
@@ -81,7 +83,12 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
 
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingHorizontal: 14, paddingTop: 14 }}
+          contentContainerStyle={{
+            gap: 12,
+            paddingBottom: Math.max(insets.bottom + 24, 24),
+            paddingHorizontal: 14,
+            paddingTop: 14,
+          }}
           showsVerticalScrollIndicator={false}>
           {usingFallback ? (
             <AppCard tone="signal" className="gap-2 rounded-[18px] p-3">

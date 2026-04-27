@@ -11,6 +11,10 @@ export type TeamMemberCommitment = 'full_time' | 'part_time' | 'flexible' | stri
 
 export type TeamMemberStatus = 'active' | 'pending' | 'inactive' | string;
 
+export type ViewerContextKind = 'person' | 'startup_owner' | 'startup_member' | string;
+
+export type TeamMemberAction = 'edit_role' | 'remove' | string;
+
 export type TeamMember = {
   id: string;
   userId: string;
@@ -18,9 +22,11 @@ export type TeamMember = {
   role: TeamRole;
   commitment: TeamMemberCommitment;
   equityPercent: number;
-  isCurrentUser: boolean;
+  isCurrentUser?: boolean;
   avatarUrl: string | null;
   status: TeamMemberStatus;
+  statusLabel?: string;
+  availableActions?: TeamMemberAction[];
 };
 
 export type RequiredRole = TeamRole & {
@@ -41,10 +47,78 @@ export type TeamCompleteness = {
   targetRoles: number;
 };
 
-export type TeamOverviewData = {
-  startup: StartupTeamOverview;
-  teamCompleteness: TeamCompleteness;
+export type TeamViewerContext = {
+  kind: ViewerContextKind;
+  hasActiveStartup: boolean;
+  startupId: string | null;
+  membershipId: string | null;
+};
+
+export type TeamRoster = {
+  title: string;
   members: TeamMember[];
+  actions: {
+    inviteViaLink: boolean;
+    addFromMatches: boolean;
+  };
+};
+
+export type TeamApplicationStatus = 'applied' | 'in_review' | 'interview' | 'rejected' | 'accepted' | string;
+
+export type TeamApplication = {
+  id: string;
+  startupId: string;
+  startupName: string;
+  role: TeamRole;
+  appliedAt: string;
+  status: TeamApplicationStatus;
+  statusLabel: string;
+};
+
+export type TeamApplicationsSummary = {
+  title: string;
+  stats: {
+    applied: number;
+    inReview: number;
+    interviews: number;
+  };
+  items: TeamApplication[];
+  actions: {
+    browseStartups: boolean;
+    discoverMoreStartups: boolean;
+  };
+};
+
+export type TeamInviteDirection = 'sent' | 'received';
+
+export type TeamInviteAction = 'accept' | 'decline' | 'revoke' | string;
+
+export type TeamDashboardInvite = {
+  id: string;
+  direction: TeamInviteDirection;
+  startupId: string;
+  startupName: string;
+  role: TeamRole;
+  email: string;
+  sentAt: string;
+  status: StartupInvitationStatus;
+  statusLabel?: string;
+  availableActions: TeamInviteAction[];
+};
+
+export type TeamInvitesSummary = {
+  title: string;
+  items: TeamDashboardInvite[];
+};
+
+export type TeamOverviewData = {
+  viewerContext: TeamViewerContext;
+  startup: StartupTeamOverview | null;
+  teamRoster: TeamRoster;
+  myApplications: TeamApplicationsSummary;
+  teamInvites: TeamInvitesSummary;
+  teamCompleteness: TeamCompleteness;
+  members?: TeamMember[];
   requiredRoles: RequiredRole[];
   missingRoles: MissingRole[];
 };

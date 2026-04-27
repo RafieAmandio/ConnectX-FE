@@ -12,15 +12,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
 import { Shadows } from '@shared/theme';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import {
   useCreateStartupInvitation,
   useRespondToStartupInvitation,
-  useStartupInvitations,
   useTeamOverview,
 } from '../hooks/use-team';
+import {
+  getMockPersonTeamOverviewResponse,
+  getMockTeamOverviewResponse,
+} from '../mock/team.mock';
 import { isNoActiveStartupError } from '../services/team-service';
-import type { StartupInvitation, TeamMember } from '../types/team.types';
+import type { TeamApplication, TeamDashboardInvite, TeamMember } from '../types/team.types';
+
+type DevTeamResponseMode = 'startup' | 'person';
 
 function getCommitmentLabel(value: string) {
   switch (value) {
@@ -62,9 +68,18 @@ function getInvitationStatusLabel(status: string) {
     case 'accepted':
       return 'Accepted';
     case 'denied':
+    case 'declined':
       return 'Denied';
     case 'expired':
       return 'Expired';
+    case 'in_review':
+      return 'In Review';
+    case 'interview':
+      return 'Interview';
+    case 'applied':
+      return 'Applied';
+    case 'active':
+      return 'Active';
     default:
       return 'Pending';
   }
@@ -84,21 +99,27 @@ function InfoPill({
   );
 }
 
-function InvitationStatusPill({ status }: { status: string }) {
+function StatusPill({ label, status }: { label?: string; status: string }) {
   const palette =
-    status === 'accepted'
+    status === 'accepted' || status === 'active'
       ? {
-          backgroundColor: 'rgba(52, 211, 153, 0.12)',
-          borderColor: 'rgba(52, 211, 153, 0.28)',
-          color: '#34D399',
-        }
-      : status === 'denied'
+        backgroundColor: 'rgba(52, 211, 153, 0.12)',
+        borderColor: 'rgba(52, 211, 153, 0.28)',
+        color: '#34D399',
+      }
+      : status === 'denied' || status === 'declined' || status === 'rejected'
         ? {
-            backgroundColor: 'rgba(248, 113, 113, 0.12)',
-            borderColor: 'rgba(248, 113, 113, 0.28)',
-            color: '#F87171',
+          backgroundColor: 'rgba(248, 113, 113, 0.12)',
+          borderColor: 'rgba(248, 113, 113, 0.28)',
+          color: '#F87171',
+        }
+        : status === 'in_review' || status === 'interview'
+          ? {
+            backgroundColor: 'rgba(0, 117, 255, 0.12)',
+            borderColor: 'rgba(0, 117, 255, 0.28)',
+            color: '#3394FF',
           }
-        : {
+          : {
             backgroundColor: '#FF9A3E1A',
             borderColor: '#FF9A3E4D',
             color: '#FF9A3E',
@@ -112,139 +133,216 @@ function InvitationStatusPill({ status }: { status: string }) {
         borderColor: palette.borderColor,
       }}>
       <AppText className="text-[11px]" style={{ color: palette.color }} variant="label">
-        {getInvitationStatusLabel(status)}
+        {label ?? getInvitationStatusLabel(status)}
       </AppText>
     </View>
   );
 }
 
-function MemberCard({ member }: { member: TeamMember }) {
+function MemberCard({
+  member,
+  onEditRole,
+  onRemove,
+}: {
+  member: TeamMember;
+  onEditRole: () => void;
+  onRemove: () => void;
+}) {
+  const memberActions = member.availableActions ?? [];
+
   return (
     <View
-      className="flex-row items-center gap-4 rounded-[20px] border border-white/10 bg-[#2C2C2C] px-4 py-4"
+      className="gap-4 rounded-[20px] border border-white/10 bg-[#2C2C2C] px-4 py-4"
       style={Shadows.card}>
-      <View className="h-16 w-16 items-center justify-center overflow-hidden rounded-[16px] bg-[#3A3A3C]">
-        {member.avatarUrl ? (
-          <Image contentFit="cover" source={{ uri: member.avatarUrl }} style={{ height: '100%', width: '100%' }} />
-        ) : (
-          <View className="h-12 w-12 items-center justify-center rounded-xl bg-[#FF9A3E]/10">
-            <Ionicons color="#FF9A3E" name="briefcase" size={24} />
-          </View>
-        )}
-      </View>
-
-      <View className="flex-1 gap-1">
-        <AppText variant="subtitle">{member.role.label}</AppText>
-        <AppText className="text-[13px]" tone="muted">{member.name}</AppText>
-        <AppText className="text-[13px] text-[#FF9A3E]" variant="bodyStrong">
-          Equity: {member.equityPercent}%
-        </AppText>
-      </View>
-
-      <View className="items-end gap-2">
-        <View className="flex-row gap-2">
-          {member.isCurrentUser && (
-            <View className="rounded-full bg-[#FF9A3E]/15 px-2 py-0.5 border border-[#FF9A3E]/30">
-              <AppText className="text-[11px] text-[#FF9A3E]" variant="label">You</AppText>
+      <View className="flex-row items-center gap-4">
+        <View className="h-16 w-16 items-center justify-center overflow-hidden rounded-[16px] bg-[#3A3A3C]">
+          {member.avatarUrl ? (
+            <Image contentFit="cover" source={{ uri: member.avatarUrl }} style={{ height: '100%', width: '100%' }} />
+          ) : (
+            <View className="h-12 w-12 items-center justify-center rounded-xl bg-[#FF9A3E]/10">
+              <Ionicons color="#FF9A3E" name="person" size={24} />
             </View>
           )}
         </View>
-        <AppText className="text-[12px]" tone="muted">{getCommitmentLabel(member.commitment)}</AppText>
+
+        <View className="flex-1 gap-2">
+          <View className="flex-row flex-wrap items-center gap-2">
+            <AppText variant="subtitle">{member.name}</AppText>
+            {member.isCurrentUser ? (
+              <View className="rounded-full bg-[#FF9A3E]/15 px-2 py-0.5 border border-[#FF9A3E]/30">
+                <AppText className="text-[11px] text-[#FF9A3E]" variant="label">You</AppText>
+              </View>
+            ) : null}
+          </View>
+          <View className="flex-row flex-wrap gap-2">
+            <InfoPill label={member.role.label} />
+            <StatusPill label={member.statusLabel} status={member.status} />
+          </View>
+          <View className="flex-row flex-wrap gap-x-4 gap-y-1">
+            <AppText className="text-[13px] text-[#FF9A3E]" variant="bodyStrong">
+              Equity: {member.equityPercent}%
+            </AppText>
+            <AppText className="text-[13px]" tone="muted">
+              {getCommitmentLabel(member.commitment)}
+            </AppText>
+          </View>
+        </View>
       </View>
+
+      {memberActions.length > 0 ? (
+        <View className="flex-row flex-wrap gap-2">
+          {memberActions.includes('edit_role') ? (
+            <Pressable className="rounded-lg border border-white/10 bg-[#3A3A3C] px-3 py-2" onPress={onEditRole}>
+              <AppText className="text-[13px]" variant="bodyStrong">Edit role</AppText>
+            </Pressable>
+          ) : null}
+          {memberActions.includes('remove') ? (
+            <Pressable className="rounded-lg border border-danger/30 bg-danger-tint px-3 py-2" onPress={onRemove}>
+              <AppText className="text-[13px]" tone="danger" variant="bodyStrong">Remove</AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
 
-function InvitationCard({
+function ApplicationCard({ application }: { application: TeamApplication }) {
+  return (
+    <AppCard className="gap-3 bg-[#2C2C2C] border-white/10">
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1 gap-1">
+          <AppText variant="subtitle">{application.startupName}</AppText>
+          <AppText className="text-[13px]" tone="muted">
+            {application.role.label} • Applied {formatInvitationDate(application.appliedAt)}
+          </AppText>
+        </View>
+        <StatusPill label={application.statusLabel} status={application.status} />
+      </View>
+    </AppCard>
+  );
+}
+
+function DashboardInviteCard({
   invitation,
   isAcceptPending,
-  isDenyPending,
+  isDeclinePending,
   onAccept,
-  onDeny,
+  onDecline,
+  onRevoke,
 }: {
-  invitation: StartupInvitation;
+  invitation: TeamDashboardInvite;
   isAcceptPending: boolean;
-  isDenyPending: boolean;
+  isDeclinePending: boolean;
   onAccept: () => void;
-  onDeny: () => void;
+  onDecline: () => void;
+  onRevoke: () => void;
 }) {
   const isPending = invitation.status === 'pending';
+  const canAccept = invitation.availableActions.includes('accept');
+  const canDecline = invitation.availableActions.includes('decline');
+  const canRevoke = invitation.availableActions.includes('revoke');
 
   return (
     <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-1">
-          <AppText variant="subtitle">{invitation.startup.name}</AppText>
-          <AppText className="text-[13px] leading-5" tone="muted">
-            {invitation.startup.description}
+          <AppText variant="subtitle">{invitation.startupName}</AppText>
+          <AppText className="text-[13px]" tone="muted">
+            {invitation.direction === 'received' ? 'Received' : 'Sent'} • {invitation.role.label}
           </AppText>
         </View>
-        <InvitationStatusPill status={invitation.status} />
+        <StatusPill label={invitation.statusLabel} status={invitation.status} />
       </View>
 
       <View className="gap-2 rounded-[16px] border border-white/10 bg-[#343434] px-4 py-3">
         <View className="flex-row items-center gap-2">
-          <Ionicons color="#FF9A3E" name="person-outline" size={16} />
-          <AppText className="flex-1 text-[13px]" tone="muted">
-            Invited by {invitation.inviter.name}
-            {invitation.inviter.roleLabel ? ` • ${invitation.inviter.roleLabel}` : ''}
-          </AppText>
-        </View>
-        <View className="flex-row items-center gap-2">
           <Ionicons color="#98A2B3" name="mail-outline" size={16} />
           <AppText className="flex-1 text-[13px]" tone="muted">
-            {invitation.recipientEmail}
+            {invitation.email}
           </AppText>
         </View>
         <View className="flex-row items-center gap-2">
           <Ionicons color="#98A2B3" name="calendar-outline" size={16} />
           <AppText className="flex-1 text-[13px]" tone="muted">
-            Sent {formatInvitationDate(invitation.sentAt)} • Expires {formatInvitationDate(invitation.expiresAt)}
+            Sent {formatInvitationDate(invitation.sentAt)}
           </AppText>
         </View>
       </View>
 
-      <View className="flex-row flex-wrap gap-2">
-        <InfoPill label={invitation.startup.industry.label} />
-        <InfoPill label={invitation.startup.stage.label} />
-      </View>
-
-      {isPending ? (
-        <View className="flex-row gap-3">
-          <Pressable
-            className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] border border-white/10 bg-[#3A3A3C] px-4 py-3"
-            disabled={isAcceptPending || isDenyPending}
-            onPress={onDeny}
-            style={{ opacity: isAcceptPending || isDenyPending ? 0.65 : 1 }}>
-            {isDenyPending ? (
-              <ActivityIndicator color="#F5F7FA" size="small" />
-            ) : (
-              <Ionicons color="#F5F7FA" name="close-outline" size={18} />
-            )}
-            <AppText className="text-[#F5F7FA]" variant="bodyStrong">
-              {isDenyPending ? 'Declining...' : 'Deny'}
-            </AppText>
-          </Pressable>
-          <Pressable
-            className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#FF9A3E] px-4 py-3"
-            disabled={isAcceptPending || isDenyPending}
-            onPress={onAccept}
-            style={{ opacity: isAcceptPending || isDenyPending ? 0.65 : 1 }}>
-            {isAcceptPending ? (
-              <ActivityIndicator color="#11131A" size="small" />
-            ) : (
-              <Ionicons color="#11131A" name="checkmark-outline" size={18} />
-            )}
-            <AppText className="text-[#11131A]" variant="bodyStrong">
-              {isAcceptPending ? 'Accepting...' : 'Accept'}
-            </AppText>
-          </Pressable>
+      {isPending && (canAccept || canDecline || canRevoke) ? (
+        <View className="flex-row flex-wrap gap-3">
+          {canDecline ? (
+            <Pressable
+              className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] border border-white/10 bg-[#3A3A3C] px-4 py-3"
+              disabled={isAcceptPending || isDeclinePending}
+              onPress={onDecline}
+              style={{ opacity: isAcceptPending || isDeclinePending ? 0.65 : 1 }}>
+              {isDeclinePending ? (
+                <ActivityIndicator color="#F5F7FA" size="small" />
+              ) : (
+                <Ionicons color="#F5F7FA" name="close-outline" size={18} />
+              )}
+              <AppText className="text-[#F5F7FA]" variant="bodyStrong">
+                {isDeclinePending ? 'Declining...' : 'Decline'}
+              </AppText>
+            </Pressable>
+          ) : null}
+          {canAccept ? (
+            <Pressable
+              className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#FF9A3E] px-4 py-3"
+              disabled={isAcceptPending || isDeclinePending}
+              onPress={onAccept}
+              style={{ opacity: isAcceptPending || isDeclinePending ? 0.65 : 1 }}>
+              {isAcceptPending ? (
+                <ActivityIndicator color="#11131A" size="small" />
+              ) : (
+                <Ionicons color="#11131A" name="checkmark-outline" size={18} />
+              )}
+              <AppText className="text-[#11131A]" variant="bodyStrong">
+                {isAcceptPending ? 'Accepting...' : 'Accept'}
+              </AppText>
+            </Pressable>
+          ) : null}
+          {canRevoke ? (
+            <Pressable
+              className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3"
+              onPress={onRevoke}>
+              <Ionicons color="#FF5A67" name="trash-outline" size={18} />
+              <AppText tone="danger" variant="bodyStrong">Revoke</AppText>
+            </Pressable>
+          ) : null}
         </View>
       ) : (
         <AppText className="text-[13px]" tone="muted">
           This invitation is no longer actionable.
         </AppText>
       )}
+    </AppCard>
+  );
+}
+
+function DashboardStatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <View className="min-h-[86px] flex-1 justify-center rounded-[18px] border border-white/10 bg-[#2C2C2C] px-4 py-3">
+      <AppText className="text-2xl font-bold text-[#FF9A3E]">{value}</AppText>
+      <AppText className="text-[12px]" tone="muted" variant="label">{label}</AppText>
+    </View>
+  );
+}
+
+function EmptySectionCard({ icon, message, title }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  message: string;
+  title: string;
+}) {
+  return (
+    <AppCard className="gap-3 bg-[#2C2C2C] border-white/10">
+      <View className="flex-row items-center gap-3">
+        <Ionicons color="#98A2B3" name={icon} size={22} />
+        <AppText variant="subtitle">{title}</AppText>
+      </View>
+      <AppText tone="muted">{message}</AppText>
     </AppCard>
   );
 }
@@ -305,11 +403,45 @@ function ActionButton({
   );
 }
 
+function DevResponseToggle({
+  mode,
+  onChange,
+}: {
+  mode: DevTeamResponseMode;
+  onChange: (mode: DevTeamResponseMode) => void;
+}) {
+  return (
+    <View className="mx-5 mb-4 flex-row rounded-[18px] border border-[#FF9A3E]/25 bg-[#2C2C2C] p-1">
+      {(['startup', 'person'] as const).map((item) => {
+        const isSelected = mode === item;
+
+        return (
+          <Pressable
+            key={item}
+            className={isSelected
+              ? 'min-h-11 flex-1 items-center justify-center rounded-[14px] bg-[#FF9A3E] px-3'
+              : 'min-h-11 flex-1 items-center justify-center rounded-[14px] px-3'}
+            onPress={() => {
+              onChange(item);
+            }}>
+            <AppText
+              className={isSelected ? 'text-[#11131A]' : 'text-[#F5F7FA]'}
+              variant="bodyStrong">
+              {item === 'startup' ? 'Founder response' : 'User response'}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function TeamScreen() {
   const router = useRouter();
+  const isDevMode = isExpoDevModeEnabled();
+  const [devResponseMode, setDevResponseMode] = React.useState<DevTeamResponseMode>('startup');
   const teamOverviewQuery = useTeamOverview();
   const isNoStartupState = teamOverviewQuery.isError && isNoActiveStartupError(teamOverviewQuery.error);
-  const startupInvitationsQuery = useStartupInvitations(isNoStartupState);
   const respondToStartupInvitationMutation = useRespondToStartupInvitation();
   const createStartupInvitationMutation = useCreateStartupInvitation();
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
@@ -320,9 +452,14 @@ export function TeamScreen() {
   const [invitationActionError, setInvitationActionError] = React.useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
-  const overview = teamOverviewQuery.data;
-  const pendingInvitations =
-    startupInvitationsQuery.data?.data.invitations.filter((invitation) => invitation.status === 'pending') ?? [];
+  const devOverview = React.useMemo(
+    () =>
+      devResponseMode === 'startup'
+        ? getMockTeamOverviewResponse()
+        : getMockPersonTeamOverviewResponse(),
+    [devResponseMode]
+  );
+  const overview = isDevMode ? devOverview : teamOverviewQuery.data;
 
   const navigateToHome = React.useCallback(() => {
     router.navigate('/(tabs)' as never);
@@ -365,7 +502,7 @@ export function TeamScreen() {
   }, [createStartupInvitationMutation, inviteEmail]);
 
   const handleInvitationDecision = React.useCallback(
-    async (invitationId: string, decision: 'accept' | 'deny') => {
+    async (invitationId: string, decision: 'accept' | 'decline') => {
       setInvitationActionError(null);
       setInvitationFeedbackMessage(null);
 
@@ -373,7 +510,7 @@ export function TeamScreen() {
         const response = await respondToStartupInvitationMutation.mutateAsync({
           invitationId,
           payload: {
-            decision,
+            decision: decision === 'decline' ? 'deny' : 'accept',
           },
         });
 
@@ -391,10 +528,24 @@ export function TeamScreen() {
     [respondToStartupInvitationMutation, teamOverviewQuery]
   );
 
-  if (teamOverviewQuery.isPending && !overview) {
+  const handleInviteRevoke = React.useCallback((invitation: TeamDashboardInvite) => {
+    setInvitationActionError(null);
+    setInvitationFeedbackMessage(`Revoke requested for ${invitation.email}.`);
+  }, []);
+
+  const handleMemberAction = React.useCallback((member: TeamMember, action: 'edit_role' | 'remove') => {
+    setInvitationActionError(null);
+    setInvitationFeedbackMessage(
+      action === 'edit_role'
+        ? `Edit role requested for ${member.name}.`
+        : `Remove requested for ${member.name}.`
+    );
+  }, []);
+
+  if (!isDevMode && teamOverviewQuery.isPending && !overview) {
     return (
       <>
-        <Stack.Screen options={{ title: 'Team', headerShown: false }} />
+        <Stack.Screen options={{ title: '', headerShown: false }} />
         <View className="flex-1" style={{ backgroundColor: '#262626' }}>
           <AppTopBar />
           <ScrollView
@@ -418,7 +569,7 @@ export function TeamScreen() {
     );
   }
 
-  if (teamOverviewQuery.isError && !overview) {
+  if (!isDevMode && teamOverviewQuery.isError && !overview) {
     return (
       <>
         <Stack.Screen options={{ title: 'Team', headerShown: false }} />
@@ -457,89 +608,6 @@ export function TeamScreen() {
               />
             </AppCard>
 
-            {isNoStartupState ? (
-              <View className="mt-5 gap-4">
-                <View className="px-1">
-                  <AppText tone="muted" variant="label">Incoming Invitations</AppText>
-                </View>
-
-                {invitationFeedbackMessage ? (
-                  <View className="rounded-[18px] border border-[#FF9A3E]/30 bg-[#FF9A3E]/10 px-4 py-3">
-                    <AppText className="text-[#FF9A3E]" variant="bodyStrong">
-                      {invitationFeedbackMessage}
-                    </AppText>
-                  </View>
-                ) : null}
-
-                {invitationActionError ? (
-                  <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
-                    <AppText tone="danger">{invitationActionError}</AppText>
-                  </View>
-                ) : null}
-
-                {startupInvitationsQuery.isPending && !startupInvitationsQuery.data ? (
-                  <AppCard className="gap-3 bg-[#2C2C2C] border-white/10">
-                    <AppText variant="subtitle">Loading invitations</AppText>
-                    <AppText tone="muted">
-                      Checking whether any startup teams have invited you to join.
-                    </AppText>
-                  </AppCard>
-                ) : null}
-
-                {startupInvitationsQuery.isError ? (
-                  <AppCard className="gap-3 bg-[#2C2C2C] border-white/10">
-                    <AppText variant="subtitle">Unable to load invitations</AppText>
-                    <AppText tone="muted">
-                      We could not load your incoming invitations right now. Try again in a moment.
-                    </AppText>
-                    <AppButton
-                      label={startupInvitationsQuery.isRefetching ? 'Refreshing...' : 'Try Again'}
-                      onPress={() => {
-                        void startupInvitationsQuery.refetch();
-                      }}
-                      variant="secondary"
-                    />
-                  </AppCard>
-                ) : null}
-
-                {!startupInvitationsQuery.isPending &&
-                !startupInvitationsQuery.isError &&
-                pendingInvitations.length === 0 ? (
-                  <AppCard className="gap-3 bg-[#2C2C2C] border-white/10">
-                    <AppText variant="subtitle">No pending invitations</AppText>
-                    <AppText tone="muted">
-                      You do not have any active startup invitations right now.
-                    </AppText>
-                  </AppCard>
-                ) : null}
-
-                {pendingInvitations.map((invitation) => {
-                  const activeVariables = respondToStartupInvitationMutation.variables;
-                  const isCurrentInvitation =
-                    respondToStartupInvitationMutation.isPending &&
-                    activeVariables?.invitationId === invitation.id;
-
-                  return (
-                    <InvitationCard
-                      key={invitation.id}
-                      invitation={invitation}
-                      isAcceptPending={
-                        isCurrentInvitation && activeVariables?.payload.decision === 'accept'
-                      }
-                      isDenyPending={
-                        isCurrentInvitation && activeVariables?.payload.decision === 'deny'
-                      }
-                      onAccept={() => {
-                        void handleInvitationDecision(invitation.id, 'accept');
-                      }}
-                      onDeny={() => {
-                        void handleInvitationDecision(invitation.id, 'deny');
-                      }}
-                    />
-                  );
-                })}
-              </View>
-            ) : null}
           </ScrollView>
         </View>
       </>
@@ -551,6 +619,12 @@ export function TeamScreen() {
   }
 
   const startup = overview.data.startup;
+  const viewerContext = overview.data.viewerContext;
+  const teamRoster = overview.data.teamRoster;
+  const myApplications = overview.data.myApplications;
+  const teamInvites = overview.data.teamInvites;
+  const hasActiveStartup = viewerContext.hasActiveStartup && Boolean(startup);
+  const screenTitle = hasActiveStartup ? 'Startup Team Builder' : 'Team Dashboard';
 
   return (
     <>
@@ -561,9 +635,13 @@ export function TeamScreen() {
         <AppTopBar />
 
         <View className="flex-row items-center gap-3 px-5 pb-6 pt-2">
-          <Ionicons color="#FF9A3E" name="rocket" size={28} />
-          <AppText className="text-2xl font-bold text-text">Startup Team Builder</AppText>
+          <Ionicons color="#FF9A3E" name={hasActiveStartup ? 'rocket' : 'briefcase'} size={28} />
+          <AppText className="text-2xl font-bold text-text">{screenTitle}</AppText>
         </View>
+
+        {isDevMode ? (
+          <DevResponseToggle mode={devResponseMode} onChange={setDevResponseMode} />
+        ) : null}
 
         <ScrollView
           className="flex-1"
@@ -574,66 +652,192 @@ export function TeamScreen() {
           }}
           showsVerticalScrollIndicator={false}>
 
+          {startup ? (
+            <AppCard className="gap-6 bg-[#2C2C2C] border-white/10">
+              <View className="gap-4">
+                <View className="gap-1 border-b border-border/30 pb-4">
+                  <AppText tone="muted" variant="label">Startup Name</AppText>
+                  <AppText className="font-display text-xl font-bold text-text py-1">
+                    {startup.name}
+                  </AppText>
+                </View>
 
-          <AppCard className="gap-6 bg-[#2C2C2C] border-white/10">
-            <View className="gap-4">
-              <View className="gap-1 border-b border-border/30 pb-4">
-                <AppText tone="muted" variant="label">Startup Name</AppText>
-                <AppText className="font-display text-xl font-bold text-text py-1">
-                  {startup.name}
-                </AppText>
-              </View>
-
-              <View className="gap-1 border-b border-border/30 pb-4">
-                <AppText tone="muted" variant="label">Startup Idea</AppText>
-                <AppText className="font-body text-[15px] leading-6 text-text-muted py-1">
-                  {startup.description || 'No startup description yet.'}
-                </AppText>
-              </View>
-            </View>
-
-            <View className="flex-row gap-8">
-              <View className="flex-1 gap-2">
-                <AppText tone="muted" variant="label">Industry</AppText>
-                <View className="flex-row flex-wrap gap-2">
-                  <InfoPill label={startup.industry.label} />
+                <View className="gap-1 border-b border-border/30 pb-4">
+                  <AppText tone="muted" variant="label">Startup Idea</AppText>
+                  <AppText className="font-body text-[15px] leading-6 text-text-muted py-1">
+                    {startup.description || 'No startup description yet.'}
+                  </AppText>
                 </View>
               </View>
 
-              <View className="flex-1 gap-2">
-                <AppText tone="muted" variant="label">Stage</AppText>
-                <View className="flex-row flex-wrap gap-2">
-                  <InfoPill label={startup.stage.label} />
+              <View className="flex-row gap-8">
+                <View className="flex-1 gap-2">
+                  <AppText tone="muted" variant="label">Industry</AppText>
+                  <View className="flex-row flex-wrap gap-2">
+                    <InfoPill label={startup.industry.label} />
+                  </View>
+                </View>
+
+                <View className="flex-1 gap-2">
+                  <AppText tone="muted" variant="label">Stage</AppText>
+                  <View className="flex-row flex-wrap gap-2">
+                    <InfoPill label={startup.stage.label} />
+                  </View>
                 </View>
               </View>
-            </View>
-          </AppCard>
+            </AppCard>
+          ) : null}
 
-          <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
-            <View className="flex-row items-center justify-between">
-              <AppText className="text-[15px] font-semibold text-text">Team Completeness</AppText>
-              <AppText className="text-[17px] font-bold text-[#FF9A3E]">
-                {overview.data.teamCompleteness.percent}%
-              </AppText>
-            </View>
+          {hasActiveStartup ? (
+            <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
+              <View className="flex-row items-center justify-between">
+                <AppText className="text-[15px] font-semibold text-text">Team Completeness</AppText>
+                <AppText className="text-[17px] font-bold text-[#FF9A3E]">
+                  {overview.data.teamCompleteness.percent}%
+                </AppText>
+              </View>
 
-            <View className="h-2.5 overflow-hidden rounded-full bg-[#3A3A3C] border border-white/10">
-              <View
-                className="h-full rounded-full bg-[#FF9A3E]"
-                style={{ width: `${overview.data.teamCompleteness.percent}%` }}
-              />
-            </View>
-          </AppCard>
+              <View className="h-2.5 overflow-hidden rounded-full bg-[#3A3A3C] border border-white/10">
+                <View
+                  className="h-full rounded-full bg-[#FF9A3E]"
+                  style={{ width: `${overview.data.teamCompleteness.percent}%` }}
+                />
+              </View>
+            </AppCard>
+          ) : null}
 
           <View className="gap-4">
-            <AppText className="px-1" tone="muted" variant="label">Team Members</AppText>
+            <View className="flex-row items-center justify-between px-1">
+              <AppText tone="muted" variant="label">{teamRoster.title}</AppText>
+              <StatusPill
+                label={hasActiveStartup ? viewerContext.kind.replace(/_/g, ' ') : 'Person'}
+                status={hasActiveStartup ? 'active' : 'pending'}
+              />
+            </View>
             <View className="gap-3">
-              {overview.data.members.map((member) => (
-                <MemberCard key={member.id} member={member} />
+              {teamRoster.members.length === 0 ? (
+                <EmptySectionCard
+                  icon="people-outline"
+                  message={
+                    hasActiveStartup
+                      ? 'No active team members are listed yet.'
+                      : 'You are not attached to an active startup team yet.'
+                  }
+                  title="No team members"
+                />
+              ) : null}
+              {teamRoster.members.map((member) => (
+                <MemberCard
+                  key={member.id}
+                  member={member}
+                  onEditRole={() => {
+                    handleMemberAction(member, 'edit_role');
+                  }}
+                  onRemove={() => {
+                    handleMemberAction(member, 'remove');
+                  }}
+                />
               ))}
               {overview.data.missingRoles.map((role) => (
                 <MissingRoleCard key={role.id} label={role.label} onFind={navigateToHome} />
               ))}
+            </View>
+          </View>
+
+          {!hasActiveStartup ? (
+            <View className="gap-4">
+              <AppText className="px-1" tone="muted" variant="label">{myApplications.title}</AppText>
+              <View className="flex-row gap-3">
+                <DashboardStatCard label="Applied" value={myApplications.stats.applied} />
+                <DashboardStatCard label="In Review" value={myApplications.stats.inReview} />
+                <DashboardStatCard label="Interviews" value={myApplications.stats.interviews} />
+              </View>
+              <View className="gap-3">
+                {myApplications.items.length === 0 ? (
+                  <EmptySectionCard
+                    icon="document-text-outline"
+                    message="Applications you send to startups will show up here."
+                    title="No applications yet"
+                  />
+                ) : null}
+                {myApplications.items.map((application) => (
+                  <ApplicationCard key={application.id} application={application} />
+                ))}
+              </View>
+              <View className="flex-row gap-4">
+                {myApplications.actions.browseStartups ? (
+                  <ActionButton
+                    icon="search-outline"
+                    label="Browse Startups"
+                    onPress={navigateToHome}
+                    variant="primary"
+                  />
+                ) : null}
+                {myApplications.actions.discoverMoreStartups ? (
+                  <ActionButton
+                    icon="compass-outline"
+                    label="Discover More"
+                    onPress={navigateToHome}
+                    variant="secondary"
+                  />
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+
+          <View className="gap-4">
+            <AppText className="px-1" tone="muted" variant="label">{teamInvites.title}</AppText>
+
+            {invitationFeedbackMessage ? (
+              <View className="rounded-[18px] border border-[#FF9A3E]/30 bg-[#FF9A3E]/10 px-4 py-3">
+                <AppText className="text-[#FF9A3E]" variant="bodyStrong">
+                  {invitationFeedbackMessage}
+                </AppText>
+              </View>
+            ) : null}
+
+            {invitationActionError ? (
+              <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
+                <AppText tone="danger">{invitationActionError}</AppText>
+              </View>
+            ) : null}
+
+            <View className="gap-3">
+              {teamInvites.items.length === 0 ? (
+                <EmptySectionCard
+                  icon="mail-open-outline"
+                  message="Pending sent and received invitations will appear here."
+                  title="No pending invites"
+                />
+              ) : null}
+              {teamInvites.items.map((invitation) => {
+                const activeVariables = respondToStartupInvitationMutation.variables;
+                const isCurrentInvitation =
+                  respondToStartupInvitationMutation.isPending &&
+                  activeVariables?.invitationId === invitation.id;
+
+                return (
+                  <DashboardInviteCard
+                    key={invitation.id}
+                    invitation={invitation}
+                    isAcceptPending={
+                      isCurrentInvitation && activeVariables?.payload.decision === 'accept'
+                    }
+                    isDeclinePending={
+                      isCurrentInvitation && activeVariables?.payload.decision === 'deny'
+                    }
+                    onAccept={() => {
+                      void handleInvitationDecision(invitation.id, 'accept');
+                    }}
+                    onDecline={() => {
+                      void handleInvitationDecision(invitation.id, 'decline');
+                    }}
+                    onRevoke={() => {
+                      handleInviteRevoke(invitation);
+                    }}
+                  />
+                );
+              })}
             </View>
           </View>
 
@@ -702,20 +906,26 @@ export function TeamScreen() {
             </AppCard>
           ) : null}
 
-          <View className="flex-row gap-4 mt-2">
-            <ActionButton
-              icon="search-outline"
-              label="Find Members"
-              onPress={navigateToHome}
-              variant="primary"
-            />
-            <ActionButton
-              icon="mail-outline"
-              label="Invite"
-              onPress={openInviteComposer}
-              variant="secondary"
-            />
-          </View>
+          {hasActiveStartup ? (
+            <View className="flex-row gap-4 mt-2">
+              {teamRoster.actions.addFromMatches ? (
+                <ActionButton
+                  icon="search-outline"
+                  label="Add from Matches"
+                  onPress={navigateToHome}
+                  variant="primary"
+                />
+              ) : null}
+              {teamRoster.actions.inviteViaLink ? (
+                <ActionButton
+                  icon="link-outline"
+                  label="Invite via Link"
+                  onPress={openInviteComposer}
+                  variant="secondary"
+                />
+              ) : null}
+            </View>
+          ) : null}
         </ScrollView>
       </View>
     </>

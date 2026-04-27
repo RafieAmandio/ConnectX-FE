@@ -10,6 +10,7 @@ import {
   ScrollView,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppInput, AppText } from '@shared/components';
 
@@ -142,6 +143,7 @@ function ActionButton({
 }
 
 export function EditProfileModal({ onClose, profile, visible }: EditProfileModalProps) {
+  const insets = useSafeAreaInsets();
   const optionsQuery = useProfileOptions(visible);
   const updateProfileMutation = useUpdateMyProfile();
   const [formState, setFormState] = React.useState(() => buildInitialFormState(profile));
@@ -256,7 +258,8 @@ export function EditProfileModal({ onClose, profile, visible }: EditProfileModal
             <ScrollView
               keyboardShouldPersistTaps="handled"
               style={{ flexGrow: 0 }}
-              contentContainerClassName="gap-4 px-4 py-4">
+              contentContainerClassName="gap-4 px-4 pt-4"
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 16, 16) }}>
               <View className="flex-row gap-4">
                 {profile.photoUrl ? (
                   <Image

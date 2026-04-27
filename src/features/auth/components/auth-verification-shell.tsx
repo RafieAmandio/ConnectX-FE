@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
@@ -127,13 +128,17 @@ export function AuthVerificationShell({
   statusTone = 'signal',
   title,
 }: AuthVerificationShellProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1"
       style={{ backgroundColor: CANVAS_BG }}>
       <Pressable className="flex-1" onPress={Keyboard.dismiss} accessible={false}>
-        <View className="flex-1 px-5 pb-8 pt-16">
+        <View
+          className="flex-1 px-5 pt-16"
+          style={{ paddingBottom: Math.max(insets.bottom + 24, 32) }}>
           <View className="h-12 flex-row items-center justify-end">
             <Pressable className="py-2" hitSlop={8} onPress={onExitPress}>
               <AppText className="text-[15px] font-medium" style={{ color: TEXT_MUTED }}>
