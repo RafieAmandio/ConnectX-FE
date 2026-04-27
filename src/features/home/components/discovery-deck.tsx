@@ -7,6 +7,7 @@ import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import Animated, {
+  Extrapolation,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -906,7 +907,7 @@ function EmptyState({
 }
 
 export function DiscoveryDeck() {
-  const { width } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const usingMockCards = isDiscoveryCardsMockEnabled();
   const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
     useRevenueCat();
@@ -1359,14 +1360,14 @@ export function DiscoveryDeck() {
     setIsSubmitting(true);
     setActionError(null);
 
-    translateX.value = withTiming(width * 0.52, { duration: 220 }, (finished) => {
+    translateX.value = withTiming(0, { duration: 220 });
+    translateY.value = withTiming(-height * 0.9, { duration: 220 }, (finished) => {
       if (finished) {
         runOnJS(handleSwipeAction)('super_like');
       }
     });
-    translateY.value = withTiming(-64, { duration: 220 });
     nextCardScale.value = withTiming(1, { duration: 220 });
-  }, [handleSwipeAction, isSubmitting, nextCardScale, translateX, translateY, width]);
+  }, [handleSwipeAction, height, isSubmitting, nextCardScale, translateX, translateY]);
 
   const handleOpenFilters = React.useCallback(() => {
     setFilterError(null);
@@ -1469,14 +1470,28 @@ export function DiscoveryDeck() {
     transform: [{ translateY: 8 }, { scale: nextCardScale.value }],
   }));
 
-  const leftBadgeStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.value, [-SWIPE_THRESHOLD, -36, 0], [1, 0.3, 0]),
-    transform: [{ scale: interpolate(translateX.value, [-SWIPE_THRESHOLD, 0], [1, 0.8]) }],
+  const passOverlayStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [-SWIPE_THRESHOLD, -32, 0], [1, 0.2, 0], Extrapolation.CLAMP),
+    transform: [
+      { rotate: '-14deg' },
+      { scale: interpolate(translateX.value, [-SWIPE_THRESHOLD, 0], [1, 0.82], Extrapolation.CLAMP) },
+    ],
   }));
 
-  const rightBadgeStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.value, [0, 36, SWIPE_THRESHOLD], [0, 0.3, 1]),
-    transform: [{ scale: interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0.8, 1]) }],
+  const likeOverlayStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [0, 32, SWIPE_THRESHOLD], [0, 0.2, 1], Extrapolation.CLAMP),
+    transform: [
+      { rotate: '14deg' },
+      { scale: interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0.82, 1], Extrapolation.CLAMP) },
+    ],
+  }));
+
+  const superLikeOverlayStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateY.value, [0, -24, -120], [0, 0, 1], Extrapolation.CLAMP),
+    transform: [
+      { translateY: interpolate(translateY.value, [0, -120], [16, 0], Extrapolation.CLAMP) },
+      { scale: interpolate(translateY.value, [0, -120], [0.86, 1], Extrapolation.CLAMP) },
+    ],
   }));
 
   const filterSheet = (
@@ -1621,19 +1636,55 @@ export function DiscoveryDeck() {
                 />
 
                 <Animated.View
-                  className="absolute left-4 top-5 rounded-full border border-signal bg-signal-tint px-3 py-1.5"
-                  style={leftBadgeStyle}>
-                  <AppText className="text-[12px]" tone="signal" variant="label">
-                    Pass
-                  </AppText>
+                  className="absolute inset-x-0 top-[42%] items-center"
+                  pointerEvents="none"
+                  style={passOverlayStyle}>
+                  <View
+                    className="rounded-[10px] border-[3px] px-5 py-2.5"
+                    style={{
+                      backgroundColor: 'rgba(24, 10, 10, 0.72)',
+                      borderColor: '#EF4444',
+                    }}>
+                    <AppText className="text-[34px] leading-[38px]" style={{ color: '#F87171' }} variant="hero">
+                      PASS
+                    </AppText>
+                  </View>
                 </Animated.View>
 
                 <Animated.View
-                  className="absolute right-4 top-5 rounded-full border border-accent bg-accent-tint px-3 py-1.5"
-                  style={rightBadgeStyle}>
-                  <AppText className="text-[12px]" tone="accent" variant="label">
-                    Like
-                  </AppText>
+                  className="absolute inset-x-0 top-[42%] items-center"
+                  pointerEvents="none"
+                  style={likeOverlayStyle}>
+                  <View
+                    className="rounded-[10px] border-[3px] px-5 py-2.5"
+                    style={{
+                      backgroundColor: 'rgba(5, 24, 17, 0.72)',
+                      borderColor: '#10B981',
+                    }}>
+                    <AppText className="text-[34px] leading-[38px]" style={{ color: '#34D399' }} variant="hero">
+                      LIKE
+                    </AppText>
+                  </View>
+                </Animated.View>
+
+                <Animated.View
+                  className="absolute inset-x-0 top-[42%] items-center"
+                  pointerEvents="none"
+                  style={superLikeOverlayStyle}>
+                  <View
+                    className="rounded-[10px] border-[3px] px-5 py-2.5"
+                    style={{
+                      backgroundColor: 'rgba(31, 20, 5, 0.74)',
+                      borderColor: '#FF9A3E',
+                    }}>
+                    <AppText
+                      align="center"
+                      className="text-[30px] leading-[34px]"
+                      style={{ color: '#FFCD38' }}
+                      variant="hero">
+                      SUPER LIKE
+                    </AppText>
+                  </View>
                 </Animated.View>
               </Animated.View>
             </GestureDetector>
@@ -1663,7 +1714,7 @@ export function DiscoveryDeck() {
               <DeckActionButton
                 color="#FF9A3E"
                 disabled={isSubmitting}
-                icon="bookmark"
+                icon="flash"
                 onPress={handleSuperLike}
                 size="medium"
               />
