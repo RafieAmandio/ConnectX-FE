@@ -143,14 +143,19 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
 
   if (isDiscoveryCardsMockEnabled()) {
     console.log('[Discovery] fetch cards using mock');
-    return getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
+    const response = getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
+    console.log('[Discovery] fetch cards response', JSON.stringify(response, null, 2));
+    return response;
   }
 
   console.log('[Discovery] fetch cards using api');
-  return apiFetch<DiscoveryCardsResponse>(DISCOVERY_API.CARDS, {
+  const response = await apiFetch<DiscoveryCardsResponse>(DISCOVERY_API.CARDS, {
     body: payload as unknown as BodyInit,
     method: 'POST',
   });
+  console.log('[Discovery] fetch cards response', JSON.stringify(response, null, 2));
+
+  return response;
 }
 
 export async function fetchDiscoveryFilterOptions(mode: DiscoveryMode) {

@@ -18,6 +18,7 @@ import type {
   DiscoveryAppliedFilters,
   DiscoveryFilterField,
   DiscoveryFilterOption,
+  DiscoveryFilterOptionsResponse,
   DiscoveryFilterSection,
   DiscoveryGoalId,
   DiscoveryMode,
@@ -26,6 +27,7 @@ import type {
 type DiscoveryFilterSheetProps = {
   currentMode: DiscoveryMode;
   errorMessage?: string | null;
+  filterOptionsResponse?: DiscoveryFilterOptionsResponse;
   goalOptions: DiscoveryFilterOption[];
   hasConnectXPro?: boolean;
   initialAppliedMode: DiscoveryMode | null;
@@ -584,6 +586,7 @@ function getEmptyOptionsMessage(
 export function DiscoveryFilterSheet({
   currentMode,
   errorMessage,
+  filterOptionsResponse,
   goalOptions,
   hasConnectXPro = false,
   initialAppliedMode,
@@ -603,6 +606,14 @@ export function DiscoveryFilterSheet({
     Partial<Record<DiscoveryMode, Record<string, boolean>>>
   >({});
   const [searchTerms, setSearchTerms] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    console.log('discovery filter-options sheet result', {
+      currentMode,
+      responseMode: filterOptionsResponse?.data.mode,
+      result: filterOptionsResponse,
+    });
+  }, [currentMode, filterOptionsResponse]);
 
   React.useEffect(() => {
     if (!visible) {

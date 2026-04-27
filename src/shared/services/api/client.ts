@@ -82,6 +82,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const token = await apiClientAuthConfig.getAccessToken?.();
   const headers = new Headers(init.headers);
 
+  console.log('apiFetch token', token);
+
   headers.set('Accept', 'application/json');
 
   if (token) {
@@ -96,7 +98,18 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 
   try {
-    console.log('apiFetch', buildApiUrl(path), init);
+    console.log(
+      'apiFetch',
+      buildApiUrl(path),
+      JSON.stringify(
+        {
+          ...init,
+          body: init.body,
+        },
+        null,
+        2
+      )
+    );
     const response = await fetch(buildApiUrl(path), {
       ...init,
       body,

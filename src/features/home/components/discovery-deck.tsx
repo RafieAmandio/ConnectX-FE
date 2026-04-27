@@ -934,9 +934,11 @@ export function DiscoveryDeck() {
   const matchToastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedDeviceCoordinatesRef = React.useRef(false);
 
-  const filterOptionsQuery = useDiscoveryFilterOptions(sheetMode);
+  const filterOptionsQuery = useDiscoveryFilterOptions(sheetMode, isFilterVisible);
+  const matchingFilterOptionsResponse =
+    filterOptionsQuery.data?.data.mode === sheetMode ? filterOptionsQuery.data : undefined;
   const isFilterOptionsLoading =
-    !filterOptionsQuery.data && (filterOptionsQuery.isLoading || filterOptionsQuery.isFetching);
+    !matchingFilterOptionsResponse && (filterOptionsQuery.isLoading || filterOptionsQuery.isFetching);
   const filterOptionsErrorMessage = React.useMemo(
     () =>
       filterOptionsQuery.error
@@ -944,9 +946,17 @@ export function DiscoveryDeck() {
         : null,
     [filterOptionsQuery.error]
   );
+  React.useEffect(() => {
+    console.log('discovery filter-options query state', {
+      isFilterVisible,
+      responseMode: filterOptionsQuery.data?.data.mode,
+      sheetMode,
+    });
+  }, [filterOptionsQuery.data?.data.mode, isFilterVisible, sheetMode]);
+
   const filterSections = React.useMemo(
-    () => getDiscoveryFilterSections(sheetMode, filterOptionsQuery.data),
-    [filterOptionsQuery.data, sheetMode]
+    () => getDiscoveryFilterSections(sheetMode, matchingFilterOptionsResponse),
+    [matchingFilterOptionsResponse, sheetMode]
   );
   const goalOptions = getGoalOptions(filterSections, sheetMode);
 
@@ -1498,6 +1508,7 @@ export function DiscoveryDeck() {
     <DiscoveryFilterSheet
       currentMode={sheetMode}
       errorMessage={filterError}
+      filterOptionsResponse={matchingFilterOptionsResponse}
       goalOptions={goalOptions}
       hasConnectXPro={isConnectXProActive}
       initialAppliedMode={appliedMode}
