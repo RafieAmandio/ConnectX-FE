@@ -1432,6 +1432,8 @@ export function DiscoveryDeck() {
 
   const panGesture = Gesture.Pan()
     .enabled(Boolean(currentItem) && !isSubmitting)
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-24, 24])
     .onUpdate((event) => {
       translateX.value = event.translationX;
       translateY.value = event.translationY * 0.12;

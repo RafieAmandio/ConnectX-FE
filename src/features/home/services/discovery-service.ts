@@ -142,9 +142,11 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
   }
 
   if (isDiscoveryCardsMockEnabled()) {
+    console.log('[Discovery] fetch cards using mock');
     return getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
   }
 
+  console.log('[Discovery] fetch cards using api');
   return apiFetch<DiscoveryCardsResponse>(DISCOVERY_API.CARDS, {
     body: payload as unknown as BodyInit,
     method: 'POST',
