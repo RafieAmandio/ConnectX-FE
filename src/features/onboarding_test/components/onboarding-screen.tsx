@@ -46,6 +46,7 @@ const CANVAS_BG = '#212121';
 const MULTI_SELECT_DROPDOWN_STEP_IDS = new Set([
   'step_su_biz',
   'step_fdr_industry',
+  'step_cf_industry',
 ]);
 const SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS = new Set([
   'step_personal_location',
