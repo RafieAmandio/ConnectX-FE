@@ -1,6 +1,13 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -77,19 +84,87 @@ function groupOptions(options: OnboardingOption[] | undefined) {
   return Array.from(groupedOptions.entries());
 }
 
+type AnchorLayout = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
 function DropdownOverlay({
+  anchorRef,
   children,
   header,
   maxHeight,
   onClose,
   visible,
 }: {
+  anchorRef: React.RefObject<View | null>;
   children: React.ReactNode;
   header?: React.ReactNode;
   maxHeight: number;
   onClose: () => void;
   visible: boolean;
 }) {
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const [anchorLayout, setAnchorLayout] = React.useState<AnchorLayout | null>(null);
+
+  React.useEffect(() => {
+    if (!visible) {
+      setAnchorLayout(null);
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      anchorRef.current?.measureInWindow((x, y, width, height) => {
+        setAnchorLayout({ height, width, x, y });
+      });
+    });
+  }, [anchorRef, visible]);
+
+  const horizontalPadding = 16;
+  const verticalGap = 8;
+  const fallbackWidth = windowWidth - horizontalPadding * 2;
+  const anchorWidth = anchorLayout?.width ?? fallbackWidth;
+  const overlayWidth = Math.min(
+    Math.max(anchorWidth, Math.min(240, fallbackWidth)),
+    fallbackWidth
+  );
+  const overlayLeft = anchorLayout
+    ? clamp(
+        anchorLayout.x,
+        horizontalPadding,
+        Math.max(horizontalPadding, windowWidth - overlayWidth - horizontalPadding)
+      )
+    : horizontalPadding;
+  const anchorBottom = anchorLayout
+    ? anchorLayout.y + anchorLayout.height
+    : windowHeight - 80;
+  const availableBelow = Math.max(
+    0,
+    windowHeight - anchorBottom - verticalGap - horizontalPadding
+  );
+  const availableAbove = Math.max(
+    0,
+    (anchorLayout?.y ?? 0) - verticalGap - horizontalPadding
+  );
+  const shouldOpenAbove = availableBelow < 180 && availableAbove > availableBelow;
+  const availableHeight = shouldOpenAbove ? availableAbove : availableBelow;
+  const overlayMaxHeight = Math.max(160, Math.min(maxHeight, availableHeight || maxHeight));
+  const overlayTop = anchorLayout
+    ? shouldOpenAbove
+      ? Math.max(horizontalPadding, anchorLayout.y - verticalGap - overlayMaxHeight)
+      : Math.min(
+          anchorBottom + verticalGap,
+          windowHeight - overlayMaxHeight - horizontalPadding
+        )
+    : windowHeight - overlayMaxHeight - 32;
+  const scrollMaxHeight = Math.max(88, overlayMaxHeight - (header ? 72 : 0));
+
   return (
     <Modal
       animationType="fade"
@@ -97,7 +172,7 @@ function DropdownOverlay({
       transparent
       visible={visible}>
       <View
-        className="flex-1 justify-end px-5 pb-8"
+        className="flex-1"
         style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
         <Pressable
           accessibilityRole="button"
@@ -110,13 +185,21 @@ function DropdownOverlay({
             top: 0,
           }}
         />
-        <AppCard className="p-1" style={{ maxHeight }}>
+        <AppCard
+          className="p-1"
+          style={{
+            left: overlayLeft,
+            maxHeight: overlayMaxHeight,
+            position: 'absolute',
+            top: overlayTop,
+            width: overlayWidth,
+          }}>
           {header}
           <ScrollView
             keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
             showsVerticalScrollIndicator
-            style={{ maxHeight: header ? maxHeight - 72 : maxHeight }}>
+            style={{ maxHeight: scrollMaxHeight }}>
             {children}
           </ScrollView>
         </AppCard>
@@ -734,6 +817,7 @@ function MultiSelectDropdownQuestion({
   value,
 }: QuestionRendererProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const triggerRef = React.useRef<View | null>(null);
   const currentValues = getArrayValue(value);
   const maxSelections = question.validation?.max_selections ?? Infinity;
   const atLimit = currentValues.length >= maxSelections;
@@ -773,6 +857,7 @@ function MultiSelectDropdownQuestion({
       <QuestionHeader error={error} question={question} />
       <View>
         <Pressable
+          ref={triggerRef}
           style={{ height: 56 }}
           className={cn(
             'flex-row items-center justify-between rounded-[16px] border px-4',
@@ -812,6 +897,7 @@ function MultiSelectDropdownQuestion({
         </Pressable>
 
         <DropdownOverlay
+          anchorRef={triggerRef}
           maxHeight={420}
           onClose={() => setIsOpen(false)}
           visible={isOpen}>
@@ -914,6 +1000,7 @@ function DropdownQuestion({
   value,
 }: QuestionRendererProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const triggerRef = React.useRef<View | null>(null);
   const currentValue = getStringValue(value);
   const currentLabel = currentValue
     ? getSelectedLabel(question.options, currentValue)
@@ -926,6 +1013,7 @@ function DropdownQuestion({
       <QuestionHeader error={error} question={question} />
       <View>
         <Pressable
+          ref={triggerRef}
           style={{ height: 56 }}
           className={cn(
             'flex-row items-center justify-between rounded-[16px] border px-4',
@@ -948,6 +1036,7 @@ function DropdownQuestion({
         </Pressable>
 
         <DropdownOverlay
+          anchorRef={triggerRef}
           maxHeight={360}
           onClose={() => setIsOpen(false)}
           visible={isOpen}>
@@ -990,6 +1079,7 @@ function SearchableDropdownQuestion({
   value,
 }: QuestionRendererProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const triggerRef = React.useRef<View | null>(null);
   const [query, setQuery] = React.useState('');
   const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
   const currentValue = getStringValue(value);
@@ -1034,6 +1124,7 @@ function SearchableDropdownQuestion({
       <QuestionHeader error={error} question={question} />
       <View>
         <Pressable
+          ref={triggerRef}
           onPress={() => (isOpen ? closeDropdown() : openDropdown())}
           style={{ height: 56 }}
           className={cn(
@@ -1059,6 +1150,7 @@ function SearchableDropdownQuestion({
         </Pressable>
 
         <DropdownOverlay
+          anchorRef={triggerRef}
           header={
             <View
               className="mb-1 flex-row items-center gap-2 rounded-[14px] border px-3"
@@ -1508,12 +1600,15 @@ function DateDropdown({
   placeholder: string;
   selectedValue: string;
 }) {
+  const triggerRef = React.useRef<View | null>(null);
+
   return (
     <View className="flex-1 gap-2" style={{ zIndex: isOpen ? 30 : 1 }}>
       <AppText tone="muted" variant="label" className="text-[10px]">
         {label}
       </AppText>
       <Pressable
+        ref={triggerRef}
         onPress={onToggle}
         style={{ height: 56 }}
         className={cn(
@@ -1535,7 +1630,11 @@ function DateDropdown({
         </AppText>
       </Pressable>
 
-      <DropdownOverlay maxHeight={320} onClose={onToggle} visible={isOpen}>
+      <DropdownOverlay
+        anchorRef={triggerRef}
+        maxHeight={320}
+        onClose={onToggle}
+        visible={isOpen}>
         {options.map((option) => {
           const isSelected = option.value === selectedValue;
 
