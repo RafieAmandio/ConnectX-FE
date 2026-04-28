@@ -7,21 +7,21 @@ const LOCAL_MESSAGE_LIMIT = 30;
 
 const seededConversations = [
   {
-    id: 'maya-chen',
+    id: 'conv_ardi_wijaya',
     kind: 'direct',
-    name: 'Maya Chen',
-    unreadCount: 2,
+    name: 'Ardi Wijaya',
+    unreadCount: 1,
   },
   {
-    id: 'ops-squad',
-    kind: 'group',
-    name: 'Ops Squad',
+    id: 'conv_maya_chen',
+    kind: 'direct',
+    name: 'Maya Chen',
     unreadCount: 0,
   },
   {
-    id: 'jess-alvarez',
+    id: 'conv_ghi',
     kind: 'direct',
-    name: 'Jess Alvarez',
+    name: 'Nina Patel',
     unreadCount: 0,
   },
 ] as const satisfies readonly {
@@ -33,60 +33,84 @@ const seededConversations = [
 
 const seededMessages = [
   {
-    id: 'maya-1',
-    conversationId: 'maya-chen',
-    body: 'Love the direction. Want to jump into a quick intro tomorrow?',
+    id: 'ardi-1',
+    conversationId: 'conv_ardi_wijaya',
+    body: 'Your business development background looks like a strong fit for the CTO search.',
     direction: 'incoming',
     status: 'read',
-    createdAt: '2026-04-04T08:58:00.000Z',
+    createdAt: '2026-04-10T08:12:00.000Z',
+  },
+  {
+    id: 'ardi-2',
+    conversationId: 'conv_ardi_wijaya',
+    body: 'Nice. I would love to compare notes on the MVP scope and technical risks.',
+    direction: 'incoming',
+    status: 'read',
+    createdAt: '2026-04-10T08:18:00.000Z',
+  },
+  {
+    id: 'ardi-3',
+    conversationId: 'conv_ardi_wijaya',
+    body: 'Great. I can send the current product brief before we talk.',
+    direction: 'outgoing',
+    status: 'sent',
+    createdAt: '2026-04-10T08:25:00.000Z',
+  },
+  {
+    id: 'ardi-4',
+    conversationId: 'conv_ardi_wijaya',
+    body: 'Perfect. Send it over and I will mark the engineering assumptions.',
+    direction: 'incoming',
+    status: 'read',
+    createdAt: '2026-04-10T08:31:00.000Z',
+  },
+  {
+    id: 'maya-1',
+    conversationId: 'conv_maya_chen',
+    body: 'Love the direction. Want to jump into a quick product strategy intro tomorrow?',
+    direction: 'incoming',
+    status: 'read',
+    createdAt: '2026-04-11T07:42:00.000Z',
   },
   {
     id: 'maya-2',
-    conversationId: 'maya-chen',
-    body: 'I can do a short call after lunch if that works on your side.',
-    direction: 'incoming',
-    status: 'read',
-    createdAt: '2026-04-04T09:12:00.000Z',
+    conversationId: 'conv_maya_chen',
+    body: 'Yes. I can share the customer segment notes and the GTM questions.',
+    direction: 'outgoing',
+    status: 'sent',
+    createdAt: '2026-04-11T07:49:00.000Z',
   },
   {
     id: 'maya-3',
-    conversationId: 'maya-chen',
-    body: 'Perfect. I will send over a few questions before then.',
-    direction: 'outgoing',
-    status: 'sent',
-    createdAt: '2026-04-04T09:14:00.000Z',
-  },
-  {
-    id: 'ops-1',
-    conversationId: 'ops-squad',
-    body: 'We can cover onboarding copy once the OTP flow is real.',
+    conversationId: 'conv_maya_chen',
+    body: 'That would be helpful. I am especially curious about retention loops.',
     direction: 'incoming',
     status: 'read',
-    createdAt: '2026-04-04T08:42:00.000Z',
+    createdAt: '2026-04-11T08:03:00.000Z',
   },
   {
-    id: 'ops-2',
-    conversationId: 'ops-squad',
-    body: 'Agreed. I will keep the draft loose until auth is hooked to the backend.',
-    direction: 'outgoing',
-    status: 'sent',
-    createdAt: '2026-04-04T08:50:00.000Z',
-  },
-  {
-    id: 'jess-1',
-    conversationId: 'jess-alvarez',
-    body: 'I sent over the deck notes and a quick summary.',
+    id: 'nina-1',
+    conversationId: 'conv_ghi',
+    body: 'Your sales motion sounds close to what I have been testing for early SaaS teams.',
     direction: 'incoming',
     status: 'read',
-    createdAt: '2026-04-04T07:35:00.000Z',
+    createdAt: '2026-04-12T06:18:00.000Z',
   },
   {
-    id: 'jess-2',
-    conversationId: 'jess-alvarez',
-    body: 'Thanks, reading now. I like how clearly you framed the first-time user journey.',
+    id: 'nina-2',
+    conversationId: 'conv_ghi',
+    body: 'That is exactly the gap. I need someone who can turn discovery into growth experiments.',
     direction: 'outgoing',
     status: 'sent',
-    createdAt: '2026-04-04T07:39:00.000Z',
+    createdAt: '2026-04-12T06:26:00.000Z',
+  },
+  {
+    id: 'nina-3',
+    conversationId: 'conv_ghi',
+    body: 'I can draft a first 30-day experiment map if you want to compare working styles.',
+    direction: 'incoming',
+    status: 'read',
+    createdAt: '2026-04-12T06:40:00.000Z',
   },
 ] as const satisfies readonly ChatMessage[];
 
@@ -161,13 +185,21 @@ async function pruneConversationMessages(
 }
 
 async function seedMockChatData(database: SQLite.SQLiteDatabase) {
-  const existingConversationCount = await database.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(*) as count FROM conversations'
+  const seededConversationIds = seededConversations.map((conversation) => conversation.id);
+  const placeholders = seededConversationIds.map(() => '?').join(', ');
+  const existingSeededConversationCount = await database.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM conversations WHERE id IN (${placeholders})`,
+    ...seededConversationIds
   );
 
-  if ((existingConversationCount?.count ?? 0) > 0) {
+  if ((existingSeededConversationCount?.count ?? 0) === seededConversations.length) {
     return;
   }
+
+  await database.execAsync(`
+    DELETE FROM messages;
+    DELETE FROM conversations;
+  `);
 
   for (const conversation of seededConversations) {
     const conversationMessages = seededMessages

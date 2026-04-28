@@ -583,19 +583,19 @@ export function MatchesScreen() {
                     if (!match.conversationId) {
                       console.log('[Connects] Chat tapped', {
                         conversationId: null,
-                        destination: '/chat',
+                        destination: '/chat_demo',
                         matchId: match.matchId,
                       });
-                      router.push('/chat');
+                      router.push('/chat_demo' as never);
                       return;
                     }
 
                     console.log('[Connects] Chat tapped', {
                       conversationId: match.conversationId,
-                      destination: `/conversation/${match.conversationId}`,
+                      destination: `/chat_demo/${match.conversationId}`,
                       matchId: match.matchId,
                     });
-                    router.push(`/conversation/${match.conversationId}`);
+                    router.push(`/chat_demo/${match.conversationId}` as never);
                   }}
                 />
               ))}

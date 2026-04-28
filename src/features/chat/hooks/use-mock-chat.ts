@@ -9,8 +9,8 @@ import {
 } from '../services/chat-sqlite-service';
 
 const chatQueryKeys = {
-  conversations: ['chat', 'conversations'] as const,
-  messages: (conversationId: string) => ['chat', 'messages', conversationId] as const,
+  conversations: ['chat-demo', 'conversations'] as const,
+  messages: (conversationId: string) => ['chat-demo', 'messages', conversationId] as const,
 };
 
 export function useChatConversations() {
@@ -24,7 +24,7 @@ export function useChatConversations() {
 export function useConversationMessages(conversationId: string | null) {
   return useQuery({
     enabled: Boolean(conversationId),
-    queryKey: conversationId ? chatQueryKeys.messages(conversationId) : ['chat', 'messages', 'idle'],
+    queryKey: conversationId ? chatQueryKeys.messages(conversationId) : ['chat-demo', 'messages', 'idle'],
     queryFn: async () => listMockMessages(conversationId ?? ''),
     staleTime: Number.POSITIVE_INFINITY,
   });

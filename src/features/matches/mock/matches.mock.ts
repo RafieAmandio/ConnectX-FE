@@ -47,7 +47,7 @@ const likesYouBlueprints = [
 const matchBlueprints = [
   {
     matchId: 'mtc_789',
-    conversationId: '11111111-1111-1111-1111-111111111112',
+    conversationId: 'conv_ardi_wijaya',
     userId: 'usr_123',
     name: 'Ardi Wijaya',
     photoUrl: 'https://i.pravatar.cc/512?img=12',
@@ -75,7 +75,7 @@ const matchBlueprints = [
   },
   {
     matchId: 'mtc_790',
-    conversationId: '11111111-1111-1111-1111-111111111112',
+    conversationId: 'conv_maya_chen',
     userId: 'usr_456',
     name: 'Maya Chen',
     photoUrl: 'https://i.pravatar.cc/512?img=32',
