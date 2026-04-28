@@ -1,5 +1,5 @@
-import { ChatListScreen } from '@features/chat';
+import { ChatDemoListScreen } from '@features/chat-demo';
 
 export default function ChatRoute() {
-  return <ChatListScreen />;
+  return <ChatDemoListScreen />;
 }
