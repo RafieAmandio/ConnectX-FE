@@ -36,7 +36,7 @@ export function AppInput({
       ) : null}
       <TextInput
         className={cn(
-          'min-h-14 rounded-[16px] border py-3 pl-5 pr-4 font-body text-[15px] text-text',
+          'min-h-14 rounded-[16px] border py-3 pl-3 pr-4 font-body text-[15px] text-text',
           error
             ? 'border-danger bg-background'
             : isFocused
