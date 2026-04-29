@@ -4,6 +4,8 @@ import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
+  LayoutChangeEvent,
+  PanResponder,
   Pressable,
   ScrollView,
   View,
@@ -17,6 +19,7 @@ import { isExpoDevModeEnabled } from '@shared/utils/env';
 import {
   useCreateStartupInvitation,
   useRespondToStartupInvitation,
+  useStartupInvitationOptions,
   useTeamOverview,
 } from '../hooks/use-team';
 import {
@@ -24,9 +27,11 @@ import {
   getMockTeamOverviewResponse,
 } from '../mock/team.mock';
 import { isNoActiveStartupError } from '../services/team-service';
-import type { TeamApplication, TeamDashboardInvite, TeamMember } from '../types/team.types';
+import type { TeamApplication, TeamDashboardInvite, TeamInviteCommitment, TeamMember } from '../types/team.types';
 
 type DevTeamResponseMode = 'startup' | 'person';
+
+const EQUITY_THUMB_SIZE = 24;
 
 function getCommitmentLabel(value: string) {
   switch (value) {
@@ -34,11 +39,20 @@ function getCommitmentLabel(value: string) {
       return 'Full-time';
     case 'part_time':
       return 'Part-time';
+    case 'advisor':
+      return 'Advisor';
     case 'flexible':
       return 'Flexible';
     default:
       return value.replace(/_/g, ' ');
   }
+}
+
+function clampSteppedValue(value: number, min: number, max: number, step: number) {
+  const clampedValue = Math.min(max, Math.max(min, value));
+  const steppedValue = min + Math.round((clampedValue - min) / step) * step;
+
+  return Math.min(max, Math.max(min, steppedValue));
 }
 
 function isValidEmail(value: string) {
@@ -406,6 +420,203 @@ function ActionButton({
   );
 }
 
+function EquitySlider({
+  disabled = false,
+  max,
+  min,
+  onChange,
+  step,
+  value,
+}: {
+  disabled?: boolean;
+  max: number;
+  min: number;
+  onChange: (value: number) => void;
+  step: number;
+  value: number;
+}) {
+  const nextValue = clampSteppedValue(value, min, max, step);
+  const trackRef = React.useRef<View>(null);
+  const trackPageXRef = React.useRef(0);
+  const trackWidthRef = React.useRef(0);
+  const draggingRef = React.useRef(false);
+  const draftValueRef = React.useRef(nextValue);
+  const [trackWidth, setTrackWidth] = React.useState(0);
+  const [draftValue, setDraftValue] = React.useState(nextValue);
+
+  React.useEffect(() => {
+    if (draggingRef.current) {
+      return;
+    }
+
+    draftValueRef.current = nextValue;
+    setDraftValue(nextValue);
+  }, [nextValue]);
+
+  const progress = (draftValue - min) / Math.max(max - min, 1);
+  const thumbOffset = Math.min(
+    Math.max(progress * trackWidth - EQUITY_THUMB_SIZE / 2, 0),
+    Math.max(trackWidth - EQUITY_THUMB_SIZE, 0)
+  );
+
+  const syncTrackMetrics = React.useCallback(() => {
+    trackRef.current?.measureInWindow((pageX, _pageY, measuredWidth) => {
+      trackPageXRef.current = pageX;
+      trackWidthRef.current = measuredWidth;
+      setTrackWidth((current) => (current === measuredWidth ? current : measuredWidth));
+    });
+  }, []);
+
+  const handleTrackLayout = React.useCallback((event: LayoutChangeEvent) => {
+    const measuredWidth = event.nativeEvent.layout.width;
+
+    trackWidthRef.current = measuredWidth;
+    setTrackWidth(measuredWidth);
+    requestAnimationFrame(syncTrackMetrics);
+  }, [syncTrackMetrics]);
+
+  const setDraftValueFromPosition = React.useCallback(
+    (positionX: number) => {
+      const measuredTrackWidth = trackWidthRef.current;
+
+      if (measuredTrackWidth <= 0) {
+        return;
+      }
+
+      const clampedX = Math.min(measuredTrackWidth, Math.max(0, positionX));
+      const rawValue = min + (clampedX / measuredTrackWidth) * (max - min);
+      const clampedValue = clampSteppedValue(rawValue, min, max, step);
+
+      if (draftValueRef.current === clampedValue) {
+        return;
+      }
+
+      draftValueRef.current = clampedValue;
+      setDraftValue(clampedValue);
+    },
+    [max, min, step]
+  );
+
+  const updateValueFromPageX = React.useCallback(
+    (pageX: number, locationX: number) => {
+      const measuredPageX = trackPageXRef.current;
+
+      if (measuredPageX > 0) {
+        setDraftValueFromPosition(pageX - measuredPageX);
+        return;
+      }
+
+      setDraftValueFromPosition(locationX);
+    },
+    [setDraftValueFromPosition]
+  );
+
+  const commitDraftValue = React.useCallback(() => {
+    draggingRef.current = false;
+
+    if (draftValueRef.current !== nextValue) {
+      onChange(draftValueRef.current);
+    }
+  }, [nextValue, onChange]);
+
+  const panResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, gestureState) =>
+          !disabled && Math.abs(gestureState.dx) >= Math.abs(gestureState.dy),
+        onMoveShouldSetPanResponderCapture: (_event, gestureState) =>
+          !disabled && Math.abs(gestureState.dx) >= Math.abs(gestureState.dy),
+        onPanResponderGrant: (event) => {
+          if (disabled) {
+            return;
+          }
+
+          draggingRef.current = true;
+          syncTrackMetrics();
+          updateValueFromPageX(event.nativeEvent.pageX, event.nativeEvent.locationX);
+        },
+        onPanResponderMove: (event) => {
+          if (disabled) {
+            return;
+          }
+
+          updateValueFromPageX(event.nativeEvent.pageX, event.nativeEvent.locationX);
+        },
+        onPanResponderRelease: commitDraftValue,
+        onPanResponderTerminate: commitDraftValue,
+        onPanResponderTerminationRequest: () => false,
+        onPanResponderReject: commitDraftValue,
+        onStartShouldSetPanResponder: () => !disabled,
+        onStartShouldSetPanResponderCapture: () => !disabled,
+      }),
+    [commitDraftValue, disabled, syncTrackMetrics, updateValueFromPageX]
+  );
+
+  return (
+    <View className="gap-3">
+      <View className="flex-row items-center justify-between">
+        <AppText tone="muted" variant="label">Equity Share</AppText>
+        <AppText className="text-[#FF9A3E]" variant="bodyStrong">
+          {draftValue}%
+        </AppText>
+      </View>
+      <View className="gap-2">
+        <View
+          ref={trackRef}
+          className="justify-center"
+          onLayout={handleTrackLayout}
+          {...panResponder.panHandlers}
+          style={{ height: 30 }}>
+          <View
+            style={{
+              backgroundColor: '#15171C',
+              borderRadius: 999,
+              height: 6,
+              left: 0,
+              overflow: 'hidden',
+              position: 'absolute',
+              right: 0,
+              top: 12,
+            }}
+          />
+          <View
+            style={{
+              backgroundColor: disabled ? '#667085' : '#FF9A3E',
+              borderRadius: 999,
+              height: 6,
+              left: 0,
+              position: 'absolute',
+              top: 12,
+              width: `${progress * 100}%`,
+            }}
+          />
+          <View
+            style={{
+              backgroundColor: disabled ? '#98A2B3' : '#FF9A3E',
+              borderColor: '#2C2C2C',
+              borderRadius: 999,
+              borderWidth: 4,
+              height: EQUITY_THUMB_SIZE,
+              left: thumbOffset,
+              position: 'absolute',
+              top: 3,
+              width: EQUITY_THUMB_SIZE,
+            }}
+          />
+        </View>
+        <View className="flex-row items-center justify-between px-0.5">
+          <AppText className="text-[12px]" tone="muted">
+            {min}%
+          </AppText>
+          <AppText className="text-[12px]" tone="muted">
+            {max}%
+          </AppText>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function DevResponseToggle({
   mode,
   onChange,
@@ -449,10 +660,14 @@ export function TeamScreen() {
   const createStartupInvitationMutation = useCreateStartupInvitation();
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
   const [inviteEmail, setInviteEmail] = React.useState('');
+  const [inviteRoleId, setInviteRoleId] = React.useState<string | null>(null);
+  const [inviteEquityPercent, setInviteEquityPercent] = React.useState(15);
+  const [inviteCommitment, setInviteCommitment] = React.useState<TeamInviteCommitment | null>(null);
   const [inviteError, setInviteError] = React.useState<string | null>(null);
   const [inviteSuccessMessage, setInviteSuccessMessage] = React.useState<string | null>(null);
   const [invitationFeedbackMessage, setInvitationFeedbackMessage] = React.useState<string | null>(null);
   const [invitationActionError, setInvitationActionError] = React.useState<string | null>(null);
+  const invitationOptionsQuery = useStartupInvitationOptions(inviteComposerVisible);
   const insets = useSafeAreaInsets();
 
   const devOverview = React.useMemo(
@@ -463,6 +678,38 @@ export function TeamScreen() {
     [devResponseMode]
   );
   const overview = isDevMode ? devOverview : teamOverviewQuery.data;
+  const invitationOptions = invitationOptionsQuery.data?.data;
+  const inviteRoleOptions = invitationOptions?.roleOptions ?? [];
+  const inviteCommitmentOptions = invitationOptions?.commitmentOptions ?? [];
+  const inviteEquityOptions = invitationOptions?.equity ?? {
+    defaultValue: 15,
+    max: 50,
+    min: 1,
+    step: 1,
+  };
+
+  React.useEffect(() => {
+    if (!inviteComposerVisible || !invitationOptions) {
+      return;
+    }
+
+    if (!inviteRoleId && invitationOptions.roleOptions[0]) {
+      setInviteRoleId(invitationOptions.roleOptions[0].id);
+    }
+
+    if (!inviteCommitment && invitationOptions.commitmentOptions[0]) {
+      setInviteCommitment(invitationOptions.commitmentOptions[0].id);
+    }
+
+    setInviteEquityPercent((currentValue) =>
+      clampSteppedValue(
+        currentValue || invitationOptions.equity.defaultValue,
+        invitationOptions.equity.min,
+        invitationOptions.equity.max,
+        invitationOptions.equity.step
+      )
+    );
+  }, [invitationOptions, inviteCommitment, inviteComposerVisible, inviteRoleId]);
 
   const navigateToHome = React.useCallback(() => {
     router.navigate('/(tabs)' as never);
@@ -477,8 +724,11 @@ export function TeamScreen() {
   const closeInviteComposer = React.useCallback(() => {
     setInviteComposerVisible(false);
     setInviteEmail('');
+    setInviteRoleId(null);
+    setInviteEquityPercent(inviteEquityOptions.defaultValue);
+    setInviteCommitment(null);
     setInviteError(null);
-  }, []);
+  }, [inviteEquityOptions.defaultValue]);
 
   const handleInvite = React.useCallback(async () => {
     const normalizedEmail = inviteEmail.trim().toLowerCase();
@@ -488,21 +738,44 @@ export function TeamScreen() {
       return;
     }
 
+    if (!inviteRoleId) {
+      setInviteError('Choose a role for this invitation.');
+      return;
+    }
+
+    if (!inviteCommitment) {
+      setInviteError('Choose a commitment level.');
+      return;
+    }
+
     setInviteError(null);
     setInviteSuccessMessage(null);
 
     try {
       const response = await createStartupInvitationMutation.mutateAsync({
+        commitment: inviteCommitment,
         email: normalizedEmail,
+        equityPercent: inviteEquityPercent,
+        roleId: inviteRoleId,
       });
 
       setInviteComposerVisible(false);
       setInviteEmail('');
+      setInviteRoleId(null);
+      setInviteEquityPercent(inviteEquityOptions.defaultValue);
+      setInviteCommitment(null);
       setInviteSuccessMessage(response.message);
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : 'Unable to send invitation.');
     }
-  }, [createStartupInvitationMutation, inviteEmail]);
+  }, [
+    createStartupInvitationMutation,
+    inviteCommitment,
+    inviteEmail,
+    inviteEquityOptions.defaultValue,
+    inviteEquityPercent,
+    inviteRoleId,
+  ]);
 
   const handleInvitationDecision = React.useCallback(
     async (invitationId: string, decision: 'accept' | 'decline') => {
@@ -628,6 +901,12 @@ export function TeamScreen() {
   const teamInvites = overview.data.teamInvites;
   const hasActiveStartup = viewerContext.hasActiveStartup && Boolean(startup);
   const screenTitle = hasActiveStartup ? 'Startup Team Builder' : 'Team Dashboard';
+  const canSubmitInvite =
+    isValidEmail(inviteEmail.trim().toLowerCase()) &&
+    Boolean(inviteRoleId) &&
+    Boolean(inviteCommitment) &&
+    !createStartupInvitationMutation.isPending &&
+    !invitationOptionsQuery.isPending;
 
   return (
     <>
@@ -855,7 +1134,7 @@ export function TeamScreen() {
               <View className="gap-1">
                 <AppText variant="subtitle">Invite by email</AppText>
                 <AppText tone="muted">
-                  Send a team invitation using the startup linked to your current account.
+                  Assign role, equity, and commitment before sending the invitation.
                 </AppText>
               </View>
 
@@ -875,6 +1154,88 @@ export function TeamScreen() {
                 value={inviteEmail}
               />
 
+              <View className="gap-3">
+                <AppText tone="muted" variant="label">Assign Role</AppText>
+                {invitationOptionsQuery.isPending ? (
+                  <View className="flex-row items-center gap-2 rounded-[16px] border border-white/10 bg-[#343434] px-4 py-3">
+                    <ActivityIndicator color="#FF9A3E" size="small" />
+                    <AppText tone="muted">Loading roles...</AppText>
+                  </View>
+                ) : null}
+                {invitationOptionsQuery.isError ? (
+                  <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
+                    <AppText tone="danger">
+                      Unable to load invitation options right now.
+                    </AppText>
+                  </View>
+                ) : null}
+                <View className="flex-row flex-wrap gap-2">
+                  {inviteRoleOptions.map((role) => {
+                    const isSelected = inviteRoleId === role.id;
+
+                    return (
+                      <Pressable
+                        key={role.id}
+                        className="rounded-full border px-4 py-2"
+                        onPress={() => {
+                          setInviteRoleId(role.id);
+                          setInviteError(null);
+                        }}
+                        style={{
+                          backgroundColor: isSelected ? '#3B2A1C' : '#343434',
+                          borderColor: isSelected ? '#FF9A3E' : 'rgba(255, 255, 255, 0.1)',
+                        }}>
+                        <AppText
+                          className="text-[13px]"
+                          style={{ color: isSelected ? '#FF9A3E' : '#98A2B3' }}
+                          variant="bodyStrong">
+                          {role.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <EquitySlider
+                disabled={createStartupInvitationMutation.isPending || invitationOptionsQuery.isPending}
+                max={inviteEquityOptions.max}
+                min={inviteEquityOptions.min}
+                onChange={setInviteEquityPercent}
+                step={inviteEquityOptions.step}
+                value={inviteEquityPercent}
+              />
+
+              <View className="gap-3">
+                <AppText tone="muted" variant="label">Commitment</AppText>
+                <View className="flex-row gap-2">
+                  {inviteCommitmentOptions.map((commitment) => {
+                    const isSelected = inviteCommitment === commitment.id;
+
+                    return (
+                      <Pressable
+                        key={commitment.id}
+                        className="min-h-12 flex-1 items-center justify-center rounded-[16px] border px-3 py-3"
+                        onPress={() => {
+                          setInviteCommitment(commitment.id);
+                          setInviteError(null);
+                        }}
+                        style={{
+                          backgroundColor: isSelected ? '#3B2A1C' : '#343434',
+                          borderColor: isSelected ? '#FF9A3E' : 'rgba(255, 255, 255, 0.1)',
+                        }}>
+                        <AppText
+                          className="text-[13px]"
+                          style={{ color: isSelected ? '#FF9A3E' : '#98A2B3' }}
+                          variant="bodyStrong">
+                          {commitment.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
               {inviteError ? (
                 <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
                   <AppText tone="danger">{inviteError}</AppText>
@@ -890,19 +1251,23 @@ export function TeamScreen() {
                   variant="secondary"
                 />
                 <Pressable
-                  className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#FF9A3E] px-4 py-3"
-                  disabled={createStartupInvitationMutation.isPending}
+                  className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#FF9A3E] px-3 py-3"
+                  disabled={!canSubmitInvite}
                   onPress={() => {
                     void handleInvite();
                   }}
-                  style={{ opacity: createStartupInvitationMutation.isPending ? 0.7 : 1 }}>
+                  style={{ opacity: canSubmitInvite ? 1 : 0.55 }}>
                   {createStartupInvitationMutation.isPending ? (
                     <ActivityIndicator color="#11131A" size="small" />
                   ) : (
-                    <Ionicons color="#11131A" name="mail-outline" size={18} />
+                    <Ionicons color="#11131A" name="person-add-outline" size={16} />
                   )}
-                  <AppText className="text-[#11131A]" variant="bodyStrong">
-                    {createStartupInvitationMutation.isPending ? 'Sending...' : 'Send Invite'}
+                  <AppText
+                    align="center"
+                    className="flex-1 text-[12px] leading-[14px] text-[#11131A]"
+                    numberOfLines={2}
+                    variant="bodyStrong">
+                    {createStartupInvitationMutation.isPending ? 'Sending...' : 'Confirm Add to Team'}
                   </AppText>
                 </Pressable>
               </View>

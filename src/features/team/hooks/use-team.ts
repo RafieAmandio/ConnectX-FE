@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   createStartupInvitation,
+  fetchStartupInvitationOptions,
   fetchStartupInvitations,
   fetchTeamOverview,
   respondToStartupInvitation,
@@ -11,6 +12,7 @@ import type { RespondToStartupInvitationRequest } from '../types/team.types';
 export const teamQueryKeys = {
   overview: ['team', 'overview'] as const,
   invitations: ['team', 'invitations'] as const,
+  invitationOptions: ['team', 'invitation-options'] as const,
 };
 
 export function useTeamOverview() {
@@ -31,6 +33,14 @@ export function useCreateStartupInvitation() {
         queryClient.invalidateQueries({ queryKey: teamQueryKeys.invitations }),
       ]);
     },
+  });
+}
+
+export function useStartupInvitationOptions(enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: teamQueryKeys.invitationOptions,
+    queryFn: fetchStartupInvitationOptions,
   });
 }
 

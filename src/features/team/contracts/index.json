@@ -4,6 +4,18 @@
   "endpoints": [
     {
       "method": "GET",
+      "path": "/me/startup/invitation-options",
+      "file": "get-startup-invitation-options.response.json",
+      "notes": "Returns role, commitment, and equity controls for assigning someone before sending an invite."
+    },
+    {
+      "method": "POST",
+      "path": "/me/startup/invitations",
+      "file": "create-startup-invitation.request.json",
+      "notes": "Request body for sending an outgoing startup invitation with assignment details."
+    },
+    {
+      "method": "GET",
       "path": "/me/startup-invitations",
       "file": "get-startup-invitations.response.json",
       "notes": "Returns incoming startup invitations for the authenticated user."

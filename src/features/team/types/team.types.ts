@@ -7,7 +7,9 @@ export type TeamRole = TeamEntityOption;
 
 export type MissingRole = TeamEntityOption;
 
-export type TeamMemberCommitment = 'full_time' | 'part_time' | 'flexible' | string;
+export type TeamInviteCommitment = 'full_time' | 'part_time' | 'advisor';
+
+export type TeamMemberCommitment = TeamInviteCommitment | 'flexible' | string;
 
 export type TeamMemberStatus = 'active' | 'pending' | 'inactive' | string;
 
@@ -143,7 +145,10 @@ export type UpdateRequiredRolesResponse = {
 };
 
 export type CreateStartupInvitationRequest = {
+  commitment: TeamInviteCommitment;
   email: string;
+  equityPercent: number;
+  roleId: string;
 };
 
 export type CreateStartupInvitationResponse = {
@@ -214,5 +219,22 @@ export type StartupOptionsResponse = {
     industries: TeamEntityOption[];
     stages: TeamEntityOption[];
     roles: TeamRole[];
+  };
+};
+
+export type StartupInvitationOptionsResponse = {
+  success: boolean;
+  data: {
+    roleOptions: TeamRole[];
+    commitmentOptions: {
+      id: TeamInviteCommitment;
+      label: string;
+    }[];
+    equity: {
+      min: number;
+      max: number;
+      step: number;
+      defaultValue: number;
+    };
   };
 };

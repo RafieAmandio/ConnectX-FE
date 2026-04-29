@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText, AppTopBar } from '@shared/components';
 
-import { useCreateStartupInvitation } from '@features/team/hooks/use-team';
+import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
 import {
   useAppendMockMessage,
@@ -256,15 +256,15 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const conversationsQuery = useChatConversations();
   const messagesQuery = useConversationMessages(conversationId);
   const appendMessageMutation = useAppendMockMessage(conversationId);
-  const createStartupInvitationMutation = useCreateStartupInvitation();
   const [draftMessage, setDraftMessage] = React.useState('');
+  const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
+  const [invitationSent, setInvitationSent] = React.useState(false);
   const [invitationMessage, setInvitationMessage] = React.useState<string | null>(null);
   const [invitationError, setInvitationError] = React.useState<string | null>(null);
   const listRef = React.useRef<FlatList<ChatMessage>>(null);
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = messagesQuery.data ?? [];
   const isSending = appendMessageMutation.isPending;
-  const invitationSent = createStartupInvitationMutation.isSuccess;
 
   React.useEffect(() => {
     if (messages.length > 0) {
@@ -283,28 +283,15 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     setDraftMessage('');
   }, [appendMessageMutation, draftMessage, isSending]);
 
-  const handleAddToTeam = React.useCallback(async () => {
-    if (!conversation?.participantEmail || createStartupInvitationMutation.isPending || invitationSent) {
+  const handleAddToTeam = React.useCallback(() => {
+    if (!conversation?.participantEmail || invitationSent) {
       return;
     }
 
     setInvitationMessage(null);
     setInvitationError(null);
-
-    try {
-      const response = await createStartupInvitationMutation.mutateAsync({
-        email: conversation.participantEmail,
-      });
-
-      setInvitationMessage(response.message);
-    } catch (error) {
-      setInvitationError(error instanceof Error ? error.message : 'Unable to send team invitation.');
-    }
-  }, [
-    conversation?.participantEmail,
-    createStartupInvitationMutation,
-    invitationSent,
-  ]);
+    setInviteComposerVisible(true);
+  }, [conversation?.participantEmail, invitationSent]);
 
   if (conversationsQuery.isLoading && !conversation) {
     return (
@@ -378,24 +365,16 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
           <Pressable
             className="min-h-11 flex-row items-center justify-center gap-2 rounded-full bg-[#FF9D3D] px-4 active:opacity-80"
-            disabled={createStartupInvitationMutation.isPending || invitationSent}
-            onPress={() => void handleAddToTeam()}
-            style={{ opacity: createStartupInvitationMutation.isPending || invitationSent ? 0.6 : 1 }}>
-            {createStartupInvitationMutation.isPending ? (
-              <ActivityIndicator color="#1F160C" size="small" />
-            ) : (
-              <Ionicons
-                color="#1F160C"
-                name={invitationSent ? 'checkmark-outline' : 'person-add-outline'}
-                size={18}
-              />
-            )}
+            disabled={invitationSent}
+            onPress={handleAddToTeam}
+            style={{ opacity: invitationSent ? 0.6 : 1 }}>
+            <Ionicons
+              color="#1F160C"
+              name={invitationSent ? 'checkmark-outline' : 'person-add-outline'}
+              size={18}
+            />
             <AppText className="text-[#1F160C]" variant="bodyStrong">
-              {createStartupInvitationMutation.isPending
-                ? 'Sending'
-                : invitationSent
-                  ? 'Invited'
-                  : 'Add to Team'}
+              {invitationSent ? 'Invited' : 'Add to Team'}
             </AppText>
           </Pressable>
         </View>
@@ -462,6 +441,18 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           </View>
         </View>
       </KeyboardAvoidingView>
+      <StartupInvitationComposer
+        initialEmail={conversation.participantEmail}
+        onClose={() => {
+          setInviteComposerVisible(false);
+        }}
+        onSuccess={(message) => {
+          setInvitationSent(true);
+          setInvitationMessage(message);
+        }}
+        recipientName={conversation.name}
+        visible={inviteComposerVisible}
+      />
     </>
   );
 }

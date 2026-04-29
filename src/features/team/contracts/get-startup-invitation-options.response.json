@@ -1,0 +1,55 @@
+{
+  "success": true,
+  "data": {
+    "roleOptions": [
+      {
+        "id": "co_founder",
+        "label": "Co-Founder"
+      },
+      {
+        "id": "cto",
+        "label": "CTO"
+      },
+      {
+        "id": "engineer",
+        "label": "Engineer"
+      },
+      {
+        "id": "product_manager",
+        "label": "Product Manager"
+      },
+      {
+        "id": "designer",
+        "label": "Designer"
+      },
+      {
+        "id": "marketing",
+        "label": "Marketing"
+      },
+      {
+        "id": "operations",
+        "label": "Operations"
+      }
+    ],
+    "commitmentOptions": [
+      {
+        "id": "full_time",
+        "label": "Full-time"
+      },
+      {
+        "id": "part_time",
+        "label": "Part-time"
+      },
+      {
+        "id": "advisor",
+        "label": "Advisor"
+      }
+    ],
+    "equity": {
+      "min": 1,
+      "max": 50,
+      "step": 1,
+      "defaultValue": 15
+    }
+  }
+}

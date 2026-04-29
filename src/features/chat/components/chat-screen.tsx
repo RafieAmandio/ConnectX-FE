@@ -3,10 +3,9 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Alert,
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Linking,
@@ -16,8 +15,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
+import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 import { AppButton, AppText, AppTopBar } from '@shared/components';
 
 import type { ChatMessage, ChatRoom } from '../domain/models';
@@ -405,6 +406,8 @@ function ConversationPanel({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [draftMessage, setDraftMessage] = React.useState('');
+  const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
+  const [invitationMessage, setInvitationMessage] = React.useState<string | null>(null);
   const roomId = conversation?.id ?? null;
   const messagesQuery = useRoomMessages(roomId, isChatEnabled && Boolean(roomId));
   const markConversationReadMutation = useMarkConversationRead(roomId);
@@ -607,7 +610,7 @@ function ConversationPanel({
 
   return (
     <View className="flex-1">
-      <View 
+      <View
         className="flex-row items-center gap-3 px-4 pb-4"
         style={{ paddingTop: Math.max(insets.top + 8, 16) }}>
         {showBackButton ? (
@@ -627,6 +630,11 @@ function ConversationPanel({
           <AppText className="text-[#9C9893]" numberOfLines={1}>
             {getConversationSubtitle(conversation, presence.members.length)}
           </AppText>
+          {invitationMessage ? (
+            <AppText className="text-[#7DD37D]" numberOfLines={1} variant="code">
+              {invitationMessage}
+            </AppText>
+          ) : null}
         </View>
 
         <Pressable
@@ -643,6 +651,10 @@ function ConversationPanel({
           className="min-h-12 rounded-full border border-[#7A562D] bg-[#5B4225] px-5"
           detail={undefined}
           label="Add to Team"
+          onPress={() => {
+            setInvitationMessage(null);
+            setInviteComposerVisible(true);
+          }}
           size="md"
           variant="ghost"
         />
@@ -748,6 +760,16 @@ function ConversationPanel({
           </Pressable>
         </View>
       </View>
+      <StartupInvitationComposer
+        onClose={() => {
+          setInviteComposerVisible(false);
+        }}
+        onSuccess={(message) => {
+          setInvitationMessage(message);
+        }}
+        recipientName={conversation.title}
+        visible={inviteComposerVisible}
+      />
     </View>
   );
 }

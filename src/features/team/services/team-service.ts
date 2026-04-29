@@ -5,6 +5,7 @@ import {
   createMockStartupInvitationResponse,
   getMockAcceptedStartupId,
   getMockPersonTeamOverviewResponse,
+  getMockStartupInvitationOptionsResponse,
   getMockStartupInvitationsResponse,
   getMockTeamOverviewResponse,
   respondToMockStartupInvitation,
@@ -16,6 +17,7 @@ import type {
   RespondToStartupInvitationRequest,
   RespondToStartupInvitationResponse,
   StartupInvitation,
+  StartupInvitationOptionsResponse,
   StartupTeamOverview,
   TeamCompleteness,
   TeamMember,
@@ -27,6 +29,7 @@ import type {
 export const TEAM_API = {
   OVERVIEW: '/api/v1/me/startup/team-overview',
   INVITATIONS: '/api/v1/me/startup/invitations',
+  INVITATION_OPTIONS: '/api/v1/me/startup/invitation-options',
   STARTUP_INVITATIONS: '/api/v1/me/startup-invitations',
   RESPOND_TO_STARTUP_INVITATION: (invitationId: string) =>
     `/api/v1/me/startup-invitations/${invitationId}/respond`,
@@ -43,6 +46,14 @@ function isTeamEntityOption(value: unknown) {
 
 function isStringArray(value: unknown) {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isTeamInviteCommitmentOption(value: unknown) {
+  return (
+    isRecord(value) &&
+    (value.id === 'full_time' || value.id === 'part_time' || value.id === 'advisor') &&
+    typeof value.label === 'string'
+  );
 }
 
 function isTeamMember(payload: unknown) {
@@ -251,6 +262,26 @@ function hasUsableStartupInvitationsResponse(payload: unknown): payload is Fetch
   );
 }
 
+function hasUsableStartupInvitationOptionsResponse(
+  payload: unknown
+): payload is StartupInvitationOptionsResponse {
+  if (!isRecord(payload) || !('data' in payload) || !isRecord(payload.data)) {
+    return false;
+  }
+
+  return (
+    Array.isArray(payload.data.roleOptions) &&
+    payload.data.roleOptions.every((role) => isTeamEntityOption(role)) &&
+    Array.isArray(payload.data.commitmentOptions) &&
+    payload.data.commitmentOptions.every((commitment) => isTeamInviteCommitmentOption(commitment)) &&
+    isRecord(payload.data.equity) &&
+    typeof payload.data.equity.min === 'number' &&
+    typeof payload.data.equity.max === 'number' &&
+    typeof payload.data.equity.step === 'number' &&
+    typeof payload.data.equity.defaultValue === 'number'
+  );
+}
+
 function hasUsableRespondToStartupInvitationResponse(
   payload: unknown
 ): payload is RespondToStartupInvitationResponse {
@@ -290,6 +321,18 @@ function shouldUseMockInvitationFallback(error: unknown) {
   }
 
   return error.status === 0 || error.status === 404 || error.status >= 500;
+}
+
+function shouldUseMockInvitationOptionsFallback(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return isExpoDevModeEnabled();
+  }
+
+  if (error.status === 0) {
+    return true;
+  }
+
+  return isExpoDevModeEnabled() && (error.status === 404 || error.status >= 500);
 }
 
 function shouldMockNoActiveStartup() {
@@ -353,6 +396,24 @@ export async function createStartupInvitation(payload: CreateStartupInvitationRe
     }
 
     return createMockStartupInvitationResponse(payload);
+  }
+}
+
+export async function fetchStartupInvitationOptions() {
+  try {
+    const response = await apiFetch<StartupInvitationOptionsResponse>(TEAM_API.INVITATION_OPTIONS);
+
+    if (!hasUsableStartupInvitationOptionsResponse(response)) {
+      return getMockStartupInvitationOptionsResponse();
+    }
+
+    return response;
+  } catch (error) {
+    if (!shouldUseMockInvitationOptionsFallback(error)) {
+      throw error;
+    }
+
+    return getMockStartupInvitationOptionsResponse();
   }
 }
 
