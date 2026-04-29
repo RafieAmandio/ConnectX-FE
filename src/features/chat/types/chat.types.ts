@@ -6,6 +6,7 @@ export type ChatConversation = {
   lastMessageAt: string;
   messagesStored: number;
   name: string;
+  participantEmail: string;
   preview: string;
   unreadCount: number;
 };

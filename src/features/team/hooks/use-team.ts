@@ -21,8 +21,16 @@ export function useTeamOverview() {
 }
 
 export function useCreateStartupInvitation() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: createStartupInvitation,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: teamQueryKeys.overview }),
+        queryClient.invalidateQueries({ queryKey: teamQueryKeys.invitations }),
+      ]);
+    },
   });
 }
 

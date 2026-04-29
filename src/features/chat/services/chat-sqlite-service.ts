@@ -10,24 +10,28 @@ const seededConversations = [
     id: 'conv_ardi_wijaya',
     kind: 'direct',
     name: 'Ardi Wijaya',
+    participantEmail: 'ardi.wijaya@connectx.demo',
     unreadCount: 1,
   },
   {
     id: 'conv_maya_chen',
     kind: 'direct',
     name: 'Maya Chen',
+    participantEmail: 'maya.chen@connectx.demo',
     unreadCount: 0,
   },
   {
     id: 'conv_ghi',
     kind: 'direct',
     name: 'Nina Patel',
+    participantEmail: 'nina.patel@connectx.demo',
     unreadCount: 0,
   },
 ] as const satisfies readonly {
   id: string;
   kind: ChatConversationKind;
   name: string;
+  participantEmail: string;
   unreadCount: number;
 }[];
 
@@ -119,6 +123,7 @@ type ConversationRow = {
   kind: ChatConversationKind;
   messagesStored: number;
   name: string;
+  participantEmail: string;
   previewText: string;
   unreadCount: number;
   updatedAt: string;
@@ -131,6 +136,10 @@ type MessageRow = {
   direction: ChatMessage['direction'];
   id: string;
   status: ChatMessageStatus;
+};
+
+type TableColumnRow = {
+  name: string;
 };
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -146,6 +155,7 @@ function mapConversationRow(row: ConversationRow): ChatConversation {
     lastMessageAt: row.updatedAt,
     messagesStored: row.messagesStored,
     name: row.name,
+    participantEmail: row.participantEmail,
     preview: row.previewText,
     unreadCount: row.unreadCount,
   };
@@ -187,12 +197,27 @@ async function pruneConversationMessages(
 async function seedMockChatData(database: SQLite.SQLiteDatabase) {
   const seededConversationIds = seededConversations.map((conversation) => conversation.id);
   const placeholders = seededConversationIds.map(() => '?').join(', ');
-  const existingSeededConversationCount = await database.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM conversations WHERE id IN (${placeholders})`,
+  const existingSeededConversations = await database.getAllAsync<{
+    id: string;
+    participantEmail: string | null;
+  }>(
+    `
+      SELECT id, participant_email AS participantEmail
+      FROM conversations
+      WHERE id IN (${placeholders})
+    `,
     ...seededConversationIds
   );
 
-  if ((existingSeededConversationCount?.count ?? 0) === seededConversations.length) {
+  const hasCurrentSeedData = seededConversations.every((conversation) =>
+    existingSeededConversations.some(
+      (existingConversation) =>
+        existingConversation.id === conversation.id &&
+        existingConversation.participantEmail === conversation.participantEmail
+    )
+  );
+
+  if (hasCurrentSeedData) {
     return;
   }
 
@@ -209,12 +234,21 @@ async function seedMockChatData(database: SQLite.SQLiteDatabase) {
 
     await database.runAsync(
       `
-        INSERT INTO conversations (id, name, kind, preview_text, unread_count, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO conversations (
+          id,
+          name,
+          kind,
+          participant_email,
+          preview_text,
+          unread_count,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       conversation.id,
       conversation.name,
       conversation.kind,
+      conversation.participantEmail,
       lastMessage?.body ?? 'No messages yet',
       conversation.unreadCount,
       lastMessage?.createdAt ?? new Date().toISOString()
@@ -239,6 +273,15 @@ async function seedMockChatData(database: SQLite.SQLiteDatabase) {
   }
 }
 
+async function ensureConversationColumns(database: SQLite.SQLiteDatabase) {
+  const columns = await database.getAllAsync<TableColumnRow>('PRAGMA table_info(conversations)');
+  const hasParticipantEmail = columns.some((column) => column.name === 'participant_email');
+
+  if (!hasParticipantEmail) {
+    await database.execAsync('ALTER TABLE conversations ADD COLUMN participant_email TEXT');
+  }
+}
+
 async function initializeDatabase() {
   const database = await SQLite.openDatabaseAsync(CHAT_DATABASE_NAME);
 
@@ -248,6 +291,7 @@ async function initializeDatabase() {
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
       kind TEXT NOT NULL,
+      participant_email TEXT,
       preview_text TEXT NOT NULL,
       unread_count INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL
@@ -265,6 +309,7 @@ async function initializeDatabase() {
       ON messages (conversation_id, created_at DESC);
   `);
 
+  await ensureConversationColumns(database);
   await seedMockChatData(database);
 
   return database;
@@ -286,6 +331,7 @@ export async function listMockConversations() {
         conversations.id,
         conversations.name,
         conversations.kind,
+        conversations.participant_email AS participantEmail,
         conversations.preview_text AS previewText,
         conversations.unread_count AS unreadCount,
         conversations.updated_at AS updatedAt,
