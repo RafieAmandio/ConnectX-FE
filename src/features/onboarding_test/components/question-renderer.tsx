@@ -405,6 +405,20 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'people-circle',
     iconColor: '#4ADE80',
   },
+  female: {
+    bg: '#2A1626',
+    border: '#56304D',
+    icon: 'gender-female',
+    iconColor: '#F472B6',
+    library: 'mci',
+  },
+  male: {
+    bg: '#142238',
+    border: '#294766',
+    icon: 'gender-male',
+    iconColor: '#60A5FA',
+    library: 'mci',
+  },
   default: {
     bg: '#2A2117',
     border: '#3A2E1E',

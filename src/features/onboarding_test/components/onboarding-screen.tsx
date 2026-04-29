@@ -51,6 +51,10 @@ const MULTI_SELECT_DROPDOWN_STEP_IDS = new Set([
 const SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS = new Set([
   'step_personal_location',
 ]);
+const GENDER_OPTION_ICONS: Record<string, string> = {
+  female: 'female',
+  male: 'male',
+};
 
 function isCompletedResponse(
   response:
@@ -72,6 +76,33 @@ function getCompletionRoute(mode: OnboardingMode, redirectTo?: string) {
   }
 
   return mode === 'preview' ? ('/login' as const) : ('/(tabs)' as const);
+}
+
+function getRenderableQuestion(
+  stepId: string,
+  question: OnboardingQuestion
+): OnboardingQuestion {
+  if (
+    stepId !== 'step_personal_gender' ||
+    question.id !== 'q_gender' ||
+    !question.options?.length
+  ) {
+    return question;
+  }
+
+  return {
+    ...question,
+    options: question.options.map((option) => {
+      const genderIcon = GENDER_OPTION_ICONS[option.value];
+
+      return genderIcon
+        ? {
+            ...option,
+            icon: genderIcon,
+          }
+        : option;
+    }),
+  };
 }
 
 function ProgressSegment({ active, delay }: { active: boolean; delay: number }) {
@@ -380,6 +411,9 @@ export function OnboardingScreen() {
       'currency_amount',
     ].includes(question.type)
   );
+  const renderableQuestions = visibleQuestions.map((question) =>
+    getRenderableQuestion(currentStep.id, question)
+  );
 
   return (
     <KeyboardAvoidingView
@@ -450,7 +484,7 @@ export function OnboardingScreen() {
                 key={`fields-${currentStep.id}`}
                 entering={FadeInUp.delay(80).duration(320)}
                 className="gap-6">
-                {visibleQuestions.map((question) => (
+                {renderableQuestions.map((question) => (
                   <QuestionRenderer
                     key={question.id}
                     error={fieldErrors[question.id]}
