@@ -911,7 +911,7 @@ export function TeamScreen() {
               {teamRoster.actions.addFromMatches ? (
                 <ActionButton
                   icon="search-outline"
-                  label="Add from Matches"
+                  label="Explore more"
                   onPress={navigateToHome}
                   variant="primary"
                 />

@@ -18,11 +18,9 @@ import { AppButton, AppText, AppTopBar } from '@shared/components';
 import { useCreateStartupInvitation } from '@features/team/hooks/use-team';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
 import {
-  LOCAL_MESSAGE_LIMIT,
   useAppendMockMessage,
   useChatConversations,
   useConversationMessages,
-  useResetMockChatData,
 } from '@features/chat/hooks/use-mock-chat';
 
 function formatRelativeTime(value: string) {
@@ -67,29 +65,6 @@ function ChatDemoAvatar({ conversation, size = 56 }: { conversation: ChatConvers
   );
 }
 
-function ChatDemoSeedButton({
-  activeConversationId,
-  compact = false,
-}: {
-  activeConversationId: string | null;
-  compact?: boolean;
-}) {
-  const resetMutation = useResetMockChatData(activeConversationId);
-
-  return (
-    <Pressable
-      className="flex-row items-center justify-center gap-2 rounded-full border border-[#7A562D] bg-[#3A2B1D] px-4 py-2 active:opacity-80"
-      disabled={resetMutation.isPending}
-      onPress={() => resetMutation.mutate()}
-      style={{ opacity: resetMutation.isPending ? 0.55 : 1 }}>
-      <Ionicons color="#FFB35E" name="refresh-outline" size={compact ? 16 : 18} />
-      <AppText className="text-[#FFB35E]" variant={compact ? 'code' : 'bodyStrong'}>
-        {resetMutation.isPending ? 'Seeding...' : 'Seed chats'}
-      </AppText>
-    </Pressable>
-  );
-}
-
 function ConversationCard({
   conversation,
   onPress,
@@ -99,51 +74,35 @@ function ConversationCard({
 }) {
   return (
     <Pressable className="active:opacity-90" onPress={onPress}>
-      <View
-        className="rounded-[26px] border px-4 py-4"
-        style={{ backgroundColor: '#2C2C2C', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
-        <View className="flex-row items-center gap-4">
-          <View className="relative">
-            <ChatDemoAvatar conversation={conversation} size={58} />
+      <View className="flex-row items-center gap-3 px-1 py-2.5">
+        <ChatDemoAvatar conversation={conversation} size={52} />
+
+        <View className="min-w-0 flex-1 border-b border-[#353535] pb-3">
+          <View className="flex-row items-center justify-between gap-3">
+            <AppText className="flex-1 text-white" numberOfLines={1} variant="bodyStrong">
+              {conversation.name}
+            </AppText>
+            <AppText
+              className={conversation.unreadCount > 0 ? 'text-[#F59E0B]' : 'text-[#8E8B87]'}
+              variant="code">
+              {formatRelativeTime(conversation.lastMessageAt)}
+            </AppText>
+          </View>
+
+          <View className="mt-1 flex-row items-center gap-3">
+            <AppText
+              className={conversation.unreadCount > 0 ? 'flex-1 text-[#F3EEE8]' : 'flex-1 text-[#AAA39B]'}
+              numberOfLines={1}>
+              {conversation.preview}
+            </AppText>
+
             {conversation.unreadCount > 0 ? (
-              <View className="absolute -right-1 -top-1 min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#2C2C2C] bg-[#F59E0B] px-1">
+              <View className="min-h-5 min-w-5 items-center justify-center rounded-full bg-[#F59E0B] px-1.5">
                 <AppText className="text-[11px] text-[#1E1B16]" variant="label">
                   {conversation.unreadCount}
                 </AppText>
               </View>
             ) : null}
-          </View>
-
-          <View className="flex-1 gap-3">
-            <View className="flex-row items-center justify-between gap-3">
-              <AppText className="flex-1 text-white" numberOfLines={1} variant="subtitle">
-                {conversation.name}
-              </AppText>
-              <AppText
-                className={conversation.unreadCount > 0 ? 'text-[#F59E0B]' : 'text-[#8E8B87]'}
-                variant="code">
-                {formatRelativeTime(conversation.lastMessageAt)}
-              </AppText>
-            </View>
-
-            <AppText
-              className={conversation.unreadCount > 0 ? 'text-[#F3EEE8]' : 'text-[#AAA39B]'}
-              numberOfLines={2}>
-              {conversation.preview}
-            </AppText>
-
-            <View className="flex-row items-center gap-2">
-              <View className="rounded-full bg-[#232323] px-3 py-1.5">
-                <AppText className="text-[#BDB7AF]" variant="code">
-                  {conversation.kind === 'group' ? 'Group chat' : 'Direct message'}
-                </AppText>
-              </View>
-              <View className="rounded-full bg-[#202124] px-3 py-1.5">
-                <AppText className="text-[#8E8B87]" variant="code">
-                  {conversation.messagesStored}/{LOCAL_MESSAGE_LIMIT} stored
-                </AppText>
-              </View>
-            </View>
           </View>
         </View>
       </View>
@@ -198,8 +157,6 @@ export function ChatDemoListScreen() {
   const conversationsQuery = useChatConversations();
   const conversations = conversationsQuery.data ?? [];
   const hasConversations = conversations.length > 0;
-  const unreadTotal = conversations.reduce((sum, conversation) => sum + conversation.unreadCount, 0);
-
   const renderConversation = React.useCallback(
     ({ item }: ListRenderItemInfo<ChatConversation>) => (
       <ConversationCard
@@ -216,7 +173,7 @@ export function ChatDemoListScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1" style={{ backgroundColor: '#262626' }}>
-        <AppTopBar rightAccessory={<ChatDemoSeedButton activeConversationId={null} compact />} />
+        <AppTopBar />
         {conversationsQuery.isLoading && !hasConversations ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color="#F59E0B" />
@@ -225,10 +182,9 @@ export function ChatDemoListScreen() {
           <FlatList
             contentContainerStyle={{
               flexGrow: hasConversations ? undefined : 1,
-              gap: 14,
               paddingBottom: Math.max(insets.bottom + 32, 32),
               paddingHorizontal: 16,
-              paddingTop: 16,
+              paddingTop: 12,
             }}
             contentInsetAdjustmentBehavior="automatic"
             data={conversations}
@@ -243,31 +199,14 @@ export function ChatDemoListScreen() {
               />
             }
             ListHeaderComponent={
-              <View className="gap-4 pb-2">
-                <View className="flex-row items-center justify-between gap-4">
-                  <View className="flex-1 gap-1">
-                    <AppText className="text-white" variant="display">
-                      Chat Demo
-                    </AppText>
-                    <AppText className="text-[#A7A199]">
-                      SQLite-backed match conversations for local demos.
-                    </AppText>
-                  </View>
-                  <View className="items-end gap-2">
-                    <View className="rounded-full bg-[#5B4225] px-4 py-2">
-                      <AppText className="text-[#FFB35E]" variant="bodyStrong">
-                        {unreadTotal > 0 ? `${unreadTotal} unread` : 'All seeded'}
-                      </AppText>
-                    </View>
-                    <AppText className="text-[#7E7972]" variant="code">
-                      {conversations.length} conversations
-                    </AppText>
-                  </View>
-                </View>
+              <View className="pb-3 pt-1">
+                <AppText className="text-white" variant="display">
+                  Chat Demo
+                </AppText>
 
                 {conversationsQuery.error instanceof Error && hasConversations ? (
                   <View
-                    className="rounded-[22px] border px-4 py-4"
+                    className="mt-4 rounded-[22px] border px-4 py-4"
                     style={{ backgroundColor: '#30251E', borderColor: 'rgba(255, 179, 94, 0.2)' }}>
                     <AppText className="text-[#FFE0BA]" variant="bodyStrong">
                       Some demo chats may be out of date
@@ -383,13 +322,13 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View className="flex-1" style={{ backgroundColor: '#262626' }}>
-          <AppTopBar rightAccessory={<ChatDemoSeedButton activeConversationId={conversationId} compact />} />
+          <AppTopBar />
           <View className="flex-1 items-center justify-center px-6">
             <AppText align="center" className="text-white" variant="title">
-              Demo conversation unavailable
+              Conversation unavailable
             </AppText>
             <AppText align="center" className="mt-2 text-[#B8B2AB]">
-              Seed chats to restore the match-linked SQLite conversations.
+              This chat could not be found right now.
             </AppText>
             <Pressable className="mt-5" onPress={() => router.replace('/chat_demo' as never)}>
               <AppText tone="signal">Open chat demo</AppText>
@@ -423,7 +362,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               {conversation.name}
             </AppText>
             <AppText className="text-[#9C9893]" numberOfLines={1}>
-              SQLite demo · {conversation.messagesStored}/{LOCAL_MESSAGE_LIMIT} messages stored
+              Direct message
             </AppText>
             {invitationMessage ? (
               <AppText className="text-[#7DD37D]" numberOfLines={1} variant="code">

@@ -1,9 +1,8 @@
-import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
+import React from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   View,
@@ -16,9 +15,9 @@ import { AppCard, AppText, AppTopBar } from '@shared/components';
 import { useMyProfile } from '../hooks/use-profile';
 import { mockMyProfileResponse } from '../mock/profile.mock';
 import type {
-  ProfileAboutKind,
   MyProfileData,
   MyProfileResponse,
+  ProfileAboutKind,
   ProfileBadge,
   ProfileNamedItem,
 } from '../types/profile.types';
@@ -57,36 +56,6 @@ function getInitials(value: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
-}
-
-function getProfileStatusCopy({
-  isError,
-  isFetching,
-}: {
-  isError: boolean;
-  isFetching: boolean;
-}) {
-  if (isError) {
-    return {
-      icon: 'alert-circle-outline' as const,
-      label: 'Using fallback profile',
-      tone: '#F4D03F',
-    };
-  }
-
-  if (isFetching) {
-    return {
-      icon: 'sync-outline' as const,
-      label: 'Syncing profile',
-      tone: ACCENT,
-    };
-  }
-
-  return {
-    icon: 'person-circle-outline' as const,
-    label: 'My profile',
-    tone: '#98A2B3',
-  };
 }
 
 function getAboutSectionDescription(kind: ProfileAboutKind) {
@@ -192,31 +161,6 @@ function NamedItemList({
           </AppText>
         </View>
       ))}
-    </View>
-  );
-}
-
-function StatusRow({
-  isError,
-  isFetching,
-}: {
-  isError: boolean;
-  isFetching: boolean;
-}) {
-  const status = getProfileStatusCopy({ isError, isFetching });
-
-  return (
-    <View className="flex-row items-center gap-2 self-start rounded-full px-3 py-1.5">
-      <View
-        className="flex-row items-center gap-2 rounded-full border px-3 py-1.5"
-        style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
-      >
-        {isFetching ? <ActivityIndicator color={status.tone} size="small" /> : null}
-        {!isFetching ? <Ionicons color={status.tone} name={status.icon} size={14} /> : null}
-        <AppText className="text-[11px] tracking-[0.8px]" tone="muted" variant="label">
-          {status.label}
-        </AppText>
-      </View>
     </View>
   );
 }
@@ -443,8 +387,6 @@ export function ProfileScreen() {
           contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
           contentInsetAdjustmentBehavior="automatic"
         >
-          <StatusRow isError={myProfileQuery.isError} isFetching={myProfileQuery.isFetching} />
-
           <ProfileHero
             onEdit={() => router.push('/profile/edit' as never)}
             profile={effectiveProfile}
