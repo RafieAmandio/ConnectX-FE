@@ -8,7 +8,11 @@ import { Colors } from '@shared/theme';
 
 const CONNECTX_LOGO = require('../../../../assets/images/connectx-logo.png');
 
-export function SplashScreen() {
+type SplashScreenProps = {
+  showLoader?: boolean;
+};
+
+export function SplashScreen({ showLoader = true }: SplashScreenProps) {
   return (
     <View
       className="flex-1 items-center justify-center"
@@ -41,9 +45,11 @@ export function SplashScreen() {
           </AppText>
         </Animated.View>
       </Animated.View>
-      <View className="absolute bottom-16">
-        <ActivityIndicator color={Colors.dark.accent} />
-      </View>
+      {showLoader ? (
+        <View className="absolute bottom-16">
+          <ActivityIndicator color={Colors.dark.accent} />
+        </View>
+      ) : null}
     </View>
   );
 }

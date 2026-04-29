@@ -14,14 +14,35 @@ import { SplashScreen } from './splash-screen';
 
 const ACCENT = '#FF9A3E';
 const ONBOARDING_IMAGE = require('../../../../assets/images/onboarding.png');
+let hasShownManualWelcomeSplash = false;
 
 export function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { authPhase, isHydrated, session } = useAuth();
+  const [isManualSplashVisible, setIsManualSplashVisible] = React.useState(
+    () => !hasShownManualWelcomeSplash
+  );
+
+  React.useEffect(() => {
+    if (!isManualSplashVisible) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      hasShownManualWelcomeSplash = true;
+      setIsManualSplashVisible(false);
+    }, 3500);
+
+    return () => clearTimeout(timer);
+  }, [isManualSplashVisible]);
 
   if (!isHydrated) {
     return <SplashScreen />;
+  }
+
+  if (isManualSplashVisible) {
+    return <SplashScreen showLoader={false} />;
   }
 
   if (session || authPhase !== 'signed_out') {
