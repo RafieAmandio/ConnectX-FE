@@ -19,7 +19,7 @@ import { mockMyProfileResponse, mockProfileOptionsResponse } from '../mock/profi
 import type {
   MyProfileData,
   MyProfileResponse,
-  ProfileAboutKind,
+  ProfileAboutSection,
   ProfileOptionsResponse,
   UpdateMyProfileRequest,
 } from '../types/profile.types';
@@ -56,18 +56,18 @@ function buildInitialFormState(profile: MyProfileData): UpdateMyProfileRequest {
   };
 }
 
-function getAboutCopy(kind: ProfileAboutKind | undefined) {
-  if (kind === 'startupIdea') {
+function getAboutCopy(aboutSection: ProfileAboutSection | undefined) {
+  if (aboutSection?.kind === 'startupIdea') {
     return {
-      errorLabel: 'Startup idea',
-      label: 'Startup Idea',
+      errorLabel: aboutSection.title || 'Startup idea',
+      label: aboutSection.title || 'Startup Idea',
       placeholder: 'Describe your startup idea',
     };
   }
 
   return {
-    errorLabel: 'Description',
-    label: 'Description',
+    errorLabel: aboutSection?.title || 'Description',
+    label: aboutSection?.title || 'Description',
     placeholder: 'Describe yourself and what you are looking for',
   };
 }
@@ -156,7 +156,19 @@ export function EditProfileScreen() {
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const profileOptionsResponse = optionsQuery.data;
-  const aboutCopy = getAboutCopy(profile.sections.about?.kind);
+  const aboutCopy = getAboutCopy(profile.sections.about);
+
+  React.useEffect(() => {
+    if (profileResponse) {
+      console.log('edit profile query response', JSON.stringify(profileResponse, null, 2));
+    }
+  }, [profileResponse]);
+
+  React.useEffect(() => {
+    if (profileOptionsResponse) {
+      console.log('profile options response', JSON.stringify(profileOptionsResponse, null, 2));
+    }
+  }, [profileOptionsResponse]);
 
   React.useEffect(() => {
     setFormState(buildInitialFormState(profile));
@@ -241,7 +253,7 @@ export function EditProfileScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
-        style={{ backgroundColor: '#11131A' }}>
+        style={{ backgroundColor: '#262626' }}>
         <View
           className="flex-row items-center justify-between border-b border-border px-5 pb-4"
           style={{ paddingTop: Math.max(insets.top + 14, 24) }}>

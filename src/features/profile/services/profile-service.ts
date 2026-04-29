@@ -14,7 +14,10 @@ export const PROFILE_API = {
 } as const;
 
 export async function fetchMyProfile() {
-  return apiFetch<MyProfileResponse>(PROFILE_API.ME);
+  const response = await apiFetch<MyProfileResponse>(PROFILE_API.ME);
+  console.log('fetch profile response', JSON.stringify(response, null, 2));
+
+  return response;
 }
 
 export async function fetchProfileOptions() {
