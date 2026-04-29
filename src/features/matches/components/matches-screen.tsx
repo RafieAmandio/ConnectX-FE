@@ -518,7 +518,7 @@ export function MatchesScreen() {
                 <AppText className="text-[15px] text-[#9F9C99]">{matchCountLabel}</AppText>
               </View>
             </View>
-            {usingMockMatches ? (
+            {/* {usingMockMatches ? (
               <AppCard
                 className="rounded-[20px] border-[#5A4726] bg-[#312A1E] p-4"
                 style={{ shadowColor: 'transparent' }}>
@@ -530,7 +530,7 @@ export function MatchesScreen() {
                   matches response in development.
                 </AppText>
               </AppCard>
-            ) : null}
+            ) : null} */}
 
             {matchesQuery.isLoading && !usingMockMatches ? (
               <AppCard
