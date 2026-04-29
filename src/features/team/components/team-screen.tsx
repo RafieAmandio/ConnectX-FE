@@ -127,12 +127,15 @@ function StatusPill({ label, status }: { label?: string; status: string }) {
 
   return (
     <View
-      className="rounded-full border px-3 py-1"
+      className="min-h-6 items-center justify-center rounded-full border px-3"
       style={{
         backgroundColor: palette.backgroundColor,
         borderColor: palette.borderColor,
       }}>
-      <AppText className="text-[11px]" style={{ color: palette.color }} variant="label">
+      <AppText
+        className="text-[11px] leading-[13px]"
+        style={{ color: palette.color, includeFontPadding: false, textAlignVertical: 'center' }}
+        variant="label">
         {label ?? getInvitationStatusLabel(status)}
       </AppText>
     </View>
