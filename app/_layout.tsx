@@ -45,6 +45,8 @@ export default function RootLayout() {
                 <Stack.Screen name="conversation" options={{ headerShown: false }} />
                 <Stack.Screen name="chat_demo" options={{ headerShown: false }} />
                 <Stack.Screen name="match-analysis" options={{ headerShown: false }} />
+                <Stack.Screen name="notifications" options={{ headerShown: false }} />
+                <Stack.Screen name="profile" options={{ headerShown: false }} />
               </Stack>
               <StatusBar style="light" />
             </ThemeProvider>

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -19,6 +20,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
+import { useNotifications } from '@features/notifications';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 import { Shadows } from '@shared/theme';
@@ -1021,9 +1023,11 @@ function EmptyState({
 }
 
 export function DiscoveryDeck() {
+  const router = useRouter();
   const { height, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const usingMockCards = isDiscoveryCardsMockEnabled();
+  const notificationsQuery = useNotifications();
   const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
     useRevenueCat();
   const [mockCards, setMockCards] = React.useState<DiscoveryCard[]>(getFallbackCards(null));
@@ -1237,6 +1241,7 @@ export function DiscoveryDeck() {
     () => countAppliedDiscoveryFilters(sanitizedAppliedFilters),
     [sanitizedAppliedFilters]
   );
+  const unreadNotificationCount = notificationsQuery.data?.data.unreadCount ?? 0;
 
   currentCardRef.current = currentItem;
   usingFallbackRef.current = usingLocalMockCards;
@@ -1661,6 +1666,7 @@ export function DiscoveryDeck() {
 
   const filterButton = (
     <Pressable
+      accessibilityLabel="Open discovery filters"
       className="flex-row items-center gap-2 rounded-full border px-3 py-2"
       onPress={handleOpenFilters}
       style={{
@@ -1686,6 +1692,39 @@ export function DiscoveryDeck() {
     </Pressable>
   );
 
+  const notificationButton = (
+    <Pressable
+      accessibilityLabel="Open notifications"
+      className="relative h-10 w-10 items-center justify-center rounded-full border"
+      onPress={() => router.push('/notifications' as never)}
+      style={{ borderColor: 'rgba(152, 162, 179, 0.18)' }}>
+      <Ionicons
+        color={unreadNotificationCount > 0 ? '#FF9A3E' : '#D0D5DD'}
+        name="notifications-outline"
+        size={19}
+      />
+      {unreadNotificationCount > 0 ? (
+        <View
+          className="absolute -right-1 -top-1 min-w-5 items-center rounded-full px-1.5 py-0.5"
+          style={{ backgroundColor: '#FF9A3E' }}>
+          <AppText
+            className="text-[10px] leading-[12px]"
+            style={{ color: '#1A120B', fontVariant: ['tabular-nums'] }}
+            variant="code">
+            {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+          </AppText>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+
+  const topBarAccessory = (
+    <View className="flex-row items-center gap-2">
+      {notificationButton}
+      {filterButton}
+    </View>
+  );
+
   if (
     !currentItem &&
     !usingLocalMockCards &&
@@ -1693,7 +1732,7 @@ export function DiscoveryDeck() {
   ) {
     return (
       <View className="flex-1">
-        <AppTopBar rightAccessory={filterButton} />
+        <AppTopBar rightAccessory={topBarAccessory} />
         <DiscoveryDeckSkeleton />
         {filterSheet}
       </View>
@@ -1703,7 +1742,7 @@ export function DiscoveryDeck() {
   if (!currentItem) {
     return (
       <View className="flex-1">
-        <AppTopBar rightAccessory={filterButton} />
+        <AppTopBar rightAccessory={topBarAccessory} />
         <ScrollView
           className="flex-1"
           contentContainerClassName="flex-grow justify-center px-4 py-8"
@@ -1730,7 +1769,7 @@ export function DiscoveryDeck() {
 
   return (
     <View className="flex-1">
-      <AppTopBar rightAccessory={filterButton} />
+      <AppTopBar rightAccessory={topBarAccessory} />
       <View className="flex-1 px-2 pb-1">
         {matchToastName ? (
           <View className="absolute inset-x-4 top-2 z-20" pointerEvents="none">

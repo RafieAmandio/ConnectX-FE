@@ -1,0 +1,12 @@
+{
+  "_description": "Expected JSON payloads for current-user notification APIs. FE should use this shape as the source of truth until the backend is live.",
+  "base_url": "/api/v1",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/me/notifications",
+      "file": "get-notifications.response.json",
+      "notes": "Returns notifications for the authenticated user. Requires Authorization: Bearer <token>."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Pressable,
@@ -22,7 +22,6 @@ import type {
   ProfileBadge,
   ProfileNamedItem,
 } from '../types/profile.types';
-import { EditProfileModal } from './edit-profile-modal';
 
 const BADGE_ICON_BY_ID: Record<string, keyof typeof Ionicons.glyphMap> = {
   'startup-founder': 'rocket-outline',
@@ -168,20 +167,6 @@ function BadgePill({ badge }: { badge: ProfileBadge }) {
   );
 }
 
-function BadgeList({ badges }: { badges: ProfileBadge[] }) {
-  if (!badges.length) {
-    return null;
-  }
-
-  return (
-    <View className="flex-row flex-wrap gap-2">
-      {badges.map((badge) => (
-        <BadgePill key={badge.id} badge={badge} />
-      ))}
-    </View>
-  );
-}
-
 function NamedItemList({
   items,
   tone = 'signal',
@@ -247,13 +232,13 @@ function ProfileHero({
 
   return (
     <AppCard
-      className="gap-5 rounded-[28px] px-5 py-5"
+      className="gap-4 rounded-[28px] px-4 py-4"
       style={{
         backgroundColor: '#2B2A28',
         borderColor: 'rgba(245, 158, 11, 0.18)',
       }}
     >
-      <View className="flex-row items-start gap-4">
+      <View className="flex-row items-center gap-4">
         {profile.photoUrl ? (
           <Image
             contentFit="cover"
@@ -262,8 +247,8 @@ function ProfileHero({
               borderColor: 'rgba(245, 158, 11, 0.85)',
               borderRadius: 999,
               borderWidth: 3,
-              height: 92,
-              width: 92,
+              height: 76,
+              width: 76,
             }}
           />
         ) : (
@@ -273,48 +258,55 @@ function ProfileHero({
               backgroundColor: ACCENT,
               borderColor: 'rgba(255, 216, 128, 0.4)',
               borderWidth: 3,
-              height: 92,
-              width: 92,
+              height: 76,
+              width: 76,
             }}
           >
-            <AppText className="text-[28px] leading-[32px]" tone="inverse" variant="title">
+            <AppText className="text-[24px] leading-[28px]" tone="inverse" variant="title">
               {initials}
             </AppText>
           </View>
         )}
 
-        <View className="flex-1 gap-2">
-          <View className="gap-1">
-            <AppText className="text-[30px] leading-[36px]" variant="hero">
-              {profile.name}
-            </AppText>
-            <AppText className="text-[15px] leading-[22px]" tone="muted">
-              {profile.headline}
-            </AppText>
+        <View className="min-w-0 flex-1 gap-3">
+          <View className="flex-row items-start gap-3">
+            <View className="min-w-0 flex-1 gap-1">
+              <AppText className="text-[25px] leading-[30px]" numberOfLines={2} variant="title">
+                {profile.name}
+              </AppText>
+              <AppText className="text-[14px] leading-5" numberOfLines={1} tone="muted">
+                {profile.headline}
+              </AppText>
+            </View>
+
+            <Pressable
+              className="min-h-10 flex-row items-center justify-center gap-1.5 rounded-full border px-3 active:opacity-80"
+              onPress={onEdit}
+              style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}
+            >
+              <Ionicons color={ACCENT} name="create-outline" size={15} />
+              <AppText className="text-[13px]" variant="bodyStrong">
+                Edit
+              </AppText>
+            </Pressable>
           </View>
 
-          <View className="self-start flex-row items-center gap-2 rounded-full border px-3 py-1.5" style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}>
-            <Ionicons color={ACCENT} name="location-outline" size={14} />
-            <AppText className="text-[13px]" tone="default">
-              {profile.location.display}
-            </AppText>
+          <View className="flex-row flex-wrap items-center gap-2">
+            <View
+              className="flex-row items-center gap-1.5 rounded-full border px-3 py-1.5"
+              style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+            >
+              <Ionicons color={ACCENT} name="location-outline" size={13} />
+              <AppText className="max-w-[170px] text-[12px]" numberOfLines={1} tone="default">
+                {profile.location.display}
+              </AppText>
+            </View>
+
+            {profile.badges.map((badge) => (
+              <BadgePill key={badge.id} badge={badge} />
+            ))}
           </View>
         </View>
-      </View>
-
-      <View className="gap-3">
-        <BadgeList badges={profile.badges} />
-
-        <Pressable
-          className="min-h-[48px] flex-row items-center justify-center gap-2 self-start rounded-full border px-4 py-3"
-          onPress={onEdit}
-          style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}
-        >
-          <Ionicons color={ACCENT} name="create-outline" size={16} />
-          <AppText className="text-[14px]" variant="bodyStrong">
-            Edit Profile
-          </AppText>
-        </Pressable>
       </View>
     </AppCard>
   );
@@ -423,10 +415,10 @@ function BottomSignOut({ onPress }: { onPress: () => void }) {
 }
 
 export function ProfileScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const { signOut } = useAuthContext();
   const myProfileQuery = useMyProfile();
-  const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
   const myProfileResponse = myProfileQuery.data;
 
   const effectiveProfile =
@@ -454,7 +446,7 @@ export function ProfileScreen() {
           <StatusRow isError={myProfileQuery.isError} isFetching={myProfileQuery.isFetching} />
 
           <ProfileHero
-            onEdit={() => setIsEditModalVisible(true)}
+            onEdit={() => router.push('/profile/edit' as never)}
             profile={effectiveProfile}
           />
 
@@ -527,14 +519,6 @@ export function ProfileScreen() {
           <BottomSignOut onPress={() => signOut()} />
         </ScrollView>
       </View>
-
-      {isEditModalVisible ? (
-        <EditProfileModal
-          onClose={() => setIsEditModalVisible(false)}
-          profile={effectiveProfile}
-          visible={isEditModalVisible}
-        />
-      ) : null}
     </>
   );
 }

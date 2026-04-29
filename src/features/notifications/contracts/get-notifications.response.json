@@ -1,0 +1,77 @@
+{
+  "success": true,
+  "message": "Notifications fetched successfully.",
+  "data": {
+    "unreadCount": 3,
+    "notifications": [
+      {
+        "id": "notif_match_001",
+        "type": "match",
+        "title": "New match with Maya",
+        "body": "You and Maya both liked each other. Start the conversation while the momentum is warm.",
+        "createdAt": "2026-04-29T02:14:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "user_maya_pratama",
+          "name": "Maya Pratama",
+          "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80"
+        },
+        "target": {
+          "kind": "match",
+          "id": "match_maya_pratama",
+          "deepLink": "/match-analysis/match_maya_pratama"
+        }
+      },
+      {
+        "id": "notif_message_001",
+        "type": "message",
+        "title": "Ardi sent you a message",
+        "body": "I checked your deck idea. The marketplace angle is interesting, especially for early design partners.",
+        "createdAt": "2026-04-28T15:42:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "user_ardi_wijaya",
+          "name": "Ardi Wijaya",
+          "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=240&q=80"
+        },
+        "target": {
+          "kind": "conversation",
+          "id": "conversation_ardi_wijaya",
+          "deepLink": "/chat_demo/conversation_ardi_wijaya"
+        }
+      },
+      {
+        "id": "notif_team_invitation_001",
+        "type": "team_invitation",
+        "title": "Team invitation from FinPilot",
+        "body": "Nadia invited you to join FinPilot as Founding Product Engineer.",
+        "createdAt": "2026-04-27T09:30:00.000Z",
+        "readAt": null,
+        "actor": {
+          "id": "user_nadia_santoso",
+          "name": "Nadia Santoso",
+          "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80"
+        },
+        "target": {
+          "kind": "startup_invitation",
+          "id": "invitation_finpilot_001",
+          "deepLink": "/team"
+        }
+      },
+      {
+        "id": "notif_system_001",
+        "type": "system",
+        "title": "Your profile is getting stronger",
+        "body": "Your latest updates improved your discovery quality score. Keep your skills and startup interests current.",
+        "createdAt": "2026-04-25T07:05:00.000Z",
+        "readAt": "2026-04-25T08:12:00.000Z",
+        "actor": null,
+        "target": {
+          "kind": "system",
+          "id": null,
+          "deepLink": null
+        }
+      }
+    ]
+  }
+}

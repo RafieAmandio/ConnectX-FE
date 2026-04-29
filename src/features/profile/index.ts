@@ -1,4 +1,5 @@
 export { ProfileScreen } from './components/profile-screen';
+export { EditProfileScreen } from './components/edit-profile-modal';
 export {
   profileQueryKeys,
   useMyProfile,
