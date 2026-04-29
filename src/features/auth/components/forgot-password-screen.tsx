@@ -201,7 +201,7 @@ export function ForgotPasswordScreen() {
               <AppText
                 variant="hero"
                 className="text-[32px] leading-[38px]"
-                style={{ color: ACCENT }}>
+                style={{ color: "white" }}>
                 {successMessage ? 'Check your email' : 'Forgot password'}
               </AppText>
               <AppText className="text-[14px] leading-[20px] text-text-muted">

@@ -324,8 +324,8 @@ export function LoginScreen() {
               <AppText
                 variant="hero"
                 className="text-[34px] leading-[40px]"
-                style={{ color: ACCENT }}>
-                Get Started now
+                style={{ color: 'white' }}>
+                Get Started
               </AppText>
               <AppText className="text-[14px] leading-[20px] text-text-muted">
                 Create an account or log in to continue.
@@ -388,7 +388,7 @@ export function LoginScreen() {
                   <AppText
                     variant="bodyStrong"
                     className="text-[13px]"
-                    style={{ color: ACCENT }}>
+                    style={{ color: 'ACCENT' }}>
                     Forgot Password?
                   </AppText>
                 </Pressable>

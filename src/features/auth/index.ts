@@ -1,5 +1,6 @@
 export { AuthIndexRedirect } from './components/auth-index-redirect';
 export { ForgotPasswordScreen } from './components/forgot-password-screen';
+export { GetStartedScreen } from './components/get-started-screen';
 export { LoginScreen } from './components/login-screen';
 export { RegisterScreen } from './components/register-screen';
 export { SplashScreen } from './components/splash-screen';

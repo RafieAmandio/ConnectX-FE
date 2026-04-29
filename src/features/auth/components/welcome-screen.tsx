@@ -96,7 +96,7 @@ export function WelcomeScreen() {
           <AppButton
             label="Next"
             size="lg"
-            onPress={() => router.replace('/login')}
+            onPress={() => router.replace('/get-started')}
             style={{ backgroundColor: ACCENT }}
           />
           <AppText
