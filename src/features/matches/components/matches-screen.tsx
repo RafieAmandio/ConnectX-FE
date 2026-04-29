@@ -193,7 +193,12 @@ function MatchRow({
 export function MatchesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { presentPaywallForOffering, presentPaywallIfNeeded, supported } = useRevenueCat();
+  const {
+    isConnectXProActive,
+    presentPaywallForOffering,
+    presentPaywallIfNeeded,
+    supported,
+  } = useRevenueCat();
   const matchesQuery = useMatchesList({ limit: 10, page: 1, status: 'active' });
   const usingMockMatches = isMatchesListMockEnabled();
   const spotlightActivation = useActivateSpotlight();
@@ -205,6 +210,7 @@ export function MatchesScreen() {
   const matches = responseData?.items ?? [];
   const likesYou = responseData?.likesYou?.items ?? [];
   const likesYouLocked = responseData?.likesYou?.locked
+  const freeUnlockedLike = likesYouLocked && !isConnectXProActive ? likesYou[0] : null;
   const likesYouCount = responseData?.likesYou?.totalNew ?? likesYou.length;
   const likesYouPreviewItems = Array.from({ length: 3 }, (_, index) => likesYou[index] ?? null);
   const matchCountLabel = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`;
@@ -307,7 +313,7 @@ export function MatchesScreen() {
     async (item: LikesYouListItem) => {
       setLikesYouBanner(null);
 
-      if (likesYouLocked) {
+      if (likesYouLocked && item.likeId !== freeUnlockedLike?.likeId) {
         setLikesYouBanner({
           detail: 'Upgrade to ConnectX Pro to reveal who liked you.',
           title: 'Likes You is locked',
@@ -322,7 +328,7 @@ export function MatchesScreen() {
         `${item.user.headline} · ${item.user.location}\n\nA dedicated Likes You detail route is not wired yet.`
       );
     },
-    [likesYouLocked, maybePresentLikesYouPaywall]
+    [freeUnlockedLike?.likeId, likesYouLocked, maybePresentLikesYouPaywall]
   );
 
   return (
@@ -353,8 +359,11 @@ export function MatchesScreen() {
               </View>
 
               <View className="flex-row gap-4">
-                {likesYouPreviewItems.map((like, index) =>
-                  likesYouLocked ? (
+                {likesYouPreviewItems.map((like, index) => {
+                  const isFreeUnlockedLike =
+                    Boolean(like) && like?.likeId === freeUnlockedLike?.likeId;
+
+                  return likesYouLocked && !isFreeUnlockedLike ? (
                     <LockedConnectCard
                       key={like ? `locked-${like.likeId}` : `locked-placeholder-${index}`}
                       photoUrl={like?.user.photoUrl ?? null}
@@ -372,19 +381,19 @@ export function MatchesScreen() {
                       key={`likes-you-placeholder-${index}`}
                       className="h-[160px] flex-1 rounded-[24px] border border-[#424242] bg-[#2B2B2D]"
                     />
-                  )
-                )}
+                  );
+                })}
               </View>
 
               <Pressable
                 className="flex-row items-center justify-center gap-3 rounded-[24px] border px-6 py-5"
                 onPress={() => {
-                  if (likesYouLocked) {
+                  if (likesYouLocked && !freeUnlockedLike) {
                     void maybePresentLikesYouPaywall();
                     return;
                   }
 
-                  const firstLike = likesYou[0];
+                  const firstLike = freeUnlockedLike ?? likesYou[0];
 
                   if (firstLike) {
                     void handleLikesYouPress(firstLike);
@@ -393,7 +402,7 @@ export function MatchesScreen() {
                 style={{ backgroundColor: '#5B4720', borderColor: '#AD8528' }}>
                 <Ionicons color="#FFD33D" name="sparkles-outline" size={22} />
                 <AppText className="text-[18px] text-[#FFD33D]" variant="subtitle">
-                  {likesYouLocked ? 'Unlock Connects' : 'View Connects'}
+                  {likesYouLocked && !freeUnlockedLike ? 'Unlock Connects' : 'View Connects'}
                 </AppText>
               </Pressable>
 
