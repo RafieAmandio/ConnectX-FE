@@ -9,10 +9,9 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.connectx.ios",
+      "bundleIdentifier": "com.connectxapp.ios",
       "googleServicesFile": "./ios/GoogleService-Info.plist",
-      "appleTeamId": "6YQB49MLC8",
-      "buildNumber": "13",
+      "appleTeamId": "NCKSK4UBPZ",
       "infoPlist": {
         "UIBackgroundModes": [
           "fetch",
