@@ -503,7 +503,7 @@ export function OnboardingScreen() {
                         MULTI_SELECT_DROPDOWN_STEP_IDS.has(currentStep.id) &&
                         (question.type === 'multi_select_chip' ||
                           question.type === 'searchable_multi_select')
-                        ? 'dropdown_multi_select'
+                        ? 'inline_searchable_checkbox_multi_select'
                         : 'default'
                     }
                     value={mergedAnswers[question.id]}

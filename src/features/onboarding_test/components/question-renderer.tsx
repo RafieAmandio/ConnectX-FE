@@ -34,7 +34,7 @@ type QuestionRendererProps = {
   onChange: (value: OnboardingAnswerValue) => void;
   question: OnboardingQuestion;
   value: OnboardingAnswerValue | undefined;
-  variant?: 'default' | 'dropdown_multi_select';
+  variant?: 'default' | 'dropdown_multi_select' | 'inline_searchable_checkbox_multi_select';
 };
 
 function getStringValue(value: OnboardingAnswerValue | undefined) {
@@ -1672,6 +1672,137 @@ function SearchableMultiSelectQuestion({
   );
 }
 
+function InlineSearchableCheckboxMultiSelectQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValues = getArrayValue(value);
+  const [query, setQuery] = React.useState('');
+  const maxSelections = question.validation?.max_selections ?? Infinity;
+  const atLimit = currentValues.length >= maxSelections;
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  const toggle = (optionValue: string) => {
+    if (currentValues.includes(optionValue)) {
+      onChange(currentValues.filter((item) => item !== optionValue));
+      return;
+    }
+
+    if (atLimit) {
+      return;
+    }
+
+    onChange([...currentValues, optionValue]);
+  };
+
+  return (
+    <View className="gap-5">
+      <QuestionHeader error={error} question={question} />
+      <View
+        className={cn(
+          'flex-row items-center gap-3 rounded-full border px-5',
+          query ? 'border-[#FF9A3E] bg-[#292929]' : FIELD_CLASS
+        )}
+        style={{ height: 64 }}>
+        <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={22} />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setQuery}
+          placeholder={question.placeholder ?? 'Search'}
+          placeholderTextColor="#8A8F99"
+          value={query}
+          className="flex-1 font-body text-[16px] text-white"
+          style={{ paddingVertical: 0 }}
+        />
+        {query ? (
+          <Pressable onPress={() => setQuery('')} hitSlop={10}>
+            <Ionicons color="#98A2B3" name="close-circle" size={20} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+        style={{ maxHeight: 520 }}>
+        {groupOptions(filteredOptions).map(([groupName, options]) => (
+          <View key={groupName} className="pb-5">
+            <AppText className="pb-5 text-[15px] leading-[20px] text-text-muted">
+              {groupName}
+            </AppText>
+            <View className="gap-1">
+              {options.map((option) => {
+                const isSelected = currentValues.includes(option.value);
+                const isDisabled = !isSelected && atLimit;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    disabled={isDisabled}
+                    onPress={() => toggle(option.value)}
+                    className={cn(
+                      'min-h-[58px] flex-row items-center gap-4 py-2',
+                      isDisabled && 'opacity-40'
+                    )}>
+                    <View className="flex-1 gap-1">
+                      <AppText
+                        className={cn(
+                          'text-[16px] leading-[22px]',
+                          isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                        )}>
+                        {option.label}
+                      </AppText>
+                      {option.sub_label ? (
+                        <AppText className="text-[13px] leading-[18px] text-text-muted">
+                          {option.sub_label}
+                        </AppText>
+                      ) : null}
+                    </View>
+                    <View
+                      className={cn(
+                        'h-7 w-7 items-center justify-center rounded-[7px] border-2',
+                        isSelected
+                          ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                          : 'border-[#5A6074] bg-transparent'
+                      )}>
+                      {isSelected ? (
+                        <Ionicons color="#1A1208" name="checkmark" size={17} />
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+        {filteredOptions.length === 0 ? (
+          <View className="px-4 py-8">
+            <AppText tone="muted" align="center">
+              {query ? `No results for "${query}"` : 'No options available'}
+            </AppText>
+          </View>
+        ) : null}
+      </ScrollView>
+    </View>
+  );
+}
+
 function SearchableSingleSelectQuestion({
   error,
   onChange,
@@ -2335,6 +2466,17 @@ export function QuestionRenderer({
         />
       );
     case 'multi_select_chip':
+      if (variant === 'inline_searchable_checkbox_multi_select') {
+        return (
+          <InlineSearchableCheckboxMultiSelectQuestion
+            error={error}
+            onChange={onChange}
+            question={question}
+            value={value}
+          />
+        );
+      }
+
       if (variant === 'dropdown_multi_select') {
         return (
           <MultiSelectDropdownQuestion
@@ -2355,6 +2497,17 @@ export function QuestionRenderer({
         />
       );
     case 'searchable_multi_select':
+      if (variant === 'inline_searchable_checkbox_multi_select') {
+        return (
+          <InlineSearchableCheckboxMultiSelectQuestion
+            error={error}
+            onChange={onChange}
+            question={question}
+            value={value}
+          />
+        );
+      }
+
       if (variant === 'dropdown_multi_select') {
         return (
           <SearchableMultiSelectDropdownQuestion
