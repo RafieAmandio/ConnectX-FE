@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, View } from 'react-native';
@@ -10,10 +9,10 @@ import { Colors } from '@shared/theme';
 
 import { useAuth } from '../hooks/use-auth';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
+import { NetworkVisualization } from './network-visualization';
 import { SplashScreen } from './splash-screen';
 
 const ACCENT = '#FF9A3E';
-const ONBOARDING_IMAGE = require('../../../../assets/images/onboarding.png');
 
 export function WelcomeScreen() {
   const router = useRouter();
@@ -44,7 +43,7 @@ export function WelcomeScreen() {
     const timer = setTimeout(() => {
       dismissWelcomeLaunchSplash();
       setIsManualSplashVisible(false);
-    }, 3500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [dismissWelcomeLaunchSplash, isManualSplashVisible]);
@@ -77,16 +76,7 @@ export function WelcomeScreen() {
         <Animated.View
           entering={FadeInDown.delay(90).duration(420)}
           className="items-center gap-8 py-10">
-          <Image
-            source={ONBOARDING_IMAGE}
-            style={{
-              width: '100%',
-              maxWidth: 320,
-              maxHeight: 320,
-              aspectRatio: 1,
-            }}
-            contentFit="contain"
-          />
+          <NetworkVisualization />
 
           <View className="items-center gap-3">
             <AppText
