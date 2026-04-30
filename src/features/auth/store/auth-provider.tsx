@@ -52,11 +52,13 @@ import type {
 type AuthContextValue = {
   authPhase: AuthPhase;
   completeOnboarding: () => Promise<void>;
+  dismissWelcomeLaunchSplash: () => void;
   enterPendingOnboarding: () => Promise<void>;
   isChatEnabled: boolean;
   isHydrated: boolean;
   isAuthBypassEnabled: boolean;
   session: AuthSession | null;
+  shouldShowWelcomeLaunchSplash: boolean;
   enterWithDevBypass: () => Promise<void>;
   login: (payload: LoginPayload) => ReturnType<typeof loginWithApi>;
   register: (payload: RegisterPayload) => ReturnType<typeof registerWithApi>;
@@ -107,6 +109,8 @@ function isExternalOAuthMethod(method?: AuthSession['method'] | null) {
 export function AuthProvider({ children }: React.PropsWithChildren) {
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [isChatEnabled, setIsChatEnabled] = React.useState(false);
+  const [shouldShowWelcomeLaunchSplash, setShouldShowWelcomeLaunchSplash] =
+    React.useState(false);
   const [authPhase, setAuthPhase] = React.useState<AuthPhase>('signed_out');
   const [session, setSession] = React.useState<AuthSession | null>(null);
   const authBypassEnabled = React.useMemo(() => isAuthBypassEnabled(), []);
@@ -207,9 +211,14 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     }
 
     setIsChatEnabled(false);
+    setShouldShowWelcomeLaunchSplash(false);
     setAuthPhase('signed_out');
     setSession(null);
   }, [session?.method]);
+
+  const dismissWelcomeLaunchSplash = React.useCallback(() => {
+    setShouldShowWelcomeLaunchSplash(false);
+  }, []);
 
   const enterPendingOnboarding = React.useCallback(async () => {
     if (!session) {
@@ -299,6 +308,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           }
 
           setIsChatEnabled(true);
+          setShouldShowWelcomeLaunchSplash(false);
           setSession(nextSession);
           setAuthPhase(nextSession.authPhase);
           setIsHydrated(true);
@@ -312,11 +322,13 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
         if ((token && storedSession) || (storedSession && canRestoreWithoutToken(storedSession.authPhase))) {
           setIsChatEnabled(false);
+          setShouldShowWelcomeLaunchSplash(false);
           setSession(storedSession);
           setAuthPhase(storedSession.authPhase);
         } else {
           await clearPersistedAuth();
           setIsChatEnabled(false);
+          setShouldShowWelcomeLaunchSplash(true);
           setSession(null);
           setAuthPhase('signed_out');
         }
@@ -343,6 +355,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         }
 
         setIsChatEnabled(false);
+        setShouldShowWelcomeLaunchSplash(true);
         setSession(null);
         setAuthPhase('signed_out');
         setIsHydrated(true);
@@ -394,6 +407,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         if (isExternalOAuthMethod(sessionRef.current?.method)) {
           await clearPersistedAuth();
           setSession(null);
+          setShouldShowWelcomeLaunchSplash(false);
           setAuthPhase('signed_out');
         }
 
@@ -422,6 +436,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           syncSupabaseRealtimeAuth(nextSupabaseSession),
         ]);
         setIsChatEnabled(true);
+        setShouldShowWelcomeLaunchSplash(false);
         setSession(nextSession);
         setAuthPhase(nextSession.authPhase);
         reconnectChatRealtime();
@@ -560,6 +575,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       authPhase,
       bootstrapLinkedInCallback,
       completeOnboarding,
+      dismissWelcomeLaunchSplash,
       enterWithDevBypass,
       enterPendingOnboarding,
       isChatEnabled,
@@ -574,6 +590,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       sendEmailOtp,
       sendWhatsappOtp,
       session,
+      shouldShowWelcomeLaunchSplash,
       signInWithGoogle,
       signInWithLinkedIn,
       signOut,
@@ -586,6 +603,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       authBypassEnabled,
       bootstrapLinkedInCallback,
       completeOnboarding,
+      dismissWelcomeLaunchSplash,
       enterWithDevBypass,
       enterPendingOnboarding,
       isChatEnabled,
@@ -599,6 +617,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       sendEmailOtp,
       sendWhatsappOtp,
       session,
+      shouldShowWelcomeLaunchSplash,
       signInWithGoogle,
       signInWithLinkedIn,
       signOut,

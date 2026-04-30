@@ -14,15 +14,27 @@ import { SplashScreen } from './splash-screen';
 
 const ACCENT = '#FF9A3E';
 const ONBOARDING_IMAGE = require('../../../../assets/images/onboarding.png');
-let hasShownManualWelcomeSplash = false;
 
 export function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { authPhase, isHydrated, session } = useAuth();
-  const [isManualSplashVisible, setIsManualSplashVisible] = React.useState(
-    () => !hasShownManualWelcomeSplash
-  );
+  const {
+    authPhase,
+    dismissWelcomeLaunchSplash,
+    isHydrated,
+    session,
+    shouldShowWelcomeLaunchSplash,
+  } = useAuth();
+  const [isManualSplashVisible, setIsManualSplashVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isHydrated && !session && authPhase === 'signed_out' && shouldShowWelcomeLaunchSplash) {
+      setIsManualSplashVisible(true);
+      return;
+    }
+
+    setIsManualSplashVisible(false);
+  }, [authPhase, isHydrated, session, shouldShowWelcomeLaunchSplash]);
 
   React.useEffect(() => {
     if (!isManualSplashVisible) {
@@ -30,23 +42,23 @@ export function WelcomeScreen() {
     }
 
     const timer = setTimeout(() => {
-      hasShownManualWelcomeSplash = true;
+      dismissWelcomeLaunchSplash();
       setIsManualSplashVisible(false);
     }, 3500);
 
     return () => clearTimeout(timer);
-  }, [isManualSplashVisible]);
+  }, [dismissWelcomeLaunchSplash, isManualSplashVisible]);
 
   if (!isHydrated) {
     return <SplashScreen />;
   }
 
-  if (isManualSplashVisible) {
-    return <SplashScreen showLoader={false} />;
-  }
-
   if (session || authPhase !== 'signed_out') {
     return <Redirect href={getRouteForAuthPhase(authPhase)} />;
+  }
+
+  if (isManualSplashVisible) {
+    return <SplashScreen showLoader={false} />;
   }
 
   return (
