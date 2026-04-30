@@ -26,6 +26,8 @@ import type {
   OnboardingQuestion,
 } from '../types/onboarding.types';
 
+const HOME_BACKGROUND = '#262626';
+
 type QuestionRendererProps = {
   error?: string;
   hideSearchableDropdownResultsUntilQuery?: boolean;
@@ -186,8 +188,11 @@ function DropdownOverlay({
           }}
         />
         <AppCard
-          className="p-1"
+          className="border-transparent p-1"
           style={{
+            backgroundColor: HOME_BACKGROUND,
+            borderWidth: 0,
+            boxShadow: 'none',
             left: overlayLeft,
             maxHeight: overlayMaxHeight,
             position: 'absolute',
@@ -831,7 +836,9 @@ function MultiSelectDropdownQuestion({
   value,
 }: QuestionRendererProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
   const triggerRef = React.useRef<View | null>(null);
+  const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
   const currentValues = getArrayValue(value);
   const maxSelections = question.validation?.max_selections ?? Infinity;
   const atLimit = currentValues.length >= maxSelections;
@@ -844,12 +851,43 @@ function MultiSelectDropdownQuestion({
     [currentValues, question.options]
   );
 
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
   const displayLabel =
     selectedLabels.length === 0
       ? question.placeholder ?? 'Select options'
       : selectedLabels.length === 1
         ? selectedLabels[0]
         : `${selectedLabels.length} selected`;
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const focusTimer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 120);
+
+    return () => clearTimeout(focusTimer);
+  }, [isOpen]);
+
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setQuery('');
+    inputRef.current?.blur();
+  };
 
   const toggle = (optionValue: string) => {
     if (currentValues.includes(optionValue)) {
@@ -877,7 +915,7 @@ function MultiSelectDropdownQuestion({
             'flex-row items-center justify-between rounded-[16px] border px-4',
             isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
           )}
-          onPress={() => setIsOpen((currentState) => !currentState)}>
+          onPress={() => (isOpen ? closeDropdown() : setIsOpen(true))}>
           <View className="flex-1">
             <AppText
               className={cn(
@@ -912,10 +950,38 @@ function MultiSelectDropdownQuestion({
 
         <DropdownOverlay
           anchorRef={triggerRef}
-          maxHeight={420}
-          onClose={() => setIsOpen(false)}
+          header={
+            <View
+              className="mb-1 flex-row items-center gap-2 rounded-[14px] border px-3"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: query ? '#FF9A3E' : '#383838',
+                height: 52,
+              }}>
+              <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+              <TextInput
+                ref={inputRef}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={setQuery}
+                placeholder={question.placeholder ?? 'Search'}
+                placeholderTextColor="#667085"
+                value={query}
+                className="flex-1 font-body text-[15px] text-white"
+                style={{ paddingVertical: 0 }}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons color="#98A2B3" name="close-circle" size={18} />
+                </Pressable>
+              ) : null}
+            </View>
+          }
+          maxHeight={460}
+          onClose={closeDropdown}
           visible={isOpen}>
-          {question.options?.map((option) => {
+          {filteredOptions.map((option) => {
             const isSelected = currentValues.includes(option.value);
             const isDisabled = !isSelected && atLimit;
 
@@ -953,6 +1019,223 @@ function MultiSelectDropdownQuestion({
               </Pressable>
             );
           })}
+          {filteredOptions.length === 0 ? (
+            <View className="px-3 py-4">
+              <AppText tone="muted">No results</AppText>
+            </View>
+          ) : null}
+        </DropdownOverlay>
+      </View>
+    </View>
+  );
+}
+
+function SearchableMultiSelectDropdownQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const triggerRef = React.useRef<View | null>(null);
+  const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
+  const currentValues = getArrayValue(value);
+  const maxSelections = question.validation?.max_selections ?? Infinity;
+  const atLimit = currentValues.length >= maxSelections;
+
+  const selectedLabels = React.useMemo(
+    () =>
+      currentValues
+        .map((currentValue) => getSelectedLabel(question.options, currentValue))
+        .filter(Boolean),
+    [currentValues, question.options]
+  );
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  const displayLabel =
+    selectedLabels.length === 0
+      ? question.placeholder ?? 'Select options'
+      : selectedLabels.length === 1
+        ? selectedLabels[0]
+        : `${selectedLabels.length} selected`;
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const focusTimer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 120);
+
+    return () => clearTimeout(focusTimer);
+  }, [isOpen]);
+
+  const openDropdown = () => {
+    setIsOpen(true);
+  };
+
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setQuery('');
+    inputRef.current?.blur();
+  };
+
+  const toggle = (optionValue: string) => {
+    if (currentValues.includes(optionValue)) {
+      onChange(currentValues.filter((item) => item !== optionValue));
+      return;
+    }
+
+    if (atLimit) {
+      return;
+    }
+
+    onChange([...currentValues, optionValue]);
+  };
+
+  return (
+    <View
+      className="gap-3"
+      style={{ zIndex: isOpen ? 40 : 1, elevation: isOpen ? 12 : 0 }}>
+      <QuestionHeader error={error} question={question} />
+      <View>
+        <Pressable
+          ref={triggerRef}
+          style={{ height: 56 }}
+          className={cn(
+            'flex-row items-center justify-between rounded-[16px] border px-4',
+            isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
+          )}
+          onPress={() => (isOpen ? closeDropdown() : openDropdown())}>
+          <View className="flex-1">
+            <AppText
+              className={cn(
+                selectedLabels.length > 0 ? 'text-white' : 'text-text-soft',
+                isOpen && 'text-[#FF9A3E]'
+              )}
+              numberOfLines={1}>
+              {displayLabel}
+            </AppText>
+          </View>
+          <View className="ml-3 flex-row items-center gap-2">
+            {selectedLabels.length > 1 ? (
+              <View
+                className="min-w-6 items-center rounded-full px-2 py-0.5"
+                style={{ backgroundColor: '#FF9A3E' }}>
+                <AppText
+                  variant="label"
+                  className="text-[10px]"
+                  style={{ color: '#1A1208', fontVariant: ['tabular-nums'] }}>
+                  {selectedLabels.length}
+                </AppText>
+              </View>
+            ) : null}
+            <AppText
+              variant="label"
+              className="text-[10px]"
+              style={{ color: isOpen ? '#FF9A3E' : '#98A2B3' }}>
+              {isOpen ? '▲' : '▼'}
+            </AppText>
+          </View>
+        </Pressable>
+
+        <DropdownOverlay
+          anchorRef={triggerRef}
+          header={
+            <View
+              className="mb-1 flex-row items-center gap-2 rounded-[14px] border px-3"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: query ? '#FF9A3E' : '#383838',
+                height: 52,
+              }}>
+              <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+              <TextInput
+                ref={inputRef}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={setQuery}
+                placeholder={question.placeholder ?? 'Search'}
+                placeholderTextColor="#667085"
+                value={query}
+                className="flex-1 font-body text-[15px] text-white"
+                style={{ paddingVertical: 0 }}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons color="#98A2B3" name="close-circle" size={18} />
+                </Pressable>
+              ) : null}
+            </View>
+          }
+          maxHeight={460}
+          onClose={closeDropdown}
+          visible={isOpen}>
+          {groupOptions(filteredOptions).map(([groupName, options]) => (
+            <View key={groupName} className="gap-1 pb-2">
+              <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
+                {groupName}
+              </AppText>
+              {options.map((option) => {
+                const isSelected = currentValues.includes(option.value);
+                const isDisabled = !isSelected && atLimit;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    disabled={isDisabled}
+                    className={cn(
+                      'flex-row items-center gap-3 rounded-[12px] px-3 py-3',
+                      isSelected ? 'bg-[#2A2117]' : 'bg-transparent',
+                      isDisabled && 'opacity-40'
+                    )}
+                    onPress={() => toggle(option.value)}>
+                    <View
+                      className={cn(
+                        'h-5 w-5 items-center justify-center rounded-[6px] border-2',
+                        isSelected
+                          ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                          : 'border-[#5A6074] bg-transparent'
+                      )}>
+                      {isSelected ? (
+                        <Ionicons color="#1A1208" name="checkmark" size={12} />
+                      ) : null}
+                    </View>
+                    <View className="flex-1 gap-1">
+                      <AppText
+                        variant="bodyStrong"
+                        className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                        {option.label}
+                      </AppText>
+                      {option.sub_label ? (
+                        <AppText tone="muted">{option.sub_label}</AppText>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+          {filteredOptions.length === 0 ? (
+            <View className="px-3 py-4">
+              <AppText tone="muted">No results</AppText>
+            </View>
+          ) : null}
         </DropdownOverlay>
       </View>
     </View>
@@ -1117,12 +1400,21 @@ function SearchableDropdownQuestion({
     });
   }, [query, question.options]);
 
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const focusTimer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 120);
+
+    return () => clearTimeout(focusTimer);
+  }, [isOpen]);
+
   const openDropdown = () => {
     setIsOpen(true);
     setQuery('');
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
   };
 
   const closeDropdown = () => {
@@ -1176,6 +1468,7 @@ function SearchableDropdownQuestion({
               <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
               <TextInput
                 ref={inputRef}
+                autoFocus
                 autoCapitalize="words"
                 autoCorrect={false}
                 onChangeText={setQuery}
@@ -2062,6 +2355,17 @@ export function QuestionRenderer({
         />
       );
     case 'searchable_multi_select':
+      if (variant === 'dropdown_multi_select') {
+        return (
+          <SearchableMultiSelectDropdownQuestion
+            error={error}
+            onChange={onChange}
+            question={question}
+            value={value}
+          />
+        );
+      }
+
       return (
         <SearchableMultiSelectQuestion
           error={error}

@@ -58,6 +58,8 @@ function pickStepAnswers(step: OnboardingStep | null, answers: OnboardingAnswers
   return step.questions.reduce<OnboardingAnswers>((result, question) => {
     if (question.id in answers) {
       result[question.id] = answers[question.id];
+    } else if (question.previous_answer !== undefined) {
+      result[question.id] = question.previous_answer;
     }
 
     return result;
@@ -238,7 +240,7 @@ export function useOnboardingSession({
     try {
       const backResponse = await goBackOnboardingSession(sessionId, locale);
 
-      console.log('[onboarding_test] go back response', backResponse);
+      console.log('[onboarding_test] go back response', JSON.stringify(backResponse, null, 2));
 
       const previousStep = backResponse.previous_step ?? backResponse.current_step ?? null;
 

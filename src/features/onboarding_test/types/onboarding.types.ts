@@ -126,6 +126,7 @@ export type OnboardingQuestion = {
   meta?: OnboardingQuestionMeta | null;
   options?: OnboardingOption[];
   placeholder?: string | null;
+  previous_answer?: OnboardingAnswerValue;
   required: boolean;
   sub_label?: string | null;
   type: OnboardingQuestionType;

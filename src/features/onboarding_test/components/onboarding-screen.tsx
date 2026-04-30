@@ -47,10 +47,11 @@ const MULTI_SELECT_DROPDOWN_STEP_IDS = new Set([
   'step_su_biz',
   'step_fdr_industry',
   'step_cf_industry',
+  'step_tm_industry',
+  'step_tm_skills',
+  'step_fdr_bt_roles',
 ]);
-const SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS = new Set([
-  'step_personal_location',
-]);
+const SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS = new Set<string>();
 const GENDER_OPTION_ICONS: Record<string, string> = {
   female: 'female',
   male: 'male',
@@ -97,9 +98,9 @@ function getRenderableQuestion(
 
       return genderIcon
         ? {
-            ...option,
-            icon: genderIcon,
-          }
+          ...option,
+          icon: genderIcon,
+        }
         : option;
     }),
   };
@@ -500,7 +501,8 @@ export function OnboardingScreen() {
                     variant={
                       currentStep &&
                         MULTI_SELECT_DROPDOWN_STEP_IDS.has(currentStep.id) &&
-                        question.type === 'multi_select_chip'
+                        (question.type === 'multi_select_chip' ||
+                          question.type === 'searchable_multi_select')
                         ? 'dropdown_multi_select'
                         : 'default'
                     }
