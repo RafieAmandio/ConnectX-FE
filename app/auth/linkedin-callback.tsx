@@ -11,6 +11,18 @@ function getSingleParam(value: string | string[] | undefined) {
   return typeof value === 'string' ? value.trim() || null : null;
 }
 
+function parseBooleanParam(value: string | null) {
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return null;
+}
+
 export default function LinkedInCallbackRoute() {
   const router = useRouter();
   const { authPhase, bootstrapLinkedInCallback, isHydrated, session } = useAuth();
@@ -18,6 +30,7 @@ export default function LinkedInCallbackRoute() {
     error?: string | string[];
     message?: string | string[];
     next_step?: string | string[];
+    is_onboarded?: string | string[];
     supabase_token?: string | string[];
     token?: string | string[];
   }>();
@@ -25,6 +38,7 @@ export default function LinkedInCallbackRoute() {
   const callbackError = getSingleParam(params.error);
   const callbackMessage = getSingleParam(params.message);
   const callbackNextStep = getSingleParam(params.next_step);
+  const callbackIsOnboarded = getSingleParam(params.is_onboarded);
   const callbackSupabaseToken = getSingleParam(params.supabase_token);
   const callbackToken = getSingleParam(params.token);
 
@@ -61,6 +75,7 @@ export default function LinkedInCallbackRoute() {
         provider: 'linkedin',
         token: callbackToken,
         nextStep: callbackNextStep,
+        isOnboarded: parseBooleanParam(callbackIsOnboarded),
         supabaseToken: callbackSupabaseToken,
       })
         .then((result) => {
@@ -93,6 +108,7 @@ export default function LinkedInCallbackRoute() {
     authPhase,
     bootstrapLinkedInCallback,
     callbackError,
+    callbackIsOnboarded,
     callbackMessage,
     callbackNextStep,
     callbackSupabaseToken,

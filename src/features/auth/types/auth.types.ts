@@ -121,6 +121,7 @@ export type LinkedInAuthResult = {
   provider: 'linkedin';
   token: string;
   nextStep: LinkedInCallbackNextStep;
+  isOnboarded?: boolean | null;
   supabaseToken?: string | null;
 };
 

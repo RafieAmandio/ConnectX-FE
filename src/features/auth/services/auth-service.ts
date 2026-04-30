@@ -330,7 +330,10 @@ function createLinkedInPendingWhatsappSession(): AuthSession {
   };
 }
 
-function createLinkedInAuthenticatedUser(identity: Awaited<ReturnType<typeof getStoredSupabaseIdentity>>) {
+function createLinkedInAuthenticatedUser(
+  identity: Awaited<ReturnType<typeof getStoredSupabaseIdentity>>,
+  isOnboarded: boolean | null = true
+) {
   const now = new Date().toISOString();
   const normalizedEmail = normalizeEmail(identity?.email ?? 'connectx-member@linkedin.local');
 
@@ -343,14 +346,15 @@ function createLinkedInAuthenticatedUser(identity: Awaited<ReturnType<typeof get
     whatsapp_verified_at: now,
     registration_step: 5,
     is_active: true,
-    is_onboarded: true,
+    is_onboarded: isOnboarded,
   } satisfies AuthUser;
 }
 
 function createLinkedInAuthenticatedSession(
-  identity: Awaited<ReturnType<typeof getStoredSupabaseIdentity>>
+  identity: Awaited<ReturnType<typeof getStoredSupabaseIdentity>>,
+  isOnboarded: boolean | null = true
 ): AuthSession {
-  const user = createLinkedInAuthenticatedUser(identity);
+  const user = createLinkedInAuthenticatedUser(identity, isOnboarded);
 
   return createAuthSession({
     displayName: identity?.displayName ?? null,
@@ -799,7 +803,10 @@ export async function bootstrapLinkedInAuthSession(
     await setSupabaseRealtimeToken(supabaseToken);
 
     const storedSupabaseIdentity = await getStoredSupabaseIdentity();
-    const session = createLinkedInAuthenticatedSession(storedSupabaseIdentity);
+    const session = createLinkedInAuthenticatedSession(
+      storedSupabaseIdentity,
+      payload.isOnboarded ?? true
+    );
     const response: LinkedInAuthResult = {
       ...payload,
       supabaseToken,

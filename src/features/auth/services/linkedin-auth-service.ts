@@ -14,6 +14,7 @@ type LinkedInCallbackPayload =
   | { type: 'missing_next_step' }
   | { type: 'missing_token' }
   | {
+    isOnboarded: boolean | null;
     type: 'success';
     token: string;
     nextStep: LinkedInCallbackNextStep;
@@ -37,6 +38,18 @@ function isLinkedInCallbackNextStep(value: string | null): value is LinkedInCall
   return value === 'LOGIN_SUCCESS' || value === 'NEED_WHATSAPP_VERIFICATION';
 }
 
+function parseLinkedInIsOnboardedParam(value: string | null) {
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return null;
+}
+
 function getLinkedInCallbackPayload(url: string): LinkedInCallbackPayload {
   const parsedUrl = Linking.parse(url);
   const normalizedPath = normalizeLinkedInCallbackPath(parsedUrl.path);
@@ -52,6 +65,9 @@ function getLinkedInCallbackPayload(url: string): LinkedInCallbackPayload {
   const token = getNormalizedLinkedInCallbackParam(parsedUrl.queryParams?.token);
   const nextStep = getNormalizedLinkedInCallbackParam(parsedUrl.queryParams?.next_step);
   const supabaseToken = getNormalizedLinkedInCallbackParam(parsedUrl.queryParams?.supabase_token);
+  const isOnboarded = parseLinkedInIsOnboardedParam(
+    getNormalizedLinkedInCallbackParam(parsedUrl.queryParams?.is_onboarded)
+  );
   const errorMessage = getNormalizedLinkedInCallbackParam(parsedUrl.queryParams?.message);
   const errorCode = getNormalizedLinkedInCallbackParam(parsedUrl.queryParams?.error);
 
@@ -71,6 +87,7 @@ function getLinkedInCallbackPayload(url: string): LinkedInCallbackPayload {
   }
 
   return {
+    isOnboarded,
     type: 'success',
     token,
     nextStep,
@@ -128,6 +145,7 @@ export async function signInWithLinkedInToken(): Promise<LinkedInAuthResult> {
     provider: 'linkedin',
     token: callbackPayload.token,
     nextStep: callbackPayload.nextStep,
+    isOnboarded: callbackPayload.isOnboarded,
     supabaseToken: callbackPayload.supabaseToken,
   };
 }
