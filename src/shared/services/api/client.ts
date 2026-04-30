@@ -1,5 +1,7 @@
 import { buildApiUrl } from './config';
 
+const GENERIC_REQUEST_ERROR_MESSAGE = 'Something went wrong. Please try again in a moment.';
+
 export class ApiError extends Error {
   payload?: unknown;
   status: number;
@@ -71,11 +73,21 @@ function getErrorMessage(payload: unknown, fallbackMessage: string) {
     const message = payload.message;
 
     if (typeof message === 'string' && message.trim()) {
-      return message;
+      return normalizeApiErrorMessage(message);
     }
   }
 
   return fallbackMessage;
+}
+
+function normalizeApiErrorMessage(message: string) {
+  const normalizedMessage = message.trim();
+
+  if (normalizedMessage.toLowerCase() === 'network request failed') {
+    return GENERIC_REQUEST_ERROR_MESSAGE;
+  }
+
+  return normalizedMessage;
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -118,7 +130,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     const payload = await parseResponsePayload(response);
 
     if (!response.ok) {
-      const message = getErrorMessage(payload, `Request failed with status ${response.status}`);
+      const message =
+        response.status === 400
+          ? GENERIC_REQUEST_ERROR_MESSAGE
+          : getErrorMessage(payload, `Request failed with status ${response.status}`);
 
       if (response.status === 401) {
         await apiClientAuthConfig.onUnauthorized?.();
@@ -133,6 +148,6 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       throw error;
     }
 
-    throw new ApiError('Network request failed', 0);
+    throw new ApiError(GENERIC_REQUEST_ERROR_MESSAGE, 0);
   }
 }
