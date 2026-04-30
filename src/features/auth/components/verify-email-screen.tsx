@@ -232,7 +232,7 @@ export function VerifyEmailScreen() {
         }
         statusMessage={statusMessage}
         statusTone={statusTone}
-        title="Check your inbox"
+        title="Check Your Inbox"
         codeValue={otpCode}
       />
     </>

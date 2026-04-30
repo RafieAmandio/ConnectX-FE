@@ -30,9 +30,9 @@ function isValidationError(response: unknown): response is { errors: { otp_code:
 
   return Boolean(
     errors &&
-      typeof errors === 'object' &&
-      'otp_code' in errors &&
-      Array.isArray(errors.otp_code)
+    typeof errors === 'object' &&
+    'otp_code' in errors &&
+    Array.isArray(errors.otp_code)
   );
 }
 
@@ -238,7 +238,7 @@ export function VerifyLoginOtpScreen() {
         }
         statusMessage={statusMessage}
         statusTone={statusTone}
-        title="Verify your login"
+        title="Verify Your Login"
         codeValue={otpCode}
       />
     </>

@@ -152,7 +152,7 @@ export function AuthVerificationShell({
               <AppText
                 variant="hero"
                 className="text-[32px] leading-[38px]"
-                style={{ color: ACCENT }}>
+                style={{ color: 'white' }}>
                 {title}
               </AppText>
               <AppText className="text-base leading-6" style={{ color: TEXT_MUTED }}>

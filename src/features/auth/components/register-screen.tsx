@@ -218,7 +218,7 @@ export function RegisterScreen() {
               flexGrow: 1,
               justifyContent: 'space-between',
               paddingHorizontal: 20,
-              paddingTop: Math.max(insets.top + 32, 64),
+              paddingTop: Math.max(insets.top + 56, 88),
               paddingBottom: Math.max(insets.bottom + 24, 40),
               gap: 32,
             }}
