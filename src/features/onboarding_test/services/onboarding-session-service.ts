@@ -137,6 +137,10 @@ function isValidUrl(value: string) {
   }
 }
 
+function shouldSkipUrlValidation(question: OnboardingQuestion) {
+  return question.id === 'q_su_twitter' || question.id === 'q_su_instagram';
+}
+
 function isValidDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return false;
@@ -193,7 +197,12 @@ export function validateStepAnswers(
       continue;
     }
 
-    if (question.type === 'url' && typeof value === 'string' && !isValidUrl(value)) {
+    if (
+      question.type === 'url' &&
+      typeof value === 'string' &&
+      !shouldSkipUrlValidation(question) &&
+      !isValidUrl(value)
+    ) {
       errors[question.id] = getMessage(
         locale,
         'Enter a valid URL that starts with http:// or https://.',
