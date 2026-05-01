@@ -182,6 +182,12 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'people',
     iconColor: '#4ADE80',
   },
+  exp_sold: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'cash',
+    iconColor: '#FF9A3E',
+  },
   exp_none: {
     bg: '#1F242E',
     border: '#2E3547',

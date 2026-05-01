@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StatusBar,
   TextInput,
   useWindowDimensions,
   View,
@@ -152,8 +151,32 @@ function DropdownOverlay({
 
   const horizontalPadding = 16;
   const verticalGap = 8;
-  const androidModalTopOffset =
-    Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0;
+
+  if (Platform.OS === 'android') {
+    const inlineScrollMaxHeight = Math.max(88, maxHeight - (header ? 72 : 0));
+    return visible ? (
+      <AppCard
+        className="border-transparent p-1"
+        style={{
+          backgroundColor: HOME_BACKGROUND,
+          borderWidth: 0,
+          boxShadow: 'none',
+          marginTop: verticalGap,
+          maxHeight,
+          width: '100%',
+        }}>
+        {header}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+          style={{ maxHeight: inlineScrollMaxHeight }}>
+          {children}
+        </ScrollView>
+      </AppCard>
+    ) : null;
+  }
+
   const fallbackWidth = windowWidth - horizontalPadding * 2;
   const anchorWidth = anchorLayout?.width ?? fallbackWidth;
   const overlayWidth = Math.min(
@@ -185,10 +208,10 @@ function DropdownOverlay({
     ? shouldOpenAbove
       ? Math.max(
         horizontalPadding,
-        anchorLayout.y + androidModalTopOffset - verticalGap - overlayMaxHeight
+        anchorLayout.y - verticalGap - overlayMaxHeight
       )
       : Math.min(
-        anchorBottom + androidModalTopOffset + verticalGap,
+        anchorBottom + verticalGap,
         windowHeight - overlayMaxHeight - horizontalPadding
       )
     : windowHeight - overlayMaxHeight - 32;
@@ -346,6 +369,12 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     border: '#265238',
     icon: 'people',
     iconColor: '#4ADE80',
+  },
+  exp_sold: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'cash',
+    iconColor: '#FF9A3E',
   },
   exp_none: {
     bg: '#1F242E',
