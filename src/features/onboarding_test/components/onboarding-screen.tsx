@@ -320,6 +320,7 @@ export function OnboardingScreen() {
     );
 
   const {
+    canGoBack,
     canSubmit,
     currentStep,
     draftAnswers,
@@ -468,7 +469,7 @@ export function OnboardingScreen() {
       return;
     }
 
-    if (currentStep?.can_go_back) {
+    if (canGoBack) {
       void goBack();
       return;
     }
@@ -478,7 +479,7 @@ export function OnboardingScreen() {
     }
   }, [
     activeQuestionIndex,
-    currentStep?.can_go_back,
+    canGoBack,
     goBack,
     mode,
     router,
@@ -560,7 +561,7 @@ export function OnboardingScreen() {
         className="flex-1"
         style={{ backgroundColor: CANVAS_BG, paddingTop: insets.top }}>
         <ProgressHeader
-          canGoBack={currentStep.can_go_back}
+          canGoBack={canGoBack}
           current={currentStep.overall_progress.current}
           isExiting={isExiting}
           onBack={handleBackPress}

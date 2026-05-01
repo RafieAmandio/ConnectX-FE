@@ -14,7 +14,7 @@ import { SplashScreen } from './splash-screen';
 
 const ACCENT = '#FF9A3E';
 const HOME_BACKGROUND = '#262626';
-const CONNECTX_LOGO = require('../../../../assets/images/connectx-logo.png');
+const CONNECTX_LOGO = require('../../../../assets/images/logo_icon.png');
 
 export function GetStartedScreen() {
   const router = useRouter();
@@ -46,14 +46,13 @@ export function GetStartedScreen() {
             entering={FadeInDown.delay(80).duration(420)}
             className="items-center justify-center"
             style={{
-              backgroundColor: 'rgba(255, 154, 62, 0.16)',
               borderCurve: 'continuous',
               borderRadius: 24,
               height: 80,
               width: 80,
             }}>
             <View
-              className="items-center justify-center overflow-hidden bg-white"
+              className="items-center justify-center overflow-hidden"
               style={{
                 borderCurve: 'continuous',
                 borderRadius: 12,
@@ -62,7 +61,7 @@ export function GetStartedScreen() {
               }}>
               <Image
                 source={CONNECTX_LOGO}
-                style={{ height: 34, width: 34 }}
+                style={{ height: 48, width: 48 }}
                 contentFit="contain"
               />
             </View>

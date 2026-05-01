@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, View } from 'react-native';
@@ -13,6 +14,7 @@ import { NetworkVisualization } from './network-visualization';
 import { SplashScreen } from './splash-screen';
 
 const ACCENT = '#FF9A3E';
+const CONNECTX_LOGO = require('../../../../assets/images/logo_welcome.png');
 
 export function WelcomeScreen() {
   const router = useRouter();
@@ -79,12 +81,19 @@ export function WelcomeScreen() {
           <NetworkVisualization />
 
           <View className="items-center gap-3">
-            <AppText
-              align="center"
-              variant="hero"
-              className="text-[34px] leading-[40px] text-white">
-              Welcome to Connectx
-            </AppText>
+            <View className="flex-row items-center justify-center gap-2">
+              <AppText
+                align="center"
+                variant="hero"
+                className="text-[34px] leading-[40px] text-white">
+                Welcome to
+              </AppText>
+              <Image
+                source={CONNECTX_LOGO}
+                contentFit="contain"
+                style={{ height: 37, width: 154 }}
+              />
+            </View>
             <AppText
               align="center"
               className="max-w-[330px] text-[17px] leading-[26px]"

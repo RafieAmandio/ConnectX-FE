@@ -76,6 +76,7 @@ export function useOnboardingSession({
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [sessionState, setSessionState] = React.useState<OnboardingSessionState | null>(null);
   const [currentStep, setCurrentStep] = React.useState<OnboardingStep | null>(null);
+  const [canGoBack, setCanGoBack] = React.useState(false);
   const [allAnswers, setAllAnswers] = React.useState<OnboardingAnswers>({});
   const [draftAnswers, setDraftAnswers] = React.useState<OnboardingAnswers>({});
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
@@ -85,9 +86,14 @@ export function useOnboardingSession({
   const [isGoingBack, setIsGoingBack] = React.useState(false);
 
   const hydrateFromStep = React.useCallback(
-    (nextStep: OnboardingStep | null, nextAnswers: OnboardingAnswers = {}) => {
+    (
+      nextStep: OnboardingStep | null,
+      nextAnswers: OnboardingAnswers = {},
+      nextCanGoBack = nextStep?.can_go_back ?? false
+    ) => {
       setSessionState(null);
       setCurrentStep(nextStep);
+      setCanGoBack(Boolean(nextCanGoBack && nextStep && nextStep.overall_progress.current > 1));
       setAllAnswers(nextAnswers);
       setDraftAnswers(pickStepAnswers(nextStep, nextAnswers));
       setFieldErrors({});
@@ -115,7 +121,11 @@ export function useOnboardingSession({
       // GET /api/v1/onboarding/sessions/:session_id does not exist yet.
       // Use the current_step returned by POST /sessions to render the first screen.
       // const sessionResponse = await getOnboardingSession(startResponse.session_id, locale);
-      hydrateFromStep(startResponse.current_step);
+      hydrateFromStep(
+        startResponse.current_step,
+        {},
+        startResponse.can_go_back ?? startResponse.current_step.can_go_back
+      );
     } catch (error) {
       setStatusMessage(
         error instanceof Error
@@ -202,7 +212,11 @@ export function useOnboardingSession({
           ...submittedAnswers,
         };
 
-        hydrateFromStep(response.completed ? null : response.next_step, nextAnswers);
+        hydrateFromStep(
+          response.completed ? null : response.next_step,
+          nextAnswers,
+          response.can_go_back ?? response.next_step?.can_go_back ?? false
+        );
 
         return response;
       } catch (error) {
@@ -251,6 +265,12 @@ export function useOnboardingSession({
       }
 
       setCurrentStep(previousStep);
+      setCanGoBack(
+        Boolean(
+          (backResponse.can_go_back ?? previousStep.can_go_back) &&
+          previousStep.overall_progress.current > 1
+        )
+      );
       setDraftAnswers(pickStepAnswers(previousStep, allAnswers));
       setFieldErrors({});
     } catch (error) {
@@ -266,6 +286,7 @@ export function useOnboardingSession({
 
   return {
     allAnswers,
+    canGoBack,
     canSubmit,
     currentStep,
     draftAnswers,

@@ -14,8 +14,8 @@ import Svg, { Circle, Line } from 'react-native-svg';
 import { AppText } from '@shared/components';
 import { Colors } from '@shared/theme';
 
-const PRIMARY = Colors.dark.accent;
-const PRIMARY_RGB = '0, 117, 255';
+const PRIMARY = '#FF9A3E';
+const PRIMARY_RGB = '255, 154, 62';
 const CARD_RGB = '26, 26, 31';
 
 const NODES = [

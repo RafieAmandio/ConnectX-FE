@@ -160,6 +160,7 @@ export type OnboardingStartParams = {
 };
 
 export type OnboardingStartResponse = {
+  can_go_back?: boolean;
   current_step: OnboardingStep;
   session_id: string;
   status: 'in_progress';
@@ -210,6 +211,7 @@ export type OnboardingSessionResponse = {
 };
 
 export type OnboardingBackResponse = {
+  can_go_back?: boolean;
   current_step?: OnboardingStep | null;
   previous_step?: OnboardingStep | null;
   progress?: {
