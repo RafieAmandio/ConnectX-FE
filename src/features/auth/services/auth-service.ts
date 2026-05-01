@@ -188,7 +188,7 @@ function isStoredSessionShape(value: unknown): value is AuthSession {
 }
 
 function resolveAuthPhase(user: AuthUser, nextStep?: AuthNextStep): AuthPhase {
-  if (nextStep === 'LOGIN_SUCCESS') {
+  if (nextStep === 'LOGIN_SUCCESS' || nextStep === 'NEED_ONBOARDING') {
     return user.is_onboarded === false ? 'pending_onboarding' : 'authenticated'
   }
 
@@ -805,7 +805,7 @@ export async function bootstrapLinkedInAuthSession(
     const storedSupabaseIdentity = await getStoredSupabaseIdentity();
     const session = createLinkedInAuthenticatedSession(
       storedSupabaseIdentity,
-      payload.isOnboarded ?? true
+      payload.nextStep === 'NEED_ONBOARDING' ? false : payload.isOnboarded ?? true
     );
     const response: LinkedInAuthResult = {
       ...payload,

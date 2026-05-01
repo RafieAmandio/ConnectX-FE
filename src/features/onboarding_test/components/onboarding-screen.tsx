@@ -55,7 +55,8 @@ const MULTI_SELECT_DROPDOWN_STEP_IDS = new Set([
   'step_tm_skills',
   'step_fdr_bt_roles',
   'step_fdr_tm_roles',
-  'step_su_need_bt_tm'
+  'step_su_need_bt_tm',
+  'step_su_need_tm'
 ]);
 const SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS = new Set<string>();
 const GENDER_OPTION_ICONS: Record<string, string> = {

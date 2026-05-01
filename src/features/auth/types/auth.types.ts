@@ -12,6 +12,7 @@ export type AuthPhase =
 export type AuthNextStep =
   | 'LOGIN_SUCCESS'
   | 'NEED_LOGIN_OTP'
+  | 'NEED_ONBOARDING'
   | 'NEED_EMAIL_VERIFICATION'
   | 'NEED_WHATSAPP_VERIFICATION'
   | 'NEED_EMAIL_OTP'
@@ -116,7 +117,7 @@ export type GoogleAuthResult = {
 
 export type LinkedInCallbackNextStep = Extract<
   AuthNextStep,
-  'LOGIN_SUCCESS' | 'NEED_WHATSAPP_VERIFICATION'
+  'LOGIN_SUCCESS' | 'NEED_ONBOARDING' | 'NEED_WHATSAPP_VERIFICATION'
 >;
 
 export type LinkedInAuthResult = {

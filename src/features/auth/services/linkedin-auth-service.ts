@@ -35,7 +35,11 @@ function getNormalizedLinkedInCallbackParam(value: unknown) {
 }
 
 function isLinkedInCallbackNextStep(value: string | null): value is LinkedInCallbackNextStep {
-  return value === 'LOGIN_SUCCESS' || value === 'NEED_WHATSAPP_VERIFICATION';
+  return (
+    value === 'LOGIN_SUCCESS' ||
+    value === 'NEED_ONBOARDING' ||
+    value === 'NEED_WHATSAPP_VERIFICATION'
+  );
 }
 
 function parseLinkedInIsOnboardedParam(value: string | null) {

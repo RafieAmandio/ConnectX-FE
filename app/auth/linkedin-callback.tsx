@@ -67,7 +67,9 @@ export default function LinkedInCallbackRoute() {
 
     if (
       callbackToken &&
-      (callbackNextStep === 'LOGIN_SUCCESS' || callbackNextStep === 'NEED_WHATSAPP_VERIFICATION')
+      (callbackNextStep === 'LOGIN_SUCCESS' ||
+        callbackNextStep === 'NEED_ONBOARDING' ||
+        callbackNextStep === 'NEED_WHATSAPP_VERIFICATION')
     ) {
       hasHandledCallback.current = true;
 
