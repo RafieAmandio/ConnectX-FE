@@ -22,10 +22,12 @@ export function getLinkedInSyncNoticeState() {
 }
 
 export function subscribeLinkedInSyncNotice(listener: () => void) {
+  console.log('[linkedin_sync_notice] subscribe', state);
   listeners.add(listener);
 
   return () => {
     listeners.delete(listener);
+    console.log('[linkedin_sync_notice] unsubscribe', state);
   };
 }
 
@@ -41,6 +43,7 @@ export function setPendingLinkedInSyncNotice(linkedInUrl: string) {
     isPending: true,
     linkedInUrl: normalizedLinkedInUrl,
   };
+  console.log('[linkedin_sync_notice] set pending', state);
   emitChange();
 }
 
@@ -50,5 +53,6 @@ export function clearLinkedInSyncNotice() {
   }
 
   state = emptyState;
+  console.log('[linkedin_sync_notice] cleared');
   emitChange();
 }

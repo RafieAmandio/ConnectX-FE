@@ -54,6 +54,7 @@ const MULTI_SELECT_DROPDOWN_STEP_IDS = new Set([
   'step_tm_industry',
   'step_tm_skills',
   'step_fdr_bt_roles',
+  'step_fdr_tm_roles',
   'step_su_need_bt_tm'
 ]);
 const SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS = new Set<string>();
@@ -95,6 +96,10 @@ function getCompletionInterstitialRoute(mode: OnboardingMode, redirectTo?: strin
 
 function isConnectLinkedInStep(step: OnboardingStep | null) {
   return step?.title.trim().toLowerCase() === 'connect linkedin';
+}
+
+function isLinkedInQuestion(question: OnboardingQuestion) {
+  return question.id.toLowerCase().includes('linkedin');
 }
 
 function getRenderableQuestion(
@@ -334,7 +339,7 @@ export function OnboardingScreen() {
 
       updateAnswer(question, value);
 
-      if (isConnectLinkedInStep(currentStep) && question.id === 'q_tm_linkedin') {
+      if (isConnectLinkedInStep(currentStep) && isLinkedInQuestion(question)) {
         if (typeof value === 'string' && value.trim().length > 0) {
           setPendingLinkedInSyncNotice(value);
         } else {

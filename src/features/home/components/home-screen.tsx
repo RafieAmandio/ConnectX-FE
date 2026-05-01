@@ -18,6 +18,14 @@ function LinkedInSyncNoticeModal() {
     getLinkedInSyncNoticeState
   );
 
+  React.useEffect(() => {
+    console.log('[home] linkedin sync notice state', notice);
+
+    if (notice.isPending) {
+      console.log('[home] presenting linkedin sync notice modal', notice);
+    }
+  }, [notice]);
+
   return (
     <Modal
       animationType="fade"
