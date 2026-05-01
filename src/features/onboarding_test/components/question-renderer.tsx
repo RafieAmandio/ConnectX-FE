@@ -444,6 +444,72 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     iconColor: '#60A5FA',
     library: 'mci',
   },
+  equity_heavy: {
+    bg: '#2A2312',
+    border: '#564518',
+    icon: 'trending-up',
+    iconColor: '#FFD166',
+  },
+  partial_equity: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'pie-chart',
+    iconColor: '#5EEAD4',
+  },
+  cash_heavy: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  strict: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'lock-closed',
+    iconColor: '#FF9A3E',
+  },
+  flexible: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'options',
+    iconColor: '#CBD4E0',
+  },
+  no_minimum: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'leaf-outline',
+    iconColor: '#7DD3FC',
+  },
+  annual: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'calendar',
+    iconColor: '#C48BFF',
+  },
+  hourly: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'time-outline',
+    iconColor: '#CBD4E0',
+  },
+  IDR: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  USD: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'logo-usd',
+    iconColor: '#5EEAD4',
+  },
+  SGD: {
+    bg: '#2A2312',
+    border: '#564518',
+    icon: 'wallet',
+    iconColor: '#FFD166',
+  },
   default: {
     bg: '#2A2117',
     border: '#3A2E1E',
@@ -452,8 +518,29 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
   },
 };
 
-function getCardBadgeStyle(option: OnboardingOption): CardBadgeStyle {
-  return CARD_BADGE_STYLES[option.icon ?? 'default'] ?? CARD_BADGE_STYLES.default;
+const SELECTED_DEFAULT_CARD_BADGE_STYLE: CardBadgeStyle = {
+  bg: '#FF9A3E',
+  border: '#FFB25F',
+  icon: 'checkmark',
+  iconColor: '#1A1208',
+};
+
+function getCardBadgeStyleKey(option: OnboardingOption) {
+  return option.icon ?? option.value;
+}
+
+function getCardBadgeStyle(option: OnboardingOption, isSelected = false): CardBadgeStyle {
+  const styleKey = getCardBadgeStyleKey(option);
+
+  if (isSelected && !CARD_BADGE_STYLES[styleKey]) {
+    return SELECTED_DEFAULT_CARD_BADGE_STYLE;
+  }
+
+  return CARD_BADGE_STYLES[styleKey] ?? CARD_BADGE_STYLES.default;
+}
+
+function getMappedCardBadgeStyle(option: OnboardingOption) {
+  return CARD_BADGE_STYLES[getCardBadgeStyleKey(option)] ?? null;
 }
 
 function CardBadgeIcon({ badge, size = 26 }: { badge: CardBadgeStyle; size?: number }) {
@@ -470,6 +557,40 @@ function CardBadgeIcon({ badge, size = 26 }: { badge: CardBadgeStyle; size?: num
   return (
     <Ionicons
       color={badge.iconColor}
+      name={badge.icon as React.ComponentProps<typeof Ionicons>['name']}
+      size={size}
+    />
+  );
+}
+
+function InlineOptionIcon({
+  isSelected,
+  option,
+  size = 18,
+}: {
+  isSelected: boolean;
+  option: OnboardingOption;
+  size?: number;
+}) {
+  const badge = getMappedCardBadgeStyle(option);
+
+  if (!badge) {
+    return null;
+  }
+
+  if (badge.library === 'mci') {
+    return (
+      <MaterialCommunityIcons
+        color={isSelected ? '#FF9A3E' : badge.iconColor}
+        name={badge.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
+        size={size}
+      />
+    );
+  }
+
+  return (
+    <Ionicons
+      color={isSelected ? '#FF9A3E' : badge.iconColor}
       name={badge.icon as React.ComponentProps<typeof Ionicons>['name']}
       size={size}
     />
@@ -568,7 +689,7 @@ function SelectionCard({
   onPress: () => void;
   option: OnboardingOption;
 }) {
-  const badge = getCardBadgeStyle(option);
+  const badge = getCardBadgeStyle(option, isSelected);
   const scale = useSharedValue(1);
   const glow = useSharedValue(0);
   const wasSelectedRef = React.useRef(isSelected);
@@ -628,8 +749,8 @@ function SelectionCard({
         <View
           className="h-14 w-14 items-center justify-center rounded-[16px] border"
           style={{
-            backgroundColor: isSelected ? '#2A1C10' : badge.bg,
-            borderColor: isSelected ? '#5A3C18' : badge.border,
+            backgroundColor: isSelected && option.icon ? '#2A1C10' : badge.bg,
+            borderColor: isSelected && option.icon ? '#5A3C18' : badge.border,
             borderCurve: 'continuous',
           }}>
           <CardBadgeIcon badge={badge} />
@@ -746,7 +867,7 @@ function MultiSelectCardQuestion({
       <View className="gap-3">
         {question.options?.map((option) => {
           const isSelected = currentValues.includes(option.value);
-          const badge = getCardBadgeStyle(option);
+          const badge = getCardBadgeStyle(option, isSelected);
 
           return (
             <Pressable
@@ -770,7 +891,9 @@ function MultiSelectCardQuestion({
                   className="h-9 w-9 items-center justify-center rounded-[10px]"
                   style={{
                     backgroundColor: badge.bg,
+                    borderColor: badge.border,
                     borderCurve: 'continuous',
+                    borderWidth: isSelected && !option.icon ? 1 : 0,
                   }}>
                   <CardBadgeIcon badge={badge} size={18} />
                 </View>
@@ -1319,6 +1442,9 @@ function DropdownQuestion({
   const [isOpen, setIsOpen] = React.useState(false);
   const triggerRef = React.useRef<View | null>(null);
   const currentValue = getStringValue(value);
+  const currentOption = currentValue
+    ? question.options?.find((option) => option.value === currentValue)
+    : undefined;
   const currentLabel = currentValue
     ? getSelectedLabel(question.options, currentValue)
     : question.placeholder ?? 'Select one';
@@ -1337,16 +1463,22 @@ function DropdownQuestion({
             isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
           )}
           onPress={() => setIsOpen((currentState) => !currentState)}>
-          <AppText
-            className={cn(
-              currentValue ? 'text-white' : 'text-text-soft',
-              isOpen && 'text-[#FF9A3E]'
-            )}>
-            {currentLabel}
-          </AppText>
+          <View className="min-w-0 flex-1 flex-row items-center gap-2">
+            {currentOption ? (
+              <InlineOptionIcon isSelected={isOpen} option={currentOption} />
+            ) : null}
+            <AppText
+              numberOfLines={1}
+              className={cn(
+                currentValue ? 'text-white' : 'text-text-soft',
+                isOpen && 'text-[#FF9A3E]'
+              )}>
+              {currentLabel}
+            </AppText>
+          </View>
           <AppText
             variant="label"
-            className="text-[10px]"
+            className="ml-2 text-[10px]"
             style={{ color: isOpen ? '#FF9A3E' : '#98A2B3' }}>
             {isOpen ? '▲' : '▼'}
           </AppText>
@@ -1364,21 +1496,24 @@ function DropdownQuestion({
               <Pressable
                 key={option.id}
                 className={cn(
-                  'rounded-[12px] px-3 py-3',
+                  'flex-row items-center gap-3 rounded-[12px] px-3 py-3',
                   isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
                 )}
                 onPress={() => {
                   onChange(option.value);
                   setIsOpen(false);
                 }}>
-                <AppText
-                  variant="bodyStrong"
-                  className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
-                  {option.label}
-                </AppText>
-                {option.sub_label ? (
-                  <AppText tone="muted">{option.sub_label}</AppText>
-                ) : null}
+                <InlineOptionIcon isSelected={isSelected} option={option} />
+                <View className="flex-1 gap-1">
+                  <AppText
+                    variant="bodyStrong"
+                    className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                    {option.label}
+                  </AppText>
+                  {option.sub_label ? (
+                    <AppText tone="muted">{option.sub_label}</AppText>
+                  ) : null}
+                </View>
               </Pressable>
             );
           })}

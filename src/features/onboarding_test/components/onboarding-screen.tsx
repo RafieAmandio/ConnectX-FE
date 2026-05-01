@@ -22,6 +22,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getRouteForAuthPhase, useAuth } from '@features/auth';
 import { AppText } from '@shared/components';
+import {
+  clearLinkedInSyncNotice,
+  setPendingLinkedInSyncNotice,
+} from '@shared/services/linkedin-sync-notice-store';
 import { cn } from '@shared/utils/cn';
 
 import { useOnboardingSession } from '../hooks/use-onboarding-session';
@@ -73,11 +77,24 @@ function getCompletionRoute(mode: OnboardingMode, redirectTo?: string) {
     return '/login' as const;
   }
 
-  if (redirectTo === '/(tabs)') {
+  if (redirectTo === '/(tabs)' || redirectTo === '/home') {
     return '/(tabs)' as const;
   }
 
   return mode === 'preview' ? ('/login' as const) : ('/(tabs)' as const);
+}
+
+function getCompletionInterstitialRoute(mode: OnboardingMode, redirectTo?: string) {
+  return {
+    pathname: '/onboarding-complete',
+    params: {
+      redirectTo: getCompletionRoute(mode, redirectTo),
+    },
+  } as const;
+}
+
+function isConnectLinkedInStep(step: OnboardingStep | null) {
+  return step?.title.trim().toLowerCase() === 'connect linkedin';
 }
 
 function getRenderableQuestion(
@@ -317,6 +334,14 @@ export function OnboardingScreen() {
 
       updateAnswer(question, value);
 
+      if (isConnectLinkedInStep(currentStep) && question.id === 'q_tm_linkedin') {
+        if (typeof value === 'string' && value.trim().length > 0) {
+          setPendingLinkedInSyncNotice(value);
+        } else {
+          clearLinkedInSyncNotice();
+        }
+      }
+
       if (
         !currentStep ||
         !question.meta?.auto_advance ||
@@ -345,7 +370,7 @@ export function OnboardingScreen() {
           await completeOnboarding();
         }
 
-        router.replace(getCompletionRoute(mode, response.redirect_to));
+        router.replace(getCompletionInterstitialRoute(mode, response.redirect_to));
       }
     },
     [
@@ -404,7 +429,7 @@ export function OnboardingScreen() {
       await completeOnboarding();
     }
 
-    router.replace(getCompletionRoute(mode, response.redirect_to));
+    router.replace(getCompletionInterstitialRoute(mode, response.redirect_to));
   }, [
     canContinuePagedQuestion,
     completeOnboarding,
