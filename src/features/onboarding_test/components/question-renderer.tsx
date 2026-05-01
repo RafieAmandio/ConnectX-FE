@@ -334,6 +334,18 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'close-circle-outline',
     iconColor: '#CBD4E0',
   },
+  remote_pref_hybrid: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'briefcase-outline',
+    iconColor: '#FF9A3E',
+  },
+  remote_pref_remote_only: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'home-outline',
+    iconColor: '#CBD4E0',
+  },
   availability_full_time: {
     bg: '#1F242E',
     border: '#2E3547',
@@ -577,6 +589,25 @@ function getCardBadgeStyle(option: OnboardingOption, isSelected = false): CardBa
 
 function getMappedCardBadgeStyle(option: OnboardingOption) {
   return CARD_BADGE_STYLES[getCardBadgeStyleKey(option)] ?? null;
+}
+
+function getRenderableDropdownOption(
+  question: OnboardingQuestion,
+  option: OnboardingOption
+): OnboardingOption {
+  if (question.id !== 'q_remote_pref') {
+    return option;
+  }
+
+  if (option.value === 'hybrid') {
+    return { ...option, icon: 'remote_pref_hybrid' };
+  }
+
+  if (option.value === 'remote_only') {
+    return { ...option, icon: 'remote_pref_remote_only' };
+  }
+
+  return option;
 }
 
 function CardBadgeIcon({ badge, size = 26 }: { badge: CardBadgeStyle; size?: number }) {
@@ -1529,8 +1560,12 @@ function DropdownQuestion({
   const [isOpen, setIsOpen] = React.useState(false);
   const triggerRef = React.useRef<View | null>(null);
   const currentValue = getStringValue(value);
+  const renderableOptions = React.useMemo(
+    () => question.options?.map((option) => getRenderableDropdownOption(question, option)) ?? [],
+    [question]
+  );
   const currentOption = currentValue
-    ? question.options?.find((option) => option.value === currentValue)
+    ? renderableOptions.find((option) => option.value === currentValue)
     : undefined;
   const currentLabel = currentValue
     ? getSelectedLabel(question.options, currentValue)
@@ -1576,7 +1611,7 @@ function DropdownQuestion({
           maxHeight={200}
           onClose={() => setIsOpen(false)}
           visible={isOpen}>
-          {question.options?.map((option) => {
+          {renderableOptions.map((option) => {
             const isSelected = currentValue === option.value;
 
             return (
