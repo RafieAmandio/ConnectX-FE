@@ -2,8 +2,10 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   TextInput,
   useWindowDimensions,
   View,
@@ -150,6 +152,8 @@ function DropdownOverlay({
 
   const horizontalPadding = 16;
   const verticalGap = 8;
+  const androidModalTopOffset =
+    Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0;
   const fallbackWidth = windowWidth - horizontalPadding * 2;
   const anchorWidth = anchorLayout?.width ?? fallbackWidth;
   const overlayWidth = Math.min(
@@ -158,10 +162,10 @@ function DropdownOverlay({
   );
   const overlayLeft = anchorLayout
     ? clamp(
-        anchorLayout.x,
-        horizontalPadding,
-        Math.max(horizontalPadding, windowWidth - overlayWidth - horizontalPadding)
-      )
+      anchorLayout.x,
+      horizontalPadding,
+      Math.max(horizontalPadding, windowWidth - overlayWidth - horizontalPadding)
+    )
     : horizontalPadding;
   const anchorBottom = anchorLayout
     ? anchorLayout.y + anchorLayout.height
@@ -179,11 +183,14 @@ function DropdownOverlay({
   const overlayMaxHeight = Math.max(160, Math.min(maxHeight, availableHeight || maxHeight));
   const overlayTop = anchorLayout
     ? shouldOpenAbove
-      ? Math.max(horizontalPadding, anchorLayout.y - verticalGap - overlayMaxHeight)
+      ? Math.max(
+        horizontalPadding,
+        anchorLayout.y + androidModalTopOffset - verticalGap - overlayMaxHeight
+      )
       : Math.min(
-          anchorBottom + verticalGap,
-          windowHeight - overlayMaxHeight - horizontalPadding
-        )
+        anchorBottom + androidModalTopOffset + verticalGap,
+        windowHeight - overlayMaxHeight - horizontalPadding
+      )
     : windowHeight - overlayMaxHeight - 32;
   const scrollMaxHeight = Math.max(88, overlayMaxHeight - (header ? 72 : 0));
 
@@ -1486,7 +1493,7 @@ function DropdownQuestion({
 
         <DropdownOverlay
           anchorRef={triggerRef}
-          maxHeight={360}
+          maxHeight={200}
           onClose={() => setIsOpen(false)}
           visible={isOpen}>
           {question.options?.map((option) => {
