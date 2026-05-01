@@ -941,13 +941,64 @@ function MultiSelectChipQuestion({
   value,
 }: QuestionRendererProps) {
   const currentValues = getArrayValue(value);
+  const shouldRenderOptionRows = question.options?.some((option) => option.sub_label);
 
   return (
     <View className="gap-3">
       <QuestionHeader error={error} question={question} />
-      <View className="flex-row flex-wrap gap-2">
+      <View className={shouldRenderOptionRows ? 'gap-3' : 'flex-row flex-wrap gap-2'}>
         {question.options?.map((option) => {
           const isSelected = currentValues.includes(option.value);
+
+          if (shouldRenderOptionRows) {
+            const badge = getCardBadgeStyle(option, isSelected);
+            const displayBadge = {
+              ...badge,
+              iconColor: isSelected ? '#FF9A3E' : '#8F8F8F',
+            };
+
+            return (
+              <Pressable
+                key={option.id}
+                className="flex-row items-center gap-4 rounded-[18px] border px-4 py-4"
+                style={{
+                  backgroundColor: isSelected ? '#1F1712' : '#292929',
+                  borderColor: isSelected ? '#FF9A3E' : '#383838',
+                  borderCurve: 'continuous',
+                  borderWidth: isSelected ? 2 : 1,
+                }}
+                onPress={() => {
+                  if (isSelected) {
+                    onChange(currentValues.filter((item) => item !== option.value));
+                    return;
+                  }
+
+                  onChange([...currentValues, option.value]);
+                }}>
+                <View className="h-10 w-10 items-center justify-center">
+                  <CardBadgeIcon badge={displayBadge} size={22} />
+                </View>
+                <View className="flex-1 gap-1">
+                  <AppText
+                    variant="subtitle"
+                    className={cn(
+                      'text-[17px] leading-[22px]',
+                      isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                    )}>
+                    {option.label}
+                  </AppText>
+                  {option.sub_label ? (
+                    <AppText className="text-[13px] leading-[18px] text-text-muted">
+                      {option.sub_label}
+                    </AppText>
+                  ) : null}
+                </View>
+                {isSelected ? (
+                  <Ionicons color="#FF9A3E" name="checkmark" size={22} />
+                ) : null}
+              </Pressable>
+            );
+          }
 
           return (
             <Pressable
