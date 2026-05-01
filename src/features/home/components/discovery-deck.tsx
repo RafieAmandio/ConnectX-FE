@@ -19,8 +19,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { useNotifications } from '@features/notifications';
+import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 import { Shadows } from '@shared/theme';
@@ -904,34 +904,29 @@ function DeckActionButton({
   color,
   disabled,
   icon,
+  label,
   onPress,
   size = 'medium',
-  variant = 'outline',
 }: {
   color: string;
   disabled?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
+  label: string;
   onPress: () => void;
   size?: 'small' | 'medium' | 'large';
-  variant?: 'outline' | 'filled';
 }) {
-  const diameter = size === 'large' ? 58 : size === 'medium' ? 52 : 44;
   const iconSize = size === 'large' ? 28 : size === 'medium' ? 24 : 20;
 
   return (
     <Pressable
-      className="items-center justify-center rounded-full"
+      className="items-center gap-1"
       disabled={disabled}
       onPress={onPress}
-      style={{
-        backgroundColor: '#1E1E1E',
-        borderColor: 'rgba(255, 255, 255, 0.5)',
-        borderWidth: 2,
-        height: diameter,
-        opacity: disabled ? 0.4 : 1,
-        width: diameter,
-      }}>
+      style={{ opacity: disabled ? 0.35 : 1, minWidth: 48 }}>
       <Ionicons color={color} name={icon} size={iconSize} />
+      <AppText className="text-[11px]" style={{ color: '#98A2B3' }}>
+        {label}
+      </AppText>
     </Pressable>
   );
 }
@@ -1879,12 +1874,17 @@ export function DiscoveryDeck() {
             pointerEvents="box-none"
             style={{ bottom: floatingActionsBottomOffset }}>
             <View
-              className="flex-row items-center justify-center gap-4 px-2 py-3"
-              style={{ backgroundColor: 'transparent' }}>
+              className="flex-row items-center justify-center gap-5 rounded-full px-6 py-3"
+              style={{
+                backgroundColor: 'rgba(30, 30, 30, 1)',
+                borderColor: 'rgba(255, 255, 255, 0.08)',
+                borderWidth: 1,
+              }}>
               <DeckActionButton
                 color="#EF4444"
                 disabled={isSubmitting}
                 icon="close"
+                label="Pass"
                 onPress={() => beginSwipe('left')}
                 size="medium"
               />
@@ -1892,6 +1892,7 @@ export function DiscoveryDeck() {
                 color="#FFCD38"
                 disabled={history.length === 0 || isSubmitting}
                 icon="refresh"
+                label="Rewind"
                 onPress={handleRewind}
                 size="small"
               />
@@ -1899,6 +1900,7 @@ export function DiscoveryDeck() {
                 color="#FF9A3E"
                 disabled={isSubmitting}
                 icon="flash"
+                label="Super Like"
                 onPress={handleSuperLike}
                 size="medium"
               />
@@ -1906,6 +1908,7 @@ export function DiscoveryDeck() {
                 color="#10B981"
                 disabled={isSubmitting}
                 icon="checkmark"
+                label="Like"
                 onPress={() => beginSwipe('right')}
                 size="medium"
               />
