@@ -71,7 +71,7 @@ const PRELOAD_THRESHOLD = 3;
 const DISCOVERY_PAGE_LIMIT = 10;
 const DEFAULT_FILTER_MODE: DiscoveryMode = 'joining_startups';
 const MATCH_TOAST_DURATION_MS = 2600;
-const FLOATING_ACTIONS_BOTTOM_OFFSET = 18;
+const FLOATING_ACTIONS_BOTTOM_OFFSET = -8;
 const FLOATING_ACTIONS_CONTENT_PADDING = 108;
 
 const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
@@ -1225,10 +1225,7 @@ export function DiscoveryDeck() {
   const currentItem = cards[0] ?? null;
   const nextItem = cards[1] ?? null;
   const remainingCards = cards.length;
-  const floatingActionsBottomOffset = Math.max(
-    insets.bottom + 8,
-    FLOATING_ACTIONS_BOTTOM_OFFSET
-  );
+  const floatingActionsBottomOffset = insets.bottom + FLOATING_ACTIONS_BOTTOM_OFFSET;
   const floatingActionsContentPadding =
     FLOATING_ACTIONS_CONTENT_PADDING +
     Math.max(floatingActionsBottomOffset - FLOATING_ACTIONS_BOTTOM_OFFSET, 0);

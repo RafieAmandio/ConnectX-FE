@@ -166,12 +166,16 @@ function ProgressSegment({ active, delay }: { active: boolean; delay: number }) 
 function ProgressHeader({
   canGoBack,
   current,
+  isExiting,
   onBack,
+  onExit,
   total,
 }: {
   canGoBack: boolean;
   current: number;
+  isExiting: boolean;
   onBack: () => void;
+  onExit: () => void;
   total: number;
 }) {
   return (
@@ -192,6 +196,16 @@ function ProgressHeader({
             {current} of {total}
           </AppText>
         </Animated.View>
+        <Pressable
+          className="min-w-14 flex-row items-center justify-end gap-1 py-1"
+          disabled={isExiting}
+          hitSlop={12}
+          onPress={onExit}>
+          <AntDesign color="#FF8A8A" name="logout" size={16} />
+          <AppText className="text-[13px] text-[#FF8A8A]" variant="bodyStrong">
+            {isExiting ? 'Exiting' : 'Exit'}
+          </AppText>
+        </Pressable>
       </View>
       <View className="flex-row gap-2">
         {Array.from({ length: total }).map((_, index) => (
@@ -291,7 +305,7 @@ export function OnboardingScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
   const insets = useSafeAreaInsets();
   const mode: OnboardingMode = params.mode === 'preview' ? 'preview' : 'post_auth';
-  const { authPhase, completeOnboarding, isHydrated, session } = useAuth();
+  const { authPhase, completeOnboarding, isHydrated, session, signOut } = useAuth();
   const locale: OnboardingLocale = 'en';
 
   const actorKey =
@@ -326,6 +340,7 @@ export function OnboardingScreen() {
     mode,
   });
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState(0);
+  const [isExiting, setIsExiting] = React.useState(false);
 
   React.useEffect(() => {
     setActiveQuestionIndex(0);
@@ -470,6 +485,21 @@ export function OnboardingScreen() {
     shouldPageCurrentQuestions,
   ]);
 
+  const handleExit = React.useCallback(async () => {
+    if (isExiting) {
+      return;
+    }
+
+    setIsExiting(true);
+    clearLinkedInSyncNotice();
+
+    try {
+      await signOut();
+    } finally {
+      router.replace('/login');
+    }
+  }, [isExiting, router, signOut]);
+
   if (!isHydrated) {
     return null;
   }
@@ -513,6 +543,7 @@ export function OnboardingScreen() {
     getRenderableQuestion(currentStep.id, question)
   );
   const primaryCtaDisabled =
+    isExiting ||
     isSubmitting ||
     isGoingBack ||
     (shouldPageCurrentQuestions && !isLastPagedQuestion ? !canContinuePagedQuestion : !canSubmit);
@@ -531,7 +562,11 @@ export function OnboardingScreen() {
         <ProgressHeader
           canGoBack={currentStep.can_go_back}
           current={currentStep.overall_progress.current}
+          isExiting={isExiting}
           onBack={handleBackPress}
+          onExit={() => {
+            void handleExit();
+          }}
           total={currentStep.overall_progress.total}
         />
 
@@ -542,7 +577,7 @@ export function OnboardingScreen() {
             <WelcomeHero step={currentStep} />
             <View className="px-5">
               <PrimaryCta
-                disabled={isSubmitting}
+                disabled={isSubmitting || isExiting}
                 label={isSubmitting ? 'Loading...' : currentStep.cta.label}
                 onPress={() => {
                   void handleContinue();
