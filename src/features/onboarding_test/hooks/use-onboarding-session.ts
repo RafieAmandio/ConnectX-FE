@@ -5,6 +5,7 @@ import { ApiError } from '@shared/services/api';
 import { getVisibleQuestions } from '../mock/registry';
 import {
   goBackOnboardingSession,
+  normalizeStepAnswers,
   startOnboardingSession,
   submitOnboardingAnswers,
   validateStepAnswers,
@@ -191,7 +192,7 @@ export function useOnboardingSession({
       setStatusMessage(null);
 
       try {
-        const submittedAnswers = answersOverride ?? draftAnswers;
+        const submittedAnswers = normalizeStepAnswers(currentStep, answersOverride ?? draftAnswers);
         const response = await submitOnboardingAnswers(sessionId, {
           answers: submittedAnswers,
           step_id: currentStep.id,

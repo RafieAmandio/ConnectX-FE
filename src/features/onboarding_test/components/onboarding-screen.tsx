@@ -50,6 +50,7 @@ const MULTI_SELECT_DROPDOWN_STEP_IDS = new Set([
   'step_tm_industry',
   'step_tm_skills',
   'step_fdr_bt_roles',
+  'step_su_need_bt_tm'
 ]);
 const SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS = new Set<string>();
 const GENDER_OPTION_ICONS: Record<string, string> = {
@@ -104,6 +105,12 @@ function getRenderableQuestion(
         : option;
     }),
   };
+}
+
+function shouldPageQuestions(questions: OnboardingQuestion[]) {
+  const questionIds = new Set(questions.map((question) => question.id));
+
+  return questionIds.has('q_su_industry') && questionIds.has('q_su_biz_model');
 }
 
 function ProgressSegment({ active, delay }: { active: boolean; delay: number }) {
@@ -295,6 +302,11 @@ export function OnboardingScreen() {
     locale,
     mode,
   });
+  const [activeQuestionIndex, setActiveQuestionIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    setActiveQuestionIndex(0);
+  }, [currentStep?.id]);
 
   const handleAnswerChange = React.useCallback(
     async (question: OnboardingQuestion, value: OnboardingAnswerValue) => {
@@ -349,7 +361,39 @@ export function OnboardingScreen() {
     ]
   );
 
+  const shouldPageCurrentQuestions = shouldPageQuestions(visibleQuestions);
+  const activeQuestion =
+    shouldPageCurrentQuestions && visibleQuestions.length > 0
+      ? visibleQuestions[Math.min(activeQuestionIndex, visibleQuestions.length - 1)]
+      : null;
+  const activeQuestionValidationErrors =
+    currentStep && activeQuestion
+      ? validateStepAnswers(
+        {
+          ...currentStep,
+          questions: [activeQuestion],
+        },
+        mergedAnswers,
+        locale
+      )
+      : {};
+  const canContinuePagedQuestion =
+    !activeQuestion || Object.keys(activeQuestionValidationErrors).length === 0;
+  const isLastPagedQuestion =
+    !shouldPageCurrentQuestions || activeQuestionIndex >= visibleQuestions.length - 1;
+
   const handleContinue = React.useCallback(async () => {
+    if (shouldPageCurrentQuestions && !isLastPagedQuestion) {
+      if (!canContinuePagedQuestion) {
+        return;
+      }
+
+      setActiveQuestionIndex((currentIndex) =>
+        Math.min(currentIndex + 1, visibleQuestions.length - 1)
+      );
+      return;
+    }
+
     const response = await submitStep();
 
     if (!isCompletedResponse(response)) {
@@ -361,9 +405,23 @@ export function OnboardingScreen() {
     }
 
     router.replace(getCompletionRoute(mode, response.redirect_to));
-  }, [completeOnboarding, mode, router, submitStep]);
+  }, [
+    canContinuePagedQuestion,
+    completeOnboarding,
+    isLastPagedQuestion,
+    mode,
+    router,
+    shouldPageCurrentQuestions,
+    submitStep,
+    visibleQuestions.length,
+  ]);
 
   const handleBackPress = React.useCallback(() => {
+    if (shouldPageCurrentQuestions && activeQuestionIndex > 0) {
+      setActiveQuestionIndex((currentIndex) => Math.max(currentIndex - 1, 0));
+      return;
+    }
+
     if (currentStep?.can_go_back) {
       void goBack();
       return;
@@ -372,7 +430,14 @@ export function OnboardingScreen() {
     if (mode === 'preview') {
       router.replace('/login');
     }
-  }, [currentStep?.can_go_back, goBack, mode, router]);
+  }, [
+    activeQuestionIndex,
+    currentStep?.can_go_back,
+    goBack,
+    mode,
+    router,
+    shouldPageCurrentQuestions,
+  ]);
 
   if (!isHydrated) {
     return null;
@@ -412,9 +477,16 @@ export function OnboardingScreen() {
       'currency_amount',
     ].includes(question.type)
   );
-  const renderableQuestions = visibleQuestions.map((question) =>
+  const questionsForScreen = activeQuestion ? [activeQuestion] : visibleQuestions;
+  const renderableQuestions = questionsForScreen.map((question) =>
     getRenderableQuestion(currentStep.id, question)
   );
+  const primaryCtaDisabled =
+    isSubmitting ||
+    isGoingBack ||
+    (shouldPageCurrentQuestions && !isLastPagedQuestion ? !canContinuePagedQuestion : !canSubmit);
+  const primaryCtaLabel =
+    isSubmitting && isLastPagedQuestion ? 'Saving...' : currentStep.cta.label;
 
   return (
     <KeyboardAvoidingView
@@ -479,6 +551,13 @@ export function OnboardingScreen() {
                     {currentStep.subtitle}
                   </AppText>
                 ) : null}
+                {shouldPageCurrentQuestions ? (
+                  <AppText
+                    align="center"
+                    className="text-[13px] leading-[18px] text-text-muted">
+                    {activeQuestionIndex + 1} of {visibleQuestions.length}
+                  </AppText>
+                ) : null}
               </Animated.View>
 
               <Animated.View
@@ -530,8 +609,8 @@ export function OnboardingScreen() {
                   paddingBottom: Math.max(insets.bottom + 16, 32),
                 }}>
                 <PrimaryCta
-                  disabled={!canSubmit || isSubmitting || isGoingBack}
-                  label={isSubmitting ? 'Saving...' : currentStep.cta.label}
+                  disabled={primaryCtaDisabled}
+                  label={primaryCtaLabel}
                   onPress={() => {
                     void handleContinue();
                   }}

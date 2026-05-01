@@ -48,6 +48,27 @@ function normalizeStringValue(value: OnboardingAnswerValue | undefined) {
   return value.trim();
 }
 
+function shouldAcceptSocialHandle(question: OnboardingQuestion) {
+  return question.id === 'q_su_twitter' || question.id === 'q_su_instagram';
+}
+
+function hasUrlScheme(value: string) {
+  return /^https?:\/\//i.test(value);
+}
+
+function normalizeUrlValue(
+  question: OnboardingQuestion,
+  value: OnboardingAnswerValue | undefined
+) {
+  const normalizedValue = normalizeStringValue(value);
+
+  if (!normalizedValue || shouldAcceptSocialHandle(question) || hasUrlScheme(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  return `https://${normalizedValue}`;
+}
+
 function normalizeAnswerValue(
   question: OnboardingQuestion,
   value: OnboardingAnswerValue | undefined
@@ -92,6 +113,8 @@ function normalizeAnswerValue(
         currency: value.currency.trim(),
       };
     }
+    case 'url':
+      return normalizeUrlValue(question, value);
     default:
       return normalizeStringValue(value);
   }
@@ -102,6 +125,22 @@ function getQuestionValue(
   answers: OnboardingAnswers
 ) {
   return normalizeAnswerValue(question, answers[question.id]);
+}
+
+export function normalizeStepAnswers(
+  step: OnboardingStep,
+  answers: OnboardingAnswers
+) {
+  const normalizedAnswers: OnboardingAnswers = {};
+  const visibleQuestions = getVisibleQuestions(step, answers);
+
+  for (const question of visibleQuestions) {
+    if (question.id in answers) {
+      normalizedAnswers[question.id] = getQuestionValue(question, answers);
+    }
+  }
+
+  return normalizedAnswers;
 }
 
 function hasValue(question: OnboardingQuestion, value: OnboardingAnswerValue) {
@@ -130,7 +169,7 @@ function isValidEmail(value: string) {
 
 function isValidUrl(value: string) {
   try {
-    const url = new URL(value);
+    const url = new URL(hasUrlScheme(value) ? value : `https://${value}`);
     return url.protocol === 'http:' || url.protocol === 'https:';
   } catch {
     return false;
@@ -138,7 +177,7 @@ function isValidUrl(value: string) {
 }
 
 function shouldSkipUrlValidation(question: OnboardingQuestion) {
-  return question.id === 'q_su_twitter' || question.id === 'q_su_instagram';
+  return shouldAcceptSocialHandle(question);
 }
 
 function isValidDate(value: string) {
@@ -205,8 +244,8 @@ export function validateStepAnswers(
     ) {
       errors[question.id] = getMessage(
         locale,
-        'Enter a valid URL that starts with http:// or https://.',
-        'Masukkan URL valid yang diawali http:// atau https://.'
+        'Enter a valid website or URL.',
+        'Masukkan website atau URL yang valid.'
       );
       continue;
     }
@@ -368,11 +407,27 @@ export async function submitOnboardingAnswers(
   payload: OnboardingAnswerPayload,
   locale: OnboardingLocale
 ): Promise<OnboardingNextStepResponse> {
-  return apiFetch<OnboardingNextStepResponse>(ONBOARDING_API.SUBMIT_ANSWER(sessionId), {
+  const response = await apiFetch<OnboardingNextStepResponse>(ONBOARDING_API.SUBMIT_ANSWER(sessionId), {
     body: payload as unknown as BodyInit,
     headers: localeHeaders(locale),
     method: 'POST',
   });
+
+  console.log(
+    '[onboarding_test] submit answer response',
+    JSON.stringify(
+      {
+        locale,
+        payload,
+        response,
+        sessionId,
+      },
+      null,
+      2
+    )
+  );
+
+  return response;
 }
 
 export async function goBackOnboardingSession(

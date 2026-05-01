@@ -69,6 +69,26 @@ function getCurrencyValue(value: OnboardingAnswerValue | undefined): CurrencyAmo
   };
 }
 
+function shouldUseHandlePlaceholder(question: OnboardingQuestion) {
+  return question.id === 'q_su_twitter' || question.id === 'q_su_instagram';
+}
+
+function getTextLikePlaceholder(question: OnboardingQuestion) {
+  if (question.placeholder) {
+    return question.placeholder;
+  }
+
+  if (shouldUseHandlePlaceholder(question)) {
+    return '@';
+  }
+
+  if (question.type === 'url') {
+    return 'https://';
+  }
+
+  return undefined;
+}
+
 function getSelectedLabel(options: OnboardingOption[] | undefined, value: string) {
   return options?.find((option) => option.value === value)?.label ?? value;
 }
@@ -526,7 +546,7 @@ function TextLikeQuestion({
         onBlur={() => setIsFocused(false)}
         onChangeText={(nextValue) => onChange(nextValue)}
         onFocus={() => setIsFocused(true)}
-        placeholder={question.placeholder ?? undefined}
+        placeholder={getTextLikePlaceholder(question)}
         textAlignVertical={multiline ? 'top' : 'center'}
         value={value}
         className={cn(
