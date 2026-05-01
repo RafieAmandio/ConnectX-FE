@@ -107,6 +107,8 @@ export type GoogleAuthResult = {
   displayName: string;
   provider: 'google';
   accessToken: string;
+  firebaseIdToken: string;
+  googleAccessToken: string | null;
   idToken: string | null;
   fcmToken: string | null;
   userId: string;

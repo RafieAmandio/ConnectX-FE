@@ -286,7 +286,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           const persistedSession = persistedState.session;
           const persistedOAuthSession =
             persistedSession &&
-            isExternalOAuthMethod(persistedSession.method) &&
+              isExternalOAuthMethod(persistedSession.method) &&
               normalizedEmail &&
               persistedSession.email === normalizedEmail
               ? persistedSession
@@ -425,7 +425,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           : 'google';
         const nextSession =
           currentSession &&
-          isExternalOAuthMethod(currentSession.method) &&
+            isExternalOAuthMethod(currentSession.method) &&
             normalizedEmail &&
             currentSession.email === normalizedEmail
             ? currentSession
@@ -460,13 +460,16 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
   const signInWithGoogle = React.useCallback(async (payload?: { fcmToken?: string | null }) => {
     const googleResult = await signInWithGoogleToken();
+    console.log('[auth:google] provider result before API login', googleResult);
+
     const result = await loginWithGoogleApi({
-      accessToken: googleResult.accessToken,
+      accessToken: googleResult.firebaseIdToken,
       displayName: googleResult.displayName,
       email: googleResult.email,
       fcmToken: payload?.fcmToken ?? '',
       idToken: googleResult.idToken,
     });
+    console.log('[auth:google] API login result', result);
 
     setSession(result.session);
     setAuthPhase(result.session.authPhase);

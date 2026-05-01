@@ -3,6 +3,12 @@ import {
   isErrorWithCode,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithCredential,
+  signOut as signOutFirebaseAuth,
+} from '@react-native-firebase/auth';
 
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
@@ -76,33 +82,52 @@ export async function signInWithGoogleToken(): Promise<GoogleAuthResult> {
     }
 
     const response = await GoogleSignin.signIn();
+    console.log('[auth:google] GoogleSignin.signIn() response', response);
 
     if (response.type === 'cancelled') {
       throw new Error('Google Sign-In was cancelled.');
     }
 
     const tokens = await GoogleSignin.getTokens();
-    const accessToken = tokens.accessToken?.trim();
+    console.log('[auth:google] GoogleSignin.getTokens() response', tokens);
+
+    const googleAccessToken = tokens.accessToken?.trim() || null;
     const idToken = response.data.idToken?.trim() || tokens.idToken?.trim() || null;
     const email = response.data.user.email.trim().toLowerCase();
     const displayName = response.data.user.name?.trim() || email.split('@')[0] || 'ConnectX Member';
     const userId = response.data.user.id.trim();
 
-    if (!accessToken || !email || !userId) {
+    if (!idToken || !email || !userId) {
       throw new Error(
-        'Google Sign-In succeeded, but the expected access token payload was incomplete. Check the configured Google OAuth client IDs in the app build.'
+        'Google Sign-In succeeded, but the expected ID token payload was incomplete. Check the configured Google OAuth client IDs in the app build.'
       );
     }
 
-    return {
+    const googleCredential = GoogleAuthProvider.credential(
+      idToken,
+      googleAccessToken ?? undefined
+    );
+    const firebaseUserCredential = await signInWithCredential(getAuth(), googleCredential);
+    const firebaseIdToken = await firebaseUserCredential.user.getIdToken();
+
+    console.log('[auth:google] Firebase signInWithCredential() response', firebaseUserCredential);
+    console.log('[auth:google] Firebase user ID token', firebaseIdToken);
+
+    const googleAuthResult = {
       email,
       displayName,
       provider: 'google',
-      accessToken,
+      accessToken: firebaseIdToken,
+      firebaseIdToken,
+      googleAccessToken,
       idToken,
       fcmToken: null,
       userId,
-    };
+    } satisfies GoogleAuthResult;
+
+    console.log('[auth:google] normalized auth result', googleAuthResult);
+
+    return googleAuthResult;
   } catch (error) {
     throw normalizeGoogleSignInError(error);
   }
@@ -115,7 +140,10 @@ export async function signOutGoogle() {
 
   try {
     ensureGoogleSignInConfigured();
-    await GoogleSignin.signOut();
+    await Promise.allSettled([
+      GoogleSignin.signOut(),
+      signOutFirebaseAuth(getAuth()),
+    ]);
   } catch (error) {
     if (isExpoDevModeEnabled()) {
       console.warn('[auth] failed to clear native Google session', error);

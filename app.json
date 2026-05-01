@@ -57,8 +57,8 @@
       ],
       "expo-secure-store",
       "@react-native-firebase/app",
+      "@react-native-firebase/auth",
       "@react-native-firebase/messaging",
-      "./plugins/withFirebaseConfig.js",
       [
         "expo-dev-client",
         {
