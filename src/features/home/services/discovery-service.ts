@@ -163,13 +163,33 @@ export async function fetchDiscoveryFilterOptions(mode: DiscoveryMode) {
     console.log('[Discovery] fetch filter options mode', mode);
   }
 
-  if (isDiscoveryCardsMockEnabled()) {
-    return getMockDiscoveryFilterOptionsResponse(mode);
-  }
+  // if (isDiscoveryCardsMockEnabled()) {
+  //   const response = getMockDiscoveryFilterOptionsResponse(mode);
 
-  return apiFetch<DiscoveryFilterOptionsResponse>(
+  //   if (isExpoDevModeEnabled()) {
+  //     console.log('[Discovery] fetch filter options source', {
+  //       cityOptionCount: response.data.city?.options.length ?? 0,
+  //       mode,
+  //       source: 'mock',
+  //     });
+  //   }
+
+  //   return response;
+  // }
+
+  const response = await apiFetch<DiscoveryFilterOptionsResponse>(
     `${DISCOVERY_API.FILTER_OPTIONS}?mode=${encodeURIComponent(mode)}`
   );
+
+  if (isExpoDevModeEnabled()) {
+    console.log('[Discovery] fetch filter options source', {
+      cityOptionCount: response.data.city?.options.length ?? 0,
+      mode,
+      source: 'api',
+    });
+  }
+
+  return response;
 }
 
 export async function postSwipeAction(targetId: string, payload: SwipeActionRequest) {
