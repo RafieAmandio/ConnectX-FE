@@ -178,7 +178,7 @@ export function VerifyOtpScreen() {
                 variant="hero"
                 className="text-[32px] font-bold tracking-tight"
                 style={{ color: ACCENT }}>
-                Verify account with OTP
+                Verify Account With OTP
               </AppText>
               <AppText className="text-base leading-6" style={{ color: TEXT_MUTED }}>
                 We&apos;ve sent a 6-digit code to {maskWhatsappNumber(whatsappNumber)}

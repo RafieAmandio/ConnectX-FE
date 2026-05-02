@@ -744,6 +744,16 @@ function mergeAuthSessionResponse(
   response: AuthSessionResponse,
   source: AuthSessionResponseResult['source']
 ): AuthSession {
+  if (source === 'mock') {
+    return {
+      ...session,
+      authSessionSyncedAt: new Date().toISOString(),
+      authSessionSource: source,
+      defaultDiscoveryMode: response.data.discovery_preferences.default_discovery_mode,
+      premium: normalizePremiumState(response.data.premium),
+    };
+  }
+
   const responseUser = response.data.user;
   const normalizedEmail = normalizeEmail(responseUser.email || session.email);
   const authPhase = resolveAuthPhase(responseUser);
