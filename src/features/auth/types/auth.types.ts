@@ -1,3 +1,5 @@
+import type { DiscoveryMode } from '@features/home/types/discovery.types';
+
 export type AuthMethod = 'email' | 'google' | 'linkedin' | 'apple' | 'developer-bypass';
 export type OAuthAuthMethod = Extract<AuthMethod, 'google' | 'linkedin'>;
 
@@ -30,8 +32,16 @@ export type AuthUser = {
   is_onboarded: boolean | null;
 };
 
+export type AuthPremiumState = {
+  boost: number;
+  spotlight: number;
+  isPremium: boolean;
+};
+
 export type AuthSession = {
   authPhase: AuthPhase;
+  authSessionSyncedAt?: string | null;
+  defaultDiscoveryMode?: DiscoveryMode | null;
   displayName: string;
   email: string;
   emailOtpCode?: string | null;
@@ -46,6 +56,7 @@ export type AuthSession = {
   method: AuthMethod;
   onboardingCompletedAt?: string | null;
   pendingWhatsappNumber?: string | null;
+  premium?: AuthPremiumState;
   shouldAutoSendEmailOtp?: boolean;
   shouldAutoSendLoginOtp?: boolean;
   user: AuthUser | null;
@@ -68,6 +79,18 @@ export type AuthSuccessResponse = AuthSupabaseSessionPayload & {
   status: 'success';
   token: string;
   token_type: string;
+};
+
+export type AuthSessionResponse = {
+  status: 'success';
+  message: string;
+  data: {
+    user: AuthUser;
+    discovery_preferences: {
+      default_discovery_mode: DiscoveryMode | null;
+    };
+    premium: AuthPremiumState;
+  };
 };
 
 export type RegisterPayload = {

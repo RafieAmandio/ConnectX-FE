@@ -19,6 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAuth } from '@features/auth';
 import { useNotifications } from '@features/notifications';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
@@ -43,6 +44,7 @@ import {
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
 import { isDiscoveryCardsMockEnabled } from '../services/discovery-service';
+import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discovery-preference';
 import type {
   DiscoveryAppliedFilters,
   DiscoveryCard,
@@ -1021,6 +1023,7 @@ export function DiscoveryDeck() {
   const router = useRouter();
   const { height, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { isHydrated: isAuthHydrated, session } = useAuth();
   const usingMockCards = isDiscoveryCardsMockEnabled();
   const notificationsQuery = useNotifications();
   const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
@@ -1039,6 +1042,7 @@ export function DiscoveryDeck() {
   const [appliedMode, setAppliedMode] = React.useState<DiscoveryMode | null>(null);
   const [appliedFilters, setAppliedFilters] = React.useState<DiscoveryAppliedFilters>({});
   const [deviceCoordinates, setDeviceCoordinates] = React.useState<DeviceCoordinates | null>(null);
+  const [hasResolvedAuthSessionSetup, setHasResolvedAuthSessionSetup] = React.useState(false);
   const [hasResolvedInitialLocation, setHasResolvedInitialLocation] = React.useState(false);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -1047,6 +1051,28 @@ export function DiscoveryDeck() {
   const usingFallbackRef = React.useRef(false);
   const matchToastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasRequestedDeviceCoordinatesRef = React.useRef(false);
+
+  const hasSyncedAuthSession =
+    !session ||
+    session.authPhase !== 'authenticated' ||
+    Boolean(session.authSessionSyncedAt) ||
+    Boolean(session.isDevelopmentBypass);
+
+  React.useEffect(() => {
+    if (!isAuthHydrated || !hasSyncedAuthSession) {
+      return;
+    }
+
+    const defaultMode = session?.defaultDiscoveryMode ?? loadOnboardingDiscoveryPreference()?.mode ?? null;
+
+    if (defaultMode) {
+      setSheetMode(defaultMode);
+      setAppliedMode(defaultMode);
+    }
+
+    setAppliedFilters({});
+    setHasResolvedAuthSessionSetup(true);
+  }, [hasSyncedAuthSession, isAuthHydrated, session?.defaultDiscoveryMode]);
 
   const filterOptionsQuery = useDiscoveryFilterOptions(sheetMode, isFilterVisible);
   const matchingFilterOptionsResponse =
@@ -1115,7 +1141,7 @@ export function DiscoveryDeck() {
   const discoveryQuery = useDiscoveryCards(
     discoveryRequest,
     DISCOVERY_PAGE_LIMIT,
-    hasResolvedInitialLocation
+    hasResolvedAuthSessionSetup && hasResolvedInitialLocation
   );
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
@@ -1684,6 +1710,28 @@ export function DiscoveryDeck() {
     </Pressable>
   );
 
+  const onboardingPreferenceDebugButton = (
+    <Pressable
+      accessibilityLabel="Log onboarding discovery preference"
+      className="h-10 w-10 items-center justify-center rounded-full border"
+      onPress={() => {
+        console.log(
+          '[discovery_bootstrap] saved state',
+          {
+            authSession: {
+              authSessionSyncedAt: session?.authSessionSyncedAt ?? null,
+              defaultDiscoveryMode: session?.defaultDiscoveryMode ?? null,
+              premium: session?.premium ?? null,
+            },
+            onboardingPreference: loadOnboardingDiscoveryPreference(),
+          }
+        );
+      }}
+      style={{ borderColor: 'rgba(152, 162, 179, 0.18)' }}>
+      <Ionicons color="#D0D5DD" name="bug-outline" size={18} />
+    </Pressable>
+  );
+
   const notificationButton = (
     <Pressable
       accessibilityLabel="Open notifications"
@@ -1712,15 +1760,17 @@ export function DiscoveryDeck() {
 
   const topBarAccessory = (
     <View className="flex-row items-center gap-2">
+      {onboardingPreferenceDebugButton}
       {notificationButton}
       {filterButton}
     </View>
   );
 
   if (
-    !currentItem &&
-    !usingLocalMockCards &&
-    (discoveryQuery.isLoading || discoveryQuery.isRefetching)
+    !hasResolvedAuthSessionSetup ||
+    (!currentItem &&
+      !usingLocalMockCards &&
+      (discoveryQuery.isLoading || discoveryQuery.isRefetching))
   ) {
     return (
       <View className="flex-1">

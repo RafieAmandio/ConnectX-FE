@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { saveOnboardingDiscoveryPreference } from '@features/home/services/onboarding-discovery-preference';
 import { ApiError } from '@shared/services/api';
 
 import { getVisibleQuestions } from '../mock/registry';
@@ -211,6 +212,7 @@ export function useOnboardingSession({
           ...allAnswers,
           ...submittedAnswers,
         };
+        saveOnboardingDiscoveryPreference(nextAnswers);
 
         hydrateFromStep(
           response.completed ? null : response.next_step,

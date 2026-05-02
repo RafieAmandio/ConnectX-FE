@@ -27,7 +27,9 @@ import {
 import type {
   AuthNextStep,
   AuthPhase,
+  AuthPremiumState,
   AuthSession,
+  AuthSessionResponse,
   ForgotPasswordPayload,
   ForgotPasswordResponse,
   AuthSuccessResponse,
@@ -55,11 +57,13 @@ import type {
   WhatsappOtpPayload,
 } from '../types/auth.types';
 
+const mockAuthSessionResponse = require('../mock/auth-session.response.json') as AuthSessionResponse;
+
 const TOKEN_KEY = 'connectx.auth.token';
 const SESSION_KEY = 'connectx.auth.session';
 const USER_KEY = 'connectx.auth.user';
 
-const AUTH_API = {
+export const AUTH_API = {
   EMAIL_RESEND_OTP: '/api/v1/auth/email/resend-otp',
   EMAIL_SEND_OTP: '/api/v1/auth/email/send-otp',
   FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
@@ -68,6 +72,7 @@ const AUTH_API = {
   LOGIN_OTP_SEND: '/api/v1/auth/login/otp/send',
   LOGIN_OTP_VERIFY: '/api/v1/auth/login/otp/verify',
   REGISTER: '/api/v1/auth/register',
+  SESSION: '/api/v1/auth/session',
   VERIFY_EMAIL: '/api/v1/auth/verify-email',
   VERIFY_WHATSAPP: '/api/v1/auth/verify-whatsapp',
   WHATSAPP_RESEND_OTP: '/api/v1/auth/whatsapp/resend-otp',
@@ -86,6 +91,11 @@ const AUTH_PHASES = new Set([
   'authenticated',
 ]);
 const AUTH_METHODS = new Set(['email', 'google', 'linkedin', 'apple', 'developer-bypass']);
+const DEFAULT_PREMIUM_STATE: AuthPremiumState = {
+  boost: 0,
+  spotlight: 0,
+  isPremium: false,
+};
 
 type PersistedAuthState = {
   session: AuthSession | null;
@@ -236,6 +246,8 @@ function createAuthSession({
 
   return {
     authPhase,
+    authSessionSyncedAt: null,
+    defaultDiscoveryMode: null,
     displayName: normalizedDisplayName || 'ConnectX Member',
     email: normalizedEmail,
     emailOtpCode: null,
@@ -252,6 +264,7 @@ function createAuthSession({
         ? user.whatsapp_verified_at ?? new Date().toISOString()
         : null,
     pendingWhatsappNumber: user.whatsapp_number,
+    premium: DEFAULT_PREMIUM_STATE,
     shouldAutoSendEmailOtp: nextStep === 'NEED_EMAIL_OTP',
     shouldAutoSendLoginOtp: nextStep === 'NEED_LOGIN_OTP',
     user: {
@@ -268,6 +281,8 @@ function createPendingLoginOtpSession(email: string): AuthSession {
 
   return {
     authPhase: 'pending_login_otp',
+    authSessionSyncedAt: null,
+    defaultDiscoveryMode: null,
     displayName: buildDisplayNameFromEmail(normalizedEmail) || 'ConnectX Member',
     email: normalizedEmail,
     emailOtpCode: null,
@@ -281,6 +296,7 @@ function createPendingLoginOtpSession(email: string): AuthSession {
     method: 'email',
     onboardingCompletedAt: null,
     pendingWhatsappNumber: null,
+    premium: DEFAULT_PREMIUM_STATE,
     shouldAutoSendEmailOtp: false,
     shouldAutoSendLoginOtp: true,
     user: null,
@@ -309,6 +325,8 @@ function createOAuthFallbackUser(user: SupabaseUser): AuthUser {
 function createLinkedInPendingWhatsappSession(): AuthSession {
   return {
     authPhase: 'pending_whatsapp_verification',
+    authSessionSyncedAt: null,
+    defaultDiscoveryMode: null,
     displayName: 'ConnectX Member',
     email: 'connectx-member@linkedin.local',
     emailOtpCode: null,
@@ -322,6 +340,7 @@ function createLinkedInPendingWhatsappSession(): AuthSession {
     method: 'linkedin',
     onboardingCompletedAt: null,
     pendingWhatsappNumber: null,
+    premium: DEFAULT_PREMIUM_STATE,
     shouldAutoSendEmailOtp: false,
     shouldAutoSendLoginOtp: false,
     user: null,
@@ -704,6 +723,70 @@ async function persistSessionResult<TResponse>(
   };
 }
 
+function normalizePremiumState(value: AuthPremiumState | null | undefined): AuthPremiumState {
+  return {
+    boost: typeof value?.boost === 'number' ? value.boost : DEFAULT_PREMIUM_STATE.boost,
+    spotlight: typeof value?.spotlight === 'number' ? value.spotlight : DEFAULT_PREMIUM_STATE.spotlight,
+    isPremium: typeof value?.isPremium === 'boolean' ? value.isPremium : DEFAULT_PREMIUM_STATE.isPremium,
+  };
+}
+
+function mergeAuthSessionResponse(session: AuthSession, response: AuthSessionResponse): AuthSession {
+  const responseUser = response.data.user;
+  const normalizedEmail = normalizeEmail(responseUser.email || session.email);
+  const authPhase = resolveAuthPhase(responseUser);
+
+  return {
+    ...session,
+    authPhase,
+    authSessionSyncedAt: new Date().toISOString(),
+    defaultDiscoveryMode: response.data.discovery_preferences.default_discovery_mode,
+    email: normalizedEmail,
+    onboardingCompletedAt:
+      authPhase === 'authenticated'
+        ? responseUser.whatsapp_verified_at ?? session.onboardingCompletedAt ?? new Date().toISOString()
+        : null,
+    pendingWhatsappNumber: responseUser.whatsapp_number ?? session.pendingWhatsappNumber ?? null,
+    premium: normalizePremiumState(response.data.premium),
+    user: {
+      ...responseUser,
+      email: normalizedEmail,
+    },
+  };
+}
+
+export async function fetchAuthSession() {
+  if (isMockAuthFlowEnabled()) {
+    return mockAuthSessionResponse;
+  }
+
+  try {
+    return await apiFetch<AuthSessionResponse>(AUTH_API.SESSION);
+  } catch (error) {
+    if (isExpoDevModeEnabled()) {
+      console.warn('[auth:session] falling back to mock session response', error);
+      return mockAuthSessionResponse;
+    }
+
+    throw error;
+  }
+}
+
+export async function refreshAuthSession(baseSession?: AuthSession): Promise<SessionActionResult<AuthSessionResponse>> {
+  const { session } = baseSession
+    ? { session: baseSession }
+    : await requireStoredAuthStateWithOptions({ requireToken: true });
+  const response = await fetchAuthSession();
+  const nextSession = mergeAuthSessionResponse(session, response);
+
+  await replaceStoredSession(nextSession);
+
+  return {
+    response,
+    session: nextSession,
+  };
+}
+
 async function applySupabaseAuthResponse(response: AuthSupabaseSessionPayload) {
   const accessToken = response.supabase_access_token?.trim() || null;
   const refreshToken = response.supabase_refresh_token?.trim() || null;
@@ -764,10 +847,11 @@ export async function loginWithGoogleApi(
     persistAuthSession(session, token),
     applySupabaseAuthResponse(response),
   ]);
+  const refreshedSessionResult = await refreshAuthSession(session);
 
   return {
     response,
-    session,
+    session: refreshedSessionResult.session,
   };
 }
 
@@ -813,10 +897,11 @@ export async function bootstrapLinkedInAuthSession(
     };
 
     await persistAuthSession(session, token);
+    const refreshedSessionResult = await refreshAuthSession(session);
 
     return {
       response,
-      session,
+      session: refreshedSessionResult.session,
     };
   } catch (error) {
     await Promise.allSettled([
@@ -1024,10 +1109,11 @@ export async function verifyLoginOtp(
       persistAuthSession(nextSession, response.token),
       applySupabaseAuthResponse(response),
     ]);
+    const refreshedSessionResult = await refreshAuthSession(nextSession);
 
     return {
       response,
-      session: nextSession,
+      session: refreshedSessionResult.session,
     };
   }
 
@@ -1047,10 +1133,11 @@ export async function verifyLoginOtp(
       persistAuthSession(nextSession, response.token),
       applySupabaseAuthResponse(response),
     ]);
+    const refreshedSessionResult = await refreshAuthSession(nextSession);
 
     return {
       response,
-      session: nextSession,
+      session: refreshedSessionResult.session,
     };
   } catch (error) {
     if (error instanceof ApiError && isVerifyWhatsappValidationErrorResponse(error.payload)) {
@@ -1384,10 +1471,11 @@ export async function verifyWhatsappOtp(
       persistAuthSession(nextSession, response.token),
       applySupabaseAuthResponse(response),
     ]);
+    const refreshedSessionResult = await refreshAuthSession(nextSession);
 
     return {
       response,
-      session: nextSession,
+      session: refreshedSessionResult.session,
     };
   }
 
@@ -1407,10 +1495,11 @@ export async function verifyWhatsappOtp(
       persistAuthSession(nextSession, response.token),
       applySupabaseAuthResponse(response),
     ]);
+    const refreshedSessionResult = await refreshAuthSession(nextSession);
 
     return {
       response,
-      session: nextSession,
+      session: refreshedSessionResult.session,
     };
   } catch (error) {
     if (error instanceof ApiError && isVerifyWhatsappValidationErrorResponse(error.payload)) {
@@ -1434,6 +1523,8 @@ export async function enterWithDevBypassSession() {
   const verifiedAt = new Date().toISOString();
   const session: AuthSession = {
     authPhase: 'authenticated',
+    authSessionSyncedAt: verifiedAt,
+    defaultDiscoveryMode: mockAuthSessionResponse.data.discovery_preferences.default_discovery_mode,
     displayName: 'Dev Explorer',
     email: 'dev-bypass@connectx.local',
     emailOtpCode: null,
@@ -1448,6 +1539,7 @@ export async function enterWithDevBypassSession() {
     method: 'developer-bypass',
     onboardingCompletedAt: verifiedAt,
     pendingWhatsappNumber: null,
+    premium: mockAuthSessionResponse.data.premium,
     shouldAutoSendEmailOtp: false,
     shouldAutoSendLoginOtp: false,
     user: {

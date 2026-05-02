@@ -1,0 +1,27 @@
+{
+  "_endpoint": "GET /api/v1/auth/session",
+  "_description": "Returns the authenticated user's normalized app session, including the backend-owned discovery default and premium counters.",
+  "status": "success",
+  "message": "Session loaded.",
+  "data": {
+    "user": {
+      "id": "usr_01HSXYZABC123",
+      "entity_type": null,
+      "email": "dio@example.com",
+      "email_verified_at": "2026-05-02T09:15:46.515Z",
+      "whatsapp_number": "+628123456789",
+      "whatsapp_verified_at": "2026-05-02T09:15:46.515Z",
+      "registration_step": 5,
+      "is_active": true,
+      "is_onboarded": true
+    },
+    "discovery_preferences": {
+      "default_discovery_mode": "finding_cofounder"
+    },
+    "premium": {
+      "boost": 3,
+      "spotlight": 1,
+      "isPremium": true
+    }
+  }
+}

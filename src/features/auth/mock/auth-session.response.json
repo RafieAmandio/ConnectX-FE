@@ -1,0 +1,25 @@
+{
+  "status": "success",
+  "message": "Session loaded.",
+  "data": {
+    "user": {
+      "id": "mock-user-1",
+      "entity_type": null,
+      "email": "mock@connectx.local",
+      "email_verified_at": "2026-05-02T09:15:46.515Z",
+      "whatsapp_number": "+6280000000000",
+      "whatsapp_verified_at": "2026-05-02T09:15:46.515Z",
+      "registration_step": 5,
+      "is_active": true,
+      "is_onboarded": true
+    },
+    "discovery_preferences": {
+      "default_discovery_mode": "finding_cofounder"
+    },
+    "premium": {
+      "boost": 3,
+      "spotlight": 1,
+      "isPremium": true
+    }
+  }
+}

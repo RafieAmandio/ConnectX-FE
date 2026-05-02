@@ -27,6 +27,7 @@ import {
   loginWithGoogleApi,
   registerWithApi,
   replaceStoredSession,
+  refreshAuthSession,
   resendEmailOtp as resendEmailOtpRequest,
   resendLoginOtp as resendLoginOtpRequest,
   resendWhatsappOtp as resendWhatsappOtpRequest,
@@ -220,6 +221,27 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     setShouldShowWelcomeLaunchSplash(false);
   }, []);
 
+  const refreshBackendAuthSession = React.useCallback(async (nextSession: AuthSession) => {
+    if (nextSession.authPhase !== 'authenticated' || nextSession.isDevelopmentBypass) {
+      return nextSession;
+    }
+
+    try {
+      return (await refreshAuthSession(nextSession)).session;
+    } catch (error) {
+      if (isExpoDevModeEnabled()) {
+        console.warn('[auth] failed to refresh backend auth session', error);
+      }
+
+      return {
+        ...nextSession,
+        authSessionSyncedAt: new Date().toISOString(),
+        defaultDiscoveryMode: nextSession.defaultDiscoveryMode ?? null,
+        premium: nextSession.premium ?? { boost: 0, spotlight: 0, isPremium: false },
+      };
+    }
+  }, []);
+
   const enterPendingOnboarding = React.useCallback(async () => {
     if (!session) {
       throw new Error('No auth session is available for onboarding.');
@@ -239,10 +261,12 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         : null,
     };
 
-    await replaceStoredSession(nextSession);
-    setSession(nextSession);
-    setAuthPhase(nextSession.authPhase);
-  }, [session]);
+    const resolvedSession = await refreshBackendAuthSession(nextSession);
+
+    await replaceStoredSession(resolvedSession);
+    setSession(resolvedSession);
+    setAuthPhase(resolvedSession.authPhase);
+  }, [refreshBackendAuthSession, session]);
 
   const completeOnboarding = React.useCallback(async () => {
     if (!session) {
@@ -264,10 +288,12 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         : null,
     };
 
-    await replaceStoredSession(nextSession);
-    setSession(nextSession);
-    setAuthPhase(nextSession.authPhase);
-  }, [session]);
+    const resolvedSession = await refreshBackendAuthSession(nextSession);
+
+    await replaceStoredSession(resolvedSession);
+    setSession(resolvedSession);
+    setAuthPhase(resolvedSession.authPhase);
+  }, [refreshBackendAuthSession, session]);
 
   React.useEffect(() => {
     let isActive = true;
@@ -297,9 +323,10 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
           const nextSession =
             persistedOAuthSession ??
             createOAuthAuthSessionFromSupabaseSession(supabaseSession, oauthMethod);
+          const resolvedSession = await refreshBackendAuthSession(nextSession);
 
           await Promise.all([
-            replaceStoredSession(nextSession),
+            replaceStoredSession(resolvedSession),
             syncSupabaseRealtimeAuth(supabaseSession),
           ]);
 
@@ -309,8 +336,8 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
           setIsChatEnabled(true);
           setShouldShowWelcomeLaunchSplash(false);
-          setSession(nextSession);
-          setAuthPhase(nextSession.authPhase);
+          setSession(resolvedSession);
+          setAuthPhase(resolvedSession.authPhase);
           setIsHydrated(true);
           return;
         }
@@ -323,8 +350,13 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         if ((token && storedSession) || (storedSession && canRestoreWithoutToken(storedSession.authPhase))) {
           setIsChatEnabled(false);
           setShouldShowWelcomeLaunchSplash(false);
-          setSession(storedSession);
-          setAuthPhase(storedSession.authPhase);
+          const resolvedSession =
+            token && storedSession.authPhase === 'authenticated'
+              ? await refreshBackendAuthSession(storedSession)
+              : storedSession;
+
+          setSession(resolvedSession);
+          setAuthPhase(resolvedSession.authPhase);
         } else {
           await clearPersistedAuth();
           setIsChatEnabled(false);
@@ -367,7 +399,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [refreshBackendAuthSession]);
 
   React.useEffect(() => {
     configureApiClient({
@@ -430,15 +462,16 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
             currentSession.email === normalizedEmail
             ? currentSession
             : createOAuthAuthSessionFromSupabaseSession(nextSupabaseSession, oauthMethod);
+        const resolvedSession = await refreshBackendAuthSession(nextSession);
 
         await Promise.all([
-          replaceStoredSession(nextSession),
+          replaceStoredSession(resolvedSession),
           syncSupabaseRealtimeAuth(nextSupabaseSession),
         ]);
         setIsChatEnabled(true);
         setShouldShowWelcomeLaunchSplash(false);
-        setSession(nextSession);
-        setAuthPhase(nextSession.authPhase);
+        setSession(resolvedSession);
+        setAuthPhase(resolvedSession.authPhase);
         reconnectChatRealtime();
       }
     });
@@ -446,7 +479,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [reconnectChatRealtime]);
+  }, [reconnectChatRealtime, refreshBackendAuthSession]);
 
   const login = React.useCallback(
     async (payload: LoginPayload) => {
