@@ -1897,7 +1897,7 @@ export function DiscoveryDeck() {
                 color="#FF9A3E"
                 disabled={isSubmitting}
                 icon="flash"
-                label="Super Like"
+                label="Boost"
                 onPress={handleSuperLike}
                 size="medium"
               />
@@ -1905,7 +1905,7 @@ export function DiscoveryDeck() {
                 color="#10B981"
                 disabled={isSubmitting}
                 icon="checkmark"
-                label="Like"
+                label="Connect"
                 onPress={() => beginSwipe('right')}
                 size="medium"
               />
