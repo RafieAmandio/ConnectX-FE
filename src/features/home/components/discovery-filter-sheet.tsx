@@ -956,7 +956,7 @@ export function DiscoveryFilterSheet({
         );
       }
 
-      if (section.id === 'industryIds' || section.id === 'skillStrengthIds') {
+      if (section.id === 'industryIds' || section.id === 'skillStrengthIds' || section.id === 'roleNeededIds') {
         const searchableOptions = filterSearchableCheckboxOptions(section.options, searchTerm);
 
         return (
