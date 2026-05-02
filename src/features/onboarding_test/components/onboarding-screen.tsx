@@ -63,6 +63,11 @@ const GENDER_OPTION_ICONS: Record<string, string> = {
   female: 'female',
   male: 'male',
 };
+const PAID_POSITION_OPTION_ICONS: Record<string, string> = {
+  open: 'paid_position_open',
+  paid: 'paid_position_paid',
+  unpaid: 'paid_position_unpaid',
+};
 
 function isCompletedResponse(
   response:
@@ -107,27 +112,43 @@ function getRenderableQuestion(
   stepId: string,
   question: OnboardingQuestion
 ): OnboardingQuestion {
-  if (
-    stepId !== 'step_personal_gender' ||
-    question.id !== 'q_gender' ||
-    !question.options?.length
-  ) {
+  if (!question.options?.length) {
     return question;
   }
 
-  return {
-    ...question,
-    options: question.options.map((option) => {
-      const genderIcon = GENDER_OPTION_ICONS[option.value];
+  if (stepId === 'step_personal_gender' && question.id === 'q_gender') {
+    return {
+      ...question,
+      options: question.options.map((option) => {
+        const genderIcon = GENDER_OPTION_ICONS[option.value];
 
-      return genderIcon
-        ? {
-          ...option,
-          icon: genderIcon,
-        }
-        : option;
-    }),
-  };
+        return genderIcon
+          ? {
+            ...option,
+            icon: genderIcon,
+          }
+          : option;
+      }),
+    };
+  }
+
+  if (question.id === 'q_su_paid') {
+    return {
+      ...question,
+      options: question.options.map((option) => {
+        const paidPositionIcon = PAID_POSITION_OPTION_ICONS[option.value];
+
+        return paidPositionIcon
+          ? {
+            ...option,
+            icon: option.icon ?? paidPositionIcon,
+          }
+          : option;
+      }),
+    };
+  }
+
+  return question;
 }
 
 function shouldPageQuestions(questions: OnboardingQuestion[]) {

@@ -510,6 +510,24 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'cash',
     iconColor: '#4ADE80',
   },
+  paid_position_paid: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  paid_position_unpaid: {
+    bg: '#2A1620',
+    border: '#573044',
+    icon: 'close-circle-outline',
+    iconColor: '#FB7185',
+  },
+  paid_position_open: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubbles-outline',
+    iconColor: '#7DD3FC',
+  },
   strict: {
     bg: '#2A1C10',
     border: '#5A3C18',
