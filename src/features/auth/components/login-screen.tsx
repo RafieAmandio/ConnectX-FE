@@ -325,10 +325,10 @@ export function LoginScreen() {
                 variant="hero"
                 className="text-[34px] leading-[40px]"
                 style={{ color: 'white' }}>
-                Get Started
+                Get Started Now
               </AppText>
               <AppText className="text-[14px] leading-[20px] text-text-muted">
-                Create an account or log in to continue.
+                Create an account or log in to explore ConnectX.
               </AppText>
             </Animated.View>
 

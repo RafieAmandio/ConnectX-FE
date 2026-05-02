@@ -1822,7 +1822,7 @@ export function DiscoveryDeck() {
                       borderColor: '#EF4444',
                     }}>
                     <AppText className="text-[34px] leading-[38px]" style={{ color: '#F87171' }} variant="hero">
-                      PASS
+                      SKIP
                     </AppText>
                   </View>
                 </Animated.View>
@@ -1838,7 +1838,7 @@ export function DiscoveryDeck() {
                       borderColor: '#10B981',
                     }}>
                     <AppText className="text-[34px] leading-[38px]" style={{ color: '#34D399' }} variant="hero">
-                      LIKE
+                      CONNECT
                     </AppText>
                   </View>
                 </Animated.View>

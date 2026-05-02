@@ -1,7 +1,7 @@
 import type {
   DiscoveryFilterCatalogGroup,
-  DiscoveryFilterSection,
   DiscoveryFilterOptionsResponse,
+  DiscoveryFilterSection,
   DiscoveryGoalId,
   DiscoveryMode,
 } from '../types/discovery.types';
@@ -167,14 +167,14 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
     },
     {
       id: 'aiMatchPrecision',
-      title: 'AI Match Precision',
+      title: 'AI Connection Precision',
       type: 'group',
       access: createPremiumSectionAccess(),
       ui: { component: 'group', collapsible: true, defaultCollapsed: false },
       fields: [
         {
           id: 'minimumMatchScore',
-          title: 'Minimum Match Score',
+          title: 'Minimum Connection Score',
           type: 'range',
           ui: { component: 'slider', suffix: '%' },
           min: 50,
@@ -198,7 +198,7 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
         },
         {
           id: 'showAiExplainWhyMatch',
-          title: 'Show AI Explain Why Match',
+          title: 'Show AI Explain for this Connection',
           type: 'boolean',
           ui: { component: 'switch' },
           defaultValue: false,
@@ -356,7 +356,7 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
       fields: [
         {
           id: 'minimumMatchScore',
-          title: 'Minimum Match Score',
+          title: 'Minimum Connection Score',
           type: 'range',
           ui: { component: 'slider', suffix: '%' },
           min: 50,
@@ -379,7 +379,7 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
         },
         {
           id: 'showAiExplainWhyMatch',
-          title: 'Show AI Explain Why Match',
+          title: 'Show AI Explain for this Connection',
           type: 'boolean',
           ui: { component: 'switch' },
           defaultValue: false,
@@ -554,7 +554,7 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
         },
         {
           id: 'showAiExplainWhyMatch',
-          title: 'Show AI Explain Why Match',
+          title: 'Show AI Explain for this Connection',
           type: 'boolean',
           ui: { component: 'switch' },
           defaultValue: false,
