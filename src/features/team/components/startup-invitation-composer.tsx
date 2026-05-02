@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppCard, AppInput, AppText } from '@shared/components';
+import { AppInput, AppText } from '@shared/components';
 
 import { useCreateStartupInvitation, useStartupInvitationOptions } from '../hooks/use-team';
 import type { TeamInviteCommitment } from '../types/team.types';
@@ -311,16 +311,29 @@ export function StartupInvitationComposer({
   }, [closeAndReset, commitment, createInvitationMutation, email, equityPercent, onSuccess, roleId]);
 
   return (
-    <Modal animationType="fade" transparent visible={visible} onRequestClose={closeAndReset}>
-      <View className="flex-1 justify-end bg-black/60">
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={closeAndReset}>
+      <Pressable className="flex-1" onPress={closeAndReset} />
+      <View
+        style={{
+          backgroundColor: '#2C2C2C',
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          maxHeight: '85%',
+        }}>
+        {/* Drag handle */}
+        <View className="items-center pb-2 pt-3">
+          <View className="h-[5px] w-10 rounded-full bg-[#555]" />
+        </View>
         <ScrollView
+          bounces={false}
           contentContainerStyle={{
             paddingBottom: Math.max(insets.bottom + 20, 32),
-            paddingHorizontal: 16,
-            paddingTop: 48,
+            paddingHorizontal: 20,
+            paddingTop: 4,
           }}
-          keyboardShouldPersistTaps="handled">
-          <AppCard className="gap-4 border-white/10 bg-[#2C2C2C]">
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View className="gap-4">
             <View className="flex-row items-start justify-between gap-3">
               <View className="flex-1 gap-1">
                 <AppText variant="subtitle">
@@ -465,7 +478,7 @@ export function StartupInvitationComposer({
                 </AppText>
               </Pressable>
             </View>
-          </AppCard>
+          </View>
         </ScrollView>
       </View>
     </Modal>
