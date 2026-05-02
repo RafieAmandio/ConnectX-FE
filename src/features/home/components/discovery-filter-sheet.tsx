@@ -572,6 +572,52 @@ function filterOptionsBySearch(
   return options.filter((option) => option.label.toLowerCase().includes(normalizedSearch));
 }
 
+function filterSearchableCheckboxOptions(
+  options: DiscoveryFilterOption[] | undefined,
+  searchTerm: string
+) {
+  if (!options) {
+    return [];
+  }
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  if (!normalizedSearch) {
+    return options;
+  }
+
+  return options.filter((option) => {
+    const haystack = `${option.label} ${option.description ?? ''}`.toLowerCase();
+    return haystack.includes(normalizedSearch);
+  });
+}
+
+function getSearchableCheckboxPlaceholder(sectionId: string) {
+  switch (sectionId) {
+    case 'industryIds':
+      return 'Search industry';
+    case 'skillStrengthIds':
+      return 'Search skill strength';
+    default:
+      return 'Search';
+  }
+}
+
+function getSearchableCheckboxEmptyMessage(sectionId: string, searchTerm: string) {
+  if (searchTerm.trim()) {
+    return `No results for "${searchTerm}"`;
+  }
+
+  switch (sectionId) {
+    case 'industryIds':
+      return 'No industries available';
+    case 'skillStrengthIds':
+      return 'No skill strengths available';
+    default:
+      return 'No options available';
+  }
+}
+
 function getEmptyOptionsMessage(
   options: DiscoveryFilterOption[] | undefined,
   searchTerm: string
@@ -906,6 +952,104 @@ export function DiscoveryFilterSheet({
         return (
           <View className="gap-4 pt-3">
             {section.fields?.map((field) => renderField(section.id, field))}
+          </View>
+        );
+      }
+
+      if (section.id === 'industryIds' || section.id === 'skillStrengthIds') {
+        const searchableOptions = filterSearchableCheckboxOptions(section.options, searchTerm);
+
+        return (
+          <View className="gap-4 pt-3">
+            <View
+              className="flex-row items-center gap-3 rounded-full border px-5"
+              style={{
+                backgroundColor: searchTerm ? '#292929' : '#2C2C2C',
+                borderColor: searchTerm ? '#FF9A3E' : 'rgba(255, 255, 255, 0.1)',
+                height: 56,
+              }}>
+              <Ionicons color={searchTerm ? '#FF9A3E' : '#98A2B3'} name="search" size={20} />
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                className="flex-1 font-body text-[15px] text-white"
+                editable={!disabled}
+                onChangeText={(value) =>
+                  setSearchTerms((current) => ({
+                    ...current,
+                    [searchKey]: value,
+                  }))
+                }
+                placeholder={getSearchableCheckboxPlaceholder(section.id)}
+                placeholderTextColor="#8A8F99"
+                style={{ paddingVertical: 0 }}
+                value={searchTerm}
+              />
+              {searchTerm ? (
+                <Pressable
+                  disabled={disabled}
+                  hitSlop={10}
+                  onPress={() =>
+                    setSearchTerms((current) => ({
+                      ...current,
+                      [searchKey]: '',
+                    }))
+                  }>
+                  <Ionicons color="#98A2B3" name="close-circle" size={20} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              style={{ maxHeight: 320 }}>
+              <View className="gap-1">
+                {searchableOptions.map((option) => {
+                  const active = Array.isArray(sectionValue)
+                    ? sectionValue.includes(option.id)
+                    : sectionValue === option.id;
+
+                  return (
+                    <Pressable
+                      key={option.id}
+                      className="min-h-[54px] flex-row items-center gap-4 py-2"
+                      disabled={disabled}
+                      onPress={() => handleToggleSectionOption(section, option.id)}
+                      style={{ opacity: disabled ? 0.45 : 1 }}>
+                      <View className="flex-1 gap-1">
+                        <AppText
+                          className="text-[15px] leading-[21px]"
+                          style={{ color: active ? '#FF9A3E' : '#FFFFFF' }}>
+                          {option.label}
+                        </AppText>
+                        {option.description ? (
+                          <AppText className="text-[13px] leading-[18px]" tone="muted">
+                            {option.description}
+                          </AppText>
+                        ) : null}
+                      </View>
+                      <View
+                        className="h-7 w-7 items-center justify-center rounded-[7px] border-2"
+                        style={{
+                          backgroundColor: active ? '#FF9A3E' : 'transparent',
+                          borderColor: active ? '#FF9A3E' : '#5A6074',
+                        }}>
+                        {active ? <Ionicons color="#1A1208" name="checkmark" size={17} /> : null}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {searchableOptions.length === 0 ? (
+                <View className="px-4 py-8">
+                  <AppText align="center" tone="muted">
+                    {getSearchableCheckboxEmptyMessage(section.id, searchTerm)}
+                  </AppText>
+                </View>
+              ) : null}
+            </ScrollView>
           </View>
         );
       }
