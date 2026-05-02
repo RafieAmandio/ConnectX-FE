@@ -196,7 +196,7 @@ export function RegisterScreen() {
         }
       } else {
         setStatusMessage(
-          error instanceof Error ? error.message : 'Could not create your account. Try again.'
+          error instanceof Error ? error.message : 'Could Not Create Your Account. Try Again.'
         );
       }
     } finally {
@@ -230,7 +230,7 @@ export function RegisterScreen() {
                 <AppText
                   variant="hero"
                   className="text-[30px] leading-[36px] text-white">
-                  Create your account
+                  Create Your Account
                 </AppText>
                 <AppText className="text-[15px] leading-[22px] text-text-muted">
                   Join ConnectX and start meeting founders, teammates, and startups.
