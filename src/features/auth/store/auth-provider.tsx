@@ -437,7 +437,12 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
         await supabaseChatRepository.clearRealtimeSubscriptions();
         setIsChatEnabled(false);
 
-        if (isExternalOAuthMethod(sessionRef.current?.method)) {
+        const currentSession = sessionRef.current;
+
+        if (
+          currentSession?.authPhase === 'authenticated' &&
+          isExternalOAuthMethod(currentSession.method)
+        ) {
           await clearPersistedAuth();
           setSession(null);
           setShouldShowWelcomeLaunchSplash(false);

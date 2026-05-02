@@ -120,9 +120,14 @@ export function VerifyWhatsappScreen() {
     setIsSendingOtp(true);
 
     try {
-      await sendWhatsappOtp({ whatsapp_number: normalizedNumber });
+      const result = await sendWhatsappOtp({ whatsapp_number: normalizedNumber });
       setStatusTone('signal');
-      router.push('/verify-otp');
+      if (result.session.authPhase === 'pending_whatsapp_verification') {
+        router.push('/verify-otp');
+        return;
+      }
+
+      router.replace(getRouteForAuthPhase(result.session.authPhase));
     } catch (error: unknown) {
       setStatusTone('danger');
 

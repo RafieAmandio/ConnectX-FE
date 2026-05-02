@@ -213,6 +213,8 @@ export type WhatsappOtpMessageResponse = {
   status: 'success';
 };
 
+export type WhatsappOtpSuccessResponse = WhatsappOtpMessageResponse | AuthSuccessResponse;
+
 export type WhatsappOtpErrorResponse = {
   errors: {
     whatsapp_number: string[];

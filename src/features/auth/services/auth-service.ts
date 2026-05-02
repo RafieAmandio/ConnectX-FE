@@ -55,6 +55,7 @@ import type {
   VerifyWhatsappValidationErrorResponse,
   WhatsappOtpMessageResponse,
   WhatsappOtpPayload,
+  WhatsappOtpSuccessResponse,
 } from '../types/auth.types';
 
 const mockAuthSessionResponse = require('../mock/auth-session.response.json') as AuthSessionResponse;
@@ -510,6 +511,17 @@ function isEmailAlreadyVerifiedResponse(value: unknown): value is EmailAlreadyVe
   const candidate = value as Partial<EmailAlreadyVerifiedResponse>;
 
   return candidate.code === 'EMAIL_ALREADY_VERIFIED' && typeof candidate.message === 'string';
+}
+
+function isWhatsappAuthSuccessResponse(value: WhatsappOtpSuccessResponse): value is AuthSuccessResponse {
+  const candidate = value as Partial<AuthSuccessResponse>;
+
+  return (
+    value.next_step !== 'NEED_WHATSAPP_VERIFICATION' &&
+    typeof candidate.token === 'string' &&
+    candidate.token.trim().length > 0 &&
+    Boolean(candidate.data && !Array.isArray(candidate.data) && isStoredUserShape(candidate.data.user))
+  );
 }
 
 function isVerifyEmailErrorResponse(value: unknown): value is VerifyEmailErrorResponse {
@@ -1401,7 +1413,7 @@ export async function verifyEmailOtp(
 
 export async function sendWhatsappOtp(
   payload: WhatsappOtpPayload
-): Promise<SessionActionResult<WhatsappOtpMessageResponse>> {
+): Promise<SessionActionResult<WhatsappOtpSuccessResponse>> {
   const { session } = await requireStoredAuthState();
 
   if (isMockAuthFlowEnabled()) {
@@ -1413,10 +1425,32 @@ export async function sendWhatsappOtp(
 
     return persistSessionResult(nextSession, buildMockWhatsappOtpMessage(payload.whatsapp_number));
   }
-  const response = await apiFetch<WhatsappOtpMessageResponse>(AUTH_API.WHATSAPP_SEND_OTP, {
+  const response = await apiFetch<WhatsappOtpSuccessResponse>(AUTH_API.WHATSAPP_SEND_OTP, {
     method: 'POST',
     body: payload as any,
   });
+
+  if (isWhatsappAuthSuccessResponse(response)) {
+    const nextSession = createAuthSession({
+      displayName: session.displayName,
+      method: session.method,
+      nextStep: response.next_step,
+      user: {
+        ...response.data.user,
+        whatsapp_number: response.data.user.whatsapp_number ?? payload.whatsapp_number,
+      },
+    });
+
+    await Promise.all([
+      persistAuthSession(nextSession, response.token),
+      applySupabaseAuthResponse(response),
+    ]);
+
+    return {
+      response,
+      session: nextSession,
+    };
+  }
 
   const nextSession = withFreshWhatsappOtpSession(session, payload.whatsapp_number);
 
