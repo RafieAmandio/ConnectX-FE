@@ -532,10 +532,12 @@ function CheckboxRow({
 function SearchInput({
   disabled = false,
   onChangeText,
+  placeholder = 'Search',
   value,
 }: {
   disabled?: boolean;
   onChangeText: (value: string) => void;
+  placeholder?: string;
   value: string;
 }) {
   return (
@@ -547,7 +549,7 @@ function SearchInput({
         className="flex-1 font-body text-[14px] text-text"
         editable={!disabled}
         onChangeText={onChangeText}
-        placeholder="Search"
+        placeholder={placeholder}
         placeholderTextColor="#667085"
         value={value}
       />
@@ -627,6 +629,49 @@ function getEmptyOptionsMessage(
   }
 
   return 'No options available right now.';
+}
+
+function getOptionValue(option: DiscoveryFilterOption) {
+  return option.value ?? option.id;
+}
+
+function getSelectedOptionLabel(options: DiscoveryFilterOption[] | undefined, value: unknown) {
+  if (typeof value !== 'string' || !value) {
+    return '';
+  }
+
+  return options?.find((option) => getOptionValue(option) === value)?.label ?? '';
+}
+
+function filterSearchableDropdownOptions(
+  options: DiscoveryFilterOption[] | undefined,
+  searchTerm: string
+) {
+  if (!options) {
+    return [];
+  }
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  if (!normalizedSearch) {
+    return [];
+  }
+
+  return options.filter((option) => {
+    const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+    return haystack.includes(normalizedSearch);
+  });
+}
+
+function groupDropdownOptions(options: DiscoveryFilterOption[]) {
+  const groups = new Map<string, DiscoveryFilterOption[]>();
+
+  options.forEach((option) => {
+    const groupName = option.group || 'Other';
+    groups.set(groupName, [...(groups.get(groupName) ?? []), option]);
+  });
+
+  return Array.from(groups.entries());
 }
 
 export function DiscoveryFilterSheet({
@@ -871,6 +916,115 @@ export function DiscoveryFilterSheet({
             onChange={(value) => handleFieldValueChange(sectionId, field.id, value)}
             value={typeof fieldValue === 'number' ? fieldValue : Number(field.defaultValue ?? field.min ?? 0)}
           />
+        );
+      }
+
+      if (field.ui.component === 'searchable_dropdown') {
+        const selectedLabel = getSelectedOptionLabel(field.options, fieldValue);
+        const hasSearchTerm = searchTerm.trim().length > 0;
+        const visibleOptions = filterSearchableDropdownOptions(field.options, searchTerm);
+
+        return (
+          <View key={field.id} className="gap-3">
+            {field.title ? (
+              <AppText tone="muted" variant="label">
+                {field.title}
+              </AppText>
+            ) : null}
+            <View
+              className="gap-3 rounded-[18px] border p-3"
+              style={{
+                backgroundColor: '#252525',
+                borderColor: selectedLabel ? 'rgba(255, 154, 62, 0.28)' : 'rgba(255, 255, 255, 0.1)',
+                opacity: disabled ? 0.55 : 1,
+              }}>
+              {selectedLabel ? (
+                <View className="flex-row items-center justify-between gap-3 rounded-[14px] bg-[#2A2117] px-3 py-2.5">
+                  <View className="flex-1 gap-0.5">
+                    <AppText className="text-[12px]" tone="muted" variant="label">
+                      Selected city
+                    </AppText>
+                    <AppText className="text-[14px] text-[#FFB05B]" variant="bodyStrong">
+                      {selectedLabel}
+                    </AppText>
+                  </View>
+                  <Pressable
+                    disabled={disabled}
+                    hitSlop={10}
+                    onPress={() => handleFieldValueChange(sectionId, field.id, '')}>
+                    <Ionicons color="#98A2B3" name="close-circle" size={20} />
+                  </Pressable>
+                </View>
+              ) : null}
+
+              <SearchInput
+                disabled={disabled}
+                onChangeText={(value) =>
+                  setSearchTerms((current) => ({
+                    ...current,
+                    [searchKey]: value,
+                  }))
+                }
+                placeholder={field.placeholder ?? field.ui.placeholder ?? 'Search'}
+                value={searchTerm}
+              />
+
+              {hasSearchTerm ? (
+                <ScrollView
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                  style={{ maxHeight: 260 }}>
+                  <View className="gap-2">
+                    {groupDropdownOptions(visibleOptions).map(([groupName, options]) => (
+                      <View key={groupName} className="gap-1">
+                        <AppText className="px-1 text-[12px]" tone="muted" variant="label">
+                          {groupName}
+                        </AppText>
+                        {options.map((option) => {
+                          const optionValue = getOptionValue(option);
+                          const active = fieldValue === optionValue;
+
+                          return (
+                            <Pressable
+                              key={option.id}
+                              className="flex-row items-center justify-between gap-3 rounded-[14px] px-3 py-3"
+                              disabled={disabled}
+                              onPress={() => {
+                                handleFieldValueChange(sectionId, field.id, optionValue);
+                                setSearchTerms((current) => ({
+                                  ...current,
+                                  [searchKey]: '',
+                                }));
+                              }}
+                              style={{
+                                backgroundColor: active ? '#2A2117' : '#2C2C2C',
+                                borderCurve: 'continuous',
+                              }}>
+                              <AppText
+                                className="flex-1 text-[14px]"
+                                style={{ color: active ? '#FFB05B' : '#FFFFFF' }}
+                                variant="bodyStrong">
+                                {option.label}
+                              </AppText>
+                              {active ? <Ionicons color="#FF9A3E" name="checkmark" size={18} /> : null}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+                  {visibleOptions.length === 0 ? (
+                    <View className="px-4 py-6">
+                      <AppText align="center" tone="muted">
+                        {`No results for "${searchTerm}"`}
+                      </AppText>
+                    </View>
+                  ) : null}
+                </ScrollView>
+              ) : null}
+            </View>
+          </View>
         );
       }
 

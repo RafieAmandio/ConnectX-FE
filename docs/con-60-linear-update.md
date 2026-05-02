@@ -7,6 +7,7 @@ References:
 ## Summary
 - Discovery filters are frontend-owned.
 - The backend contract only owns:
+  - `GET /api/v1/discovery/filter-options`
   - `POST /api/v1/discovery/cards`
   - `POST /api/v1/discovery/cards/:targetId/action`
 - The swipe feed response is a discriminated union:
@@ -43,10 +44,58 @@ The backend resolves the current user from the token.
 - Distance calculation
 - Excluding the current user and already-swiped targets
 
-### Important rule
-There is no `GET /api/v1/discovery/filter-options` endpoint in this contract.
+### Filter options rule
+`GET /api/v1/discovery/filter-options` provides backend-owned dynamic filter options for the active discovery mode.
 
-The frontend ships the filter configuration locally and sends only the selected ids/values when the user presses `Generate Candidates`.
+The frontend owns section order, local premium presentation, and visual behavior. The backend owns canonical dynamic option values, including city options. The frontend sends only selected ids/values when the user presses `Generate Candidates`.
+
+## Filter Options Endpoint
+
+### Endpoint
+
+```http
+GET /api/v1/discovery/filter-options?mode=finding_cofounder
+```
+
+### Query Parameters
+- `mode`: one of `finding_cofounder`, `building_team`, `explore_startups`, `joining_startups`.
+
+### Response Shape
+
+```json
+{
+  "success": true,
+  "message": "Discovery filter options fetched successfully",
+  "data": {
+    "mode": "finding_cofounder",
+    "city": {
+      "id": "q_city",
+      "type": "searchable_dropdown",
+      "placeholder": "Search a city",
+      "required": true,
+      "meta": { "searchable": true },
+      "options": [
+        { "id": "opt_city_jakarta", "label": "Jakarta", "value": "jakarta", "group": "Indonesia" },
+        { "id": "opt_city_bandung", "label": "Bandung", "value": "bandung", "group": "Indonesia" },
+        { "id": "opt_city_singapore", "label": "Singapore", "value": "singapore", "group": "Singapore" },
+        { "id": "opt_city_bangalore", "label": "Bangalore", "value": "bangalore", "group": "India" },
+        { "id": "opt_city_hcmc", "label": "Ho Chi Minh City", "value": "hcmc", "group": "Vietnam" },
+        { "id": "opt_city_dubai", "label": "Dubai", "value": "dubai", "group": "United Arab Emirates" }
+      ]
+    },
+    "industries": [],
+    "skills": [],
+    "roles": [],
+    "languages": []
+  }
+}
+```
+
+### City Filter Rules
+- `city.id` is the UI/question id from the filter-options response.
+- `city.options[].id` is the UI option id.
+- `city.options[].value` is the canonical value sent in `POST /api/v1/discovery/cards`.
+- The frontend sends selected city as `filters.locationAvailability.city`.
 
 ## Premium Validation Rules
 - Non-premium users can call discovery cards with:
@@ -115,6 +164,7 @@ Premium sections may carry local frontend metadata such as:
       - `wa_onsite`
       - `wa_hybrid`
       - `wa_remote`
+    - `city`
     - `remoteReady`
     - `distanceKm`
 - `commitmentIds`
@@ -194,6 +244,7 @@ Premium sections may carry local frontend metadata such as:
       - `wa_onsite`
       - `wa_hybrid`
       - `wa_remote`
+    - `city`
     - `remoteReady`
     - `distanceKm`
 - `roleNeededIds`
@@ -283,6 +334,7 @@ Premium sections may carry local frontend metadata such as:
       - `wa_onsite`
       - `wa_hybrid`
       - `wa_remote`
+    - `city`
     - `remoteReady`
     - `distanceKm`
 - `roleNeededIds`
@@ -351,6 +403,7 @@ Premium sections may carry local frontend metadata such as:
       - `wa_onsite`
       - `wa_hybrid`
       - `wa_remote`
+    - `city`
     - `remoteReady`
     - `distanceKm`
 - premium `founderQuality`
@@ -425,6 +478,7 @@ The top-level shape is shared across all modes:
     "industryIds": ["ind_ai", "ind_fintech"],
     "locationAvailability": {
       "workArrangementIds": ["wa_remote", "wa_hybrid"],
+      "city": "jakarta",
       "remoteReady": true,
       "latitude": 37.785834,
       "longitude": -122.406417,
@@ -470,6 +524,7 @@ The top-level shape is shared across all modes:
     "industryIds": ["ind_ai", "ind_saas"],
     "locationAvailability": {
       "workArrangementIds": ["wa_onsite", "wa_hybrid", "wa_remote"],
+      "city": "singapore",
       "remoteReady": true,
       "latitude": 37.785834,
       "longitude": -122.406417,
@@ -521,6 +576,7 @@ The top-level shape is shared across all modes:
     "industryIds": ["ind_ai", "ind_fintech"],
     "locationAvailability": {
       "workArrangementIds": ["wa_remote", "wa_hybrid"],
+      "city": "bangalore",
       "remoteReady": true,
       "latitude": 37.785834,
       "longitude": -122.406417,
@@ -562,6 +618,7 @@ The top-level shape is shared across all modes:
     "founderTypeIds": ["ft_technical_founder", "ft_business_founder"],
     "locationAvailability": {
       "workArrangementIds": ["wa_remote", "wa_hybrid"],
+      "city": "dubai",
       "remoteReady": true,
       "latitude": 37.785834,
       "longitude": -122.406417,

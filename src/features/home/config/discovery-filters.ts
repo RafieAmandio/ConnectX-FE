@@ -1,5 +1,6 @@
 import type {
   DiscoveryFilterCatalogGroup,
+  DiscoveryFilterField,
   DiscoveryFilterOptionsResponse,
   DiscoveryFilterSection,
   DiscoveryGoalId,
@@ -704,6 +705,33 @@ function getCatalogOptions(
   }
 }
 
+function getCityFilterField(filterOptionsResponse?: DiscoveryFilterOptionsResponse): DiscoveryFilterField | null {
+  const city = filterOptionsResponse?.data.city;
+
+  if (!city || city.type !== 'searchable_dropdown') {
+    return null;
+  }
+
+  return {
+    id: 'city',
+    title: city.label ?? '',
+    type: city.type,
+    ui: {
+      component: 'searchable_dropdown',
+      placeholder: city.placeholder,
+      searchable: city.meta?.searchable ?? true,
+    },
+    options: city.options.map((option) => ({
+      id: option.id,
+      label: option.label,
+      group: option.group,
+      value: option.value,
+    })),
+    placeholder: city.placeholder,
+    required: city.required,
+  };
+}
+
 export function getDiscoveryFilterSections(
   mode: DiscoveryMode,
   filterOptionsResponse?: DiscoveryFilterOptionsResponse
@@ -716,6 +744,20 @@ export function getDiscoveryFilterSections(
     }
 
     if (nextSection.fields?.length) {
+      const cityFilterField =
+        nextSection.id === 'locationAvailability' ? getCityFilterField(filterOptionsResponse) : null;
+
+      if (cityFilterField && !nextSection.fields.some((field) => field.id === cityFilterField.id)) {
+        const workArrangementIndex = nextSection.fields.findIndex((field) => field.id === 'workArrangementIds');
+        const insertIndex = workArrangementIndex >= 0 ? workArrangementIndex + 1 : 0;
+
+        nextSection.fields = [
+          ...nextSection.fields.slice(0, insertIndex),
+          cityFilterField,
+          ...nextSection.fields.slice(insertIndex),
+        ];
+      }
+
       nextSection.fields = nextSection.fields.map((field) => {
         if (!CATALOG_FIELD_IDS.has(field.id)) {
           return field;

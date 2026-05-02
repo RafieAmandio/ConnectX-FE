@@ -170,6 +170,7 @@ export type DiscoveryFilterUiConfig = {
   component: DiscoveryFilterUiComponent;
   collapsible?: boolean;
   defaultCollapsed?: boolean;
+  placeholder?: string;
   searchable?: boolean;
   suffix?: string;
 };
@@ -178,11 +179,15 @@ export type DiscoveryFilterOption = {
   id: string;
   label: string;
   description?: string;
+  group?: string | null;
+  value?: string;
 };
 
 export type DiscoveryFilterCatalogOption = {
   id: string;
   label: string;
+  group?: string | null;
+  value?: string;
 };
 
 export type DiscoveryFilterCatalogGroup = {
@@ -191,11 +196,32 @@ export type DiscoveryFilterCatalogGroup = {
   options: DiscoveryFilterCatalogOption[];
 };
 
+export type DiscoveryFilterQuestionOption = {
+  id: string;
+  label: string;
+  value: string;
+  group?: string | null;
+};
+
+export type DiscoveryFilterQuestion = {
+  id: string;
+  type: 'searchable_dropdown' | string;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  meta?: {
+    searchable?: boolean;
+    [key: string]: unknown;
+  };
+  options: DiscoveryFilterQuestionOption[];
+};
+
 export type DiscoveryFilterOptionsResponse = {
   success: true;
   message: string;
   data: {
     mode: DiscoveryMode;
+    city?: DiscoveryFilterQuestion;
     industries: DiscoveryFilterCatalogGroup[];
     skills: DiscoveryFilterCatalogGroup[];
     roles: DiscoveryFilterCatalogGroup[];
@@ -221,6 +247,8 @@ export type DiscoveryFilterField = {
   max?: number;
   step?: number;
   defaultValue?: string | string[] | number | boolean;
+  placeholder?: string;
+  required?: boolean;
 };
 
 export type DiscoveryFilterSection = {

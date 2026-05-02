@@ -1573,16 +1573,6 @@ export function DiscoveryDeck() {
           nextDeviceCoordinates = await loadDeviceCoordinates(isRecordValue(sanitizedNextFilters.locationAvailability));
         }
 
-        console.log('applyDiscoveryFilters payload', {
-          context: {
-            mode,
-          },
-          filters: {
-            goalId: GOAL_ID_BY_MODE[mode],
-            ...withDeviceCoordinates(sanitizedNextFilters, nextDeviceCoordinates),
-          },
-        });
-
         setAppliedMode(mode);
         setAppliedFilters(nextFilters);
         setSheetMode(mode);

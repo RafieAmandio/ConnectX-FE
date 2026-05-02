@@ -4,6 +4,21 @@
     "message": "Discovery filter options fetched successfully",
     "data": {
       "mode": "finding_cofounder",
+      "city": {
+        "id": "q_city",
+        "type": "searchable_dropdown",
+        "placeholder": "Search a city",
+        "required": true,
+        "meta": { "searchable": true },
+        "options": [
+          { "id": "opt_city_jakarta", "label": "Jakarta", "value": "jakarta", "group": "Indonesia" },
+          { "id": "opt_city_bandung", "label": "Bandung", "value": "bandung", "group": "Indonesia" },
+          { "id": "opt_city_singapore", "label": "Singapore", "value": "singapore", "group": "Singapore" },
+          { "id": "opt_city_bangalore", "label": "Bangalore", "value": "bangalore", "group": "India" },
+          { "id": "opt_city_hcmc", "label": "Ho Chi Minh City", "value": "hcmc", "group": "Vietnam" },
+          { "id": "opt_city_dubai", "label": "Dubai", "value": "dubai", "group": "United Arab Emirates" }
+        ]
+      },
       "industries": [
         {
           "id": "grp_industry_core_technology",
@@ -53,6 +68,21 @@
     "message": "Discovery filter options fetched successfully",
     "data": {
       "mode": "building_team",
+      "city": {
+        "id": "q_city",
+        "type": "searchable_dropdown",
+        "placeholder": "Search a city",
+        "required": true,
+        "meta": { "searchable": true },
+        "options": [
+          { "id": "opt_city_jakarta", "label": "Jakarta", "value": "jakarta", "group": "Indonesia" },
+          { "id": "opt_city_bandung", "label": "Bandung", "value": "bandung", "group": "Indonesia" },
+          { "id": "opt_city_singapore", "label": "Singapore", "value": "singapore", "group": "Singapore" },
+          { "id": "opt_city_bangalore", "label": "Bangalore", "value": "bangalore", "group": "India" },
+          { "id": "opt_city_hcmc", "label": "Ho Chi Minh City", "value": "hcmc", "group": "Vietnam" },
+          { "id": "opt_city_dubai", "label": "Dubai", "value": "dubai", "group": "United Arab Emirates" }
+        ]
+      },
       "industries": [
         {
           "id": "grp_industry_core_technology",
@@ -155,6 +185,21 @@
     "message": "Discovery filter options fetched successfully",
     "data": {
       "mode": "explore_startups",
+      "city": {
+        "id": "q_city",
+        "type": "searchable_dropdown",
+        "placeholder": "Search a city",
+        "required": true,
+        "meta": { "searchable": true },
+        "options": [
+          { "id": "opt_city_jakarta", "label": "Jakarta", "value": "jakarta", "group": "Indonesia" },
+          { "id": "opt_city_bandung", "label": "Bandung", "value": "bandung", "group": "Indonesia" },
+          { "id": "opt_city_singapore", "label": "Singapore", "value": "singapore", "group": "Singapore" },
+          { "id": "opt_city_bangalore", "label": "Bangalore", "value": "bangalore", "group": "India" },
+          { "id": "opt_city_hcmc", "label": "Ho Chi Minh City", "value": "hcmc", "group": "Vietnam" },
+          { "id": "opt_city_dubai", "label": "Dubai", "value": "dubai", "group": "United Arab Emirates" }
+        ]
+      },
       "industries": [
         {
           "id": "grp_industry_core_technology",
@@ -215,6 +260,21 @@
     "message": "Discovery filter options fetched successfully",
     "data": {
       "mode": "joining_startups",
+      "city": {
+        "id": "q_city",
+        "type": "searchable_dropdown",
+        "placeholder": "Search a city",
+        "required": true,
+        "meta": { "searchable": true },
+        "options": [
+          { "id": "opt_city_jakarta", "label": "Jakarta", "value": "jakarta", "group": "Indonesia" },
+          { "id": "opt_city_bandung", "label": "Bandung", "value": "bandung", "group": "Indonesia" },
+          { "id": "opt_city_singapore", "label": "Singapore", "value": "singapore", "group": "Singapore" },
+          { "id": "opt_city_bangalore", "label": "Bangalore", "value": "bangalore", "group": "India" },
+          { "id": "opt_city_hcmc", "label": "Ho Chi Minh City", "value": "hcmc", "group": "Vietnam" },
+          { "id": "opt_city_dubai", "label": "Dubai", "value": "dubai", "group": "United Arab Emirates" }
+        ]
+      },
       "industries": [
         {
           "id": "grp_industry_core_technology",
