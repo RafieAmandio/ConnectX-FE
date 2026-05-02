@@ -236,6 +236,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       return {
         ...nextSession,
         authSessionSyncedAt: new Date().toISOString(),
+        authSessionSource: nextSession.authSessionSource ?? null,
         defaultDiscoveryMode: nextSession.defaultDiscoveryMode ?? null,
         premium: nextSession.premium ?? { boost: 0, spotlight: 0, isPremium: false },
       };

@@ -108,6 +108,11 @@ type SessionActionResult<TResponse> = {
   session: AuthSession;
 };
 
+type AuthSessionResponseResult = {
+  response: AuthSessionResponse;
+  source: 'api' | 'mock';
+};
+
 type GoogleOAuthVerifyResponse = AuthSuccessResponse & {
   data: AuthSuccessResponse['data'] & {
     oauth_provider: 'google';
@@ -247,6 +252,7 @@ function createAuthSession({
   return {
     authPhase,
     authSessionSyncedAt: null,
+    authSessionSource: null,
     defaultDiscoveryMode: null,
     displayName: normalizedDisplayName || 'ConnectX Member',
     email: normalizedEmail,
@@ -282,6 +288,7 @@ function createPendingLoginOtpSession(email: string): AuthSession {
   return {
     authPhase: 'pending_login_otp',
     authSessionSyncedAt: null,
+    authSessionSource: null,
     defaultDiscoveryMode: null,
     displayName: buildDisplayNameFromEmail(normalizedEmail) || 'ConnectX Member',
     email: normalizedEmail,
@@ -326,6 +333,7 @@ function createLinkedInPendingWhatsappSession(): AuthSession {
   return {
     authPhase: 'pending_whatsapp_verification',
     authSessionSyncedAt: null,
+    authSessionSource: null,
     defaultDiscoveryMode: null,
     displayName: 'ConnectX Member',
     email: 'connectx-member@linkedin.local',
@@ -731,7 +739,11 @@ function normalizePremiumState(value: AuthPremiumState | null | undefined): Auth
   };
 }
 
-function mergeAuthSessionResponse(session: AuthSession, response: AuthSessionResponse): AuthSession {
+function mergeAuthSessionResponse(
+  session: AuthSession,
+  response: AuthSessionResponse,
+  source: AuthSessionResponseResult['source']
+): AuthSession {
   const responseUser = response.data.user;
   const normalizedEmail = normalizeEmail(responseUser.email || session.email);
   const authPhase = resolveAuthPhase(responseUser);
@@ -740,6 +752,7 @@ function mergeAuthSessionResponse(session: AuthSession, response: AuthSessionRes
     ...session,
     authPhase,
     authSessionSyncedAt: new Date().toISOString(),
+    authSessionSource: source,
     defaultDiscoveryMode: response.data.discovery_preferences.default_discovery_mode,
     email: normalizedEmail,
     onboardingCompletedAt:
@@ -755,29 +768,42 @@ function mergeAuthSessionResponse(session: AuthSession, response: AuthSessionRes
   };
 }
 
-export async function fetchAuthSession() {
+async function fetchAuthSessionWithSource(): Promise<AuthSessionResponseResult> {
   if (isMockAuthFlowEnabled()) {
-    return mockAuthSessionResponse;
+    return {
+      response: mockAuthSessionResponse,
+      source: 'mock',
+    };
   }
 
   try {
-    return await apiFetch<AuthSessionResponse>(AUTH_API.SESSION);
+    return {
+      response: await apiFetch<AuthSessionResponse>(AUTH_API.SESSION),
+      source: 'api',
+    };
   } catch (error) {
     if (isExpoDevModeEnabled()) {
       console.warn('[auth:session] falling back to mock session response', error);
-      return mockAuthSessionResponse;
+      return {
+        response: mockAuthSessionResponse,
+        source: 'mock',
+      };
     }
 
     throw error;
   }
 }
 
+export async function fetchAuthSession() {
+  return (await fetchAuthSessionWithSource()).response;
+}
+
 export async function refreshAuthSession(baseSession?: AuthSession): Promise<SessionActionResult<AuthSessionResponse>> {
   const { session } = baseSession
     ? { session: baseSession }
     : await requireStoredAuthStateWithOptions({ requireToken: true });
-  const response = await fetchAuthSession();
-  const nextSession = mergeAuthSessionResponse(session, response);
+  const { response, source } = await fetchAuthSessionWithSource();
+  const nextSession = mergeAuthSessionResponse(session, response, source);
 
   await replaceStoredSession(nextSession);
 
@@ -1524,6 +1550,7 @@ export async function enterWithDevBypassSession() {
   const session: AuthSession = {
     authPhase: 'authenticated',
     authSessionSyncedAt: verifiedAt,
+    authSessionSource: 'mock',
     defaultDiscoveryMode: mockAuthSessionResponse.data.discovery_preferences.default_discovery_mode,
     displayName: 'Dev Explorer',
     email: 'dev-bypass@connectx.local',

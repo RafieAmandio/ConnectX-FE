@@ -41,6 +41,7 @@ export type AuthPremiumState = {
 export type AuthSession = {
   authPhase: AuthPhase;
   authSessionSyncedAt?: string | null;
+  authSessionSource?: 'api' | 'mock' | null;
   defaultDiscoveryMode?: DiscoveryMode | null;
   displayName: string;
   email: string;

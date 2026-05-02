@@ -1063,7 +1063,11 @@ export function DiscoveryDeck() {
       return;
     }
 
-    const defaultMode = session?.defaultDiscoveryMode ?? loadOnboardingDiscoveryPreference()?.mode ?? null;
+    const localOnboardingMode = loadOnboardingDiscoveryPreference()?.mode ?? null;
+    const defaultMode =
+      session?.authSessionSource === 'api'
+        ? session.defaultDiscoveryMode
+        : localOnboardingMode ?? session?.defaultDiscoveryMode ?? null;
 
     if (defaultMode) {
       setSheetMode(defaultMode);
@@ -1072,7 +1076,7 @@ export function DiscoveryDeck() {
 
     setAppliedFilters({});
     setHasResolvedAuthSessionSetup(true);
-  }, [hasSyncedAuthSession, isAuthHydrated, session?.defaultDiscoveryMode]);
+  }, [hasSyncedAuthSession, isAuthHydrated, session?.authSessionSource, session?.defaultDiscoveryMode]);
 
   const filterOptionsQuery = useDiscoveryFilterOptions(sheetMode, isFilterVisible);
   const matchingFilterOptionsResponse =
@@ -1720,6 +1724,7 @@ export function DiscoveryDeck() {
           {
             authSession: {
               authSessionSyncedAt: session?.authSessionSyncedAt ?? null,
+              authSessionSource: session?.authSessionSource ?? null,
               defaultDiscoveryMode: session?.defaultDiscoveryMode ?? null,
               premium: session?.premium ?? null,
             },
