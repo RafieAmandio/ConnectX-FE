@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 import Animated, {
   FadeInDown,
   useAnimatedProps,
@@ -125,6 +125,7 @@ function getLineStroke(state: LineState) {
 }
 
 export function NetworkVisualization() {
+  const { width } = useWindowDimensions();
   const [phase, setPhase] = React.useState<Phase>('idle');
   const [currentSeq, setCurrentSeq] = React.useState(0);
   const [scanProgress, setScanProgress] = React.useState<number[]>([]);
@@ -244,117 +245,122 @@ export function NetworkVisualization() {
           y: connectedNodes.reduce((sum, idx) => sum + NODES[idx].y, 0) / connectedNodes.length,
         }
       : null;
+  const isCompactWidth = width < 390;
+  const maxWidth = width >= 400 ? 300 : 280;
 
   return (
-    <View
-      className="relative w-full select-none"
-      style={{
-        aspectRatio: 4 / 3,
-        maxHeight: 220,
-        maxWidth: 260,
-      }}>
-      <Svg
-        height="100%"
-        preserveAspectRatio="xMidYMid meet"
-        style={{ bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 }}
-        viewBox="0 0 100 100"
-        width="100%">
-        {ALL_CONNECTIONS.map(([from, to]) => {
-          const a = NODES[from];
-          const b = NODES[to];
-          const state = getLineVisualState(from, to, hoveredNode, matchedEdges);
-          const stroke = getLineStroke(state);
-
-          return (
-            <Line
-              key={`line-${from}-${to}`}
-              stroke={stroke.color}
-              strokeLinecap="round"
-              strokeWidth={stroke.width}
-              x1={a.x}
-              x2={b.x}
-              y1={a.y}
-              y2={b.y}
-            />
-          );
-        })}
-
-        {matchedEdges.map(([from, to]) => {
-          const a = NODES[from];
-          const b = NODES[to];
-
-          return (
-            <React.Fragment key={`glow-${from}-${to}`}>
-              <Line
-                stroke={primaryAlpha(0.18)}
-                strokeLinecap="round"
-                strokeWidth={2.8}
-                x1={a.x}
-                x2={b.x}
-                y1={a.y}
-                y2={b.y}
-              />
-              <Line
-                stroke={primaryAlpha(0.72)}
-                strokeLinecap="round"
-                strokeWidth={1.2}
-                x1={a.x}
-                x2={b.x}
-                y1={a.y}
-                y2={b.y}
-              />
-            </React.Fragment>
-          );
-        })}
-
-        <AnimatedCircle
-          animatedProps={pulseAnimatedProps}
-          fill={PRIMARY}
-          r={1.2}
-          stroke={primaryAlpha(0.35)}
-          strokeWidth={1.4}
-        />
-      </Svg>
-
-      {groupGlow ? <FormationGlow x={groupGlow.x} y={groupGlow.y} /> : null}
-      {phase === 'activation' ? <ActivationRipple /> : null}
-
+    <View className="w-full items-center select-none">
       <View
-        pointerEvents="none"
+        className="relative w-full"
         style={{
-          alignItems: 'center',
-          justifyContent: 'center',
-          left: '48%',
-          position: 'absolute',
-          top: '46%',
-          transform: [{ translateX: -96 }, { translateY: -12 }],
-          width: 192,
+          aspectRatio: 4 / 3,
+          maxHeight: 230,
+          maxWidth,
         }}>
-        {statusText ? (
-          <Animated.View key={statusText} entering={FadeInDown.duration(360)}>
-            <AppText
-              align="center"
-              className="text-[12px] font-semibold leading-[16px]"
-              numberOfLines={1}
-              style={{ color: PRIMARY }}>
-              {statusText}
-            </AppText>
-          </Animated.View>
-        ) : null}
-      </View>
+        <Svg
+          height="100%"
+          preserveAspectRatio="xMidYMid meet"
+          style={{ bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 }}
+          viewBox="0 0 100 100"
+          width="100%">
+          {ALL_CONNECTIONS.map(([from, to]) => {
+            const a = NODES[from];
+            const b = NODES[to];
+            const state = getLineVisualState(from, to, hoveredNode, matchedEdges);
+            const stroke = getLineStroke(state);
 
-      {NODES.map((node, idx) => (
-        <NetworkNode
-          connectedNodes={connectedNodes}
-          hoveredNode={hoveredNode}
-          idx={idx}
-          key={node.id}
-          node={node}
-          phase={phase}
-          scanProgress={scanProgress}
-          setHoveredNode={setHoveredNode}
-        />
-      ))}
+            return (
+              <Line
+                key={`line-${from}-${to}`}
+                stroke={stroke.color}
+                strokeLinecap="round"
+                strokeWidth={stroke.width}
+                x1={a.x}
+                x2={b.x}
+                y1={a.y}
+                y2={b.y}
+              />
+            );
+          })}
+
+          {matchedEdges.map(([from, to]) => {
+            const a = NODES[from];
+            const b = NODES[to];
+
+            return (
+              <React.Fragment key={`glow-${from}-${to}`}>
+                <Line
+                  stroke={primaryAlpha(0.18)}
+                  strokeLinecap="round"
+                  strokeWidth={2.8}
+                  x1={a.x}
+                  x2={b.x}
+                  y1={a.y}
+                  y2={b.y}
+                />
+                <Line
+                  stroke={primaryAlpha(0.72)}
+                  strokeLinecap="round"
+                  strokeWidth={1.2}
+                  x1={a.x}
+                  x2={b.x}
+                  y1={a.y}
+                  y2={b.y}
+                />
+              </React.Fragment>
+            );
+          })}
+
+          <AnimatedCircle
+            animatedProps={pulseAnimatedProps}
+            fill={PRIMARY}
+            r={1.2}
+            stroke={primaryAlpha(0.35)}
+            strokeWidth={1.4}
+          />
+        </Svg>
+
+        {groupGlow ? <FormationGlow x={groupGlow.x} y={groupGlow.y} /> : null}
+        {phase === 'activation' ? <ActivationRipple /> : null}
+
+        <View
+          pointerEvents="none"
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            left: '48%',
+            position: 'absolute',
+            top: '46%',
+            transform: [{ translateX: -96 }, { translateY: -12 }],
+            width: 192,
+          }}>
+          {statusText ? (
+            <Animated.View key={statusText} entering={FadeInDown.duration(360)}>
+              <AppText
+                align="center"
+                className="text-[12px] font-semibold leading-[16px]"
+                numberOfLines={1}
+                style={{ color: PRIMARY }}>
+                {statusText}
+              </AppText>
+            </Animated.View>
+          ) : null}
+        </View>
+
+        {NODES.map((node, idx) => (
+          <NetworkNode
+            connectedNodes={connectedNodes}
+            hoveredNode={hoveredNode}
+            idx={idx}
+            key={node.id}
+            node={node}
+            phase={phase}
+            scanProgress={scanProgress}
+            setHoveredNode={setHoveredNode}
+            size={isCompactWidth ? 'compact' : 'regular'}
+          />
+        ))}
+      </View>
     </View>
   );
 }
@@ -436,6 +442,7 @@ function NetworkNode({
   phase,
   scanProgress,
   setHoveredNode,
+  size,
 }: {
   connectedNodes: number[];
   hoveredNode: number | null;
@@ -444,6 +451,7 @@ function NetworkNode({
   phase: Phase;
   scanProgress: number[];
   setHoveredNode: React.Dispatch<React.SetStateAction<number | null>>;
+  size: 'compact' | 'regular';
 }) {
   const state = getNodeVisualState(idx, hoveredNode, connectedNodes, scanProgress);
   const isHighlighted =
@@ -453,6 +461,10 @@ function NetworkNode({
   const y = useSharedValue(0);
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
+  const nodeWidth = size === 'compact' ? 112 : 132;
+  const emojiFontSize = size === 'compact' ? 13 : 14;
+  const labelFontSize = size === 'compact' ? 11 : 12;
+  const labelLineHeight = size === 'compact' ? 15 : 16;
 
   React.useEffect(() => {
     opacity.value = withDelay(node.delay * 1000 + 200, withTiming(1, { duration: 500 }));
@@ -485,7 +497,11 @@ function NetworkNode({
 
   const nodeStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateX: -66 + x.value }, { translateY: -16 + y.value }, { scale: scale.value }],
+    transform: [
+      { translateX: -nodeWidth / 2 + x.value },
+      { translateY: -16 + y.value },
+      { scale: scale.value },
+    ],
   }));
 
   return (
@@ -496,7 +512,7 @@ function NetworkNode({
           left: `${node.x}%`,
           position: 'absolute',
           top: `${node.y}%`,
-          width: 132,
+          width: nodeWidth,
         },
         nodeStyle,
       ]}>
@@ -507,7 +523,7 @@ function NetworkNode({
         onPressIn={() => setHoveredNode(idx)}
         onPressOut={() => setHoveredNode(null)}>
         <View
-          className="flex-row items-center gap-2 rounded-lg border px-3 py-1.5"
+          className="flex-row items-center rounded-lg border py-1.5"
           style={{
             backgroundColor:
               state === 'matched'
@@ -531,12 +547,18 @@ function NetworkNode({
                       : 'rgba(38, 42, 51, 0.56)',
             borderCurve: 'continuous',
             boxShadow: isHighlighted ? `0 0 18px ${primaryAlpha(state === 'matched' ? 0.35 : 0.2)}` : undefined,
+            columnGap: size === 'compact' ? 6 : 8,
+            paddingHorizontal: size === 'compact' ? 9 : 12,
           }}>
-          <AppText className="text-[14px] leading-[18px]">{node.emoji}</AppText>
+          <AppText style={{ fontSize: emojiFontSize, lineHeight: 18 }}>{node.emoji}</AppText>
           <AppText
-            className="text-[12px] font-semibold leading-[16px]"
+            className="font-semibold"
             numberOfLines={1}
-            style={{ color: isHighlighted ? Colors.dark.text : Colors.dark.textMuted }}>
+            style={{
+              color: isHighlighted ? Colors.dark.text : Colors.dark.textMuted,
+              fontSize: labelFontSize,
+              lineHeight: labelLineHeight,
+            }}>
             {node.label}
           </AppText>
         </View>

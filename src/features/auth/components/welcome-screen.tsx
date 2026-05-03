@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +19,7 @@ const CONNECTX_LOGO = require('../../../../assets/images/logo_welcome.png');
 export function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const {
     authPhase,
     dismissWelcomeLaunchSplash,
@@ -62,6 +63,13 @@ export function WelcomeScreen() {
     return <SplashScreen showLoader={false} />;
   }
 
+  const isCompactWidth = width < 390;
+  const horizontalPadding = width >= 420 ? 36 : 24;
+  const titleFontSize = isCompactWidth ? 30 : 34;
+  const titleLineHeight = isCompactWidth ? 36 : 40;
+  const logoWidth = isCompactWidth ? 132 : 148;
+  const logoHeight = isCompactWidth ? 30 : 34;
+
   return (
     <View className="flex-1" style={{ backgroundColor: Colors.dark.canvas }}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -71,7 +79,7 @@ export function WelcomeScreen() {
           flexGrow: 1,
           justifyContent: 'space-between',
           paddingBottom: Math.max(insets.bottom + 24, 40),
-          paddingHorizontal: 24,
+          paddingHorizontal: horizontalPadding,
           paddingTop: Math.max(insets.top + 48, 88),
         }}>
 
@@ -81,24 +89,28 @@ export function WelcomeScreen() {
           <NetworkVisualization />
 
           <View className="items-center gap-3">
-            <View className="flex-row items-end justify-center gap-2">
+            <View className="flex-row items-end justify-center gap-1.5">
               <AppText
                 align="center"
                 variant="hero"
-                className="text-[34px] leading-[40px] text-white"
-                style={{ lineHeight: 40 }}>
+                className="text-white"
+                style={{ fontSize: titleFontSize, lineHeight: titleLineHeight }}>
                 Welcome to
               </AppText>
               <Image
                 source={CONNECTX_LOGO}
                 contentFit="contain"
-                style={{ height: 34, marginBottom: 7, width: 148 }}
+                style={{ height: logoHeight, marginBottom: isCompactWidth ? 6 : 7, width: logoWidth }}
               />
             </View>
             <AppText
               align="center"
-              className="max-w-[330px] text-[17px] leading-[26px]"
-              style={{ color: Colors.dark.textMuted }}>
+              className="max-w-[330px]"
+              style={{
+                color: Colors.dark.textMuted,
+                fontSize: isCompactWidth ? 16 : 17,
+                lineHeight: isCompactWidth ? 24 : 26,
+              }}>
               Build your startup with co-founders, early teams, and driven builders all in one place.
             </AppText>
           </View>
