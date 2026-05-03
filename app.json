@@ -23,6 +23,7 @@
     },
     "android": {
       "package": "com.connectx.app",
+      "softwareKeyboardLayoutMode": "pan",
       "googleServicesFile": "./android/google-services.json",
       "permissions": [
         "POST_NOTIFICATIONS",

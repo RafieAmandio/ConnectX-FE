@@ -341,7 +341,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={process.env.EXPO_OS === 'ios' ? 'padding' : 'height'}
+        behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
         style={{ backgroundColor: '#262626' }}
         keyboardVerticalOffset={0}
@@ -429,7 +429,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
         ) : null}
 
         <SafeAreaView edges={Platform.OS === 'ios' ? ['bottom'] : ['bottom']}>
-          <View className="border-t border-[#3A3938] px-4 pt-3 pb-3">
+          <View className="border-t border-[#3A3938] px-4 pt-3 ">
             <View className="flex-row items-end gap-3">
               <View className="min-h-11 flex-1 rounded-full border border-[#444240] bg-[#2E2C2B] px-4 py-2">
                 <TextInput
