@@ -1755,7 +1755,7 @@ export function DiscoveryDeck() {
 
   const topBarAccessory = (
     <View className="flex-row items-center gap-2">
-      {onboardingPreferenceDebugButton}
+      {/* {onboardingPreferenceDebugButton} */}
       {notificationButton}
       {filterButton}
     </View>
