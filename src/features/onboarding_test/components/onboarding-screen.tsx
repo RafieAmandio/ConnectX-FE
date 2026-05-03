@@ -272,6 +272,8 @@ function LoadingState() {
 }
 
 function WelcomeHero({ step }: { step: OnboardingStep }) {
+  const subtitle = step.subtitle?.trim();
+
   return (
     <View className="flex-1 items-center justify-center px-8">
       <View
@@ -296,14 +298,82 @@ function WelcomeHero({ step }: { step: OnboardingStep }) {
         className="text-[30px] leading-[36px] text-white">
         {step.title}
       </AppText>
-      {step.subtitle ? (
+      {subtitle ? (
         <AppText
           align="center"
           className="mt-4 text-[15px] leading-[22px] text-text-muted">
-          {step.subtitle}
+          {subtitle}
         </AppText>
       ) : null}
     </View>
+  );
+}
+
+function StepIntroHeader({
+  currentQuestion,
+  step,
+  totalQuestions,
+}: {
+  currentQuestion?: number;
+  step: OnboardingStep;
+  totalQuestions?: number;
+}) {
+  const subtitle = step.subtitle?.trim();
+  const section = step.section?.trim();
+  const sectionProgress = step.section_progress?.trim();
+  const sectionLabel = [section, sectionProgress].filter(Boolean).join(' • ');
+  const shouldShowQuestionCounter =
+    typeof currentQuestion === 'number' &&
+    typeof totalQuestions === 'number' &&
+    totalQuestions > 1;
+
+  return (
+    <Animated.View
+      key={`title-${step.id}`}
+      entering={FadeInDown.duration(320)}
+      className="items-center gap-4">
+
+      <View className="items-center gap-3">
+        <AppText
+          accessibilityRole="header"
+          align="center"
+          variant="hero"
+          className="text-[30px] leading-[36px] tracking-[0px] text-white">
+          {step.title.trim()}
+        </AppText>
+        <View
+          className="h-[3px] w-12 rounded-full"
+          style={{ backgroundColor: ACCENT }}
+        />
+        {subtitle ? (
+          <AppText
+            align="center"
+            className="px-3 text-[15px] leading-[23px] text-[#B8C0CC]"
+            style={{ maxWidth: 340 }}>
+            {subtitle}
+          </AppText>
+        ) : null}
+      </View>
+
+      {shouldShowQuestionCounter ? (
+        <View className="items-center">
+          <View
+            className="rounded-full border px-3 py-[6px]"
+            style={{
+              backgroundColor: '#272727',
+              borderColor: BORDER_SOFT,
+              borderCurve: 'continuous',
+            }}>
+            <AppText
+              className="text-[12px] leading-[16px] text-text-muted"
+              style={{ fontVariant: ['tabular-nums'] }}
+              variant="bodyStrong">
+              Question {currentQuestion} of {totalQuestions}
+            </AppText>
+          </View>
+        </View>
+      ) : null}
+    </Animated.View>
   );
 }
 
@@ -633,40 +703,20 @@ export function OnboardingScreen() {
               className="flex-1"
               contentContainerStyle={{
                 flexGrow: 1,
-                justifyContent: shouldTopAlignContent ? 'flex-start' : 'center',
+                justifyContent: 'flex-start',
                 paddingHorizontal: 20,
-                paddingTop: shouldTopAlignContent ? 8 : 0,
+                paddingTop: shouldTopAlignContent ? 10 : 18,
                 paddingBottom: 96,
-                gap: 28,
+                gap: shouldTopAlignContent ? 24 : 32,
               }}
               contentInsetAdjustmentBehavior="automatic"
               keyboardShouldPersistTaps="handled"
               nestedScrollEnabled>
-              <Animated.View
-                key={`title-${currentStep.id}`}
-                entering={FadeInDown.duration(320)}
-                className="gap-2">
-                <AppText
-                  align="center"
-                  variant="hero"
-                  className="text-[26px] leading-[32px] text-white">
-                  {currentStep.title}
-                </AppText>
-                {currentStep.subtitle ? (
-                  <AppText
-                    align="center"
-                    className="text-[15px] leading-[22px] text-text-muted">
-                    {currentStep.subtitle}
-                  </AppText>
-                ) : null}
-                {shouldPageCurrentQuestions ? (
-                  <AppText
-                    align="center"
-                    className="text-[13px] leading-[18px] text-text-muted">
-                    {activeQuestionIndex + 1} of {visibleQuestions.length}
-                  </AppText>
-                ) : null}
-              </Animated.View>
+              <StepIntroHeader
+                currentQuestion={shouldPageCurrentQuestions ? activeQuestionIndex + 1 : undefined}
+                step={currentStep}
+                totalQuestions={shouldPageCurrentQuestions ? visibleQuestions.length : undefined}
+              />
 
               <Animated.View
                 key={`fields-${currentStep.id}`}
