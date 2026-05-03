@@ -15,7 +15,7 @@ import { AppText } from '@shared/components';
 import { Colors } from '@shared/theme';
 
 const PRIMARY = '#FF9836';
-const PRIMARY_RGB = '255, 154, 62';
+const PRIMARY_RGB = '255, 152, 54';
 const CARD_RGB = '26, 26, 31';
 
 const NODES = [
