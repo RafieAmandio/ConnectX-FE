@@ -280,8 +280,11 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = messagesQuery.data ?? [];
   const isSending = appendMessageMutation.isPending;
+  const composerBasePaddingBottom = Math.max(insets.bottom + 12, 24);
   const composerPaddingBottom =
-    Platform.OS === 'android' && androidKeyboardInset > 0 ? androidKeyboardInset + 8 : 24;
+    Platform.OS === 'android' && androidKeyboardInset > 0
+      ? androidKeyboardInset + 8
+      : composerBasePaddingBottom;
 
   React.useEffect(() => {
     if (messages.length > 0) {
