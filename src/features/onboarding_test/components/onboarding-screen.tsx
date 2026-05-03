@@ -68,6 +68,10 @@ const PAID_POSITION_OPTION_ICONS: Record<string, string> = {
   paid: 'paid_position_paid',
   unpaid: 'paid_position_unpaid',
 };
+const COFOUNDER_EQUITY_OPTION_ICONS: Record<string, string> = {
+  balanced: 'partial_equity',
+  cash_only: 'cash_heavy',
+};
 
 function isCompletedResponse(
   response:
@@ -142,6 +146,22 @@ function getRenderableQuestion(
           ? {
             ...option,
             icon: option.icon ?? paidPositionIcon,
+          }
+          : option;
+      }),
+    };
+  }
+
+  if (question.id === 'q_cf_equity') {
+    return {
+      ...question,
+      options: question.options.map((option) => {
+        const cofounderEquityIcon = COFOUNDER_EQUITY_OPTION_ICONS[option.value];
+
+        return cofounderEquityIcon
+          ? {
+            ...option,
+            icon: option.icon ?? cofounderEquityIcon,
           }
           : option;
       }),

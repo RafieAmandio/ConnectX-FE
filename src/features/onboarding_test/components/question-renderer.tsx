@@ -334,6 +334,30 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'close-circle-outline',
     iconColor: '#CBD4E0',
   },
+  maybe: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubble-ellipses-outline',
+    iconColor: '#7DD3FC',
+  },
+  relocate_yes: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'location',
+    iconColor: '#4ADE80',
+  },
+  relocate_maybe: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubble-ellipses-outline',
+    iconColor: '#7DD3FC',
+  },
+  relocate_no: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'close-circle-outline',
+    iconColor: '#CBD4E0',
+  },
   remote_pref_hybrid: {
     bg: '#2A1C10',
     border: '#5A3C18',
