@@ -7,6 +7,7 @@ export type ChatConversation = {
   messagesStored: number;
   name: string;
   participantEmail: string;
+  photoUrl: string | null;
   preview: string;
   unreadCount: number;
 };

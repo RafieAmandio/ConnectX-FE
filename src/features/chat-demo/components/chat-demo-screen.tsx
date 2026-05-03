@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -54,6 +55,16 @@ function getInitials(value: string) {
 }
 
 function ChatDemoAvatar({ conversation, size = 56 }: { conversation: ChatConversation; size?: number }) {
+  if (conversation.photoUrl) {
+    return (
+      <Image
+        contentFit="cover"
+        source={{ uri: conversation.photoUrl }}
+        style={{ borderRadius: size / 2, height: size, width: size }}
+      />
+    );
+  }
+
   return (
     <View
       className="items-center justify-center rounded-full bg-[#2F3440]"

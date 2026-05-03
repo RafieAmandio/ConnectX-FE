@@ -11,6 +11,7 @@ const seededConversations = [
     kind: 'direct',
     name: 'Ardi Wijaya',
     participantEmail: 'ardi.wijaya@connectx.demo',
+    photoUrl: 'https://i.pravatar.cc/512?img=12',
     unreadCount: 1,
   },
   {
@@ -18,6 +19,7 @@ const seededConversations = [
     kind: 'direct',
     name: 'Maya Chen',
     participantEmail: 'maya.chen@connectx.demo',
+    photoUrl: 'https://i.pravatar.cc/512?img=32',
     unreadCount: 0,
   },
   {
@@ -25,6 +27,7 @@ const seededConversations = [
     kind: 'direct',
     name: 'Nina Patel',
     participantEmail: 'nina.patel@connectx.demo',
+    photoUrl: 'https://i.pravatar.cc/512?img=5',
     unreadCount: 0,
   },
 ] as const satisfies readonly {
@@ -32,6 +35,7 @@ const seededConversations = [
   kind: ChatConversationKind;
   name: string;
   participantEmail: string;
+  photoUrl: string | null;
   unreadCount: number;
 }[];
 
@@ -124,6 +128,7 @@ type ConversationRow = {
   messagesStored: number;
   name: string;
   participantEmail: string;
+  photoUrl: string | null;
   previewText: string;
   unreadCount: number;
   updatedAt: string;
@@ -156,6 +161,7 @@ function mapConversationRow(row: ConversationRow): ChatConversation {
     messagesStored: row.messagesStored,
     name: row.name,
     participantEmail: row.participantEmail,
+    photoUrl: row.photoUrl,
     preview: row.previewText,
     unreadCount: row.unreadCount,
   };
@@ -239,16 +245,18 @@ async function seedMockChatData(database: SQLite.SQLiteDatabase) {
           name,
           kind,
           participant_email,
+          photo_url,
           preview_text,
           unread_count,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       conversation.id,
       conversation.name,
       conversation.kind,
       conversation.participantEmail,
+      conversation.photoUrl,
       lastMessage?.body ?? 'No messages yet',
       conversation.unreadCount,
       lastMessage?.createdAt ?? new Date().toISOString()
@@ -273,12 +281,31 @@ async function seedMockChatData(database: SQLite.SQLiteDatabase) {
   }
 }
 
+async function backfillSeededConversationPhotoUrls(database: SQLite.SQLiteDatabase) {
+  for (const conversation of seededConversations) {
+    await database.runAsync(
+      `
+        UPDATE conversations
+        SET photo_url = ?
+        WHERE id = ?
+      `,
+      conversation.photoUrl,
+      conversation.id
+    );
+  }
+}
+
 async function ensureConversationColumns(database: SQLite.SQLiteDatabase) {
   const columns = await database.getAllAsync<TableColumnRow>('PRAGMA table_info(conversations)');
   const hasParticipantEmail = columns.some((column) => column.name === 'participant_email');
+  const hasPhotoUrl = columns.some((column) => column.name === 'photo_url');
 
   if (!hasParticipantEmail) {
     await database.execAsync('ALTER TABLE conversations ADD COLUMN participant_email TEXT');
+  }
+
+  if (!hasPhotoUrl) {
+    await database.execAsync('ALTER TABLE conversations ADD COLUMN photo_url TEXT');
   }
 }
 
@@ -292,6 +319,7 @@ async function initializeDatabase() {
       name TEXT NOT NULL,
       kind TEXT NOT NULL,
       participant_email TEXT,
+      photo_url TEXT,
       preview_text TEXT NOT NULL,
       unread_count INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL
@@ -311,6 +339,7 @@ async function initializeDatabase() {
 
   await ensureConversationColumns(database);
   await seedMockChatData(database);
+  await backfillSeededConversationPhotoUrls(database);
 
   return database;
 }
@@ -332,6 +361,7 @@ export async function listMockConversations() {
         conversations.name,
         conversations.kind,
         conversations.participant_email AS participantEmail,
+        conversations.photo_url AS photoUrl,
         conversations.preview_text AS previewText,
         conversations.unread_count AS unreadCount,
         conversations.updated_at AS updatedAt,
