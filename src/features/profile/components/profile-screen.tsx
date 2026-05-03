@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
+  ActivityIndicator,
   Linking,
   Pressable,
   ScrollView,
@@ -13,12 +14,14 @@ import {
 import { useAuthContext } from '@features/auth/store/auth-provider';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 
+import { useMyProfile } from '../hooks/use-profile';
 import {
   mockIndividualProfileResponse,
   mockStartupProfileResponse,
 } from '../mock/profile.mock';
 import type {
   MyProfileData,
+  MyProfileResponse,
   ProfileAboutKind,
   ProfileBadge,
   ProfileNamedItem,
@@ -48,6 +51,10 @@ const DANGER = '#FF5A67';
 const DANGER_BORDER = 'rgba(255, 90, 103, 0.2)';
 
 type ProfileMockMode = 'startup' | 'individual';
+
+function hasUsableProfile(response?: MyProfileResponse): response is MyProfileResponse {
+  return typeof response?.data?.id === 'string' && response.data.id.length > 0;
+}
 
 function getInitials(value: string) {
   return value
@@ -488,11 +495,20 @@ export function ProfileScreen() {
   const { width } = useWindowDimensions();
   const { signOut } = useAuthContext();
   const [mockMode, setMockMode] = React.useState<ProfileMockMode>('startup');
-
-  const effectiveProfile =
+  const myProfileQuery = useMyProfile();
+  const myProfileResponse = myProfileQuery.data;
+  const shouldUseMockProfile =
+    myProfileQuery.isError ||
+    (myProfileQuery.isSuccess && !hasUsableProfile(myProfileResponse));
+  const mockProfile =
     mockMode === 'startup'
       ? mockStartupProfileResponse.data
       : mockIndividualProfileResponse.data;
+
+  const effectiveProfile =
+    shouldUseMockProfile || !hasUsableProfile(myProfileResponse)
+      ? mockProfile
+      : myProfileResponse.data;
 
   const aboutSection = effectiveProfile.sections.about;
   const startup = effectiveProfile.startup;
@@ -507,6 +523,14 @@ export function ProfileScreen() {
       <Stack.Screen options={{ headerShown: false, title: '' }} />
       <View className="flex-1" style={{ backgroundColor: '#262626' }}>
         <AppTopBar />
+        {!shouldUseMockProfile && !hasUsableProfile(myProfileResponse) ? (
+          <View className="flex-1 items-center justify-center gap-3 px-6">
+            <ActivityIndicator color={ACCENT} />
+            <AppText align="center" className="text-[14px]" tone="muted">
+              Loading profile...
+            </AppText>
+          </View>
+        ) : (
         <ScrollView
           className="flex-1"
           contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
@@ -517,7 +541,9 @@ export function ProfileScreen() {
             profile={effectiveProfile}
           />
 
-          <MockProfileToggle mode={mockMode} onChange={setMockMode} />
+          {shouldUseMockProfile ? (
+            <MockProfileToggle mode={mockMode} onChange={setMockMode} />
+          ) : null}
 
           <StatsOverview stats={effectiveProfile.stats} />
 
@@ -589,6 +615,7 @@ export function ProfileScreen() {
 
           <BottomSignOut onPress={() => signOut()} />
         </ScrollView>
+        )}
       </View>
     </>
   );
