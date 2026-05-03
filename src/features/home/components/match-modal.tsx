@@ -27,6 +27,7 @@ type MatchModalProps = {
   card: DiscoveryCard | null;
   onChat: () => void;
   onClose: () => void;
+  onReport: () => void;
 };
 
 const SPARK_ANGLES = [0, 60, 120, 180, 240, 300] as const;
@@ -101,7 +102,7 @@ function getStartupRole(card: DiscoveryCard) {
   return card.openRoles[0]?.title ?? card.lookingFor[0] ?? 'Co-Founder';
 }
 
-export function MatchModal({ card, onChat, onClose }: MatchModalProps) {
+export function MatchModal({ card, onChat, onClose, onReport }: MatchModalProps) {
   if (!card) {
     return null;
   }
@@ -275,7 +276,7 @@ export function MatchModal({ card, onChat, onClose }: MatchModalProps) {
               <Pressable
                 accessibilityLabel={`View match report for ${getMatchSubject(card)}`}
                 className="min-h-10 flex-1 flex-row items-center justify-center gap-2 rounded-[10px] border"
-                onPress={() => { }}
+                onPress={onReport}
                 style={{ backgroundColor: '#22211F', borderColor: 'rgba(255, 255, 255, 0.12)' }}>
                 <Ionicons color="#E3E3E3" name="bar-chart-outline" size={16} />
                 <AppText className="text-[#E3E3E3]" variant="bodyStrong">

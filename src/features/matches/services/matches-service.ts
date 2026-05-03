@@ -2,6 +2,10 @@ import { ApiError, apiFetch } from '@shared/services/api';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import { mockMatchesListResponse } from '../mock/matches.mock';
+import {
+  loadGeneratedMockMatchAnalysis,
+  loadGeneratedMockMatches,
+} from './generated-matches-storage';
 import type {
   MatchAnalysisResponse,
   MatchesListQueryParams,
@@ -71,11 +75,20 @@ export async function fetchMatchesList(params: MatchesListQueryParams = {}) {
   if (isMatchesListMockEnabled()) {
     const normalizedLimit = normalizeLimit(params.limit);
     const page = params.page && params.page > 0 ? params.page : 1;
+    const generatedMatches = loadGeneratedMockMatches();
+    const matchesById = new Map(
+      [...generatedMatches, ...mockMatchesListResponse.data.items].map((item) => [item.matchId, item])
+    );
+    const mergedMatches = Array.from(matchesById.values()).sort((left, right) =>
+      right.matchedAt.localeCompare(left.matchedAt)
+    );
 
     return {
       ...mockMatchesListResponse,
       data: {
         ...mockMatchesListResponse.data,
+        items: mergedMatches,
+        total: mergedMatches.length,
         limit: normalizedLimit,
         page,
       },
@@ -86,6 +99,14 @@ export async function fetchMatchesList(params: MatchesListQueryParams = {}) {
 }
 
 export async function fetchMatchAnalysis(matchId: string) {
+  if (isMatchesListMockEnabled()) {
+    const generatedAnalysis = loadGeneratedMockMatchAnalysis(matchId);
+
+    if (generatedAnalysis) {
+      return generatedAnalysis;
+    }
+  }
+
   return apiFetch<MatchAnalysisResponse>(MATCHES_API.ANALYSIS(matchId));
 }
 

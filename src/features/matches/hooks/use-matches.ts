@@ -1,11 +1,9 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 
-import { mockMatchesListResponse } from '../mock/matches.mock';
 import {
   activateSpotlight,
   fetchMatchAnalysis,
   fetchMatchesList,
-  isMatchesListMockEnabled,
 } from '../services/matches-service';
 import type {
   MatchAnalysisResponse,
@@ -21,18 +19,10 @@ export const matchesQueryKeys = {
 };
 
 export function useMatchesList(params: MatchesListQueryParams = {}) {
-  const usingMockMatches = isMatchesListMockEnabled();
-
   return useQuery<MatchesListResponse>({
-    enabled: !usingMockMatches,
-    initialData: usingMockMatches
-      ? {
-        ...mockMatchesListResponse
-      }
-      : undefined,
     queryKey: matchesQueryKeys.list(params),
     queryFn: () => fetchMatchesList(params),
-    staleTime: usingMockMatches ? Number.POSITIVE_INFINITY : 0,
+    staleTime: 0,
   });
 }
 

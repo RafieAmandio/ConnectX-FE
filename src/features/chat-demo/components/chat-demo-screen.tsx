@@ -408,7 +408,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               </View>
             ) : (
               <View className="items-center py-8">
-                <AppText className="text-[#9C9893]">No messages in this demo chat yet.</AppText>
+                <AppText className="text-[#9C9893]">No messages in this chat yet.</AppText>
               </View>
             )
           }

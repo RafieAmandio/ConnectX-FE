@@ -23,6 +23,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@features/auth';
 import { chatQueryKeys } from '@features/chat/hooks/use-mock-chat';
 import { upsertDiscoveryMatchConversation } from '@features/chat/services/chat-sqlite-service';
+import { matchesQueryKeys } from '@features/matches/hooks/use-matches';
+import { upsertGeneratedMockMatch } from '@features/matches/services/generated-matches-storage';
 import { useNotifications } from '@features/notifications';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
@@ -74,6 +76,7 @@ type DeviceCoordinates = {
 type MatchState = {
   card: DiscoveryCard;
   conversationId: string | null;
+  matchId: string | null;
 };
 
 const SWIPE_THRESHOLD = 120;
@@ -1379,18 +1382,22 @@ export function DiscoveryDeck() {
           matched
         ) {
           let conversationId: string | null = null;
+          let matchId: string | null = null;
 
           try {
             conversationId = await upsertDiscoveryMatchConversation(
               getDiscoveryMatchConversationInput(activeCard)
             );
+            const generatedMatch = upsertGeneratedMockMatch(activeCard, conversationId);
+            matchId = generatedMatch.item.matchId;
             await queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversations });
+            await queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
           } catch (error) {
-            console.warn('Unable to create local chat conversation for discovery match.', error);
+            console.warn('Unable to create local mock match records for discovery match.', error);
           }
 
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setMatchState({ card: activeCard, conversationId });
+          setMatchState({ card: activeCard, conversationId, matchId });
         }
 
         setActionError(null);
@@ -1767,11 +1774,24 @@ export function DiscoveryDeck() {
     router.push('/chat_demo' as never);
   }, [matchState?.conversationId, router]);
 
+  const handleOpenMatchReport = React.useCallback(() => {
+    const matchId = matchState?.matchId;
+
+    setMatchState(null);
+
+    if (!matchId) {
+      return;
+    }
+
+    router.push(`/match-analysis/${matchId}` as never);
+  }, [matchState?.matchId, router]);
+
   const matchModal = (
     <MatchModal
       card={matchState?.card ?? null}
       onChat={handleOpenMatchChat}
       onClose={() => setMatchState(null)}
+      onReport={handleOpenMatchReport}
     />
   );
 

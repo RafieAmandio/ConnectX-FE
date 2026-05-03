@@ -465,7 +465,21 @@ export async function upsertDiscoveryMatchConversation(input: DiscoveryMatchConv
   const database = await getDatabase();
   const now = new Date().toISOString();
   const normalizedId = normalizeConversationId(input.id);
-  const conversationId = `conv_match_${normalizedId || Date.now()}`;
+  const normalizedName = input.name.trim().toLowerCase();
+  const existingConversation = normalizedName
+    ? await database.getFirstAsync<{ id: string }>(
+      `
+        SELECT id
+        FROM conversations
+        WHERE kind = ?
+          AND lower(trim(name)) = ?
+        LIMIT 1
+      `,
+      'direct',
+      normalizedName
+    )
+    : null;
+  const conversationId = existingConversation?.id ?? `conv_match_${normalizedId || Date.now()}`;
   const participantEmail =
     input.participantEmail?.trim() || `${normalizedId || conversationId}@connectx.match`;
   const previewText = 'You matched on ConnectX. Say hi to start the conversation.';
