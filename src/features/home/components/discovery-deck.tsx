@@ -1926,7 +1926,7 @@ export function DiscoveryDeck() {
                 color="#EF4444"
                 disabled={isSubmitting}
                 icon="close"
-                label="Pass"
+                label="Skip"
                 onPress={() => beginSwipe('left')}
                 size="medium"
               />
@@ -1942,7 +1942,7 @@ export function DiscoveryDeck() {
                 color="#FF9A3E"
                 disabled={isSubmitting}
                 icon="flash"
-                label="Boost"
+                label="Spotlight"
                 onPress={handleSuperLike}
                 size="medium"
               />
