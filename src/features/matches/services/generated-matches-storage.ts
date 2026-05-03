@@ -5,7 +5,8 @@ import { isDiscoveryProfileCard } from '@features/home/types/discovery.types';
 
 import type { MatchAnalysisResponse, MatchListItem } from '../types/matches.types';
 
-const GENERATED_MATCHES_STORAGE_KEY = 'connectx.matches.generated.v1';
+const GENERATED_MATCHES_STORAGE_KEY = 'connectx.matches.generated.v2';
+const LEGACY_GENERATED_MATCHES_STORAGE_KEYS = ['connectx.matches.generated.v1'];
 const MATCH_EXPIRY_DAYS = 7;
 
 type GeneratedMockMatchRecord = {
@@ -33,6 +34,8 @@ function calculateExpiresInDays(expiresAt: string) {
 
 function loadRecords() {
   try {
+    clearLegacyGeneratedMatchesStorage();
+
     const rawValue = localStorage.getItem(GENERATED_MATCHES_STORAGE_KEY);
 
     if (!rawValue) {
@@ -65,9 +68,16 @@ function loadRecords() {
 
 function saveRecords(records: GeneratedMockMatchRecord[]) {
   try {
+    clearLegacyGeneratedMatchesStorage();
     localStorage.setItem(GENERATED_MATCHES_STORAGE_KEY, JSON.stringify(records));
   } catch (error) {
     console.warn('[generated_matches] save failed', error);
+  }
+}
+
+function clearLegacyGeneratedMatchesStorage() {
+  for (const storageKey of LEGACY_GENERATED_MATCHES_STORAGE_KEYS) {
+    localStorage.removeItem(storageKey);
   }
 }
 
@@ -173,7 +183,7 @@ function buildGeneratedRecord(card: DiscoveryCard, conversationId: string | null
       conversationId,
       user: {
         userId: card.startupId,
-        name: card.founder.name || card.name,
+        name: card.name,
         photoUrl: card.logoUrl,
         headline: founderTitle,
         location: card.industry.display,
@@ -198,7 +208,7 @@ function buildGeneratedRecord(card: DiscoveryCard, conversationId: string | null
         generatedAt: matchedAt,
         user: {
           userId: card.startupId,
-          name: card.founder.name || card.name,
+          name: card.name,
           photoUrl: card.logoUrl,
           headline: founderTitle,
           location: card.industry.display,

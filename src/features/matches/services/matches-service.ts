@@ -8,6 +8,7 @@ import {
 } from './generated-matches-storage';
 import type {
   MatchAnalysisResponse,
+  MatchListItem,
   MatchesListQueryParams,
   MatchesListResponse,
   SpotlightActivationSuccessResponse,
@@ -71,15 +72,29 @@ function buildMatchesListPath({ limit, page, status = 'active' }: MatchesListQue
   return `${MATCHES_API.LIST}?${params.toString()}`;
 }
 
+function getDemoMatchDedupeKey(match: MatchListItem) {
+  const normalizedName = match.user.name.trim().toLowerCase();
+
+  return normalizedName || match.matchId;
+}
+
 export async function fetchMatchesList(params: MatchesListQueryParams = {}) {
   if (isMatchesListMockEnabled()) {
     const normalizedLimit = normalizeLimit(params.limit);
     const page = params.page && params.page > 0 ? params.page : 1;
     const generatedMatches = loadGeneratedMockMatches();
-    const matchesById = new Map(
-      [...generatedMatches, ...mockMatchesListResponse.data.items].map((item) => [item.matchId, item])
-    );
-    const mergedMatches = Array.from(matchesById.values()).sort((left, right) =>
+    const matchesByName = new Map<string, MatchListItem>();
+
+    for (const match of [...mockMatchesListResponse.data.items, ...generatedMatches]) {
+      const dedupeKey = getDemoMatchDedupeKey(match);
+      const existingMatch = matchesByName.get(dedupeKey);
+
+      if (!existingMatch || match.matchedAt >= existingMatch.matchedAt) {
+        matchesByName.set(dedupeKey, match);
+      }
+    }
+
+    const mergedMatches = Array.from(matchesByName.values()).sort((left, right) =>
       right.matchedAt.localeCompare(left.matchedAt)
     );
 

@@ -360,7 +360,7 @@ function getDiscoveryMatchConversationInput(card: DiscoveryCard) {
 
   return {
     id: getCardActionTargetId(card),
-    name: card.founder.name || card.name,
+    name: card.name,
     photoUrl: card.logoUrl,
   };
 }
