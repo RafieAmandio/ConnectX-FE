@@ -251,10 +251,10 @@ export function NetworkVisualization({ variant = 'default' }: NetworkVisualizati
       : null;
   const isLargeCompact = variant === 'largeCompact';
   const isCompactWidth = width < 390 || isLargeCompact;
-  const maxWidth = isLargeCompact ? 270 : width >= 400 ? 300 : 280;
-  const maxHeight = isLargeCompact ? 205 : 230;
-  const statusTextFontSize = isLargeCompact ? 11 : 12;
-  const statusTextLineHeight = isLargeCompact ? 15 : 16;
+  const maxWidth = isLargeCompact ? 270 : isCompactWidth ? 250 : width >= 400 ? 300 : 280;
+  const maxHeight = isLargeCompact ? 205 : isCompactWidth ? 195 : 230;
+  const statusTextFontSize = isLargeCompact ? 11 : isCompactWidth ? 10 : 12;
+  const statusTextLineHeight = isLargeCompact ? 15 : isCompactWidth ? 14 : 16;
 
   return (
     <View className="w-full items-center select-none">
@@ -473,10 +473,10 @@ function NetworkNode({
   const y = useSharedValue(0);
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
-  const nodeWidth = size === 'compact' ? 112 : 132;
-  const emojiFontSize = size === 'compact' ? 13 : 14;
-  const labelFontSize = size === 'compact' ? 11 : 12;
-  const labelLineHeight = size === 'compact' ? 15 : 16;
+  const nodeWidth = size === 'compact' ? 96 : 132;
+  const emojiFontSize = size === 'compact' ? 11 : 14;
+  const labelFontSize = size === 'compact' ? 10 : 12;
+  const labelLineHeight = size === 'compact' ? 14 : 16;
 
   React.useEffect(() => {
     opacity.value = withDelay(node.delay * 1000 + 200, withTiming(1, { duration: 500 }));
@@ -559,8 +559,8 @@ function NetworkNode({
                       : 'rgba(38, 42, 51, 0.56)',
             borderCurve: 'continuous',
             boxShadow: isHighlighted ? `0 0 18px ${primaryAlpha(state === 'matched' ? 0.35 : 0.2)}` : undefined,
-            columnGap: size === 'compact' ? 6 : 8,
-            paddingHorizontal: size === 'compact' ? 9 : 12,
+            columnGap: size === 'compact' ? 5 : 8,
+            paddingHorizontal: size === 'compact' ? 8 : 12,
           }}>
           <AppText style={{ fontSize: emojiFontSize, lineHeight: 18 }}>{node.emoji}</AppText>
           <AppText
