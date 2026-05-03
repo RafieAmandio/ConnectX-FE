@@ -42,6 +42,31 @@ export type ProfileHighlightsSection = {
   items: string[];
 };
 
+export type ProfileStartupStageValue = 'idea' | 'mvp' | 'live' | 'scale';
+
+export type ProfileStartupStageDetailValue = string | number | string[] | null;
+
+export type ProfileStartupStageDetail = {
+  id: string;
+  label: string;
+  value: ProfileStartupStageDetailValue;
+};
+
+export type ProfileStartupData = {
+  name: string;
+  tagline: string;
+  stage: {
+    value: ProfileStartupStageValue;
+    label: string;
+    details: ProfileStartupStageDetail[];
+  };
+  industries: ProfileNamedItem[];
+  links: {
+    label: string;
+    url: string;
+  }[];
+};
+
 export type MyProfileSections = {
   about?: ProfileAboutSection;
   personalityAndHobbies?: ProfileListSection;
@@ -60,6 +85,7 @@ export type MyProfileData = {
   location: ProfileLocation;
   stats: ProfileStats;
   badges: ProfileBadge[];
+  startup?: ProfileStartupData;
   sections: MyProfileSections;
   createdAt: string;
   updatedAt: string;

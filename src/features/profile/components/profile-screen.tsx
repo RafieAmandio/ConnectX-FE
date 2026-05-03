@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   View,
@@ -12,14 +13,16 @@ import {
 import { useAuthContext } from '@features/auth/store/auth-provider';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 
-import { useMyProfile } from '../hooks/use-profile';
-import { mockMyProfileResponse } from '../mock/profile.mock';
+import {
+  mockIndividualProfileResponse,
+  mockStartupProfileResponse,
+} from '../mock/profile.mock';
 import type {
   MyProfileData,
-  MyProfileResponse,
   ProfileAboutKind,
   ProfileBadge,
   ProfileNamedItem,
+  ProfileStartupStageDetailValue,
 } from '../types/profile.types';
 
 const BADGE_ICON_BY_ID: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -45,9 +48,7 @@ const ACCENT_SOFT_BG = '#2A2117';
 const DANGER = '#FF5A67';
 const DANGER_BORDER = 'rgba(255, 90, 103, 0.2)';
 
-function hasUsableProfile(response?: MyProfileResponse) {
-  return typeof response?.data?.id === 'string' && response.data.id.length > 0;
-}
+type ProfileMockMode = 'startup' | 'individual';
 
 function getInitials(value: string) {
   return value
@@ -161,6 +162,150 @@ function NamedItemList({
           </AppText>
         </View>
       ))}
+    </View>
+  );
+}
+
+function formatStageDetailValue(value: ProfileStartupStageDetailValue) {
+  if (Array.isArray(value)) {
+    return value.length ? value.join(', ') : 'Not provided';
+  }
+
+  if (value === null || value === '') {
+    return 'Not provided';
+  }
+
+  return String(value);
+}
+
+function StartupProfileCard({ startup }: { startup: NonNullable<MyProfileData['startup']> }) {
+  return (
+    <SectionCard>
+      <SectionHeader
+        description="Startup details pulled from onboarding for people representing a company."
+        eyebrow="Startup"
+        icon="rocket-outline"
+        title={startup.name}
+      />
+
+      <View className="gap-3">
+        <AppText className="text-[15px] leading-6" tone="muted">
+          {startup.tagline}
+        </AppText>
+
+        <View
+          className="gap-3 rounded-[18px] border px-3.5 py-3"
+          style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+        >
+          <View className="flex-row items-center justify-between gap-3">
+            <AppText className="text-[12px] tracking-[1px]" tone="muted" variant="label">
+              Stage
+            </AppText>
+            <View
+              className="rounded-full border px-3 py-1.5"
+              style={{ backgroundColor: ACCENT_SOFT_BG, borderColor: ACCENT_BORDER }}
+            >
+              <AppText className="text-[12px]" tone="signal" variant="bodyStrong">
+                {startup.stage.label}
+              </AppText>
+            </View>
+          </View>
+
+          {startup.stage.details.map((detail) => (
+            <View key={detail.id} className="flex-row items-start justify-between gap-3">
+              <AppText className="flex-1 text-[13px] leading-5" tone="muted">
+                {detail.label}
+              </AppText>
+              <AppText align="right" className="max-w-[58%] text-[13px] leading-5">
+                {formatStageDetailValue(detail.value)}
+              </AppText>
+            </View>
+          ))}
+        </View>
+
+        {startup.industries.length ? (
+          <View className="gap-2">
+            <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
+              Industries
+            </AppText>
+            <NamedItemList items={startup.industries} />
+          </View>
+        ) : null}
+
+        {startup.links.length ? (
+          <View className="gap-2">
+            <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
+              Links
+            </AppText>
+            <View className="gap-2">
+              {startup.links.map((link) => (
+                <Pressable
+                  key={`${link.label}-${link.url}`}
+                  className="flex-row items-center gap-3 rounded-[16px] border px-3.5 py-3 active:opacity-80"
+                  onPress={() => Linking.openURL(link.url)}
+                  style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+                >
+                  <Ionicons color={ACCENT} name="link-outline" size={16} />
+                  <View className="min-w-0 flex-1">
+                    <AppText className="text-[13px]" variant="bodyStrong">
+                      {link.label}
+                    </AppText>
+                    <AppText className="text-[12px] leading-4" numberOfLines={1} tone="muted">
+                      {link.url}
+                    </AppText>
+                  </View>
+                  <Ionicons color="rgba(255,255,255,0.45)" name="open-outline" size={15} />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </SectionCard>
+  );
+}
+
+function MockProfileToggle({
+  mode,
+  onChange,
+}: {
+  mode: ProfileMockMode;
+  onChange: (mode: ProfileMockMode) => void;
+}) {
+  const options: { label: string; value: ProfileMockMode }[] = [
+    { label: 'Startup', value: 'startup' },
+    { label: 'Individual', value: 'individual' },
+  ];
+
+  return (
+    <View
+      className="flex-row rounded-[18px] border p-1"
+      style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+    >
+      {options.map((option) => {
+        const isActive = mode === option.value;
+
+        return (
+          <Pressable
+            key={option.value}
+            className="min-h-10 flex-1 items-center justify-center rounded-[14px] px-3 active:opacity-80"
+            onPress={() => onChange(option.value)}
+            style={{
+              backgroundColor: isActive ? ACCENT_SOFT_BG : 'transparent',
+              borderColor: isActive ? ACCENT_BORDER : 'transparent',
+              borderWidth: 1,
+            }}
+          >
+            <AppText
+              className="text-[13px]"
+              tone={isActive ? 'signal' : 'muted'}
+              variant="bodyStrong"
+            >
+              {option.label}
+            </AppText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -362,15 +507,15 @@ export function ProfileScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { signOut } = useAuthContext();
-  const myProfileQuery = useMyProfile();
-  const myProfileResponse = myProfileQuery.data;
+  const [mockMode, setMockMode] = React.useState<ProfileMockMode>('startup');
 
   const effectiveProfile =
-    myProfileResponse && hasUsableProfile(myProfileResponse)
-      ? myProfileResponse.data
-      : mockMyProfileResponse.data;
+    mockMode === 'startup'
+      ? mockStartupProfileResponse.data
+      : mockIndividualProfileResponse.data;
 
   const aboutSection = effectiveProfile.sections.about;
+  const startup = effectiveProfile.startup;
   const personalitySection = effectiveProfile.sections.personalityAndHobbies;
   const skillsSection = effectiveProfile.sections.skills;
   const interestsSection = effectiveProfile.sections.interests;
@@ -392,7 +537,11 @@ export function ProfileScreen() {
             profile={effectiveProfile}
           />
 
+          <MockProfileToggle mode={mockMode} onChange={setMockMode} />
+
           <StatsOverview stats={effectiveProfile.stats} />
+
+          {startup ? <StartupProfileCard startup={startup} /> : null}
 
           {aboutSection ? (
             <SectionCard>
