@@ -124,7 +124,11 @@ function getLineStroke(state: LineState) {
   }
 }
 
-export function NetworkVisualization() {
+type NetworkVisualizationProps = {
+  variant?: 'default' | 'largeCompact';
+};
+
+export function NetworkVisualization({ variant = 'default' }: NetworkVisualizationProps) {
   const { width } = useWindowDimensions();
   const [phase, setPhase] = React.useState<Phase>('idle');
   const [currentSeq, setCurrentSeq] = React.useState(0);
@@ -245,8 +249,12 @@ export function NetworkVisualization() {
         y: connectedNodes.reduce((sum, idx) => sum + NODES[idx].y, 0) / connectedNodes.length,
       }
       : null;
-  const isCompactWidth = width < 390;
-  const maxWidth = width >= 400 ? 300 : 280;
+  const isLargeCompact = variant === 'largeCompact';
+  const isCompactWidth = width < 390 || isLargeCompact;
+  const maxWidth = isLargeCompact ? 270 : width >= 400 ? 300 : 280;
+  const maxHeight = isLargeCompact ? 205 : 230;
+  const statusTextFontSize = isLargeCompact ? 11 : 12;
+  const statusTextLineHeight = isLargeCompact ? 15 : 16;
 
   return (
     <View className="w-full items-center select-none">
@@ -254,7 +262,7 @@ export function NetworkVisualization() {
         className="relative w-full"
         style={{
           aspectRatio: 4 / 3,
-          maxHeight: 230,
+          maxHeight,
           maxWidth,
         }}>
         <Svg
@@ -338,9 +346,13 @@ export function NetworkVisualization() {
             <Animated.View key={statusText} entering={FadeInDown.duration(360)}>
               <AppText
                 align="center"
-                className="text-[12px] font-semibold leading-[16px]"
+                className="font-semibold"
                 numberOfLines={1}
-                style={{ color: PRIMARY }}>
+                style={{
+                  color: PRIMARY,
+                  fontSize: statusTextFontSize,
+                  lineHeight: statusTextLineHeight,
+                }}>
                 {statusText}
               </AppText>
             </Animated.View>

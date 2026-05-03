@@ -64,11 +64,16 @@ export function WelcomeScreen() {
   }
 
   const isCompactWidth = width < 390;
+  const isLargeWidth = width >= 420;
   const horizontalPadding = width >= 420 ? 36 : 24;
-  const titleFontSize = isCompactWidth ? 30 : 34;
-  const titleLineHeight = isCompactWidth ? 36 : 40;
-  const logoWidth = isCompactWidth ? 132 : 148;
-  const logoHeight = isCompactWidth ? 30 : 34;
+  const titleFontSize = isCompactWidth ? 30 : isLargeWidth ? 31 : 34;
+  const titleLineHeight = isCompactWidth ? 36 : isLargeWidth ? 37 : 40;
+  const logoWidth = isCompactWidth ? 132 : isLargeWidth ? 136 : 148;
+  const logoHeight = isCompactWidth ? 30 : isLargeWidth ? 31 : 34;
+  const subtitleFontSize = isCompactWidth ? 16 : isLargeWidth ? 15.5 : 17;
+  const subtitleLineHeight = isCompactWidth ? 24 : isLargeWidth ? 23 : 26;
+  const heroGap = isLargeWidth ? 7 : 8;
+  const heroPaddingY = isLargeWidth ? 32 : 40;
 
   return (
     <View className="flex-1" style={{ backgroundColor: Colors.dark.canvas }}>
@@ -85,8 +90,9 @@ export function WelcomeScreen() {
 
         <Animated.View
           entering={FadeInDown.delay(90).duration(420)}
-          className="items-center gap-8 py-10">
-          <NetworkVisualization />
+          className="items-center"
+          style={{ gap: heroGap * 4, paddingVertical: heroPaddingY }}>
+          <NetworkVisualization variant={isLargeWidth ? 'largeCompact' : 'default'} />
 
           <View className="items-center gap-3">
             <View className="flex-row items-end justify-center gap-1.5">
@@ -108,8 +114,8 @@ export function WelcomeScreen() {
               className="max-w-[330px]"
               style={{
                 color: Colors.dark.textMuted,
-                fontSize: isCompactWidth ? 16 : 17,
-                lineHeight: isCompactWidth ? 24 : 26,
+                fontSize: subtitleFontSize,
+                lineHeight: subtitleLineHeight,
               }}>
               Build your startup with co-founders, early teams, and driven builders all in one place.
             </AppText>
