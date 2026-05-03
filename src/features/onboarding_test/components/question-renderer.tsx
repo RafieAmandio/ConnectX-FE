@@ -364,7 +364,31 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'briefcase-outline',
     iconColor: '#FF9A3E',
   },
+  hybrid: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'briefcase-outline',
+    iconColor: '#FF9A3E',
+  },
+  onsite: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'business-outline',
+    iconColor: '#4ADE80',
+  },
+  remote_preferred: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'laptop-outline',
+    iconColor: '#7DD3FC',
+  },
   remote_pref_remote_only: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'home-outline',
+    iconColor: '#CBD4E0',
+  },
+  remote_only: {
     bg: '#1F242E',
     border: '#2E3547',
     icon: 'home-outline',
