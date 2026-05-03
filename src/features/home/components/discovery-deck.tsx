@@ -1933,7 +1933,7 @@ export function DiscoveryDeck() {
               <DeckActionButton
                 color="#FFCD38"
                 disabled={history.length === 0 || isSubmitting}
-                icon="refresh"
+                icon="play-back"
                 label="Rewind"
                 onPress={handleRewind}
                 size="small"
