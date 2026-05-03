@@ -452,13 +452,13 @@ export function StartupInvitationComposer({
 
             <View className="flex-row gap-3">
               <Pressable
-                className="min-h-12 flex-1 items-center justify-center rounded-[16px] border border-white/10 bg-[#3A3A3C] px-4 py-3"
+                className="min-h-10 flex-1 items-center justify-center rounded-[14px] border border-white/10 bg-[#3A3A3C] px-3 py-2"
                 disabled={createInvitationMutation.isPending}
                 onPress={closeAndReset}>
-                <AppText variant="bodyStrong">Cancel</AppText>
+                <AppText className="text-[13px]" variant="bodyStrong">Cancel</AppText>
               </Pressable>
               <Pressable
-                className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#FF9A3E] px-3 py-3"
+                className="min-h-10 flex-1 flex-row items-center justify-center gap-1.5 rounded-[14px] bg-[#FF9A3E] px-3 py-2"
                 disabled={!canSubmit}
                 onPress={() => {
                   void handleSubmit();
@@ -467,11 +467,11 @@ export function StartupInvitationComposer({
                 {createInvitationMutation.isPending ? (
                   <ActivityIndicator color="#11131A" size="small" />
                 ) : (
-                  <Ionicons color="#11131A" name="person-add-outline" size={16} />
+                  <Ionicons color="#11131A" name="person-add-outline" size={15} />
                 )}
                 <AppText
                   align="center"
-                  className="flex-1 text-[12px] leading-[14px] text-[#11131A]"
+                  className="flex-1 text-[11px] leading-[13px] text-[#11131A]"
                   numberOfLines={2}
                   variant="bodyStrong">
                   {createInvitationMutation.isPending ? 'Sending...' : 'Confirm Add to Team'}
