@@ -81,17 +81,18 @@ export function WelcomeScreen() {
           <NetworkVisualization />
 
           <View className="items-center gap-3">
-            <View className="flex-row items-center justify-center gap-2">
+            <View className="flex-row items-end justify-center gap-2">
               <AppText
                 align="center"
                 variant="hero"
-                className="text-[34px] leading-[40px] text-white">
+                className="text-[34px] leading-[40px] text-white"
+                style={{ lineHeight: 40 }}>
                 Welcome to
               </AppText>
               <Image
                 source={CONNECTX_LOGO}
                 contentFit="contain"
-                style={{ height: 37, width: 154 }}
+                style={{ height: 34, marginBottom: 7, width: 148 }}
               />
             </View>
             <AppText

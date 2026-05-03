@@ -250,7 +250,8 @@ export function NetworkVisualization() {
       className="relative w-full select-none"
       style={{
         aspectRatio: 4 / 3,
-        maxWidth: 300,
+        maxHeight: 220,
+        maxWidth: 260,
       }}>
       <Svg
         height="100%"
