@@ -540,6 +540,18 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     iconColor: '#60A5FA',
     library: 'mci',
   },
+  cash_only: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  balanced: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'pie-chart',
+    iconColor: '#5EEAD4',
+  },
   equity_heavy: {
     bg: '#2A2312',
     border: '#564518',

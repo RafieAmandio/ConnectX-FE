@@ -278,6 +278,24 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'people-circle',
     iconColor: '#4ADE80',
   },
+  cash_only: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  balanced: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'pie-chart',
+    iconColor: '#5EEAD4',
+  },
+  equity_heavy: {
+    bg: '#2A2312',
+    border: '#564518',
+    icon: 'trending-up',
+    iconColor: '#FFD166',
+  },
   default: {
     bg: '#2A2117',
     border: '#3A2E1E',
@@ -287,7 +305,10 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
 };
 
 function getCardBadgeStyle(option: OnboardingOption): CardBadgeStyle {
-  return CARD_BADGE_STYLES[option.icon ?? 'default'] ?? CARD_BADGE_STYLES.default;
+  return (
+    CARD_BADGE_STYLES[option.icon ?? option.value] ??
+    CARD_BADGE_STYLES.default
+  );
 }
 
 function CardBadgeIcon({ badge, size = 26 }: { badge: CardBadgeStyle; size?: number }) {
