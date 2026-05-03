@@ -60,6 +60,7 @@ import type {
 } from '../types/discovery.types';
 import { isDiscoveryProfileCard } from '../types/discovery.types';
 import { DiscoveryFilterSheet } from './discovery-filter-sheet';
+import { MatchModal } from './match-modal';
 
 type SwipeDirection = 'left' | 'right';
 type SwipeActionIntent = SwipeActionRequest['action'];
@@ -72,7 +73,7 @@ const SWIPE_THRESHOLD = 120;
 const PRELOAD_THRESHOLD = 3;
 const DISCOVERY_PAGE_LIMIT = 10;
 const DEFAULT_FILTER_MODE: DiscoveryMode = 'joining_startups';
-const MATCH_TOAST_DURATION_MS = 2600;
+const MOCK_MATCH_RANDOM_CHANCE = 0.35;
 const FLOATING_ACTIONS_CONTENT_PADDING = 72;
 
 const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
@@ -332,10 +333,6 @@ function getGoalOptions(sections: DiscoveryFilterSection[], mode: DiscoveryMode)
   }
 
   return getDiscoveryFilterSections(mode).find((section) => section.id === 'goal')?.options ?? [];
-}
-
-function shouldShowMockMatchToast(card: DiscoveryCard) {
-  return false
 }
 
 function getCardActionTargetId(card: DiscoveryCard) {
@@ -1032,7 +1029,7 @@ export function DiscoveryDeck() {
   const [history, setHistory] = React.useState<DiscoverySwipeHistoryEntry[]>([]);
   const [lastSuccessfulCards, setLastSuccessfulCards] = React.useState<DiscoveryCard[]>([]);
   const [actionError, setActionError] = React.useState<string | null>(null);
-  const [matchToastName, setMatchToastName] = React.useState<string | null>(null);
+  const [matchedCard, setMatchedCard] = React.useState<DiscoveryCard | null>(null);
   const [filterError, setFilterError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isFilterVisible, setIsFilterVisible] = React.useState(false);
@@ -1048,7 +1045,7 @@ export function DiscoveryDeck() {
   const nextCardScale = useSharedValue(0.96);
   const currentCardRef = React.useRef<DiscoveryCard | null>(null);
   const usingFallbackRef = React.useRef(false);
-  const matchToastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasShownGuaranteedMockMatchRef = React.useRef(false);
   const hasRequestedDeviceCoordinatesRef = React.useRef(false);
 
   const hasSyncedAuthSession =
@@ -1245,6 +1242,7 @@ export function DiscoveryDeck() {
   const handleRefreshDiscovery = React.useCallback(async () => {
     if (usingLocalMockCards) {
       setMockCards(getFallbackCards(appliedMode));
+      hasShownGuaranteedMockMatchRef.current = false;
       return;
     }
 
@@ -1299,37 +1297,18 @@ export function DiscoveryDeck() {
     setRestoredCards([]);
     setHistory([]);
     setActionError(null);
-    setMatchToastName(null);
+    setMatchedCard(null);
+    hasShownGuaranteedMockMatchRef.current = false;
     translateX.value = 0;
     translateY.value = 0;
     nextCardScale.value = 0.96;
   }, [appliedMode, discoveryRequest, nextCardScale, translateX, translateY]);
-
-  React.useEffect(() => {
-    return () => {
-      if (matchToastTimerRef.current) {
-        clearTimeout(matchToastTimerRef.current);
-      }
-    };
-  }, []);
 
   const resetCardPosition = React.useCallback(() => {
     translateX.value = withSpring(0);
     translateY.value = withSpring(0);
     nextCardScale.value = withSpring(0.96);
   }, [nextCardScale, translateX, translateY]);
-
-  const showMatchToast = React.useCallback((cardName: string) => {
-    if (matchToastTimerRef.current) {
-      clearTimeout(matchToastTimerRef.current);
-    }
-
-    setMatchToastName(cardName);
-    matchToastTimerRef.current = setTimeout(() => {
-      setMatchToastName(null);
-      matchToastTimerRef.current = null;
-    }, MATCH_TOAST_DURATION_MS);
-  }, []);
 
   const maybePresentBoostPaywall = React.useCallback(async () => {
     if (!supported) {
@@ -1368,6 +1347,12 @@ export function DiscoveryDeck() {
         if (usingFallbackRef.current) {
           setMockCards((current) => current.filter((item) => item.id !== activeCard.id));
 
+          if (action === 'like' || action === 'super_like') {
+            matched =
+              !hasShownGuaranteedMockMatchRef.current ||
+              Math.random() < MOCK_MATCH_RANDOM_CHANCE;
+            hasShownGuaranteedMockMatchRef.current = true;
+          }
         } else {
           const response = await swipeAction.mutateAsync({
             cardId: activeCard.id,
@@ -1390,10 +1375,10 @@ export function DiscoveryDeck() {
 
         if (
           (action === 'like' || action === 'super_like') &&
-          (matched || shouldShowMockMatchToast(activeCard))
+          matched
         ) {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          showMatchToast(activeCard.name);
+          setMatchedCard(activeCard);
         }
 
         setActionError(null);
@@ -1419,7 +1404,6 @@ export function DiscoveryDeck() {
       maybePresentBoostPaywall,
       nextCardScale,
       resetCardPosition,
-      showMatchToast,
       swipeAction,
       translateX,
       translateY,
@@ -1757,6 +1741,8 @@ export function DiscoveryDeck() {
     </View>
   );
 
+  const matchModal = <MatchModal card={matchedCard} onClose={() => setMatchedCard(null)} />;
+
   if (
     !hasResolvedAuthSessionSetup ||
     (!currentItem &&
@@ -1768,6 +1754,7 @@ export function DiscoveryDeck() {
         <AppTopBar rightAccessory={topBarAccessory} />
         <DiscoveryDeckSkeleton />
         {filterSheet}
+        {matchModal}
       </View>
     );
   }
@@ -1790,12 +1777,16 @@ export function DiscoveryDeck() {
             hasActiveFilters={appliedFilterCount > 0 || Boolean(appliedMode)}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
             onOpenFilters={handleOpenFilters}
-            onResetFallback={() => setMockCards(getFallbackCards(appliedMode))}
+            onResetFallback={() => {
+              setMockCards(getFallbackCards(appliedMode));
+              hasShownGuaranteedMockMatchRef.current = false;
+            }}
             onResetFilters={handleResetFilters}
             usingMockData={usingLocalMockCards}
           />
         </ScrollView>
         {filterSheet}
+        {matchModal}
       </View>
     );
   }
@@ -1804,24 +1795,6 @@ export function DiscoveryDeck() {
     <View className="flex-1">
       <AppTopBar rightAccessory={topBarAccessory} />
       <View className="flex-1 px-2 pb-1">
-        {matchToastName ? (
-          <View className="absolute inset-x-4 top-2 z-20" pointerEvents="none">
-            <AppCard
-              className="gap-1 rounded-[18px] border px-4 py-3"
-              style={{
-                backgroundColor: 'rgba(16, 185, 129, 0.96)',
-                borderColor: 'rgba(209, 250, 229, 0.72)',
-              }}>
-              <AppText className="text-[12px] uppercase tracking-[1px]" style={{ color: '#052E16' }} variant="label">
-                Mock Match
-              </AppText>
-              <AppText className="text-[15px]" style={{ color: '#052E16' }} variant="bodyStrong">
-                You and {matchToastName} liked each other.
-              </AppText>
-            </AppCard>
-          </View>
-        ) : null}
-
         {filterError ? (
           <AppCard tone="signal" className="mb-2 gap-2 rounded-[16px] p-3">
             <AppText variant="subtitle">Discovery search</AppText>
@@ -1973,6 +1946,7 @@ export function DiscoveryDeck() {
 
         {filterSheet}
       </View>
+      {matchModal}
     </View>
   );
 }
