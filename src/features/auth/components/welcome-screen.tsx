@@ -13,7 +13,7 @@ import { getRouteForAuthPhase } from '../utils/auth-routing';
 import { NetworkVisualization } from './network-visualization';
 import { SplashScreen } from './splash-screen';
 
-const ACCENT = '#FF9A3E';
+const ACCENT = '#FF9836';
 const CONNECTX_LOGO = require('../../../../assets/images/logo_welcome.png');
 
 export function WelcomeScreen() {

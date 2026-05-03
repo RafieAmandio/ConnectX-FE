@@ -14,7 +14,7 @@ import { AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
 
 const CANVAS_BG = '#212121';
-const ACCENT = '#FF9A3E';
+const ACCENT = '#FF9836';
 const FIELD_BORDER = '#383838';
 const TEXT_MUTED = '#98A2B3';
 const TEXT_SOFT = '#667085';

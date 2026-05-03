@@ -24,7 +24,7 @@ import { getRouteForAuthPhase } from '../utils/auth-routing';
 import { getEmailError, getPasswordError } from '../utils/auth-validation';
 
 const CANVAS_BG = '#212121';
-const ACCENT = '#FF9A3E';
+const ACCENT = '#FF9836';
 const FIELD_BG = '#292929';
 const FIELD_BORDER = '#383838';
 const TEXT_MUTED = '#98A2B3';
