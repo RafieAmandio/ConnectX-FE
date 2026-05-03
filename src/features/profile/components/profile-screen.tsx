@@ -22,7 +22,6 @@ import type {
   ProfileAboutKind,
   ProfileBadge,
   ProfileNamedItem,
-  ProfileStartupStageDetailValue,
 } from '../types/profile.types';
 
 const BADGE_ICON_BY_ID: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -166,101 +165,82 @@ function NamedItemList({
   );
 }
 
-function formatStageDetailValue(value: ProfileStartupStageDetailValue) {
-  if (Array.isArray(value)) {
-    return value.length ? value.join(', ') : 'Not provided';
-  }
-
-  if (value === null || value === '') {
-    return 'Not provided';
-  }
-
-  return String(value);
-}
-
 function StartupProfileCard({ startup }: { startup: NonNullable<MyProfileData['startup']> }) {
   return (
-    <SectionCard>
-      <SectionHeader
-        description="Startup details pulled from onboarding for people representing a company."
-        eyebrow="Startup"
-        icon="rocket-outline"
-        title={startup.name}
-      />
-
-      <View className="gap-3">
-        <AppText className="text-[15px] leading-6" tone="muted">
-          {startup.tagline}
-        </AppText>
-
+    <SectionCard className="gap-5 rounded-[24px] px-4 py-4">
+      <View className="flex-row items-start gap-3">
         <View
-          className="gap-3 rounded-[18px] border px-3.5 py-3"
-          style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+          className="h-10 w-10 items-center justify-center rounded-full border"
+          style={{ backgroundColor: ACCENT_SOFT_BG, borderColor: ACCENT_BORDER }}
         >
-          <View className="flex-row items-center justify-between gap-3">
-            <AppText className="text-[12px] tracking-[1px]" tone="muted" variant="label">
-              Stage
+          <Ionicons color={ACCENT} name="rocket-outline" size={18} />
+        </View>
+
+        <View className="min-w-0 flex-1 gap-1">
+          <View className="flex-row flex-wrap items-center gap-2">
+            <AppText className="text-[11px] tracking-[1.2px]" tone="muted" variant="label">
+              Startup
             </AppText>
             <View
-              className="rounded-full border px-3 py-1.5"
+              className="rounded-full border px-2.5 py-1"
               style={{ backgroundColor: ACCENT_SOFT_BG, borderColor: ACCENT_BORDER }}
             >
-              <AppText className="text-[12px]" tone="signal" variant="bodyStrong">
+              <AppText className="text-[11px]" tone="signal" variant="bodyStrong">
                 {startup.stage.label}
               </AppText>
             </View>
           </View>
-
-          {startup.stage.details.map((detail) => (
-            <View key={detail.id} className="flex-row items-start justify-between gap-3">
-              <AppText className="flex-1 text-[13px] leading-5" tone="muted">
-                {detail.label}
-              </AppText>
-              <AppText align="right" className="max-w-[58%] text-[13px] leading-5">
-                {formatStageDetailValue(detail.value)}
-              </AppText>
-            </View>
-          ))}
+          <AppText className="text-[18px] leading-6" variant="subtitle">
+            {startup.name}
+          </AppText>
+          <AppText className="text-[14px] leading-5" tone="muted">
+            {startup.tagline}
+          </AppText>
         </View>
-
-        {startup.industries.length ? (
-          <View className="gap-2">
-            <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
-              Industries
-            </AppText>
-            <NamedItemList items={startup.industries} />
-          </View>
-        ) : null}
-
-        {startup.links.length ? (
-          <View className="gap-2">
-            <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
-              Links
-            </AppText>
-            <View className="gap-2">
-              {startup.links.map((link) => (
-                <Pressable
-                  key={`${link.label}-${link.url}`}
-                  className="flex-row items-center gap-3 rounded-[16px] border px-3.5 py-3 active:opacity-80"
-                  onPress={() => Linking.openURL(link.url)}
-                  style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
-                >
-                  <Ionicons color={ACCENT} name="link-outline" size={16} />
-                  <View className="min-w-0 flex-1">
-                    <AppText className="text-[13px]" variant="bodyStrong">
-                      {link.label}
-                    </AppText>
-                    <AppText className="text-[12px] leading-4" numberOfLines={1} tone="muted">
-                      {link.url}
-                    </AppText>
-                  </View>
-                  <Ionicons color="rgba(255,255,255,0.45)" name="open-outline" size={15} />
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        ) : null}
       </View>
+
+      {startup.industries.length ? (
+        <View className="gap-2.5">
+          <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
+            Industries
+          </AppText>
+          <NamedItemList items={startup.industries} />
+        </View>
+      ) : null}
+
+      {startup.links.length ? (
+        <View className="gap-2.5">
+          <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
+            Links
+          </AppText>
+          <View className="gap-2">
+            {startup.links.map((link) => (
+              <Pressable
+                key={`${link.label}-${link.url}`}
+                className="min-h-[52px] flex-row items-center gap-3 rounded-[16px] border px-3 active:opacity-80"
+                onPress={() => Linking.openURL(link.url)}
+                style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+              >
+                <View
+                  className="h-8 w-8 items-center justify-center rounded-full"
+                  style={{ backgroundColor: ACCENT_SOFT_BG }}
+                >
+                  <Ionicons color={ACCENT} name="link-outline" size={15} />
+                </View>
+                <View className="min-w-0 flex-1">
+                  <AppText className="text-[13px]" variant="bodyStrong">
+                    {link.label}
+                  </AppText>
+                  <AppText className="text-[12px] leading-4" numberOfLines={1} tone="muted">
+                    {link.url}
+                  </AppText>
+                </View>
+                <Ionicons color="rgba(255,255,255,0.45)" name="open-outline" size={15} />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
     </SectionCard>
   );
 }
