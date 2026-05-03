@@ -15,13 +15,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText, AppTopBar } from '@shared/components';
 
-import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
-import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
 import {
   useAppendMockMessage,
   useChatConversations,
   useConversationMessages,
 } from '@features/chat/hooks/use-mock-chat';
+import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
+import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 
 function formatRelativeTime(value: string) {
   const deltaInMinutes = Math.max(
@@ -414,21 +414,22 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           </View>
         ) : null}
 
-        <View className="border-t border-[#3A3938] px-4 pb-8 pt-3">
+        <View className="border-t border-[#3A3938] px-4 pb-6 pt-2">
           <View className="flex-row items-end gap-3">
-            <View className="flex-1 rounded-full border border-[#444240] bg-[#2E2C2B] px-5 py-3">
+            <View className="min-h-11 flex-1 rounded-full border border-[#444240] bg-[#2E2C2B] px-4 py-2">
               <TextInput
-                className="font-body text-[16px] text-white"
+                className="font-body text-[15px] text-white"
                 multiline
                 onChangeText={setDraftMessage}
                 placeholder="Type a demo message..."
                 placeholderTextColor="#7D7974"
+                style={{ maxHeight: 96, padding: 0 }}
                 value={draftMessage}
               />
             </View>
 
             <Pressable
-              className="h-14 w-14 items-center justify-center rounded-full bg-[#FF9D3D] active:opacity-70"
+              className="h-11 w-11 items-center justify-center rounded-full bg-[#FF9D3D] active:opacity-70"
               disabled={!draftMessage.trim() || isSending}
               onPress={() => void handleSend()}
               style={{ opacity: !draftMessage.trim() || isSending ? 0.5 : 1 }}>
