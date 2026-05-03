@@ -1390,7 +1390,7 @@ export function DiscoveryDeck() {
             );
             const generatedMatch = upsertGeneratedMockMatch(activeCard, conversationId);
             matchId = generatedMatch.item.matchId;
-            await queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversations });
+            await queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversationsRoot });
             await queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
           } catch (error) {
             console.warn('Unable to create local mock match records for discovery match.', error);

@@ -4,6 +4,10 @@ import type {
   MatchListItem,
   MatchesListResponse,
 } from '../types/matches.types';
+import { mockDiscoveryCardsResponsesByMode } from '@features/home/mock/discovery.mock';
+import { isDiscoveryStartupCard } from '@features/home/types/discovery.types';
+
+export type MockMatchesSeedVariant = 'individual' | 'startup';
 
 const likesYouBlueprints = [
   {
@@ -131,7 +135,7 @@ const matchBlueprints = [
   },
 ] as const;
 
-export const mockMatchesListResponse: MatchesListResponse = {
+export const mockIndividualMatchesListResponse: MatchesListResponse = {
   success: true,
   message: 'Matches fetched successfully',
   data: {
@@ -183,7 +187,7 @@ export const mockMatchesListResponse: MatchesListResponse = {
   },
 };
 
-export const mockMatchAnalysisById: Record<string, MatchAnalysisResponse> = Object.fromEntries(
+export const mockIndividualMatchAnalysisById: Record<string, MatchAnalysisResponse> = Object.fromEntries(
   matchBlueprints.map((item) => [
     item.matchId,
     {
@@ -243,6 +247,142 @@ export const mockMatchAnalysisById: Record<string, MatchAnalysisResponse> = Obje
   ])
 );
 
-export function getFallbackMatchAnalysis(matchId: string) {
-  return mockMatchAnalysisById[matchId] ?? mockMatchAnalysisById.mtc_789;
+const startupMatchCards = mockDiscoveryCardsResponsesByMode.joining_startups.data.items
+  .filter(isDiscoveryStartupCard)
+  .slice(0, 4);
+
+const startupMatches = startupMatchCards.slice(0, 3).map((card, index) => {
+  const normalizedStartupId = card.startupId
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  const role = card.openRoles[0]?.title ?? card.lookingFor[0] ?? 'Early Team Member';
+  const matchedAt = new Date(Date.UTC(2026, 3, 13 + index, 7, 0, 0)).toISOString();
+  const expiresAt = new Date(Date.UTC(2026, 3, 20 + index, 7, 0, 0)).toISOString();
+
+  return {
+    actions: {
+      canChat: true,
+      canViewAnalysis: true,
+    },
+    conversationId: `conv_startup_${normalizedStartupId}`,
+    expiresAt,
+    expiresInDays: 6 - Math.min(index, 2),
+    fitSummary: {
+      score: card.match.score,
+      label: card.match.label ?? 'Strong Startup Fit',
+      insight: `You connected with ${card.name} for ${role}.`,
+    },
+    hasMessaged: index === 0,
+    isOnline: index !== 1,
+    matchedAt,
+    matchId: `mtc_startup_${normalizedStartupId}`,
+    status: 'active',
+    user: {
+      userId: card.startupId,
+      name: card.name,
+      photoUrl: card.logoUrl,
+      headline: role,
+      location: card.industry.display,
+    },
+    card,
+    role,
+  } satisfies MatchListItem & {
+    card: typeof card;
+    role: string;
+  };
+});
+
+export const mockStartupMatchesListResponse: MatchesListResponse = {
+  ...mockIndividualMatchesListResponse,
+  data: {
+    ...mockIndividualMatchesListResponse.data,
+    likesYou: {
+      items: startupMatchCards.map<LikesYouListItem>((card, index) => ({
+        likeId: `like_startup_${card.startupId}`,
+        likedAt: new Date(Date.UTC(2026, 3, 13 + index, 4, 30, 0)).toISOString(),
+        user: {
+          userId: card.startupId,
+          name: card.name,
+          photoUrl: card.logoUrl,
+          headline: card.openRoles[0]?.title ?? card.lookingFor[0] ?? 'Startup team',
+          location: card.industry.display,
+        },
+      })),
+      locked: true,
+      totalNew: startupMatchCards.length,
+    },
+    items: startupMatches.map(({ card, role, ...match }) => match),
+    total: startupMatches.length,
+  },
+};
+
+export const mockStartupMatchAnalysisById: Record<string, MatchAnalysisResponse> = Object.fromEntries(
+  startupMatches.map(({ card, role, ...match }) => [
+    match.matchId,
+    {
+      success: true,
+      message: 'Match analysis fetched successfully',
+      data: {
+        matchId: match.matchId,
+        conversationId: match.conversationId,
+        status: match.status,
+        generatedAt: '2026-04-13T10:00:00.000Z',
+        user: match.user,
+        analysis: {
+          compatibilityScore: card.match.score,
+          label: card.match.label ?? 'Strong Startup Fit',
+          subtitle: `You & ${card.name}`,
+          skillComplementarity: {
+            title: 'Role Fit',
+            youBring: ['Founder energy', 'Execution', 'Startup interest'],
+            theyBring: [role, ...card.lookingFor],
+            summary: card.summary,
+          },
+          startupVisionAlignment: {
+            title: 'Startup Vision Alignment',
+            sharedInterests: [card.industry.primary, card.industry.secondary].filter(
+              (value): value is string => Boolean(value)
+            ),
+          },
+          suggestedRoles: {
+            title: 'Suggested Roles',
+            you: role,
+            them: card.founder.title ?? 'Founder',
+          },
+          suggestedTeamStructure: {
+            title: 'Suggested Team Structure',
+            roles: card.openRoles.map((openRole) => openRole.title),
+          },
+        },
+      },
+    },
+  ])
+);
+
+export const mockMatchesListResponse = mockIndividualMatchesListResponse;
+export const mockMatchAnalysisById = mockIndividualMatchAnalysisById;
+
+export function getMockMatchesListResponse(seedVariant: MockMatchesSeedVariant) {
+  return seedVariant === 'startup'
+    ? mockStartupMatchesListResponse
+    : mockIndividualMatchesListResponse;
+}
+
+export function getFallbackMatchAnalysis(
+  matchId: string,
+  seedVariant: MockMatchesSeedVariant = 'individual'
+) {
+  const analysisById =
+    seedVariant === 'startup' ? mockStartupMatchAnalysisById : mockIndividualMatchAnalysisById;
+
+  return (
+    analysisById[matchId] ??
+    mockStartupMatchAnalysisById[matchId] ??
+    mockIndividualMatchAnalysisById[matchId] ??
+    (seedVariant === 'startup'
+      ? mockStartupMatchAnalysisById.mtc_startup_startup_payflow_ai
+      : mockIndividualMatchAnalysisById.mtc_789)
+  );
 }

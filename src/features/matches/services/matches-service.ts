@@ -1,7 +1,11 @@
 import { ApiError, apiFetch } from '@shared/services/api';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
-import { mockMatchesListResponse } from '../mock/matches.mock';
+import {
+  getFallbackMatchAnalysis,
+  getMockMatchesListResponse,
+  type MockMatchesSeedVariant,
+} from '../mock/matches.mock';
 import {
   loadGeneratedMockMatchAnalysis,
   loadGeneratedMockMatches,
@@ -78,11 +82,15 @@ function getDemoMatchDedupeKey(match: MatchListItem) {
   return normalizedName || match.matchId;
 }
 
-export async function fetchMatchesList(params: MatchesListQueryParams = {}) {
+export async function fetchMatchesList(
+  params: MatchesListQueryParams = {},
+  seedVariant: MockMatchesSeedVariant = 'individual'
+) {
   if (isMatchesListMockEnabled()) {
     const normalizedLimit = normalizeLimit(params.limit);
     const page = params.page && params.page > 0 ? params.page : 1;
     const generatedMatches = loadGeneratedMockMatches();
+    const mockMatchesListResponse = getMockMatchesListResponse(seedVariant);
     const matchesByName = new Map<string, MatchListItem>();
 
     for (const match of [...mockMatchesListResponse.data.items, ...generatedMatches]) {
@@ -113,13 +121,18 @@ export async function fetchMatchesList(params: MatchesListQueryParams = {}) {
   return apiFetch<MatchesListResponse>(buildMatchesListPath(params));
 }
 
-export async function fetchMatchAnalysis(matchId: string) {
+export async function fetchMatchAnalysis(
+  matchId: string,
+  seedVariant: MockMatchesSeedVariant = 'individual'
+) {
   if (isMatchesListMockEnabled()) {
     const generatedAnalysis = loadGeneratedMockMatchAnalysis(matchId);
 
     if (generatedAnalysis) {
       return generatedAnalysis;
     }
+
+    return getFallbackMatchAnalysis(matchId, seedVariant);
   }
 
   return apiFetch<MatchAnalysisResponse>(MATCHES_API.ANALYSIS(matchId));

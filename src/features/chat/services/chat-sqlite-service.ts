@@ -1,11 +1,30 @@
 import * as SQLite from 'expo-sqlite';
 
+import { mockDiscoveryCardsResponsesByMode } from '@features/home/mock/discovery.mock';
+import { isDiscoveryStartupCard } from '@features/home/types/discovery.types';
+
 import type { ChatConversation, ChatConversationKind, ChatMessage, ChatMessageStatus } from '../types/chat.types';
 
 const CHAT_DATABASE_NAME = 'connectx-chat.db';
 const LOCAL_MESSAGE_LIMIT = 30;
 
-const seededConversations = [
+export type MockChatSeedVariant = 'individual' | 'startup';
+
+type SeededConversation = {
+  id: string;
+  kind: ChatConversationKind;
+  name: string;
+  participantEmail: string;
+  photoUrl: string | null;
+  unreadCount: number;
+};
+
+type MockChatSeedData = {
+  conversations: readonly SeededConversation[];
+  messages: readonly ChatMessage[];
+};
+
+const individualSeededConversations = [
   {
     id: 'conv_ardi_wijaya',
     kind: 'direct',
@@ -30,16 +49,9 @@ const seededConversations = [
     photoUrl: 'https://i.pravatar.cc/512?img=5',
     unreadCount: 0,
   },
-] as const satisfies readonly {
-  id: string;
-  kind: ChatConversationKind;
-  name: string;
-  participantEmail: string;
-  photoUrl: string | null;
-  unreadCount: number;
-}[];
+] as const satisfies readonly SeededConversation[];
 
-const seededMessages = [
+const individualSeededMessages = [
   {
     id: 'ardi-1',
     conversationId: 'conv_ardi_wijaya',
@@ -122,6 +134,63 @@ const seededMessages = [
   },
 ] as const satisfies readonly ChatMessage[];
 
+const startupSeedCards = mockDiscoveryCardsResponsesByMode.joining_startups.data.items
+  .filter(isDiscoveryStartupCard)
+  .slice(0, 3);
+
+const startupSeededConversations = startupSeedCards.map((card) => ({
+  id: `conv_startup_${normalizeConversationId(card.startupId)}`,
+  kind: 'direct',
+  name: card.name,
+  participantEmail: `${normalizeConversationId(card.startupId)}@connectx.startup`,
+  photoUrl: card.logoUrl,
+  unreadCount: 0,
+})) satisfies SeededConversation[];
+
+const startupSeededMessages = startupSeedCards.flatMap((card, index) => {
+  const conversationId = `conv_startup_${normalizeConversationId(card.startupId)}`;
+  const role = card.openRoles[0]?.title ?? card.lookingFor[0] ?? 'early team member';
+  const baseTimestamp = Date.UTC(2026, 3, 13 + index, 7, 18, 0);
+
+  return [
+    {
+      id: `${conversationId}-1`,
+      conversationId,
+      body: `${card.name} is looking for a ${role}. Your profile looks aligned with the role.`,
+      direction: 'incoming',
+      status: 'read',
+      createdAt: new Date(baseTimestamp).toISOString(),
+    },
+    {
+      id: `${conversationId}-2`,
+      conversationId,
+      body: `The team is building in ${card.industry.display}. Want to compare notes on fit?`,
+      direction: 'incoming',
+      status: 'read',
+      createdAt: new Date(baseTimestamp + 8 * 60 * 1000).toISOString(),
+    },
+    {
+      id: `${conversationId}-3`,
+      conversationId,
+      body: 'Yes, send over the current role brief and I will take a look.',
+      direction: 'outgoing',
+      status: 'sent',
+      createdAt: new Date(baseTimestamp + 15 * 60 * 1000).toISOString(),
+    },
+  ];
+}) satisfies ChatMessage[];
+
+const mockChatSeeds = {
+  individual: {
+    conversations: individualSeededConversations,
+    messages: individualSeededMessages,
+  },
+  startup: {
+    conversations: startupSeededConversations,
+    messages: startupSeededMessages,
+  },
+} as const satisfies Record<MockChatSeedVariant, MockChatSeedData>;
+
 type ConversationRow = {
   id: string;
   kind: ChatConversationKind;
@@ -166,6 +235,20 @@ function normalizeConversationId(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
+}
+
+function getAllSeededConversationIds() {
+  return Array.from(
+    new Set(
+      Object.values(mockChatSeeds).flatMap((seed) =>
+        seed.conversations.map((conversation) => conversation.id)
+      )
+    )
+  );
+}
+
+function getSeedData(seedVariant: MockChatSeedVariant) {
+  return mockChatSeeds[seedVariant];
 }
 
 function mapConversationRow(row: ConversationRow): ChatConversation {
@@ -215,9 +298,15 @@ async function pruneConversationMessages(
   );
 }
 
-async function seedMockChatData(database: SQLite.SQLiteDatabase) {
-  const seededConversationIds = seededConversations.map((conversation) => conversation.id);
-  const placeholders = seededConversationIds.map(() => '?').join(', ');
+async function seedMockChatData(
+  database: SQLite.SQLiteDatabase,
+  seedVariant: MockChatSeedVariant
+) {
+  const activeSeed = getSeedData(seedVariant);
+  const activeSeededConversationIds = activeSeed.conversations.map((conversation) => conversation.id);
+  const activeSeededConversationIdSet = new Set(activeSeededConversationIds);
+  const allSeededConversationIds = getAllSeededConversationIds();
+  const placeholders = allSeededConversationIds.map(() => '?').join(', ');
   const existingSeededConversations = await database.getAllAsync<{
     id: string;
     participantEmail: string | null;
@@ -227,28 +316,35 @@ async function seedMockChatData(database: SQLite.SQLiteDatabase) {
       FROM conversations
       WHERE id IN (${placeholders})
     `,
-    ...seededConversationIds
+    ...allSeededConversationIds
   );
 
-  const hasCurrentSeedData = seededConversations.every((conversation) =>
+  const hasActiveSeedRows = activeSeed.conversations.every((conversation) =>
     existingSeededConversations.some(
       (existingConversation) =>
         existingConversation.id === conversation.id &&
         existingConversation.participantEmail === conversation.participantEmail
     )
   );
+  const hasOnlyActiveSeedRows = existingSeededConversations.every((conversation) =>
+    activeSeededConversationIdSet.has(conversation.id)
+  );
 
-  if (hasCurrentSeedData) {
+  if (hasActiveSeedRows && hasOnlyActiveSeedRows) {
     return;
   }
 
-  await database.execAsync(`
-    DELETE FROM messages;
-    DELETE FROM conversations;
-  `);
+  await database.runAsync(
+    `DELETE FROM messages WHERE conversation_id IN (${placeholders})`,
+    ...allSeededConversationIds
+  );
+  await database.runAsync(
+    `DELETE FROM conversations WHERE id IN (${placeholders})`,
+    ...allSeededConversationIds
+  );
 
-  for (const conversation of seededConversations) {
-    const conversationMessages = seededMessages
+  for (const conversation of activeSeed.conversations) {
+    const conversationMessages = activeSeed.messages
       .filter((message) => message.conversationId === conversation.id)
       .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
     const lastMessage = conversationMessages.at(-1);
@@ -296,8 +392,11 @@ async function seedMockChatData(database: SQLite.SQLiteDatabase) {
   }
 }
 
-async function backfillSeededConversationPhotoUrls(database: SQLite.SQLiteDatabase) {
-  for (const conversation of seededConversations) {
+async function backfillSeededConversationPhotoUrls(
+  database: SQLite.SQLiteDatabase,
+  seedVariant: MockChatSeedVariant
+) {
+  for (const conversation of getSeedData(seedVariant).conversations) {
     await database.runAsync(
       `
         UPDATE conversations
@@ -353,8 +452,6 @@ async function initializeDatabase() {
   `);
 
   await ensureConversationColumns(database);
-  await seedMockChatData(database);
-  await backfillSeededConversationPhotoUrls(database);
 
   return database;
 }
@@ -367,8 +464,12 @@ async function getDatabase() {
   return databasePromise;
 }
 
-export async function listMockConversations() {
+export async function listMockConversations(seedVariant: MockChatSeedVariant = 'individual') {
   const database = await getDatabase();
+
+  await seedMockChatData(database, seedVariant);
+  await backfillSeededConversationPhotoUrls(database, seedVariant);
+
   const rows = await database.getAllAsync<ConversationRow>(
     `
       SELECT
@@ -519,15 +620,21 @@ export async function upsertDiscoveryMatchConversation(input: DiscoveryMatchConv
   return conversationId;
 }
 
-export async function resetMockChatData() {
+export async function resetMockChatData(seedVariant: MockChatSeedVariant = 'individual') {
   const database = await getDatabase();
+  const allSeededConversationIds = getAllSeededConversationIds();
+  const placeholders = allSeededConversationIds.map(() => '?').join(', ');
 
-  await database.execAsync(`
-    DELETE FROM messages;
-    DELETE FROM conversations;
-  `);
+  await database.runAsync(
+    `DELETE FROM messages WHERE conversation_id IN (${placeholders})`,
+    ...allSeededConversationIds
+  );
+  await database.runAsync(
+    `DELETE FROM conversations WHERE id IN (${placeholders})`,
+    ...allSeededConversationIds
+  );
 
-  await seedMockChatData(database);
+  await seedMockChatData(database, seedVariant);
 }
 
 export { LOCAL_MESSAGE_LIMIT };
