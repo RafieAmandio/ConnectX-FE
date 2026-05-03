@@ -5,7 +5,6 @@ import React from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   ListRenderItemInfo,
   Pressable,
@@ -272,37 +271,16 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const [invitationSent, setInvitationSent] = React.useState(false);
   const [invitationMessage, setInvitationMessage] = React.useState<string | null>(null);
   const [invitationError, setInvitationError] = React.useState<string | null>(null);
-  const [isKeyboardVisible, setIsKeyboardVisible] = React.useState(false);
   const listRef = React.useRef<FlatList<ChatMessage>>(null);
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = messagesQuery.data ?? [];
   const isSending = appendMessageMutation.isPending;
-  const composerBottomPadding =
-    process.env.EXPO_OS === 'ios'
-      ? Math.max(insets.bottom, 12)
-      : isKeyboardVisible
-        ? 12
-        : Math.max(insets.bottom, 12);
 
   React.useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     }
   }, [messages.length]);
-
-  React.useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
-      setIsKeyboardVisible(true);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setIsKeyboardVisible(false);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
 
   const handleSend = React.useCallback(async () => {
     const body = draftMessage.trim();
@@ -450,7 +428,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
         <View
           className="border-t border-[#3A3938] px-4 pt-3"
-          style={{ paddingBottom: composerBottomPadding }}>
+          style={{ paddingBottom: process.env.EXPO_OS === 'ios' ? Math.max(insets.bottom, 12) : 24 }}>
           <View className="flex-row items-end gap-3">
             <View className="min-h-11 flex-1 rounded-full border border-[#444240] bg-[#2E2C2B] px-4 py-2">
               <TextInput
