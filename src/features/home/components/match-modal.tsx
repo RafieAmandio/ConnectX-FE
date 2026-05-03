@@ -25,6 +25,7 @@ const connectxLogo = require('../../../../assets/images/connectx-logo.png');
 
 type MatchModalProps = {
   card: DiscoveryCard | null;
+  onChat: () => void;
   onClose: () => void;
 };
 
@@ -100,7 +101,7 @@ function getStartupRole(card: DiscoveryCard) {
   return card.openRoles[0]?.title ?? card.lookingFor[0] ?? 'Co-Founder';
 }
 
-export function MatchModal({ card, onClose }: MatchModalProps) {
+export function MatchModal({ card, onChat, onClose }: MatchModalProps) {
   if (!card) {
     return null;
   }
@@ -263,7 +264,7 @@ export function MatchModal({ card, onClose }: MatchModalProps) {
               <Pressable
                 accessibilityLabel={`Start chat with ${getMatchSubject(card)}`}
                 className="min-h-10 flex-1 flex-row items-center justify-center gap-2 rounded-[10px]"
-                onPress={() => { }}
+                onPress={onChat}
                 style={{ backgroundColor: '#FF9836' }}>
                 <Ionicons color="#1A120B" name="chatbubble-outline" size={16} />
                 <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
@@ -286,7 +287,7 @@ export function MatchModal({ card, onClose }: MatchModalProps) {
             <Pressable
               accessibilityLabel={`Chat with founder of ${getMatchSubject(card)}`}
               className="min-h-10 flex-1 flex-row items-center justify-center gap-2 rounded-[10px]"
-              onPress={() => { }}
+              onPress={onChat}
               style={{ backgroundColor: '#FF9836' }}>
               <Ionicons color="#1A120B" name="chatbubble-outline" size={16} />
               <AppText style={{ color: '#1A120B' }} variant="bodyStrong">

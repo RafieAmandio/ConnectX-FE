@@ -8,7 +8,7 @@ import {
   resetMockChatData,
 } from '../services/chat-sqlite-service';
 
-const chatQueryKeys = {
+export const chatQueryKeys = {
   conversations: ['chat-demo', 'conversations'] as const,
   messages: (conversationId: string) => ['chat-demo', 'messages', conversationId] as const,
 };

@@ -341,10 +341,12 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior="padding"
+        behavior={process.env.EXPO_OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
         style={{ backgroundColor: '#262626' }}
-        keyboardVerticalOffset={0}>
+        keyboardVerticalOffset={0}
+        enabled={true}
+      >
         <View
           className="flex-row items-center gap-3 px-4 pb-4"
           style={{ paddingTop: Math.max(insets.top + 8, 16) }}>

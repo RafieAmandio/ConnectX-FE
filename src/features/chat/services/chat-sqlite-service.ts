@@ -147,10 +147,25 @@ type TableColumnRow = {
   name: string;
 };
 
+export type DiscoveryMatchConversationInput = {
+  id: string;
+  name: string;
+  participantEmail?: string | null;
+  photoUrl?: string | null;
+};
+
 let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 function createMessageId(conversationId: string) {
   return `${conversationId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeConversationId(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
 }
 
 function mapConversationRow(row: ConversationRow): ChatConversation {
@@ -444,6 +459,50 @@ export async function appendMockMessage(conversationId: string, body: string) {
   await pruneConversationMessages(database, conversationId);
 
   return nextMessage;
+}
+
+export async function upsertDiscoveryMatchConversation(input: DiscoveryMatchConversationInput) {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+  const normalizedId = normalizeConversationId(input.id);
+  const conversationId = `conv_match_${normalizedId || Date.now()}`;
+  const participantEmail =
+    input.participantEmail?.trim() || `${normalizedId || conversationId}@connectx.match`;
+  const previewText = 'You matched on ConnectX. Say hi to start the conversation.';
+
+  await database.runAsync(
+    `
+      INSERT INTO conversations (
+        id,
+        name,
+        kind,
+        participant_email,
+        photo_url,
+        preview_text,
+        unread_count,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        kind = excluded.kind,
+        participant_email = excluded.participant_email,
+        photo_url = excluded.photo_url,
+        preview_text = excluded.preview_text,
+        unread_count = 0,
+        updated_at = excluded.updated_at
+    `,
+    conversationId,
+    input.name,
+    'direct',
+    participantEmail,
+    input.photoUrl ?? null,
+    previewText,
+    0,
+    now
+  );
+
+  return conversationId;
 }
 
 export async function resetMockChatData() {

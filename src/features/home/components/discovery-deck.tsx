@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
@@ -20,6 +21,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
+import { chatQueryKeys } from '@features/chat/hooks/use-mock-chat';
+import { upsertDiscoveryMatchConversation } from '@features/chat/services/chat-sqlite-service';
 import { useNotifications } from '@features/notifications';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
@@ -67,6 +70,10 @@ type SwipeActionIntent = SwipeActionRequest['action'];
 type DeviceCoordinates = {
   latitude: number;
   longitude: number;
+};
+type MatchState = {
+  card: DiscoveryCard;
+  conversationId: string | null;
 };
 
 const SWIPE_THRESHOLD = 120;
@@ -337,6 +344,22 @@ function getGoalOptions(sections: DiscoveryFilterSection[], mode: DiscoveryMode)
 
 function getCardActionTargetId(card: DiscoveryCard) {
   return isDiscoveryProfileCard(card) ? card.profileId : card.startupId;
+}
+
+function getDiscoveryMatchConversationInput(card: DiscoveryCard) {
+  if (isDiscoveryProfileCard(card)) {
+    return {
+      id: getCardActionTargetId(card),
+      name: card.name,
+      photoUrl: card.photoUrl,
+    };
+  }
+
+  return {
+    id: getCardActionTargetId(card),
+    name: card.founder.name || card.name,
+    photoUrl: card.logoUrl,
+  };
 }
 
 function withAlpha(hexColor: string, alpha: number) {
@@ -976,6 +999,7 @@ function EmptyState({
 
 export function DiscoveryDeck() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { height, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { isHydrated: isAuthHydrated, session } = useAuth();
@@ -988,7 +1012,7 @@ export function DiscoveryDeck() {
   const [history, setHistory] = React.useState<DiscoverySwipeHistoryEntry[]>([]);
   const [lastSuccessfulCards, setLastSuccessfulCards] = React.useState<DiscoveryCard[]>([]);
   const [actionError, setActionError] = React.useState<string | null>(null);
-  const [matchedCard, setMatchedCard] = React.useState<DiscoveryCard | null>(null);
+  const [matchState, setMatchState] = React.useState<MatchState | null>(null);
   const [filterError, setFilterError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isFilterVisible, setIsFilterVisible] = React.useState(false);
@@ -1210,7 +1234,7 @@ export function DiscoveryDeck() {
   const handleStartOver = React.useCallback(async () => {
     setHistory([]);
     setRestoredCards([]);
-    setMatchedCard(null);
+    setMatchState(null);
     setActionError(null);
     hasShownGuaranteedMockMatchRef.current = false;
 
@@ -1274,7 +1298,7 @@ export function DiscoveryDeck() {
     setRestoredCards([]);
     setHistory([]);
     setActionError(null);
-    setMatchedCard(null);
+    setMatchState(null);
     hasShownGuaranteedMockMatchRef.current = false;
     translateX.value = 0;
     translateY.value = 0;
@@ -1354,8 +1378,19 @@ export function DiscoveryDeck() {
           (action === 'like' || action === 'super_like') &&
           matched
         ) {
+          let conversationId: string | null = null;
+
+          try {
+            conversationId = await upsertDiscoveryMatchConversation(
+              getDiscoveryMatchConversationInput(activeCard)
+            );
+            await queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversations });
+          } catch (error) {
+            console.warn('Unable to create local chat conversation for discovery match.', error);
+          }
+
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setMatchedCard(activeCard);
+          setMatchState({ card: activeCard, conversationId });
         }
 
         setActionError(null);
@@ -1380,6 +1415,7 @@ export function DiscoveryDeck() {
     [
       maybePresentBoostPaywall,
       nextCardScale,
+      queryClient,
       resetCardPosition,
       swipeAction,
       translateX,
@@ -1718,7 +1754,26 @@ export function DiscoveryDeck() {
     </View>
   );
 
-  const matchModal = <MatchModal card={matchedCard} onClose={() => setMatchedCard(null)} />;
+  const handleOpenMatchChat = React.useCallback(() => {
+    const conversationId = matchState?.conversationId;
+
+    setMatchState(null);
+
+    if (conversationId) {
+      router.push(`/chat_demo/${conversationId}` as never);
+      return;
+    }
+
+    router.push('/chat_demo' as never);
+  }, [matchState?.conversationId, router]);
+
+  const matchModal = (
+    <MatchModal
+      card={matchState?.card ?? null}
+      onChat={handleOpenMatchChat}
+      onClose={() => setMatchState(null)}
+    />
+  );
 
   if (
     !hasResolvedAuthSessionSetup ||
