@@ -930,88 +930,47 @@ function DeckActionButton({
 }
 
 function EmptyState({
-  hasActiveFilters,
   isLoadingMore,
-  onOpenFilters,
-  onResetFallback,
-  onResetFilters,
-  usingMockData,
+  connectedCount,
+  onStartOver,
+  skippedCount,
 }: {
-  hasActiveFilters: boolean;
+  connectedCount: number;
   isLoadingMore: boolean;
-  onOpenFilters: () => void;
-  onResetFallback: () => void;
-  onResetFilters: () => void;
-  usingMockData: boolean;
+  onStartOver: () => void;
+  skippedCount: number;
 }) {
-  const title = isLoadingMore
-    ? 'Loading more cards...'
-    : hasActiveFilters
-      ? 'No cards match these filters'
-      : 'No discovery cards right now';
-  const description = isLoadingMore
-    ? 'Hang tight while the next page of discovery cards loads into the deck.'
-    : hasActiveFilters
-      ? 'Try widening the role, location, or availability filters to bring more people into the deck.'
-      : 'You are all caught up for now. Fresh matches will appear here when they are available.';
-
   return (
-    <AppCard className="items-center gap-4 rounded-[24px] p-5">
+    <View className="items-center gap-3">
       <View
-        className="h-16 w-16 items-center justify-center rounded-full border"
-        style={{ backgroundColor: '#2A2117', borderColor: 'rgba(255, 154, 62, 0.28)' }}>
-        <Ionicons color="#FF9A3E" name={hasActiveFilters ? 'options-outline' : 'albums-outline'} size={28} />
+        className="h-14 w-14 items-center justify-center rounded-[14px]"
+        style={{ backgroundColor: '#4A382B' }}>
+        <Ionicons color="#FF9836" name={isLoadingMore ? 'hourglass-outline' : 'checkmark'} size={24} />
       </View>
 
-      <View className="items-center gap-2">
-        <AppText className="text-center" variant="title">
-          {title}
+      <View className="items-center gap-1">
+        <AppText align="center" className="text-[15px] leading-5" variant="bodyStrong">
+          {isLoadingMore ? 'Loading more cards...' : "You've seen everyone!"}
         </AppText>
-        <AppText className="max-w-[300px] text-center" tone="muted">
-          {description}
+        <AppText align="center" className="text-[13px] leading-[18px]" tone="muted">
+          {connectedCount} connected · {skippedCount} skipped
+        </AppText>
+        <AppText align="center" className="text-[12px] leading-[17px]" tone="muted">
+          Adjust filters for more
         </AppText>
       </View>
 
       {!isLoadingMore ? (
-        <View className="w-full gap-2">
-          {hasActiveFilters ? (
-            <Pressable
-              className="h-11 flex-row items-center justify-center gap-2 rounded-full"
-              onPress={onOpenFilters}
-              style={{ backgroundColor: '#FF9A3E' }}>
-              <Ionicons color="#1A120B" name="options-outline" size={18} />
-              <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
-                Adjust filters
-              </AppText>
-            </Pressable>
-          ) : null}
-
-          {hasActiveFilters ? (
-            <Pressable
-              className="h-11 flex-row items-center justify-center gap-2 rounded-full border"
-              onPress={onResetFilters}
-              style={{ backgroundColor: '#1E1E1E', borderColor: 'rgba(255, 255, 255, 0.16)' }}>
-              <Ionicons color="#D0D5DD" name="close-circle-outline" size={18} />
-              <AppText tone="muted" variant="bodyStrong">
-                Clear filters
-              </AppText>
-            </Pressable>
-          ) : null}
-
-          {usingMockData ? (
-            <Pressable
-              className="h-11 flex-row items-center justify-center gap-2 rounded-full border"
-              onPress={onResetFallback}
-              style={{ backgroundColor: '#2A2117', borderColor: 'rgba(245, 158, 11, 0.28)' }}>
-              <Ionicons color="#FF9A3E" name="refresh-outline" size={18} />
-              <AppText tone="signal" variant="bodyStrong">
-                Reload Mock Deck
-              </AppText>
-            </Pressable>
-          ) : null}
-        </View>
+        <Pressable
+          className="mt-1 h-[37px] items-center justify-center rounded-[10px] px-5"
+          onPress={onStartOver}
+          style={{ backgroundColor: '#FF9836' }}>
+          <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
+            Start Over
+          </AppText>
+        </Pressable>
       ) : null}
-    </AppCard>
+    </View>
   );
 }
 
@@ -1248,10 +1207,28 @@ export function DiscoveryDeck() {
 
     await discoveryQuery.refetch();
   }, [appliedMode, discoveryQuery, usingLocalMockCards]);
+  const handleStartOver = React.useCallback(async () => {
+    setHistory([]);
+    setRestoredCards([]);
+    setMatchedCard(null);
+    setActionError(null);
+    hasShownGuaranteedMockMatchRef.current = false;
+
+    if (usingLocalMockCards) {
+      setMockCards(getFallbackCards(appliedMode));
+      return;
+    }
+
+    await discoveryQuery.refetch();
+  }, [appliedMode, discoveryQuery, usingLocalMockCards]);
 
   const currentItem = cards[0] ?? null;
   const nextItem = cards[1] ?? null;
   const remainingCards = cards.length;
+  const connectedCount = history.filter(
+    (entry) => entry.action === 'like' || entry.action === 'super_like'
+  ).length;
+  const skippedCount = history.filter((entry) => entry.action === 'pass').length;
   const floatingActionsContentPadding = FLOATING_ACTIONS_CONTENT_PADDING;
   const appliedFilterCount = React.useMemo(
     () => countAppliedDiscoveryFilters(sanitizedAppliedFilters),
@@ -1774,15 +1751,10 @@ export function DiscoveryDeck() {
             />
           }>
           <EmptyState
-            hasActiveFilters={appliedFilterCount > 0 || Boolean(appliedMode)}
+            connectedCount={connectedCount}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
-            onOpenFilters={handleOpenFilters}
-            onResetFallback={() => {
-              setMockCards(getFallbackCards(appliedMode));
-              hasShownGuaranteedMockMatchRef.current = false;
-            }}
-            onResetFilters={handleResetFilters}
-            usingMockData={usingLocalMockCards}
+            onStartOver={handleStartOver}
+            skippedCount={skippedCount}
           />
         </ScrollView>
         {filterSheet}
