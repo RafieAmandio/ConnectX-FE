@@ -285,13 +285,13 @@ export function MatchModal({ card, onChat, onClose }: MatchModalProps) {
             </>
           ) : (
             <Pressable
-              accessibilityLabel={`Chat with founder of ${getMatchSubject(card)}`}
+              accessibilityLabel={`Chat with co-founder of ${getMatchSubject(card)}`}
               className="min-h-10 flex-1 flex-row items-center justify-center gap-2 rounded-[10px]"
               onPress={onChat}
               style={{ backgroundColor: '#FF9836' }}>
               <Ionicons color="#1A120B" name="chatbubble-outline" size={16} />
               <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
-                Chat with Founder
+                Chat with Co-Founder
               </AppText>
             </Pressable>
           )}
