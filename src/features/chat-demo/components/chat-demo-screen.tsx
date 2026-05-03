@@ -5,11 +5,13 @@ import React from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   ListRenderItemInfo,
   Platform,
   Pressable,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -264,10 +266,12 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 export function ChatDemoConversationScreen({ conversationId }: { conversationId: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const conversationsQuery = useChatConversations();
   const messagesQuery = useConversationMessages(conversationId);
   const appendMessageMutation = useAppendMockMessage(conversationId);
   const [draftMessage, setDraftMessage] = React.useState('');
+  const [androidKeyboardInset, setAndroidKeyboardInset] = React.useState(0);
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
   const [invitationSent, setInvitationSent] = React.useState(false);
   const [invitationMessage, setInvitationMessage] = React.useState<string | null>(null);
@@ -276,12 +280,33 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = messagesQuery.data ?? [];
   const isSending = appendMessageMutation.isPending;
+  const composerPaddingBottom =
+    Platform.OS === 'android' && androidKeyboardInset > 0 ? androidKeyboardInset + 8 : 24;
 
   React.useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     }
   }, [messages.length]);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return undefined;
+    }
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      const keyboardTopY = event.endCoordinates.screenY;
+      setAndroidKeyboardInset(Math.max(0, windowHeight - keyboardTopY));
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setAndroidKeyboardInset(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [windowHeight]);
 
   const handleSend = React.useCallback(async () => {
     const body = draftMessage.trim();
@@ -425,7 +450,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           </View>
         ) : null}
 
-        <View className="border-t border-[#3A3938] px-4 pb-6 pt-2">
+        <View
+          className="border-t border-[#3A3938] px-4 pt-2"
+          style={{ paddingBottom: composerPaddingBottom }}>
           <View className="flex-row items-end gap-3">
             <View className="min-h-11 flex-1 rounded-full border border-[#444240] bg-[#2E2C2B] px-4 py-2">
               <TextInput
@@ -434,6 +461,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
                 onChangeText={setDraftMessage}
                 placeholder="Type a demo message..."
                 placeholderTextColor="#7D7974"
+                showSoftInputOnFocus
                 style={{ maxHeight: 96, padding: 0 }}
                 value={draftMessage}
               />
