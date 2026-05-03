@@ -343,7 +343,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ backgroundColor: '#262626', flex: 1 }}
         keyboardVerticalOffset={0}
         enabled={true}
