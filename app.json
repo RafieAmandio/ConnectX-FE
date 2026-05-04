@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.connectx.app",
-      "softwareKeyboardLayoutMode": "pan",
+      "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./android/google-services.json",
       "permissions": [
         "POST_NOTIFICATIONS",

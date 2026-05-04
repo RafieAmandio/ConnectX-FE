@@ -346,7 +346,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ backgroundColor: '#262626', flex: 1 }}
         keyboardVerticalOffset={0}
-        enabled={true}
+        enabled={Platform.OS === 'ios'}
       >
         <View
           className="flex-row items-center gap-3 px-4 pb-4"
