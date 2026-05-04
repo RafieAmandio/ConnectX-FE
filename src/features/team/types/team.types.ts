@@ -71,7 +71,13 @@ export type TeamApplication = {
   id: string;
   startupId: string;
   startupName: string;
+  startupInitials?: string;
+  industryLabel?: string;
+  stageLabel?: string;
   role: TeamRole;
+  openRoles?: TeamRole[];
+  matchScore?: number;
+  teamMemberCount?: number;
   appliedAt: string;
   status: TeamApplicationStatus;
   statusLabel: string;

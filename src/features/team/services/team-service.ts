@@ -158,7 +158,14 @@ function normalizeTeamOverviewResponse(payload: unknown): TeamOverviewResponse |
         typeof application.id === 'string' &&
         typeof application.startupId === 'string' &&
         typeof application.startupName === 'string' &&
+        (!('startupInitials' in application) || typeof application.startupInitials === 'string') &&
+        (!('industryLabel' in application) || typeof application.industryLabel === 'string') &&
+        (!('stageLabel' in application) || typeof application.stageLabel === 'string') &&
         isTeamEntityOption(application.role) &&
+        (!('openRoles' in application) ||
+          (Array.isArray(application.openRoles) && application.openRoles.every((role) => isTeamEntityOption(role)))) &&
+        (!('matchScore' in application) || typeof application.matchScore === 'number') &&
+        (!('teamMemberCount' in application) || typeof application.teamMemberCount === 'number') &&
         typeof application.appliedAt === 'string' &&
         typeof application.status === 'string' &&
         typeof application.statusLabel === 'string'

@@ -79,6 +79,27 @@ function formatInvitationDate(value: string | null) {
   }).format(date);
 }
 
+function formatRelativeDate(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return formatInvitationDate(value);
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  const diffDays = Math.max(0, Math.floor(diffMs / 86_400_000));
+
+  if (diffDays === 0) {
+    return 'today';
+  }
+
+  if (diffDays < 7) {
+    return `${diffDays}d ago`;
+  }
+
+  return formatInvitationDate(value);
+}
+
 function getInvitationStatusLabel(status: string) {
   switch (status) {
     case 'accepted':
@@ -99,6 +120,58 @@ function getInvitationStatusLabel(status: string) {
     default:
       return 'Pending';
   }
+}
+
+function getApplicationInitials(application: TeamApplication) {
+  if (application.startupInitials) {
+    return application.startupInitials;
+  }
+
+  return application.startupName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function getApplicationStatusPalette(status: string) {
+  return status === 'in_review' || status === 'interview'
+    ? {
+      backgroundColor: 'rgba(255, 207, 64, 0.08)',
+      borderColor: 'rgba(255, 207, 64, 0.42)',
+      color: '#FFCF40',
+    }
+    : {
+      backgroundColor: 'rgba(255, 154, 62, 0.08)',
+      borderColor: 'rgba(255, 154, 62, 0.42)',
+      color: '#FF9A3E',
+    };
+}
+
+function ApplicationRolePill({
+  active,
+  label,
+}: {
+  active: boolean;
+  label: string;
+}) {
+  return (
+    <View
+      className="min-h-9 justify-center rounded-full border px-4"
+      style={{
+        backgroundColor: active ? 'rgba(255, 154, 62, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+        borderColor: active ? 'rgba(255, 154, 62, 0.48)' : 'rgba(255, 255, 255, 0.1)',
+      }}>
+      <AppText
+        className="text-[13px] leading-[16px]"
+        numberOfLines={1}
+        style={{ color: active ? '#FF9A3E' : '#8F8F8F' }}
+        variant="bodyStrong">
+        {label}
+      </AppText>
+    </View>
+  );
 }
 
 function InfoPill({
@@ -227,20 +300,92 @@ function MemberCard({
 }
 
 function ApplicationCard({ application }: { application: TeamApplication }) {
+  const statusPalette = getApplicationStatusPalette(application.status);
+  const matchScore = application.matchScore;
+  const openRoles = application.openRoles?.length ? application.openRoles : [application.role];
+  const subtitle = [application.industryLabel, application.stageLabel].filter(Boolean).join(' · ');
+
   return (
-    <AppCard className="gap-2 bg-[#2C2C2C] border-white/10 px-3 py-3">
-      <View className="flex-row items-center justify-between gap-3">
-        <View className="flex-1 gap-0.5">
-          <AppText className="text-[14px] leading-[18px]" numberOfLines={1} variant="bodyStrong">
-            {application.startupName}
-          </AppText>
-          <AppText className="text-[11px] leading-[15px]" numberOfLines={1} tone="muted">
-            {application.role.label} • Applied {formatInvitationDate(application.appliedAt)}
+    <View
+      className="gap-5 rounded-[22px] border border-white/10 bg-[#282828] px-5 py-5"
+      style={Shadows.card}>
+      <View className="flex-row items-start gap-4">
+        <View
+          className="h-[72px] w-[72px] items-center justify-center rounded-[20px]"
+          style={{ backgroundColor: '#FFB238' }}>
+          <AppText className="text-[24px] leading-[28px] text-[#1A1A1A]" variant="heading">
+            {getApplicationInitials(application)}
           </AppText>
         </View>
-        <StatusPill label={application.statusLabel} status={application.status} />
+
+        <View className="min-w-0 flex-1 gap-1 pt-1">
+          <AppText className="text-[24px] leading-[29px]" numberOfLines={1} variant="heading">
+            {application.startupName}
+          </AppText>
+          {subtitle ? (
+            <AppText className="text-[15px] leading-[19px]" numberOfLines={1} tone="muted">
+              {subtitle}
+            </AppText>
+          ) : null}
+        </View>
+
+        <View
+          className="mt-2 rounded-full border px-4 py-2"
+          style={{
+            backgroundColor: statusPalette.backgroundColor,
+            borderColor: statusPalette.borderColor,
+          }}>
+          <AppText className="text-[13px] leading-[16px]" style={{ color: statusPalette.color }} variant="bodyStrong">
+            {application.statusLabel}
+          </AppText>
+        </View>
       </View>
-    </AppCard>
+
+      <View className="gap-3">
+        <AppText className="text-[12px] uppercase tracking-[2px]" tone="muted" variant="label">
+          Applied Role
+        </AppText>
+        <View className="flex-row flex-wrap gap-2">
+          {openRoles.map((role) => (
+            <ApplicationRolePill
+              key={role.id}
+              active={role.id === application.role.id}
+              label={role.label}
+            />
+          ))}
+        </View>
+      </View>
+
+      {typeof matchScore === 'number' ? (
+        <View className="gap-2">
+          <View className="flex-row items-center gap-3">
+            <Ionicons color="#FFCF40" name="star-outline" size={20} />
+            <AppText className="flex-1 text-[14px] leading-[18px]" tone="muted">
+              Match Score
+            </AppText>
+            <AppText className="text-[14px] leading-[18px] text-[#FF9A3E]" variant="bodyStrong">
+              {Math.round(matchScore)}%
+            </AppText>
+          </View>
+          <View className="ml-10 h-2 overflow-hidden rounded-full bg-[#3A3A3C]">
+            <View
+              className="h-full rounded-full bg-[#FF9A3E]"
+              style={{ width: `${Math.min(100, Math.max(0, matchScore))}%` }}
+            />
+          </View>
+        </View>
+      ) : null}
+
+      <View className="flex-row items-center gap-2">
+        <Ionicons color="#8F8F8F" name="time-outline" size={16} />
+        <AppText className="text-[14px] leading-[18px]" tone="muted">
+          Applied {formatRelativeDate(application.appliedAt)}
+          {typeof application.teamMemberCount === 'number'
+            ? `  ·  ${application.teamMemberCount} team ${application.teamMemberCount === 1 ? 'member' : 'members'}`
+            : ''}
+        </AppText>
+      </View>
+    </View>
   );
 }
 
