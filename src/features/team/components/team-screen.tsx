@@ -13,6 +13,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
+import {
+  getAppliedDiscoveryModeSnapshot,
+  subscribeAppliedDiscoveryMode,
+} from '@features/home/services/applied-discovery-mode-store';
 import { Shadows } from '@shared/theme';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
@@ -28,8 +32,6 @@ import {
 } from '../mock/team.mock';
 import { isNoActiveStartupError } from '../services/team-service';
 import type { TeamApplication, TeamDashboardInvite, TeamInviteCommitment, TeamMember } from '../types/team.types';
-
-type DevTeamResponseMode = 'startup' | 'person';
 
 const EQUITY_THUMB_SIZE = 24;
 
@@ -630,43 +632,14 @@ function EquitySlider({
   );
 }
 
-function DevResponseToggle({
-  mode,
-  onChange,
-}: {
-  mode: DevTeamResponseMode;
-  onChange: (mode: DevTeamResponseMode) => void;
-}) {
-  return (
-    <View className="mx-5 mb-4 flex-row rounded-[18px] border border-[#FF9A3E]/25 bg-[#2C2C2C] p-1">
-      {(['startup', 'person'] as const).map((item) => {
-        const isSelected = mode === item;
-
-        return (
-          <Pressable
-            key={item}
-            className={isSelected
-              ? 'min-h-11 flex-1 items-center justify-center rounded-[14px] bg-[#FF9A3E] px-3'
-              : 'min-h-11 flex-1 items-center justify-center rounded-[14px] px-3'}
-            onPress={() => {
-              onChange(item);
-            }}>
-            <AppText
-              className={isSelected ? 'text-[#11131A]' : 'text-[#F5F7FA]'}
-              variant="bodyStrong">
-              {item === 'startup' ? 'Founder' : 'Individual'}
-            </AppText>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 export function TeamScreen() {
   const router = useRouter();
   const isDevMode = isExpoDevModeEnabled();
-  const [devResponseMode, setDevResponseMode] = React.useState<DevTeamResponseMode>('startup');
+  const appliedDiscoveryMode = React.useSyncExternalStore(
+    subscribeAppliedDiscoveryMode,
+    getAppliedDiscoveryModeSnapshot,
+    getAppliedDiscoveryModeSnapshot
+  );
   const teamOverviewQuery = useTeamOverview();
   const isNoStartupState = teamOverviewQuery.isError && isNoActiveStartupError(teamOverviewQuery.error);
   const respondToStartupInvitationMutation = useRespondToStartupInvitation();
@@ -682,13 +655,15 @@ export function TeamScreen() {
   const [invitationActionError, setInvitationActionError] = React.useState<string | null>(null);
   const invitationOptionsQuery = useStartupInvitationOptions(inviteComposerVisible);
   const insets = useSafeAreaInsets();
+  const shouldRenderFounderDemo =
+    appliedDiscoveryMode === 'finding_cofounder' || appliedDiscoveryMode === 'building_team';
 
   const devOverview = React.useMemo(
     () =>
-      devResponseMode === 'startup'
+      shouldRenderFounderDemo
         ? getMockTeamOverviewResponse()
         : getMockPersonTeamOverviewResponse(),
-    [devResponseMode]
+    [shouldRenderFounderDemo]
   );
   const overview = isDevMode ? devOverview : teamOverviewQuery.data;
   const invitationOptions = invitationOptionsQuery.data?.data;
@@ -933,10 +908,6 @@ export function TeamScreen() {
           <Ionicons color="#FF9A3E" name={hasActiveStartup ? 'rocket' : 'briefcase'} size={28} />
           <AppText className="text-2xl font-bold text-text">{screenTitle}</AppText>
         </View>
-
-        {isDevMode ? (
-          <DevResponseToggle mode={devResponseMode} onChange={setDevResponseMode} />
-        ) : null}
 
         <ScrollView
           className="flex-1"

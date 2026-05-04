@@ -49,6 +49,7 @@ import {
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
 import { isDiscoveryCardsMockEnabled } from '../services/discovery-service';
+import { setAppliedDiscoveryMode } from '../services/applied-discovery-mode-store';
 import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discovery-preference';
 import type {
   DiscoveryAppliedFilters,
@@ -1054,6 +1055,9 @@ export function DiscoveryDeck() {
     if (defaultMode) {
       setSheetMode(defaultMode);
       setAppliedMode(defaultMode);
+      setAppliedDiscoveryMode(defaultMode);
+    } else {
+      setAppliedDiscoveryMode(null);
     }
 
     setAppliedFilters({});
@@ -1555,6 +1559,7 @@ export function DiscoveryDeck() {
     setAppliedFilters({});
     setFilterError(null);
     setSheetMode(DEFAULT_FILTER_MODE);
+    setAppliedDiscoveryMode(null);
     setIsFilterVisible(false);
   }, []);
 
@@ -1576,6 +1581,7 @@ export function DiscoveryDeck() {
         setAppliedMode(mode);
         setAppliedFilters(nextFilters);
         setSheetMode(mode);
+        setAppliedDiscoveryMode(mode);
         setFilterError(null);
         setIsFilterVisible(false);
       } catch (error) {
