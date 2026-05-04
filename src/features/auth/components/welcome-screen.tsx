@@ -66,14 +66,14 @@ export function WelcomeScreen() {
   const isCompactWidth = width < 390;
   const isLargeWidth = width >= 420;
   const horizontalPadding = width >= 420 ? 36 : 24;
-  const titleFontSize = isCompactWidth ? 26 : isLargeWidth ? 31 : 34;
-  const titleLineHeight = isCompactWidth ? 32 : isLargeWidth ? 37 : 40;
-  const logoWidth = isCompactWidth ? 116 : isLargeWidth ? 136 : 148;
-  const logoHeight = isCompactWidth ? 26 : isLargeWidth ? 31 : 34;
-  const subtitleFontSize = isCompactWidth ? 14 : isLargeWidth ? 15.5 : 17;
-  const subtitleLineHeight = isCompactWidth ? 21 : isLargeWidth ? 23 : 26;
-  const heroGap = isCompactWidth ? 5 : isLargeWidth ? 7 : 8;
-  const heroPaddingY = isCompactWidth ? 24 : isLargeWidth ? 32 : 40;
+  const titleFontSize = isCompactWidth ? 30 : isLargeWidth ? 31 : 34;
+  const titleLineHeight = isCompactWidth ? 36 : isLargeWidth ? 37 : 40;
+  const logoWidth = isCompactWidth ? 132 : isLargeWidth ? 136 : 148;
+  const logoHeight = isCompactWidth ? 30 : isLargeWidth ? 31 : 34;
+  const subtitleFontSize = isCompactWidth ? 16 : isLargeWidth ? 15.5 : 17;
+  const subtitleLineHeight = isCompactWidth ? 24 : isLargeWidth ? 23 : 26;
+  const heroGap = isLargeWidth ? 7 : 8;
+  const heroPaddingY = isLargeWidth ? 32 : 40;
 
   return (
     <View className="flex-1" style={{ backgroundColor: Colors.dark.canvas }}>
