@@ -2,10 +2,16 @@ import type {
   DiscoveryFilterCatalogGroup,
   DiscoveryFilterField,
   DiscoveryFilterOptionsResponse,
+  DiscoveryFilterQuestion,
   DiscoveryFilterSection,
   DiscoveryGoalId,
   DiscoveryMode,
 } from '../types/discovery.types';
+
+const mockDiscoveryFilterOptionsResponsesByMode = require('../mock/discovery-filter-options.responses.json') as Record<
+  DiscoveryMode,
+  DiscoveryFilterOptionsResponse
+>;
 
 function createPremiumSectionAccess(enabled = false) {
   return {
@@ -714,8 +720,33 @@ function getCatalogOptions(
   }
 }
 
-function getCityFilterField(filterOptionsResponse?: DiscoveryFilterOptionsResponse): DiscoveryFilterField | null {
-  const city = filterOptionsResponse?.data.city;
+function getCityQuestion(
+  mode: DiscoveryMode,
+  filterOptionsResponse?: DiscoveryFilterOptionsResponse
+): DiscoveryFilterQuestion | undefined {
+  const fallbackCity = mockDiscoveryFilterOptionsResponsesByMode[mode]?.data.city;
+  const apiCity = filterOptionsResponse?.data.city;
+
+  if (!apiCity) {
+    return fallbackCity;
+  }
+
+  return {
+    ...fallbackCity,
+    ...apiCity,
+    meta: {
+      ...fallbackCity?.meta,
+      ...apiCity.meta,
+    },
+    options: apiCity.options.length > 0 ? apiCity.options : (fallbackCity?.options ?? []),
+  };
+}
+
+function getCityFilterField(
+  mode: DiscoveryMode,
+  filterOptionsResponse?: DiscoveryFilterOptionsResponse
+): DiscoveryFilterField | null {
+  const city = getCityQuestion(mode, filterOptionsResponse);
 
   if (!city || city.type !== 'searchable_dropdown') {
     return null;
@@ -754,7 +785,7 @@ export function getDiscoveryFilterSections(
 
     if (nextSection.fields?.length) {
       const cityFilterField =
-        nextSection.id === 'locationAvailability' ? getCityFilterField(filterOptionsResponse) : null;
+        nextSection.id === 'locationAvailability' ? getCityFilterField(mode, filterOptionsResponse) : null;
 
       if (cityFilterField && !nextSection.fields.some((field) => field.id === cityFilterField.id)) {
         const workArrangementIndex = nextSection.fields.findIndex((field) => field.id === 'workArrangementIds');
