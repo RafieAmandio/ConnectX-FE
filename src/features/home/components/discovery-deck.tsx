@@ -341,6 +341,37 @@ function withDeviceCoordinates(
   };
 }
 
+function withoutLocationAvailability(filters: DiscoveryAppliedFilters) {
+  if (!('locationAvailability' in filters)) {
+    return filters;
+  }
+
+  const { locationAvailability: _locationAvailability, ...remainingFilters } = filters;
+  return remainingFilters;
+}
+
+function buildDiscoveryRequestFilters(
+  filters: DiscoveryAppliedFilters,
+  coordinates: DeviceCoordinates | null,
+  shouldIncludeLocationAvailability: boolean
+) {
+  if (!shouldIncludeLocationAvailability) {
+    return withoutLocationAvailability(filters);
+  }
+
+  return withDeviceCoordinates(filters, coordinates);
+}
+
+function hasDiscoveryQuerySettled({
+  isError,
+  isSuccess,
+}: {
+  isError: boolean;
+  isSuccess: boolean;
+}) {
+  return isError || isSuccess;
+}
+
 function getGoalOptions(sections: DiscoveryFilterSection[], mode: DiscoveryMode) {
   const goalSection = sections.find((section) => section.id === 'goal');
 
@@ -1035,6 +1066,8 @@ export function DiscoveryDeck() {
   const [deviceCoordinates, setDeviceCoordinates] = React.useState<DeviceCoordinates | null>(null);
   const [hasResolvedAuthSessionSetup, setHasResolvedAuthSessionSetup] = React.useState(false);
   const [hasResolvedInitialLocation, setHasResolvedInitialLocation] = React.useState(false);
+  const [shouldIncludeLocationAvailability, setShouldIncludeLocationAvailability] =
+    React.useState(false);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const nextCardScale = useSharedValue(0.96);
@@ -1099,18 +1132,17 @@ export function DiscoveryDeck() {
         ? session.defaultDiscoveryMode
         : localOnboardingMode ?? session?.defaultDiscoveryMode ?? null;
 
-    if (defaultMode) {
-      setSheetMode(defaultMode);
-      setAppliedMode(defaultMode);
-      setAppliedDiscoveryMode(defaultMode);
-    } else {
-      setAppliedDiscoveryMode(null);
-    }
+    const initialMode = defaultMode ?? DEFAULT_FILTER_MODE;
+
+    setSheetMode(initialMode);
+    setAppliedMode(initialMode);
+    setAppliedDiscoveryMode(initialMode);
 
     setAppliedFilters({});
+    setShouldIncludeLocationAvailability(false);
     setHasResolvedAuthSessionSetup(true);
     console.log('[DiscoveryDeck] auth session setup resolved', {
-      appliedMode: defaultMode,
+      appliedMode: initialMode,
       authSessionSource: session?.authSessionSource ?? null,
     });
   }, [
@@ -1159,8 +1191,13 @@ export function DiscoveryDeck() {
     [appliedFilters, appliedSections]
   );
   const requestFilters = React.useMemo(
-    () => withDeviceCoordinates(sanitizedAppliedFilters, deviceCoordinates),
-    [deviceCoordinates, sanitizedAppliedFilters]
+    () =>
+      buildDiscoveryRequestFilters(
+        sanitizedAppliedFilters,
+        deviceCoordinates,
+        shouldIncludeLocationAvailability
+      ),
+    [deviceCoordinates, sanitizedAppliedFilters, shouldIncludeLocationAvailability]
   );
 
   const discoveryRequest = React.useMemo<Omit<DiscoveryCardsRequest, 'pagination'>>(() => {
@@ -1190,10 +1227,20 @@ export function DiscoveryDeck() {
   const discoveryQuery = useDiscoveryCards(
     discoveryRequest,
     DISCOVERY_PAGE_LIMIT,
-    hasResolvedAuthSessionSetup && hasResolvedInitialLocation
+    hasResolvedAuthSessionSetup
   );
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
+
+  React.useEffect(() => {
+    if (!hasDiscoveryQuerySettled(discoveryQuery)) {
+      return;
+    }
+
+    console.log('[DiscoveryDeck] discovery fetch settled', {
+      shouldIncludeLocationAvailability,
+    });
+  }, [discoveryQuery, shouldIncludeLocationAvailability]);
 
   const loadDeviceCoordinates = React.useCallback(async (requestPermissionIfNeeded = true) => {
     try {
@@ -1268,12 +1315,18 @@ export function DiscoveryDeck() {
 
   React.useEffect(() => {
     console.log('[DiscoveryDeck] query input on enter/update', {
-      enabled: hasResolvedAuthSessionSetup && hasResolvedInitialLocation,
+      enabled: hasResolvedAuthSessionSetup,
       hasResolvedAuthSessionSetup,
       hasResolvedInitialLocation,
       request: discoveryRequest,
+      shouldIncludeLocationAvailability,
     });
-  }, [discoveryRequest, hasResolvedAuthSessionSetup, hasResolvedInitialLocation]);
+  }, [
+    discoveryRequest,
+    hasResolvedAuthSessionSetup,
+    hasResolvedInitialLocation,
+    shouldIncludeLocationAvailability,
+  ]);
 
 
   const liveCards = React.useMemo(() => flattenUniqueCards(discoveryQuery.data), [discoveryQuery.data]);
@@ -1644,6 +1697,7 @@ export function DiscoveryDeck() {
   const handleResetFilters = React.useCallback(() => {
     setAppliedMode(null);
     setAppliedFilters({});
+    setShouldIncludeLocationAvailability(false);
     setFilterError(null);
     setSheetMode(DEFAULT_FILTER_MODE);
     setAppliedDiscoveryMode(null);
@@ -1665,6 +1719,7 @@ export function DiscoveryDeck() {
           nextDeviceCoordinates = await loadDeviceCoordinates(isRecordValue(sanitizedNextFilters.locationAvailability));
         }
 
+        setShouldIncludeLocationAvailability(isRecordValue(sanitizedNextFilters.locationAvailability));
         setAppliedMode(mode);
         setAppliedFilters(nextFilters);
         setSheetMode(mode);

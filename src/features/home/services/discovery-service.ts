@@ -203,14 +203,13 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
     body: payload as unknown as BodyInit,
     method: 'POST',
   });
+  console.log('[Discovery] fetch cards api response', JSON.stringify(response, null, 2));
 
   if (shouldMergeMockDiscoveryCards()) {
     const mergedResponse = mergeDiscoveryCardsWithMocks(response, input);
     console.log('[Discovery] fetch cards response merged with mock', JSON.stringify(mergedResponse, null, 2));
     return mergedResponse;
   }
-
-  console.log('[Discovery] fetch cards response', JSON.stringify(response, null, 2));
 
   return response;
 }
