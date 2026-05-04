@@ -267,10 +267,40 @@ export async function postSwipeAction(targetId: string, payload: SwipeActionRequ
     });
   }
 
-  return apiFetch<SwipeActionResponse>(DISCOVERY_API.ACTION(targetId), {
-    body: payload as unknown as BodyInit,
-    method: 'POST',
-  });
+  try {
+    const response = await apiFetch<SwipeActionResponse>(DISCOVERY_API.ACTION(targetId), {
+      body: payload as unknown as BodyInit,
+      method: 'POST',
+    });
+
+    console.log('[Discovery] swipe action api response', JSON.stringify({
+      payload,
+      response,
+      targetId,
+    }, null, 2));
+
+    return response;
+  } catch (error) {
+    console.log('[Discovery] swipe action api error', JSON.stringify({
+      error:
+        error instanceof ApiError
+          ? {
+            message: error.message,
+            payload: error.payload,
+            status: error.status,
+          }
+          : error instanceof Error
+            ? {
+              message: error.message,
+              name: error.name,
+            }
+            : error,
+      payload,
+      targetId,
+    }, null, 2));
+
+    throw error;
+  }
 }
 
 export async function postRewindAction(

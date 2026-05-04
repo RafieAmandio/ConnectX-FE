@@ -1546,6 +1546,26 @@ export function DiscoveryDeck() {
 
         setActionError(null);
       } catch (error) {
+        console.log('[DiscoveryDeck] swipe action failed', {
+          action,
+          cardId: activeCard.id,
+          cardSource: activeCard.__source ?? 'api',
+          error:
+            error instanceof ApiError
+              ? {
+                message: error.message,
+                payload: error.payload,
+                status: error.status,
+              }
+              : error instanceof Error
+                ? {
+                  message: error.message,
+                  name: error.name,
+                }
+                : error,
+          targetId: getCardActionTargetId(activeCard),
+        });
+
         if (action === 'super_like' && isSuperLikeRequiresBoostError(error)) {
           await maybePresentBoostPaywall();
         } else {
