@@ -46,6 +46,7 @@ export type DiscoveryStartupJourneyStage = {
 };
 
 export type DiscoveryBaseCard = {
+  __source?: 'mock';
   entityType: DiscoveryEntityType;
   id: string;
   name: string;

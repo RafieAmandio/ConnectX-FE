@@ -1,4 +1,5 @@
-import { ApiError, apiFetch } from '@shared/services/api';
+import { ApiError, apiFetch, getApiAccessToken } from '@shared/services/api';
+import { buildApiUrl } from '@shared/services/api/config';
 import { isExpoDevModeEnabled, parseBooleanEnv } from '@shared/utils/env';
 
 import {
@@ -37,6 +38,10 @@ function shouldMockSuperLikeRequiresBoost() {
   }
 
   return false;
+}
+
+function shouldMergeMockDiscoveryCards() {
+  return parseBooleanEnv(process.env.EXPO_PUBLIC_MERGE_MOCK_DISCOVERY_CARDS) ?? false;
 }
 
 type MockRewindMode = 'success' | 'premium_required' | 'not_available';
@@ -83,7 +88,7 @@ export function getMockDiscoveryCardsResponse(
 }
 
 export function isDiscoveryCardsMockEnabled() {
-  return isExpoDevModeEnabled();
+  return parseBooleanEnv(process.env.EXPO_PUBLIC_MOCK_DISCOVERY_CARDS) ?? false;
 }
 
 export const DISCOVERY_API = {
@@ -128,6 +133,40 @@ function buildDiscoveryCardsPayload({
   return payload;
 }
 
+function maskToken(token: string | null) {
+  if (!token) {
+    return null;
+  }
+
+  if (token.length <= 12) {
+    return `${token.slice(0, 4)}...`;
+  }
+
+  return `${token.slice(0, 6)}...${token.slice(-6)}`;
+}
+
+function mergeDiscoveryCardsWithMocks(
+  response: DiscoveryCardsResponse,
+  input: DiscoveryCardFeedInput
+): DiscoveryCardsResponse {
+  const mockResponse = getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
+  const apiCardIds = new Set(response.data.items.map((card) => card.id));
+  const mockItems = mockResponse.data.items
+    .filter((card) => !apiCardIds.has(card.id))
+    .map((card) => ({
+      ...card,
+      __source: 'mock' as const,
+    }));
+
+  return {
+    ...response,
+    data: {
+      ...response.data,
+      items: [...response.data.items, ...mockItems],
+    },
+  };
+}
+
 export function getMockDiscoveryFilterOptionsResponse(mode: DiscoveryMode) {
   const response = mockDiscoveryFilterOptionsResponsesByMode[mode];
 
@@ -136,23 +175,41 @@ export function getMockDiscoveryFilterOptionsResponse(mode: DiscoveryMode) {
 
 export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
   const payload = buildDiscoveryCardsPayload(input);
+  const token = await getApiAccessToken();
+  const requestLog = {
+    body: payload,
+    hasToken: Boolean(token),
+    method: 'POST',
+    tokenPreview: maskToken(token),
+    url: buildApiUrl(DISCOVERY_API.CARDS),
+  };
 
   if (isExpoDevModeEnabled()) {
-    console.log('[Discovery] fetch cards payload', payload);
+    console.log('[Discovery] fetch cards request', JSON.stringify(requestLog, null, 2));
   }
 
   if (isDiscoveryCardsMockEnabled()) {
-    console.log('[Discovery] fetch cards using mock');
+    console.log(
+      '[Discovery] fetch cards using mock; backend API was not called',
+      JSON.stringify(requestLog, null, 2)
+    );
     const response = getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
     console.log('[Discovery] fetch cards response', JSON.stringify(response, null, 2));
     return response;
   }
 
-  console.log('[Discovery] fetch cards using api');
+  console.log('[Discovery] fetch cards using api', JSON.stringify(requestLog, null, 2));
   const response = await apiFetch<DiscoveryCardsResponse>(DISCOVERY_API.CARDS, {
     body: payload as unknown as BodyInit,
     method: 'POST',
   });
+
+  if (shouldMergeMockDiscoveryCards()) {
+    const mergedResponse = mergeDiscoveryCardsWithMocks(response, input);
+    console.log('[Discovery] fetch cards response merged with mock', JSON.stringify(mergedResponse, null, 2));
+    return mergedResponse;
+  }
+
   console.log('[Discovery] fetch cards response', JSON.stringify(response, null, 2));
 
   return response;

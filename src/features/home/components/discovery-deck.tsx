@@ -86,6 +86,7 @@ const DISCOVERY_PAGE_LIMIT = 10;
 const DEFAULT_FILTER_MODE: DiscoveryMode = 'joining_startups';
 const MOCK_MATCH_RANDOM_CHANCE = 0.35;
 const FLOATING_ACTIONS_CONTENT_PADDING = 72;
+const DISCOVERY_LOCATION_TIMEOUT_MS = 6000;
 
 const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
   finding_cofounder: 'goal_finding_cofounder',
@@ -93,6 +94,10 @@ const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
   explore_startups: 'goal_explore_startups',
   joining_startups: 'goal_joining_startups',
 };
+
+function isMergedMockCard(card: DiscoveryCard) {
+  return card.__source === 'mock';
+}
 
 function hasUsableCards(items: DiscoveryCard[]) {
   return items.length > 0;
@@ -1013,6 +1018,9 @@ export function DiscoveryDeck() {
     useRevenueCat();
   const [mockCards, setMockCards] = React.useState<DiscoveryCard[]>(getFallbackCards(null));
   const [restoredCards, setRestoredCards] = React.useState<DiscoveryCard[]>([]);
+  const [dismissedMergedMockCardIds, setDismissedMergedMockCardIds] = React.useState<Set<string>>(
+    () => new Set()
+  );
   const [history, setHistory] = React.useState<DiscoverySwipeHistoryEntry[]>([]);
   const [lastSuccessfulCards, setLastSuccessfulCards] = React.useState<DiscoveryCard[]>([]);
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -1040,10 +1048,49 @@ export function DiscoveryDeck() {
     session.authPhase !== 'authenticated' ||
     Boolean(session.authSessionSyncedAt) ||
     Boolean(session.isDevelopmentBypass);
+  const canResolveDiscoveryAuthSetup =
+    isAuthHydrated && (hasSyncedAuthSession || session?.authPhase === 'authenticated');
 
   React.useEffect(() => {
-    if (!isAuthHydrated || !hasSyncedAuthSession) {
+    console.log('[DiscoveryDeck] bootstrap gates', {
+      authPhase: session?.authPhase ?? null,
+      canResolveDiscoveryAuthSetup,
+      authSessionSource: session?.authSessionSource ?? null,
+      authSessionSyncedAt: session?.authSessionSyncedAt ?? null,
+      hasResolvedAuthSessionSetup,
+      hasResolvedInitialLocation,
+      hasSyncedAuthSession,
+      isAuthHydrated,
+      queryEnabled: hasResolvedAuthSessionSetup && hasResolvedInitialLocation,
+      usingMockCards,
+    });
+  }, [
+    canResolveDiscoveryAuthSetup,
+    hasResolvedAuthSessionSetup,
+    hasResolvedInitialLocation,
+    hasSyncedAuthSession,
+    isAuthHydrated,
+    session?.authPhase,
+    session?.authSessionSource,
+    session?.authSessionSyncedAt,
+    usingMockCards,
+  ]);
+
+  React.useEffect(() => {
+    if (!canResolveDiscoveryAuthSetup) {
+      console.log('[DiscoveryDeck] waiting for auth session setup', {
+        canResolveDiscoveryAuthSetup,
+        hasSyncedAuthSession,
+        isAuthHydrated,
+      });
       return;
+    }
+
+    if (session?.authPhase === 'authenticated' && !hasSyncedAuthSession) {
+      console.log('[DiscoveryDeck] proceeding before auth session sync metadata is set', {
+        authSessionSource: session.authSessionSource ?? null,
+        authSessionSyncedAt: session.authSessionSyncedAt ?? null,
+      });
     }
 
     const localOnboardingMode = loadOnboardingDiscoveryPreference()?.mode ?? null;
@@ -1062,7 +1109,19 @@ export function DiscoveryDeck() {
 
     setAppliedFilters({});
     setHasResolvedAuthSessionSetup(true);
-  }, [hasSyncedAuthSession, isAuthHydrated, session?.authSessionSource, session?.defaultDiscoveryMode]);
+    console.log('[DiscoveryDeck] auth session setup resolved', {
+      appliedMode: defaultMode,
+      authSessionSource: session?.authSessionSource ?? null,
+    });
+  }, [
+    canResolveDiscoveryAuthSetup,
+    hasSyncedAuthSession,
+    isAuthHydrated,
+    session?.authPhase,
+    session?.authSessionSource,
+    session?.authSessionSyncedAt,
+    session?.defaultDiscoveryMode,
+  ]);
 
   const filterOptionsQuery = useDiscoveryFilterOptions(sheetMode, isFilterVisible);
   const matchingFilterOptionsResponse =
@@ -1191,20 +1250,30 @@ export function DiscoveryDeck() {
     hasRequestedDeviceCoordinatesRef.current = true;
     void (async () => {
       try {
-        await loadDeviceCoordinates(true);
+        console.log('[DiscoveryDeck] resolving initial location');
+        await Promise.race([
+          loadDeviceCoordinates(true),
+          new Promise<null>((resolve) => {
+            setTimeout(() => resolve(null), DISCOVERY_LOCATION_TIMEOUT_MS);
+          }),
+        ]);
       } finally {
         setHasResolvedInitialLocation(true);
+        console.log('[DiscoveryDeck] initial location resolved', {
+          timedOutAfterMs: DISCOVERY_LOCATION_TIMEOUT_MS,
+        });
       }
     })();
   }, [loadDeviceCoordinates]);
 
   React.useEffect(() => {
-    if (!hasResolvedInitialLocation) {
-      return;
-    }
-
-    console.log('[DiscoveryDeck] request payload on enter/update', discoveryRequest);
-  }, [discoveryRequest, hasResolvedInitialLocation]);
+    console.log('[DiscoveryDeck] query input on enter/update', {
+      enabled: hasResolvedAuthSessionSetup && hasResolvedInitialLocation,
+      hasResolvedAuthSessionSetup,
+      hasResolvedInitialLocation,
+      request: discoveryRequest,
+    });
+  }, [discoveryRequest, hasResolvedAuthSessionSetup, hasResolvedInitialLocation]);
 
 
   const liveCards = React.useMemo(() => flattenUniqueCards(discoveryQuery.data), [discoveryQuery.data]);
@@ -1217,14 +1286,22 @@ export function DiscoveryDeck() {
 
   const shouldKeepLastSuccessfulCards =
     !discoveryQuery.isSuccess && (discoveryQuery.isLoading || discoveryQuery.isFetching);
-  const effectiveLiveCards =
-    liveCards.length > 0 ? liveCards : shouldKeepLastSuccessfulCards ? lastSuccessfulCards : [];
+  const effectiveLiveCards = React.useMemo(
+    () => (liveCards.length > 0 ? liveCards : shouldKeepLastSuccessfulCards ? lastSuccessfulCards : []),
+    [lastSuccessfulCards, liveCards, shouldKeepLastSuccessfulCards]
+  );
   const usingFallback =
     !usingMockCards &&
     !hasUsableCards(effectiveLiveCards) &&
     (discoveryQuery.isError || discoveryQuery.isSuccess);
   const usingLocalMockCards = usingMockCards || usingFallback;
-  const baseCards = usingLocalMockCards ? mockCards : effectiveLiveCards;
+  const baseCards = React.useMemo(
+    () =>
+      (usingLocalMockCards ? mockCards : effectiveLiveCards).filter(
+        (card) => !dismissedMergedMockCardIds.has(card.id)
+      ),
+    [dismissedMergedMockCardIds, effectiveLiveCards, mockCards, usingLocalMockCards]
+  );
   const cards = React.useMemo(() => {
     const baseIds = new Set(baseCards.map((card) => card.id));
     return [...restoredCards.filter((card) => !baseIds.has(card.id)), ...baseCards];
@@ -1233,14 +1310,17 @@ export function DiscoveryDeck() {
     if (usingLocalMockCards) {
       setMockCards(getFallbackCards(appliedMode));
       hasShownGuaranteedMockMatchRef.current = false;
+      setDismissedMergedMockCardIds(new Set());
       return;
     }
 
+    setDismissedMergedMockCardIds(new Set());
     await discoveryQuery.refetch();
   }, [appliedMode, discoveryQuery, usingLocalMockCards]);
   const handleStartOver = React.useCallback(async () => {
     setHistory([]);
     setRestoredCards([]);
+    setDismissedMergedMockCardIds(new Set());
     setMatchState(null);
     setActionError(null);
     hasShownGuaranteedMockMatchRef.current = false;
@@ -1303,6 +1383,7 @@ export function DiscoveryDeck() {
   React.useEffect(() => {
     setMockCards(getFallbackCards(appliedMode));
     setRestoredCards([]);
+    setDismissedMergedMockCardIds(new Set());
     setHistory([]);
     setActionError(null);
     setMatchState(null);
@@ -1352,8 +1433,14 @@ export function DiscoveryDeck() {
       try {
         let matched = false;
 
-        if (usingFallbackRef.current) {
-          setMockCards((current) => current.filter((item) => item.id !== activeCard.id));
+        const shouldHandleLocally = usingFallbackRef.current || isMergedMockCard(activeCard);
+
+        if (shouldHandleLocally) {
+          if (usingFallbackRef.current) {
+            setMockCards((current) => current.filter((item) => item.id !== activeCard.id));
+          } else {
+            setDismissedMergedMockCardIds((current) => new Set(current).add(activeCard.id));
+          }
 
           if (action === 'like' || action === 'super_like') {
             matched =
