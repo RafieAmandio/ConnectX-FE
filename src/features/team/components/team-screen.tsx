@@ -12,11 +12,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
 import {
   getAppliedDiscoveryModeSnapshot,
   subscribeAppliedDiscoveryMode,
 } from '@features/home/services/applied-discovery-mode-store';
+import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
 import { Shadows } from '@shared/theme';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
@@ -158,13 +158,13 @@ function ApplicationRolePill({
 }) {
   return (
     <View
-      className="min-h-9 justify-center rounded-full border px-4"
+      className="min-h-8 justify-center rounded-full border px-3"
       style={{
         backgroundColor: active ? 'rgba(255, 154, 62, 0.12)' : 'rgba(255, 255, 255, 0.02)',
         borderColor: active ? 'rgba(255, 154, 62, 0.48)' : 'rgba(255, 255, 255, 0.1)',
       }}>
       <AppText
-        className="text-[13px] leading-[16px]"
+        className="text-[12px] leading-[15px]"
         numberOfLines={1}
         style={{ color: active ? '#FF9A3E' : '#8F8F8F' }}
         variant="bodyStrong">
@@ -307,42 +307,42 @@ function ApplicationCard({ application }: { application: TeamApplication }) {
 
   return (
     <View
-      className="gap-5 rounded-[22px] border border-white/10 bg-[#282828] px-5 py-5"
+      className="gap-4 rounded-[20px] border border-white/10 bg-[#282828] px-4 py-4"
       style={Shadows.card}>
-      <View className="flex-row items-start gap-4">
+      <View className="flex-row items-start gap-3">
         <View
-          className="h-[72px] w-[72px] items-center justify-center rounded-[20px]"
+          className="h-[56px] w-[56px] items-center justify-center rounded-[16px]"
           style={{ backgroundColor: '#FFB238' }}>
-          <AppText className="text-[24px] leading-[28px] text-[#1A1A1A]" variant="heading">
+          <AppText className="text-[19px] leading-[23px] text-[#1A1A1A]" variant="heading">
             {getApplicationInitials(application)}
           </AppText>
         </View>
 
-        <View className="min-w-0 flex-1 gap-1 pt-1">
-          <AppText className="text-[24px] leading-[29px]" numberOfLines={1} variant="heading">
+        <View className="min-w-0 flex-1 gap-0.5 pt-0.5">
+          <AppText className="text-[19px] leading-[23px]" numberOfLines={1} variant="heading">
             {application.startupName}
           </AppText>
           {subtitle ? (
-            <AppText className="text-[15px] leading-[19px]" numberOfLines={1} tone="muted">
+            <AppText className="text-[13px] leading-[17px]" numberOfLines={1} tone="muted">
               {subtitle}
             </AppText>
           ) : null}
         </View>
 
         <View
-          className="mt-2 rounded-full border px-4 py-2"
+          className="mt-1 rounded-full border px-3 py-1.5"
           style={{
             backgroundColor: statusPalette.backgroundColor,
             borderColor: statusPalette.borderColor,
           }}>
-          <AppText className="text-[13px] leading-[16px]" style={{ color: statusPalette.color }} variant="bodyStrong">
+          <AppText className="text-[12px] leading-[15px]" style={{ color: statusPalette.color }} variant="bodyStrong">
             {application.statusLabel}
           </AppText>
         </View>
       </View>
 
-      <View className="gap-3">
-        <AppText className="text-[12px] uppercase tracking-[2px]" tone="muted" variant="label">
+      <View className="gap-2">
+        <AppText className="text-[11px] uppercase tracking-[1.5px]" tone="muted" variant="label">
           Applied Role
         </AppText>
         <View className="flex-row flex-wrap gap-2">
@@ -357,19 +357,19 @@ function ApplicationCard({ application }: { application: TeamApplication }) {
       </View>
 
       {typeof matchScore === 'number' ? (
-        <View className="gap-2">
+        <View className="gap-1.5">
           <View className="flex-row items-center gap-3">
-            <Ionicons color="#FFCF40" name="star-outline" size={20} />
-            <AppText className="flex-1 text-[14px] leading-[18px]" tone="muted">
+            <Ionicons color="#FF9836" name="star-outline" size={18} />
+            <AppText className="flex-1 text-[13px] leading-[17px]" tone="muted">
               Match Score
             </AppText>
-            <AppText className="text-[14px] leading-[18px] text-[#FF9A3E]" variant="bodyStrong">
+            <AppText className="text-[13px] leading-[17px] text-[#FF9836]" variant="bodyStrong">
               {Math.round(matchScore)}%
             </AppText>
           </View>
-          <View className="ml-10 h-2 overflow-hidden rounded-full bg-[#3A3A3C]">
+          <View className="ml-[30px] h-1.5 overflow-hidden rounded-full bg-[#3A3A3C]">
             <View
-              className="h-full rounded-full bg-[#FF9A3E]"
+              className="h-full rounded-full bg-[#FF9836]"
               style={{ width: `${Math.min(100, Math.max(0, matchScore))}%` }}
             />
           </View>
@@ -377,8 +377,8 @@ function ApplicationCard({ application }: { application: TeamApplication }) {
       ) : null}
 
       <View className="flex-row items-center gap-2">
-        <Ionicons color="#8F8F8F" name="time-outline" size={16} />
-        <AppText className="text-[14px] leading-[18px]" tone="muted">
+        <Ionicons color="#8F8F8F" name="time-outline" size={15} />
+        <AppText className="text-[12px] leading-[16px]" tone="muted">
           Applied {formatRelativeDate(application.appliedAt)}
           {typeof application.teamMemberCount === 'number'
             ? `  ·  ${application.teamMemberCount} team ${application.teamMemberCount === 1 ? 'member' : 'members'}`
@@ -554,10 +554,10 @@ function ActionButton({
   const isPrimary = variant === 'primary';
   const iconColor = isPrimary ? '#11131A' : '#F5F7FA';
   const compactClassName = isPrimary
-    ? 'min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[14px] bg-[#FF9A3E] px-3 py-2.5'
+    ? 'min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[14px] bg-[#FF9836] px-3 py-2.5'
     : 'min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[14px] border border-white/10 bg-[#292929] px-3 py-2.5';
   const defaultClassName = isPrimary
-    ? 'min-h-[56px] flex-1 flex-row items-center justify-center gap-3 rounded-[18px] bg-[#FF9A3E] px-5 py-4'
+    ? 'min-h-[56px] flex-1 flex-row items-center justify-center gap-3 rounded-[18px] bg-[#FF9836] px-5 py-4'
     : 'min-h-[56px] flex-1 flex-row items-center justify-center gap-3 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-5 py-4';
 
   return (
