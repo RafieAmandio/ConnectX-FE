@@ -226,6 +226,7 @@ export type DiscoveryFilterOptionsResponse = {
     skills: DiscoveryFilterCatalogGroup[];
     roles: DiscoveryFilterCatalogGroup[];
     languages: DiscoveryFilterCatalogGroup[];
+    founderTypes?: DiscoveryFilterCatalogGroup[];
   };
 };
 

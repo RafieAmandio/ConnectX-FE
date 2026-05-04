@@ -598,6 +598,8 @@ function getSearchableCheckboxPlaceholder(sectionId: string) {
   switch (sectionId) {
     case 'industryIds':
       return 'Search industry';
+    case 'founderTypeIds':
+      return 'Search founder type';
     case 'skillStrengthIds':
       return 'Search skill strength';
     default:
@@ -613,6 +615,8 @@ function getSearchableCheckboxEmptyMessage(sectionId: string, searchTerm: string
   switch (sectionId) {
     case 'industryIds':
       return 'No industries available';
+    case 'founderTypeIds':
+      return 'No founder types available';
     case 'skillStrengthIds':
       return 'No skill strengths available';
     default:
@@ -1110,7 +1114,12 @@ export function DiscoveryFilterSheet({
         );
       }
 
-      if (section.id === 'industryIds' || section.id === 'skillStrengthIds' || section.id === 'roleNeededIds') {
+      if (
+        section.id === 'industryIds' ||
+        section.id === 'skillStrengthIds' ||
+        section.id === 'roleNeededIds' ||
+        section.id === 'founderTypeIds'
+      ) {
         const searchableOptions = filterSearchableCheckboxOptions(section.options, searchTerm);
 
         return (

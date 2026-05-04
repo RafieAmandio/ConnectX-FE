@@ -571,7 +571,7 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
       id: 'founderTypeIds',
       title: 'Founder Type',
       type: 'multi_select',
-      ui: { component: 'chips', collapsible: false },
+      ui: { component: 'checkbox_list', searchable: true, collapsible: false },
       options: [
         { id: 'ft_technical_founder', label: 'Technical Founder' },
         { id: 'ft_business_founder', label: 'Business Founder' },
@@ -665,7 +665,7 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
   ],
 };
 
-const CATALOG_SECTION_IDS = new Set(['industryIds', 'skillIds', 'roleNeededIds']);
+const CATALOG_SECTION_IDS = new Set(['industryIds', 'skillIds', 'roleNeededIds', 'founderTypeIds']);
 const CATALOG_FIELD_IDS = new Set(['languageIds']);
 
 function cloneSection(section: DiscoveryFilterSection): DiscoveryFilterSection {
@@ -683,12 +683,17 @@ export function flattenDiscoveryFilterCatalogGroups(groups: DiscoveryFilterCatal
   return groups.flatMap((group) => group.options);
 }
 
+function hasDiscoveryFilterCatalogOptions(groups: DiscoveryFilterCatalogGroup[] | undefined) {
+  return Boolean(groups?.some((group) => group.options.length > 0));
+}
+
 function getCatalogOptions(
   sectionOrFieldId: string,
-  filterOptionsResponse?: DiscoveryFilterOptionsResponse
+  filterOptionsResponse: DiscoveryFilterOptionsResponse | undefined,
+  fallbackOptions: DiscoveryFilterSection['options'] = []
 ) {
   if (!filterOptionsResponse) {
-    return [];
+    return sectionOrFieldId === 'founderTypeIds' ? fallbackOptions : [];
   }
 
   switch (sectionOrFieldId) {
@@ -700,6 +705,10 @@ function getCatalogOptions(
       return flattenDiscoveryFilterCatalogGroups(filterOptionsResponse.data.roles);
     case 'languageIds':
       return flattenDiscoveryFilterCatalogGroups(filterOptionsResponse.data.languages);
+    case 'founderTypeIds':
+      return hasDiscoveryFilterCatalogOptions(filterOptionsResponse.data.founderTypes)
+        ? flattenDiscoveryFilterCatalogGroups(filterOptionsResponse.data.founderTypes ?? [])
+        : fallbackOptions;
     default:
       return [];
   }
@@ -740,7 +749,7 @@ export function getDiscoveryFilterSections(
     const nextSection = cloneSection(section);
 
     if (CATALOG_SECTION_IDS.has(nextSection.id)) {
-      nextSection.options = getCatalogOptions(nextSection.id, filterOptionsResponse);
+      nextSection.options = getCatalogOptions(nextSection.id, filterOptionsResponse, nextSection.options);
     }
 
     if (nextSection.fields?.length) {
@@ -765,7 +774,7 @@ export function getDiscoveryFilterSections(
 
         return {
           ...field,
-          options: getCatalogOptions(field.id, filterOptionsResponse),
+          options: getCatalogOptions(field.id, filterOptionsResponse, field.options),
         };
       });
     }

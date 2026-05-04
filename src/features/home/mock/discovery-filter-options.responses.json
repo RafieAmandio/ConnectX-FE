@@ -301,6 +301,18 @@
           ]
         }
       ],
+      "founderTypes": [
+        {
+          "id": "grp_founder_type_primary",
+          "label": "Founder Type",
+          "options": [
+            { "id": "ft_technical_founder", "label": "Technical Founder" },
+            { "id": "ft_business_founder", "label": "Business Founder" },
+            { "id": "ft_product_founder", "label": "Product Founder" },
+            { "id": "ft_operator_founder", "label": "Operator Founder" }
+          ]
+        }
+      ],
       "skills": [],
       "roles": [],
       "languages": []
