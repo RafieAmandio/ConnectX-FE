@@ -19,14 +19,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { useAuth, getRouteForAuthPhase } from '@features/auth';
+import { getRouteForAuthPhase, useAuth } from '@features/auth';
 import { AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
 
 import { useOnboardingSession } from '../hooks/use-onboarding-session';
 import {
-  validateStepAnswers,
   resolveDeviceOnboardingLocale,
+  validateStepAnswers,
 } from '../services/onboarding-session-service';
 import type {
   OnboardingAnswerValue,
@@ -92,7 +92,7 @@ function HeaderChrome() {
           variant="label"
           className="text-[9px]"
           style={{ color: ACCENT, letterSpacing: 0.5 }}>
-          V1 FREE
+          BETA VERSION
         </AppText>
       </View>
       <View className="flex-1" />
@@ -282,7 +282,7 @@ export function OnboardingScreen() {
     mode === 'preview' ||
     Boolean(
       session &&
-        (authPhase === 'pending_onboarding' || authPhase === 'authenticated')
+      (authPhase === 'pending_onboarding' || authPhase === 'authenticated')
     );
 
   const {

@@ -17,7 +17,7 @@ type AppTopBarProps = {
 
 export function AppTopBar({ rightAccessory }: AppTopBarProps) {
   const { isConnectXProActive } = useRevenueCat();
-  const badgeLabel = isConnectXProActive ? 'V1 PREMIUM' : 'V1 FREE';
+  const badgeLabel = isConnectXProActive ? 'BETA VERSION' : 'V1 FREE';
 
   return (
     <View
