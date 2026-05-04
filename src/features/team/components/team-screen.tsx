@@ -228,11 +228,13 @@ function MemberCard({
 
 function ApplicationCard({ application }: { application: TeamApplication }) {
   return (
-    <AppCard className="gap-3 bg-[#2C2C2C] border-white/10">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1 gap-1">
-          <AppText variant="subtitle">{application.startupName}</AppText>
-          <AppText className="text-[13px]" tone="muted">
+    <AppCard className="gap-2 bg-[#2C2C2C] border-white/10 px-3 py-3">
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="flex-1 gap-0.5">
+          <AppText className="text-[14px] leading-[18px]" numberOfLines={1} variant="bodyStrong">
+            {application.startupName}
+          </AppText>
+          <AppText className="text-[11px] leading-[15px]" numberOfLines={1} tone="muted">
             {application.role.label} • Applied {formatInvitationDate(application.appliedAt)}
           </AppText>
         </View>
@@ -1030,7 +1032,7 @@ export function TeamScreen() {
                   <ApplicationCard key={application.id} application={application} />
                 ))}
               </View>
-              <View className="flex-row gap-4">
+              <View className="flex-row">
                 {myApplications.actions.browseStartups ? (
                   <ActionButton
                     compact
@@ -1038,15 +1040,6 @@ export function TeamScreen() {
                     label="Browse Startups"
                     onPress={navigateToHome}
                     variant="primary"
-                  />
-                ) : null}
-                {myApplications.actions.discoverMoreStartups ? (
-                  <ActionButton
-                    compact
-                    icon="compass-outline"
-                    label="Discover More"
-                    onPress={navigateToHome}
-                    variant="secondary"
                   />
                 ) : null}
               </View>
