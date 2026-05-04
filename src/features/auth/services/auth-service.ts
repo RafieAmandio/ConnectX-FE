@@ -228,6 +228,10 @@ function resolveAuthPhase(user: AuthUser, nextStep?: AuthNextStep): AuthPhase {
     return 'pending_email_verification';
   }
 
+  if (user.is_onboarded === true) {
+    return 'authenticated';
+  }
+
   if (!user.whatsapp_verified_at) {
     return 'pending_whatsapp_verification';
   }
