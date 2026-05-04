@@ -654,7 +654,7 @@ function DevResponseToggle({
             <AppText
               className={isSelected ? 'text-[#11131A]' : 'text-[#F5F7FA]'}
               variant="bodyStrong">
-              {item === 'startup' ? 'Founder response' : 'User response'}
+              {item === 'startup' ? 'Founder' : 'Individual'}
             </AppText>
           </Pressable>
         );
