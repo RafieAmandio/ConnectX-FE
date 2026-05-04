@@ -390,11 +390,13 @@ function MissingRoleCard({ label, onFind }: { label: string; onFind: () => void 
 }
 
 function ActionButton({
+  compact = false,
   icon,
   label,
   onPress,
   variant,
 }: {
+  compact?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
@@ -402,18 +404,29 @@ function ActionButton({
 }) {
   const isPrimary = variant === 'primary';
   const iconColor = isPrimary ? '#11131A' : '#F5F7FA';
+  const compactClassName = isPrimary
+    ? 'min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[14px] bg-[#FF9A3E] px-3 py-2.5'
+    : 'min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-[14px] border border-white/10 bg-[#292929] px-3 py-2.5';
+  const defaultClassName = isPrimary
+    ? 'min-h-[56px] flex-1 flex-row items-center justify-center gap-3 rounded-[18px] bg-[#FF9A3E] px-5 py-4'
+    : 'min-h-[56px] flex-1 flex-row items-center justify-center gap-3 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-5 py-4';
 
   return (
     <Pressable
-      className={isPrimary
-        ? 'min-h-[56px] flex-1 flex-row items-center justify-center gap-3 rounded-[18px] bg-[#FF9A3E] px-5 py-4'
-        : 'min-h-[56px] flex-1 flex-row items-center justify-center gap-3 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-5 py-4'}
+      className={compact ? compactClassName : defaultClassName}
       onPress={onPress}
-      style={Shadows.card}>
-      <Ionicons color={iconColor} name={icon} size={22} />
+      style={compact ? undefined : Shadows.card}>
+      <Ionicons color={iconColor} name={icon} size={compact ? 16 : 22} />
       <AppText
-        className={isPrimary ? 'text-[#11131A]' : 'text-[#F5F7FA]'}
-        variant="subtitle">
+        className={isPrimary
+          ? compact
+            ? 'text-[12px] leading-[14px] text-[#11131A]'
+            : 'text-[#11131A]'
+          : compact
+            ? 'text-[12px] leading-[14px] text-[#F5F7FA]'
+            : 'text-[#F5F7FA]'}
+        numberOfLines={1}
+        variant={compact ? 'bodyStrong' : 'subtitle'}>
         {label}
       </AppText>
     </Pressable>
@@ -1049,6 +1062,7 @@ export function TeamScreen() {
               <View className="flex-row gap-4">
                 {myApplications.actions.browseStartups ? (
                   <ActionButton
+                    compact
                     icon="search-outline"
                     label="Browse Startups"
                     onPress={navigateToHome}
@@ -1057,6 +1071,7 @@ export function TeamScreen() {
                 ) : null}
                 {myApplications.actions.discoverMoreStartups ? (
                   <ActionButton
+                    compact
                     icon="compass-outline"
                     label="Discover More"
                     onPress={navigateToHome}
