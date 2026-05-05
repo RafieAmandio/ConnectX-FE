@@ -5,7 +5,9 @@ import React from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
+  type LayoutChangeEvent,
   ListRenderItemInfo,
   Platform,
   Pressable,
@@ -272,12 +274,68 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const [invitationSent, setInvitationSent] = React.useState(false);
   const [invitationMessage, setInvitationMessage] = React.useState<string | null>(null);
   const [invitationError, setInvitationError] = React.useState<string | null>(null);
+  const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
   const listRef = React.useRef<FlatList<ChatMessage>>(null);
+  const containerFrameRef = React.useRef({ height: 0, y: 0 });
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = messagesQuery.data ?? [];
   const isSending = appendMessageMutation.isPending;
   const inputBottomPadding =
-    Platform.OS === 'ios' ? Math.max(insets.bottom, 12) : Math.max(insets.bottom + 12, 24);
+    Platform.OS === 'ios' || androidKeyboardOverlap === 0 ? Math.max(insets.bottom + 8, 20) : 12;
+
+  const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    if (!keyboardY) {
+      setAndroidKeyboardOverlap(0);
+      return;
+    }
+
+    const { height, y } = containerFrameRef.current;
+
+    if (height <= 0) {
+      return;
+    }
+
+    setAndroidKeyboardOverlap(Math.max(y + height - keyboardY, 0));
+  }, []);
+
+  const handleContainerLayout = React.useCallback(
+    (event: LayoutChangeEvent) => {
+      containerFrameRef.current = event.nativeEvent.layout;
+
+      if (Platform.OS === 'android') {
+        updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
+      }
+    },
+    [updateAndroidKeyboardOverlap]
+  );
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
+    });
+    const changeSubscription = Keyboard.addListener('keyboardDidChangeFrame', (event) => {
+      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      updateAndroidKeyboardOverlap();
+    });
+
+    updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
+
+    return () => {
+      showSubscription.remove();
+      changeSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [updateAndroidKeyboardOverlap]);
 
   React.useEffect(() => {
     if (messages.length > 0) {
@@ -344,10 +402,10 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        onLayout={handleContainerLayout}
         style={{ backgroundColor: '#262626', flex: 1 }}
         keyboardVerticalOffset={0}
-        enabled={Platform.OS === 'ios'}
-      >
+        enabled={Platform.OS === 'ios'}>
         <View
           className="flex-row items-center gap-3 px-4 pb-4"
           style={{ paddingTop: Math.max(insets.top + 8, 16) }}>
@@ -431,7 +489,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
         <View
           className="border-t border-[#3A3938] px-4 pt-3"
-          style={{ paddingBottom: inputBottomPadding }}>
+          style={{ marginBottom: androidKeyboardOverlap, paddingBottom: inputBottomPadding }}>
           <View className="flex-row items-end gap-3">
             <View className="min-h-11 flex-1 rounded-full border border-[#444240] bg-[#2E2C2B] px-4 py-2">
               <TextInput
