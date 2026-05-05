@@ -123,6 +123,7 @@ function DropdownOverlay({
   children,
   header,
   maxHeight,
+  minWidth,
   onClose,
   visible,
 }: {
@@ -130,6 +131,7 @@ function DropdownOverlay({
   children: React.ReactNode;
   header?: React.ReactNode;
   maxHeight: number;
+  minWidth?: number;
   onClose: () => void;
   visible: boolean;
 }) {
@@ -163,6 +165,7 @@ function DropdownOverlay({
           boxShadow: 'none',
           marginTop: verticalGap,
           maxHeight,
+          minWidth,
           width: '100%',
         }}>
         {header}
@@ -180,7 +183,7 @@ function DropdownOverlay({
   const fallbackWidth = windowWidth - horizontalPadding * 2;
   const anchorWidth = anchorLayout?.width ?? fallbackWidth;
   const overlayWidth = Math.min(
-    Math.max(anchorWidth, Math.min(240, fallbackWidth)),
+    Math.max(anchorWidth, minWidth ?? Math.min(240, fallbackWidth)),
     fallbackWidth
   );
   const overlayLeft = anchorLayout
@@ -2383,10 +2386,12 @@ function DateDropdown({
   options,
   placeholder,
   selectedValue,
+  minDropdownWidth,
 }: {
   displayValue: string;
   isOpen: boolean;
   label: string;
+  minDropdownWidth?: number;
   onSelect: (value: string) => void;
   onToggle: () => void;
   options: { label: string; value: string }[];
@@ -2426,6 +2431,7 @@ function DateDropdown({
       <DropdownOverlay
         anchorRef={triggerRef}
         maxHeight={320}
+        minWidth={minDropdownWidth}
         onClose={onToggle}
         visible={isOpen}>
         {options.map((option) => {
@@ -2441,7 +2447,9 @@ function DateDropdown({
               onPress={() => onSelect(option.value)}>
               <AppText
                 variant="bodyStrong"
-                className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}
+                numberOfLines={1}
+                adjustsFontSizeToFit>
                 {option.label}
               </AppText>
             </Pressable>
@@ -2567,6 +2575,7 @@ function DateSelectQuestion({
           options={monthOptions}
           placeholder="MMM"
           selectedValue={parts.month}
+          minDropdownWidth={148}
         />
         <DateDropdown
           displayValue={parts.year}
