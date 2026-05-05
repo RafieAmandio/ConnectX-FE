@@ -338,7 +338,10 @@ function StepIntroHeader({
           accessibilityRole="header"
           align="center"
           variant="hero"
-          className="text-[30px] leading-[36px] tracking-[0px] text-white">
+          className="text-[30px] leading-[36px] tracking-[0px] text-white "
+          numberOfLines={2}
+          adjustsFontSizeToFit
+        >
           {step.title.trim()}
         </AppText>
         <View
