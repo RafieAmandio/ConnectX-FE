@@ -157,6 +157,25 @@ function getBadgeIcon(icon?: string): keyof typeof Ionicons.glyphMap {
   }
 }
 
+function getStartupIndustryLabels(industry: DiscoveryStartupCard['industry']) {
+  const displayLabels = industry.display
+    .split(/\s+\/\s+/)
+    .map((label) => label.trim())
+    .filter(Boolean);
+
+  if (displayLabels.length) {
+    return displayLabels;
+  }
+
+  return [industry.primary, industry.secondary].filter((label): label is string => Boolean(label));
+}
+
+function getStartupIndustryPreview(industry: DiscoveryStartupCard['industry']) {
+  const labels = getStartupIndustryLabels(industry);
+
+  return labels.slice(0, 2).join(' / ');
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) {
     return error.message;
@@ -794,6 +813,10 @@ function StartupCardContent({
   bottomInset?: number;
   scrollEnabled?: boolean;
 }) {
+  const industryLabels = getStartupIndustryLabels(card.industry);
+  const industryPreview = getStartupIndustryPreview(card.industry);
+  const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
+
   return (
     <View className="flex-1">
       <View className="shrink-0">
@@ -832,8 +855,8 @@ function StartupCardContent({
           </View>
         </View>
 
-        <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
-          <View className="flex-row items-center gap-3">
+        <View className="flex-row items-center justify-between gap-3 border-b border-border px-4 py-4">
+          <View className="shrink-0 flex-row items-center gap-3">
             <View className="h-[52px] w-[52px] items-center justify-center rounded-full border-[2.5px] border-[#31D47A]">
               <AppText className="text-[16px] font-bold" style={{ color: '#58EA93' }}>
                 {card.match.score}%
@@ -849,10 +872,30 @@ function StartupCardContent({
             </View>
           </View>
 
-          <View className="items-end gap-1">
-            <AppText className="text-[17px] leading-tight" align="right" variant="title">
-              {card.industry.display}
-            </AppText>
+          <View className="min-w-0 flex-1 items-end gap-1">
+            <View className="w-full flex-row flex-wrap items-center justify-end gap-1.5">
+              <AppText
+                className="min-w-0 text-[17px] leading-tight"
+                align="right"
+                ellipsizeMode="tail"
+                numberOfLines={2}
+                style={{ flexShrink: 1 }}
+                variant="title">
+                {industryPreview}
+              </AppText>
+              {hiddenIndustryCount > 0 ? (
+                <View
+                  className="rounded-full border px-2 py-0.5"
+                  style={{
+                    backgroundColor: 'rgba(152, 162, 179, 0.10)',
+                    borderColor: 'rgba(152, 162, 179, 0.18)',
+                  }}>
+                  <AppText className="text-[11px] leading-[14px]" tone="muted" variant="bodyStrong">
+                    +{hiddenIndustryCount}
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
             <View className="flex-row items-center gap-1">
               <Ionicons color="#98A2B3" name="people-outline" size={14} />
               <AppText className="text-[13px]" tone="muted">
@@ -920,18 +963,18 @@ function StartupCardContent({
                 </View>
                 <View className="w-1/2 gap-1 pr-2">
                   <AppText className="text-[12px]" tone="muted">
-                    Industry
-                  </AppText>
-                  <AppText className="text-[18px]" variant="title">
-                    {card.teamStage.industry}
-                  </AppText>
-                </View>
-                <View className="w-1/2 gap-1 pl-2">
-                  <AppText className="text-[12px]" tone="muted">
                     Hiring
                   </AppText>
                   <AppText className="text-[18px]" variant="title">
                     {card.teamStage.hiringCount} roles
+                  </AppText>
+                </View>
+                <View className="w-full gap-1">
+                  <AppText className="text-[12px]" tone="muted">
+                    Industry
+                  </AppText>
+                  <AppText className="text-[18px] leading-[23px]" variant="title">
+                    {card.teamStage.industry}
                   </AppText>
                 </View>
               </View>

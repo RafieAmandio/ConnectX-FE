@@ -58,6 +58,7 @@ type MockDiscoveryStartupCardBlueprint = {
   matchLabel: string;
   industryPrimary: string;
   industrySecondary?: string;
+  industries?: string[];
   memberCount: number;
   summary: string;
   openRoles: string[];
@@ -447,6 +448,7 @@ const startupCardBlueprints: MockDiscoveryStartupCardBlueprint[] = [
     matchLabel: 'Perfect Match',
     industryPrimary: 'Fintech',
     industrySecondary: 'AI',
+    industries: ['Fintech', 'AI', 'Payments', 'B2B SaaS', 'SME Infrastructure'],
     memberCount: 2,
     summary: 'Building an AI-powered payment infrastructure for Southeast Asian SMEs.',
     openRoles: ['Technical Co-Founder', 'Backend Engineer'],
@@ -584,49 +586,54 @@ function createProfileCards(): DiscoveryCard[] {
 }
 
 function createStartupCards(): DiscoveryCard[] {
-  return startupCardBlueprints.map((card) => ({
-    entityType: 'startup',
-    id: card.id,
-    startupId: card.startupId,
-    name: card.name,
-    logoUrl: card.logoUrl ?? null,
-    badge: {
-      label: card.badgeLabel,
-    },
-    founder: {
-      name: card.founderName,
-      title: card.founderTitle,
-    },
-    match: {
-      score: card.score,
-      label: card.matchLabel,
-    },
-    industry: {
-      primary: card.industryPrimary,
-      secondary: card.industrySecondary,
-      display: [card.industryPrimary, card.industrySecondary].filter(Boolean).join(' / '),
-    },
-    team: {
-      memberCount: card.memberCount,
-      display: `${card.memberCount} members`,
-    },
-    summary: card.summary,
-    openRoles: card.openRoles.map((title) => ({
-      id: `${card.startupId}_${title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
-      title,
-    })),
-    lookingFor: [...card.lookingFor],
-    teamStage: {
-      teamSize: card.memberCount,
-      stage: card.badgeLabel,
-      industry: [card.industryPrimary, card.industrySecondary].filter(Boolean).join(' / '),
-      hiringCount: card.openRoles.length,
-    },
-    journey: {
-      currentStage: card.journeyCurrentStage,
-      stages: [...card.journeyStages],
-    },
-  }));
+  return startupCardBlueprints.map((card) => {
+    const industries = card.industries ?? [card.industryPrimary, card.industrySecondary].filter(Boolean);
+    const industryDisplay = industries.join(' / ');
+
+    return {
+      entityType: 'startup',
+      id: card.id,
+      startupId: card.startupId,
+      name: card.name,
+      logoUrl: card.logoUrl ?? null,
+      badge: {
+        label: card.badgeLabel,
+      },
+      founder: {
+        name: card.founderName,
+        title: card.founderTitle,
+      },
+      match: {
+        score: card.score,
+        label: card.matchLabel,
+      },
+      industry: {
+        primary: card.industryPrimary,
+        secondary: card.industrySecondary,
+        display: industryDisplay,
+      },
+      team: {
+        memberCount: card.memberCount,
+        display: `${card.memberCount} members`,
+      },
+      summary: card.summary,
+      openRoles: card.openRoles.map((title) => ({
+        id: `${card.startupId}_${title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
+        title,
+      })),
+      lookingFor: [...card.lookingFor],
+      teamStage: {
+        teamSize: card.memberCount,
+        stage: card.badgeLabel,
+        industry: industryDisplay,
+        hiringCount: card.openRoles.length,
+      },
+      journey: {
+        currentStage: card.journeyCurrentStage,
+        stages: [...card.journeyStages],
+      },
+    };
+  });
 }
 
 function createCardsResponse(items: DiscoveryCard[]): DiscoveryCardsResponse {
