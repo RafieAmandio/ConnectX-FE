@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
-  ActivityIndicator,
   Linking,
   Pressable,
   ScrollView,
@@ -14,6 +13,7 @@ import {
 import { useAuthContext } from '@features/auth/store/auth-provider';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 
+import { ProfileSkeleton } from './profile-skeleton';
 import { useMyProfile } from '../hooks/use-profile';
 import {
   mockIndividualProfileResponse,
@@ -524,97 +524,92 @@ export function ProfileScreen() {
       <View className="flex-1" style={{ backgroundColor: '#262626' }}>
         <AppTopBar />
         {!shouldUseMockProfile && !hasUsableProfile(myProfileResponse) ? (
-          <View className="flex-1 items-center justify-center gap-3 px-6">
-            <ActivityIndicator color={ACCENT} />
-            <AppText align="center" className="text-[14px]" tone="muted">
-              Loading profile...
-            </AppText>
-          </View>
+          <ProfileSkeleton shouldStackPanels={shouldStackPanels} />
         ) : (
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
-          contentInsetAdjustmentBehavior="automatic"
-        >
-          <ProfileHero
-            onEdit={() => router.push('/profile/edit' as never)}
-            profile={effectiveProfile}
-          />
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
+            contentInsetAdjustmentBehavior="automatic"
+          >
+            <ProfileHero
+              onEdit={() => router.push('/profile/edit' as never)}
+              profile={effectiveProfile}
+            />
 
-          {shouldUseMockProfile ? (
-            <MockProfileToggle mode={mockMode} onChange={setMockMode} />
-          ) : null}
+            {shouldUseMockProfile ? (
+              <MockProfileToggle mode={mockMode} onChange={setMockMode} />
+            ) : null}
 
-          <StatsOverview stats={effectiveProfile.stats} />
+            <StatsOverview stats={effectiveProfile.stats} />
 
-          {startup ? <StartupProfileCard startup={startup} /> : null}
+            {startup ? <StartupProfileCard startup={startup} /> : null}
 
-          {aboutSection ? (
-            <SectionCard>
-              <SectionHeader
-                description={getAboutSectionDescription(aboutSection.kind)}
-                eyebrow="About"
-                icon="bulb-outline"
-                title={aboutSection.title}
-              />
-              <AppText className="text-[15px] leading-7" selectable tone="muted">
-                {aboutSection.value}
-              </AppText>
-            </SectionCard>
-          ) : null}
+            {aboutSection ? (
+              <SectionCard>
+                <SectionHeader
+                  description={getAboutSectionDescription(aboutSection.kind)}
+                  eyebrow="About"
+                  icon="bulb-outline"
+                  title={aboutSection.title}
+                />
+                <AppText className="text-[15px] leading-7" selectable tone="muted">
+                  {aboutSection.value}
+                </AppText>
+              </SectionCard>
+            ) : null}
 
-          {personalitySection ? (
-            <SectionCard>
-              <SectionHeader
-                description="Traits and hobbies that make the collaboration style easier to read."
-                eyebrow="Personality"
-                icon="flash-outline"
-                title={personalitySection.title}
-              />
-              <NamedItemList items={personalitySection.items} />
-            </SectionCard>
-          ) : null}
+            {personalitySection ? (
+              <SectionCard>
+                <SectionHeader
+                  description="Traits and hobbies that make the collaboration style easier to read."
+                  eyebrow="Personality"
+                  icon="flash-outline"
+                  title={personalitySection.title}
+                />
+                <NamedItemList items={personalitySection.items} />
+              </SectionCard>
+            ) : null}
 
-          {skillsSection || interestsSection ? (
-            <View className={shouldStackPanels ? 'gap-3' : 'flex-row gap-3'}>
-              {skillsSection ? (
-                <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
-                  <SectionHeader
-                    eyebrow="Expertise"
-                    icon="construct-outline"
-                    title={skillsSection.title}
-                  />
-                  <NamedItemList items={skillsSection.items} tone="warning" />
-                </SectionCard>
-              ) : null}
+            {skillsSection || interestsSection ? (
+              <View className={shouldStackPanels ? 'gap-3' : 'flex-row gap-3'}>
+                {skillsSection ? (
+                  <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
+                    <SectionHeader
+                      eyebrow="Expertise"
+                      icon="construct-outline"
+                      title={skillsSection.title}
+                    />
+                    <NamedItemList items={skillsSection.items} tone="warning" />
+                  </SectionCard>
+                ) : null}
 
-              {interestsSection ? (
-                <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
-                  <SectionHeader
-                    eyebrow="Focus"
-                    icon="compass-outline"
-                    title={interestsSection.title}
-                  />
-                  <NamedItemList items={interestsSection.items} />
-                </SectionCard>
-              ) : null}
-            </View>
-          ) : null}
+                {interestsSection ? (
+                  <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
+                    <SectionHeader
+                      eyebrow="Focus"
+                      icon="compass-outline"
+                      title={interestsSection.title}
+                    />
+                    <NamedItemList items={interestsSection.items} />
+                  </SectionCard>
+                ) : null}
+              </View>
+            ) : null}
 
-          {highlightsSection?.items?.length ? (
-            <SectionCard>
-              <SectionHeader
-                description="Quick facts that help others understand experience and context."
-                eyebrow="Highlights"
-                icon="sparkles-outline"
-                title="Standout details"
-              />
-              <HighlightList items={highlightsSection.items} />
-            </SectionCard>
-          ) : null}
+            {highlightsSection?.items?.length ? (
+              <SectionCard>
+                <SectionHeader
+                  description="Quick facts that help others understand experience and context."
+                  eyebrow="Highlights"
+                  icon="sparkles-outline"
+                  title="Standout details"
+                />
+                <HighlightList items={highlightsSection.items} />
+              </SectionCard>
+            ) : null}
 
-          <BottomSignOut onPress={() => signOut()} />
-        </ScrollView>
+            <BottomSignOut onPress={() => signOut()} />
+          </ScrollView>
         )}
       </View>
     </>
