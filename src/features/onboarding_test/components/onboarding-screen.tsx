@@ -723,9 +723,12 @@ export function OnboardingScreen() {
   const primaryCtaLabel =
     isSubmitting && isLastPagedQuestion ? 'Saving...' : currentStep.cta.label;
   const footerBottomPadding =
-    Platform.OS === 'ios' || androidKeyboardOverlap === 0
-      ? Math.max(insets.bottom + 16, 32)
-      : 12;
+    Platform.OS === 'ios'
+      ? insets.bottom
+      : androidKeyboardOverlap === 0
+        ? Math.max(insets.bottom + 16, 32)
+        : 12;
+
 
   return (
     <KeyboardAvoidingView
