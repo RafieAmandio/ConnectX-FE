@@ -12,6 +12,9 @@
       "bundleIdentifier": "com.connectxapp.ios",
       "googleServicesFile": "./ios/GoogleService-Info.plist",
       "appleTeamId": "NCKSK4UBPZ",
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "infoPlist": {
         "UIBackgroundModes": [
           "fetch",

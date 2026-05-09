@@ -4,12 +4,18 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { getApp } from '@react-native-firebase/app';
 import {
   AuthorizationStatus,
+  getAPNSToken,
   getMessaging,
   getToken,
   onTokenRefresh,
   registerDeviceForRemoteMessages,
   requestPermission,
 } from '@react-native-firebase/messaging';
+
+const APNS_TOKEN_RETRY_COUNT = 10;
+const APNS_TOKEN_RETRY_DELAY_MS = 500;
+
+const wait = (delayMs: number) => new Promise((resolve) => setTimeout(resolve, delayMs));
 
 export function useFcmToken() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
@@ -43,6 +49,20 @@ export function useFcmToken() {
       return result === PermissionsAndroid.RESULTS.GRANTED;
     };
 
+    const waitForApnsToken = async (messaging: ReturnType<typeof getMessaging>) => {
+      for (let attempt = 0; attempt < APNS_TOKEN_RETRY_COUNT; attempt += 1) {
+        const apnsToken = await getAPNSToken(messaging);
+
+        if (apnsToken) {
+          return apnsToken;
+        }
+
+        await wait(APNS_TOKEN_RETRY_DELAY_MS);
+      }
+
+      return null;
+    };
+
     const fetchFcmToken = async () => {
       try {
         const hasAndroidPermission = await requestAndroidNotificationPermission();
@@ -65,6 +85,13 @@ export function useFcmToken() {
 
         if (Platform.OS === 'ios') {
           await registerDeviceForRemoteMessages(messaging);
+
+          const apnsToken = await waitForApnsToken(messaging);
+
+          if (!apnsToken) {
+            console.info('APNs token was not available yet. Reopen the app after rebuilding with Push Notifications enabled.');
+            return;
+          }
         }
 
         const token = await getToken(messaging);
