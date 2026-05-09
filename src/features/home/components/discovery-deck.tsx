@@ -1115,6 +1115,7 @@ export function DiscoveryDeck() {
   const translateY = useSharedValue(0);
   const nextCardScale = useSharedValue(0.96);
   const currentCardRef = React.useRef<DiscoveryCard | null>(null);
+  const pendingCardAdvanceResetRef = React.useRef<string | null>(null);
   const usingFallbackRef = React.useRef(false);
   const hasShownGuaranteedMockMatchRef = React.useRef(false);
   const hasRequestedDeviceCoordinatesRef = React.useRef(false);
@@ -1446,6 +1447,20 @@ export function DiscoveryDeck() {
   currentCardRef.current = currentItem;
   usingFallbackRef.current = usingLocalMockCards;
 
+  React.useLayoutEffect(() => {
+    const pendingCardId = pendingCardAdvanceResetRef.current;
+
+    if (!pendingCardId || currentItem?.id === pendingCardId) {
+      return;
+    }
+
+    pendingCardAdvanceResetRef.current = null;
+    translateX.value = 0;
+    translateY.value = 0;
+    nextCardScale.value = 0.96;
+    setIsSubmitting(false);
+  }, [currentItem?.id, nextCardScale, translateX, translateY]);
+
   React.useEffect(() => {
     if (usingFallbackRef.current) {
       return;
@@ -1519,6 +1534,7 @@ export function DiscoveryDeck() {
   const handleSwipeAction = React.useCallback(
     async (action: SwipeActionIntent, direction?: SwipeDirection) => {
       const activeCard = currentCardRef.current;
+      let didAdvanceCard = false;
 
       if (!activeCard) {
         setIsSubmitting(false);
@@ -1553,6 +1569,9 @@ export function DiscoveryDeck() {
 
           matched = Boolean(response.data.isMatch);
         }
+
+        didAdvanceCard = true;
+        pendingCardAdvanceResetRef.current = activeCard.id;
 
         // Rewound cards are restored from local state, so clear that copy once
         // the backend accepts the new swipe.
@@ -1615,25 +1634,19 @@ export function DiscoveryDeck() {
           setActionError(getErrorMessage(error, 'Unable to record this swipe right now.'));
         }
       } finally {
+        if (didAdvanceCard) {
+          return;
+        }
+
         setIsSubmitting(false);
-        // Defer the position reset to the next frame so React commits the
-        // new currentItem first. Without this, the card snaps to center
-        // while still showing the previous card's content for one frame.
-        requestAnimationFrame(() => {
-          translateX.value = 0;
-          translateY.value = 0;
-          nextCardScale.value = 0.96;
-        });
+        resetCardPosition();
       }
     },
     [
       maybePresentBoostPaywall,
-      nextCardScale,
       queryClient,
       resetCardPosition,
       swipeAction,
-      translateX,
-      translateY,
     ]
   );
 
