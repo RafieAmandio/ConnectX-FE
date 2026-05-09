@@ -722,6 +722,10 @@ export function OnboardingScreen() {
     (shouldPageCurrentQuestions && !isLastPagedQuestion ? !canContinuePagedQuestion : !canSubmit);
   const primaryCtaLabel =
     isSubmitting && isLastPagedQuestion ? 'Saving...' : currentStep.cta.label;
+  const footerBottomPadding =
+    Platform.OS === 'ios' || androidKeyboardOverlap === 0
+      ? Math.max(insets.bottom + 16, 32)
+      : 12;
 
   return (
     <KeyboardAvoidingView
@@ -823,7 +827,7 @@ export function OnboardingScreen() {
               <View
                 style={{
                   marginBottom: androidKeyboardOverlap,
-                  paddingBottom: Math.max(insets.bottom + 16, 32),
+                  paddingBottom: footerBottomPadding,
                 }}
               />
             ) : (
@@ -834,7 +838,7 @@ export function OnboardingScreen() {
                   borderTopColor: BORDER_SOFT,
                   borderTopWidth: 1,
                   marginBottom: androidKeyboardOverlap,
-                  paddingBottom: Math.max(insets.bottom + 16, 32),
+                  paddingBottom: footerBottomPadding,
                 }}>
                 <PrimaryCta
                   disabled={primaryCtaDisabled}
