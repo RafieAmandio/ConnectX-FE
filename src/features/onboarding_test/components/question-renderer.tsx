@@ -31,6 +31,14 @@ import type {
 const HOME_BACKGROUND = '#262626';
 const SEARCHABLE_DROPDOWN_QUERY_GATE_OPTION_COUNT = 80;
 const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
+const SINGLE_LINE_TEXT_INPUT_STYLE = {
+  height: 40,
+  lineHeight: 20,
+  paddingBottom: 0,
+  paddingTop: 0,
+  paddingVertical: 0,
+  textAlignVertical: 'center' as const,
+};
 
 type QuestionRendererProps = {
   error?: string;
@@ -1362,7 +1370,7 @@ function MultiSelectDropdownQuestion({
                 placeholderTextColor="#667085"
                 value={query}
                 className="flex-1 font-body text-[15px] text-white"
-                style={{ paddingVertical: 0 }}
+                style={SINGLE_LINE_TEXT_INPUT_STYLE}
               />
               {query ? (
                 <Pressable onPress={() => setQuery('')} hitSlop={8}>
@@ -1567,7 +1575,7 @@ function SearchableMultiSelectDropdownQuestion({
                 placeholderTextColor="#667085"
                 value={query}
                 className="flex-1 font-body text-[15px] text-white"
-                style={{ paddingVertical: 0 }}
+                style={SINGLE_LINE_TEXT_INPUT_STYLE}
               />
               {query ? (
                 <Pressable onPress={() => setQuery('')} hitSlop={8}>
@@ -1926,7 +1934,7 @@ function SearchableDropdownQuestion({
                 placeholderTextColor="#667085"
                 value={query}
                 className="flex-1 font-body text-[15px] text-white"
-                style={{ paddingVertical: 0 }}
+                style={SINGLE_LINE_TEXT_INPUT_STYLE}
               />
               {query ? (
                 <Pressable onPress={() => setQuery('')} hitSlop={8}>
@@ -2105,7 +2113,7 @@ function SearchableMultiSelectQuestion({
           placeholderTextColor="#667085"
           value={query}
           className="flex-1 font-body text-[15px] text-white"
-          style={{ paddingVertical: 0 }}
+          style={SINGLE_LINE_TEXT_INPUT_STYLE}
         />
         {query ? (
           <Pressable onPress={() => setQuery('')} hitSlop={8}>
@@ -2237,7 +2245,7 @@ function InlineSearchableCheckboxMultiSelectQuestion({
           placeholderTextColor="#8A8F99"
           value={query}
           className="flex-1 font-body text-[16px] text-white"
-          style={{ paddingVertical: 0 }}
+          style={SINGLE_LINE_TEXT_INPUT_STYLE}
         />
         {query ? (
           <Pressable onPress={() => setQuery('')} hitSlop={10}>
@@ -2353,7 +2361,7 @@ function SearchableSingleSelectQuestion({
           placeholderTextColor="#667085"
           value={query}
           className="flex-1 font-body text-[15px] text-white"
-          style={{ paddingVertical: 0 }}
+          style={SINGLE_LINE_TEXT_INPUT_STYLE}
         />
         {query ? (
           <Pressable onPress={() => setQuery('')} hitSlop={8}>
