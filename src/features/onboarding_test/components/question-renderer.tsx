@@ -29,8 +29,8 @@ import type {
 } from '../types/onboarding.types';
 
 const HOME_BACKGROUND = '#262626';
-const SEARCHABLE_DROPDOWN_QUERY_GATE_OPTION_COUNT = 80;
 const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
+const SEARCHABLE_DROPDOWN_QUERY_GATED_QUESTION_IDS = new Set(['q_location']);
 const SINGLE_LINE_TEXT_INPUT_STYLE = {
   height: 40,
   lineHeight: 20,
@@ -1785,14 +1785,6 @@ function DropdownQuestion({
   );
 }
 
-function SearchableDropdownQueryPrompt({ optionCount }: { optionCount: number }) {
-  if (optionCount > SEARCHABLE_DROPDOWN_QUERY_GATE_OPTION_COUNT) {
-    return null;
-  }
-
-  return null;
-}
-
 function SearchableDropdownEmptyState({ query }: { query: string }) {
   return (
     <View className="px-3 py-4">
@@ -1825,10 +1817,9 @@ function SearchableDropdownQuestion({
     ? getSelectedLabel(question.options, currentValue)
     : '';
   const hasQuery = query.trim().length > 0;
-  const optionCount = question.options?.length ?? 0;
   const shouldRequireQuery =
     hideSearchableDropdownResultsUntilQuery ||
-    optionCount > SEARCHABLE_DROPDOWN_QUERY_GATE_OPTION_COUNT;
+    SEARCHABLE_DROPDOWN_QUERY_GATED_QUESTION_IDS.has(question.id);
   const shouldRenderResults =
     isOpen && (!shouldRequireQuery || hasQuery);
 
@@ -2000,14 +1991,10 @@ function SearchableDropdownQuestion({
                   );
                 }}
               />
-                ) : (
-                  <SearchableDropdownQueryPrompt optionCount={optionCount} />
-                )
+                ) : null
           }
         >
-          {!shouldRenderResults ? (
-            <SearchableDropdownQueryPrompt optionCount={optionCount} />
-          ) : (
+          {shouldRenderResults ? (
             <>
               {groupOptions(visibleOptions).map(([groupName, options]) => (
                 <View key={groupName} className="gap-1 pb-2">
@@ -2041,7 +2028,7 @@ function SearchableDropdownQuestion({
               {visibleOptions.length === 0 ? <SearchableDropdownEmptyState query={query} /> : null}
               {hasMoreResults ? <SearchableDropdownMoreResults /> : null}
             </>
-          )}
+          ) : null}
         </DropdownOverlay>
       </View>
     </View>
