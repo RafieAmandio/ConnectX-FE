@@ -639,8 +639,12 @@ function ProfileCardContent({
   scrollEnabled?: boolean;
 }) {
   return (
-    <View className="flex-1">
-      <View className="shrink-0">
+    <ScrollView
+      className="flex-1"
+      showsVerticalScrollIndicator={false}
+      scrollEnabled={scrollEnabled}
+      contentContainerStyle={{ paddingBottom: bottomInset }}>
+      <View>
         <View className="overflow-hidden" style={{ height: 260 }}>
           {card.photoUrl ? (
             <Image
@@ -710,97 +714,91 @@ function ProfileCardContent({
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
-        contentContainerStyle={{ paddingBottom: bottomInset }}>
-        <View className="gap-5 px-4 py-4">
-          {card.bio ? (
-            <AppText className="text-[16px] leading-7" tone="muted">
-              {card.bio}
-            </AppText>
-          ) : null}
+      <View className="gap-5 px-4 py-4">
+        {card.bio ? (
+          <AppText className="text-[16px] leading-7" tone="muted">
+            {card.bio}
+          </AppText>
+        ) : null}
 
-          {card.startupIdea ? (
-            <View
-              className="gap-2.5 rounded-[20px] border px-4 py-4"
-              style={{
-                backgroundColor: '#2A2117',
-                borderColor: 'rgba(255, 154, 62, 0.25)',
-              }}>
-              <SectionLabel icon="bulb-outline" title="Startup Idea" />
-              <AppText className="text-[16px] leading-6">{card.startupIdea}</AppText>
-            </View>
-          ) : null}
-
-          <View className="gap-2.5">
-            <SectionLabel title="Industries & Interests" />
-            <View className="flex-row flex-wrap gap-2">
-              {card.interests.map((item) => (
-                <DiscoveryTag
-                  key={item.id}
-                  item={item}
-                  tone={item.type === 'availability' ? 'availability' : 'default'}
-                />
-              ))}
-            </View>
+        {card.startupIdea ? (
+          <View
+            className="gap-2.5 rounded-[20px] border px-4 py-4"
+            style={{
+              backgroundColor: '#2A2117',
+              borderColor: 'rgba(255, 154, 62, 0.25)',
+            }}>
+            <SectionLabel icon="bulb-outline" title="Startup Idea" />
+            <AppText className="text-[16px] leading-6">{card.startupIdea}</AppText>
           </View>
+        ) : null}
 
-          <View className="gap-2.5">
-            <SectionLabel title="Skills" />
-            <View className="flex-row flex-wrap gap-2">
-              {card.skills.map((item) => (
-                <DiscoveryTag key={item.id} item={item} />
-              ))}
-            </View>
+        <View className="gap-2.5">
+          <SectionLabel title="Industries & Interests" />
+          <View className="flex-row flex-wrap gap-2">
+            {card.interests.map((item) => (
+              <DiscoveryTag
+                key={item.id}
+                item={item}
+                tone={item.type === 'availability' ? 'availability' : 'default'}
+              />
+            ))}
           </View>
-
-          {card.experience?.length ? (
-            <View className="gap-3">
-              <SectionLabel icon="briefcase-outline" title="Experience" />
-              {card.experience.map((item) => (
-                <AppCard key={item.id} className="gap-1.5 rounded-[16px] p-4 bg-[#2C2C2C] border border-white/10 border-l-[2.5px] border-l-[#FF9A3E]">
-                  <AppText className="text-[16px]" variant="title">
-                    {item.title}
-                  </AppText>
-                  <AppText className="text-[13px] text-[#FF9A3E]">
-                    {item.organization} · {item.period}
-                  </AppText>
-                </AppCard>
-              ))}
-            </View>
-          ) : null}
-
-          {card.education?.length ? (
-            <View className="gap-3">
-              {card.education.map((item) => (
-                <AppCard key={item.id} className="flex-row items-center gap-3.5 rounded-[16px] p-4 bg-[#2C2C2C] border-white/10">
-                  <Ionicons color="#FFCD38" name="school-outline" size={24} />
-                  <View className="flex-1 gap-0.5">
-                    <AppText className="text-[16px]" variant="title">
-                      {item.degree}
-                    </AppText>
-                    <AppText className="text-[13px]" style={{ color: '#FFCD38' }}>
-                      {item.school}
-                    </AppText>
-                  </View>
-                </AppCard>
-              ))}
-            </View>
-          ) : null}
-
-          {card.languages?.length ? (
-            <View className="flex-row items-center gap-2 pb-1">
-              <Ionicons color="#FF9A3E" name="globe-outline" size={20} />
-              <AppText className="text-[14px]" tone="muted">
-                {card.languages.join(' · ')}
-              </AppText>
-            </View>
-          ) : null}
         </View>
-      </ScrollView>
-    </View>
+
+        <View className="gap-2.5">
+          <SectionLabel title="Skills" />
+          <View className="flex-row flex-wrap gap-2">
+            {card.skills.map((item) => (
+              <DiscoveryTag key={item.id} item={item} />
+            ))}
+          </View>
+        </View>
+
+        {card.experience?.length ? (
+          <View className="gap-3">
+            <SectionLabel icon="briefcase-outline" title="Experience" />
+            {card.experience.map((item) => (
+              <AppCard key={item.id} className="gap-1.5 rounded-[16px] p-4 bg-[#2C2C2C] border border-white/10 border-l-[2.5px] border-l-[#FF9A3E]">
+                <AppText className="text-[16px]" variant="title">
+                  {item.title}
+                </AppText>
+                <AppText className="text-[13px] text-[#FF9A3E]">
+                  {item.organization} · {item.period}
+                </AppText>
+              </AppCard>
+            ))}
+          </View>
+        ) : null}
+
+        {card.education?.length ? (
+          <View className="gap-3">
+            {card.education.map((item) => (
+              <AppCard key={item.id} className="flex-row items-center gap-3.5 rounded-[16px] p-4 bg-[#2C2C2C] border-white/10">
+                <Ionicons color="#FFCD38" name="school-outline" size={24} />
+                <View className="flex-1 gap-0.5">
+                  <AppText className="text-[16px]" variant="title">
+                    {item.degree}
+                  </AppText>
+                  <AppText className="text-[13px]" style={{ color: '#FFCD38' }}>
+                    {item.school}
+                  </AppText>
+                </View>
+              </AppCard>
+            ))}
+          </View>
+        ) : null}
+
+        {card.languages?.length ? (
+          <View className="flex-row items-center gap-2 pb-1">
+            <Ionicons color="#FF9A3E" name="globe-outline" size={20} />
+            <AppText className="text-[14px]" tone="muted">
+              {card.languages.join(' · ')}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+    </ScrollView>
   );
 }
 
