@@ -816,8 +816,12 @@ function StartupCardContent({
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
 
   return (
-    <View className="flex-1">
-      <View className="shrink-0">
+    <ScrollView
+      className="flex-1"
+      showsVerticalScrollIndicator={false}
+      scrollEnabled={scrollEnabled}
+      contentContainerStyle={{ paddingBottom: bottomInset }}>
+      <View>
         <View
           className="overflow-hidden rounded-t-[24px] px-4 pb-5 pt-4"
           style={{ backgroundColor: '#5A4226' }}>
@@ -904,85 +908,79 @@ function StartupCardContent({
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
-        contentContainerStyle={{ paddingBottom: bottomInset }}>
-        <View className="gap-5 px-4 py-4">
-          <AppText className="text-[16px] leading-7" tone="muted">
-            {card.summary}
-          </AppText>
+      <View className="gap-5 px-4 py-4">
+        <AppText className="text-[16px] leading-7" tone="muted">
+          {card.summary}
+        </AppText>
 
-          {card.openRoles.length ? (
-            <View className="gap-3">
-              <SectionLabel icon="briefcase-outline" title="Open Roles" />
-              <View className="flex-row flex-wrap gap-2">
-                {card.openRoles.map((role) => (
-                  <StartupRoleChip key={role.id} title={role.title} />
-                ))}
-              </View>
-            </View>
-          ) : null}
-
-          {card.lookingFor.length ? (
-            <View
-              className="gap-2.5 rounded-[20px] border px-4 py-4"
-              style={{
-                backgroundColor: '#2A261B',
-                borderColor: 'rgba(255, 190, 61, 0.28)',
-              }}>
-              <SectionLabel icon="sparkles-outline" title="Looking For" />
-              <AppText className="text-[16px] leading-6">
-                {card.lookingFor.join(' & ')}
-              </AppText>
-            </View>
-          ) : null}
-
+        {card.openRoles.length ? (
           <View className="gap-3">
-            <SectionLabel icon="people-outline" title="Team & Stage" />
-            <AppCard className="rounded-[18px] p-4 bg-[#2C2C2C] border-white/10">
-              <View className="flex-row flex-wrap gap-y-4">
-                <View className="w-1/2 gap-1 pr-2">
-                  <AppText className="text-[12px]" tone="muted">
-                    Team Size
-                  </AppText>
-                  <AppText className="text-[18px]" variant="title">
-                    {card.teamStage.teamSize} members
-                  </AppText>
-                </View>
-                <View className="w-1/2 gap-1 pl-2">
-                  <AppText className="text-[12px]" tone="muted">
-                    Stage
-                  </AppText>
-                  <AppText className="text-[18px]" variant="title">
-                    {card.teamStage.stage}
-                  </AppText>
-                </View>
-                <View className="w-1/2 gap-1 pr-2">
-                  <AppText className="text-[12px]" tone="muted">
-                    Hiring
-                  </AppText>
-                  <AppText className="text-[18px]" variant="title">
-                    {card.teamStage.hiringCount} roles
-                  </AppText>
-                </View>
-                <View className="w-full gap-1">
-                  <AppText className="text-[12px]" tone="muted">
-                    Industry
-                  </AppText>
-                  <AppText className="text-[18px] leading-[23px]" variant="title">
-                    {card.teamStage.industry}
-                  </AppText>
-                </View>
-              </View>
-            </AppCard>
+            <SectionLabel icon="briefcase-outline" title="Open Roles" />
+            <View className="flex-row flex-wrap gap-2">
+              {card.openRoles.map((role) => (
+                <StartupRoleChip key={role.id} title={role.title} />
+              ))}
+            </View>
           </View>
+        ) : null}
 
-          <StartupJourney card={card} />
+        {card.lookingFor.length ? (
+          <View
+            className="gap-2.5 rounded-[20px] border px-4 py-4"
+            style={{
+              backgroundColor: '#2A261B',
+              borderColor: 'rgba(255, 190, 61, 0.28)',
+            }}>
+            <SectionLabel icon="sparkles-outline" title="Looking For" />
+            <AppText className="text-[16px] leading-6">
+              {card.lookingFor.join(' & ')}
+            </AppText>
+          </View>
+        ) : null}
+
+        <View className="gap-3">
+          <SectionLabel icon="people-outline" title="Team & Stage" />
+          <AppCard className="rounded-[18px] p-4 bg-[#2C2C2C] border-white/10">
+            <View className="flex-row flex-wrap gap-y-4">
+              <View className="w-1/2 gap-1 pr-2">
+                <AppText className="text-[12px]" tone="muted">
+                  Team Size
+                </AppText>
+                <AppText className="text-[18px]" variant="title">
+                  {card.teamStage.teamSize} members
+                </AppText>
+              </View>
+              <View className="w-1/2 gap-1 pl-2">
+                <AppText className="text-[12px]" tone="muted">
+                  Stage
+                </AppText>
+                <AppText className="text-[18px]" variant="title">
+                  {card.teamStage.stage}
+                </AppText>
+              </View>
+              <View className="w-1/2 gap-1 pr-2">
+                <AppText className="text-[12px]" tone="muted">
+                  Hiring
+                </AppText>
+                <AppText className="text-[18px]" variant="title">
+                  {card.teamStage.hiringCount} roles
+                </AppText>
+              </View>
+              <View className="w-full gap-1">
+                <AppText className="text-[12px]" tone="muted">
+                  Industry
+                </AppText>
+                <AppText className="text-[18px] leading-[23px]" variant="title">
+                  {card.teamStage.industry}
+                </AppText>
+              </View>
+            </View>
+          </AppCard>
         </View>
-      </ScrollView>
-    </View>
+
+        <StartupJourney card={card} />
+      </View>
+    </ScrollView>
   );
 }
 
