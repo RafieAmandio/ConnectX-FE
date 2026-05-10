@@ -127,6 +127,41 @@ function getQuestionValue(
   return normalizeAnswerValue(question, answers[question.id]);
 }
 
+function summarizeQuestionForLog(question: OnboardingQuestion) {
+  return {
+    id: question.id,
+    label: question.label,
+    option_count: question.options?.length ?? 0,
+    required: question.required,
+    type: question.type,
+  };
+}
+
+export function summarizeOnboardingStepForLog(step: OnboardingStep | null | undefined) {
+  if (!step) {
+    return null;
+  }
+
+  return {
+    id: step.id,
+    progress: step.overall_progress,
+    question_count: step.questions.length,
+    questions: step.questions.map(summarizeQuestionForLog),
+    title: step.title,
+  };
+}
+
+function summarizeNextStepResponseForLog(response: OnboardingNextStepResponse) {
+  return {
+    can_go_back: response.can_go_back,
+    completed: response.completed ?? false,
+    next_step: summarizeOnboardingStepForLog(response.next_step),
+    profile_id: response.profile_id,
+    progress: response.progress,
+    redirect_to: response.redirect_to,
+  };
+}
+
 export function normalizeStepAnswers(
   step: OnboardingStep,
   answers: OnboardingAnswers
@@ -419,7 +454,7 @@ export async function submitOnboardingAnswers(
       {
         locale,
         payload,
-        response,
+        response: summarizeNextStepResponseForLog(response),
         sessionId,
       },
       null,

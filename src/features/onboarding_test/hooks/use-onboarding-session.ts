@@ -9,6 +9,7 @@ import {
   normalizeStepAnswers,
   startOnboardingSession,
   submitOnboardingAnswers,
+  summarizeOnboardingStepForLog,
   validateStepAnswers,
 } from '../services/onboarding-session-service';
 import type {
@@ -257,7 +258,19 @@ export function useOnboardingSession({
     try {
       const backResponse = await goBackOnboardingSession(sessionId, locale);
 
-      console.log('[onboarding_test] go back response', JSON.stringify(backResponse, null, 2));
+      console.log(
+        '[onboarding_test] go back response',
+        JSON.stringify(
+          {
+            can_go_back: backResponse.can_go_back,
+            current_step: summarizeOnboardingStepForLog(backResponse.current_step),
+            previous_step: summarizeOnboardingStepForLog(backResponse.previous_step),
+            progress: backResponse.progress,
+          },
+          null,
+          2
+        )
+      );
 
       const previousStep = backResponse.previous_step ?? backResponse.current_step ?? null;
 

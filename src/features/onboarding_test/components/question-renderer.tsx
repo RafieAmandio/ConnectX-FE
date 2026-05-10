@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
+  FlatList,
   Modal,
   Platform,
   Pressable,
@@ -28,6 +29,8 @@ import type {
 } from '../types/onboarding.types';
 
 const HOME_BACKGROUND = '#262626';
+const SEARCHABLE_DROPDOWN_QUERY_GATE_OPTION_COUNT = 80;
+const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
 
 type QuestionRendererProps = {
   error?: string;
@@ -107,11 +110,49 @@ function groupOptions(options: OnboardingOption[] | undefined) {
   return Array.from(groupedOptions.entries());
 }
 
+type GroupedOptionListItem =
+  | {
+    id: string;
+    label: string;
+    type: 'group';
+  }
+  | {
+    id: string;
+    option: OnboardingOption;
+    type: 'option';
+  };
+
+function flattenGroupedOptions(options: OnboardingOption[]) {
+  const items: GroupedOptionListItem[] = [];
+
+  for (const [groupName, groupedOptions] of groupOptions(options)) {
+    items.push({
+      id: `group:${groupName}`,
+      label: groupName,
+      type: 'group',
+    });
+
+    for (const option of groupedOptions) {
+      items.push({
+        id: `option:${option.id}`,
+        option,
+        type: 'option',
+      });
+    }
+  }
+
+  return items;
+}
+
 type AnchorLayout = {
   height: number;
   width: number;
   x: number;
   y: number;
+};
+
+type DropdownContentRenderParams = {
+  maxHeight: number;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -125,14 +166,16 @@ function DropdownOverlay({
   maxHeight,
   minWidth,
   onClose,
+  renderContent,
   visible,
 }: {
   anchorRef: React.RefObject<View | null>;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   header?: React.ReactNode;
   maxHeight: number;
   minWidth?: number;
   onClose: () => void;
+  renderContent?: (params: DropdownContentRenderParams) => React.ReactNode;
   visible: boolean;
 }) {
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
@@ -152,7 +195,7 @@ function DropdownOverlay({
   }, [anchorRef, visible]);
 
   const horizontalPadding = 16;
-  const verticalGap = 8;
+  const verticalGap = Platform.OS === 'android' ? 20 : 8;
 
   if (Platform.OS === 'android') {
     const inlineScrollMaxHeight = Math.max(88, maxHeight - (header ? 72 : 0));
@@ -163,7 +206,7 @@ function DropdownOverlay({
           backgroundColor: HOME_BACKGROUND,
           borderWidth: 0,
           boxShadow: 'none',
-          marginTop: verticalGap,
+          marginTop: 16,
           maxHeight,
           minWidth,
           width: '100%',
@@ -205,7 +248,14 @@ function DropdownOverlay({
     (anchorLayout?.y ?? 0) - verticalGap - horizontalPadding
   );
   const shouldOpenAbove = availableBelow < 180 && availableAbove > availableBelow;
-  const availableHeight = shouldOpenAbove ? availableAbove : availableBelow;
+  const preferredOverlayTop = anchorLayout
+    ? shouldOpenAbove
+      ? horizontalPadding
+      : anchorBottom + verticalGap
+    : windowHeight - maxHeight - 32;
+  const availableHeight = shouldOpenAbove
+    ? availableAbove
+    : Math.max(0, windowHeight - preferredOverlayTop - horizontalPadding);
   const overlayMaxHeight = Math.max(160, Math.min(maxHeight, availableHeight || maxHeight));
   const overlayTop = anchorLayout
     ? shouldOpenAbove
@@ -213,10 +263,7 @@ function DropdownOverlay({
         horizontalPadding,
         anchorLayout.y - verticalGap - overlayMaxHeight
       )
-      : Math.min(
-        anchorBottom + verticalGap,
-        windowHeight - overlayMaxHeight - horizontalPadding
-      )
+      : preferredOverlayTop
     : windowHeight - overlayMaxHeight - 32;
   const scrollMaxHeight = Math.max(88, overlayMaxHeight - (header ? 72 : 0));
 
@@ -253,13 +300,17 @@ function DropdownOverlay({
             width: overlayWidth,
           }}>
           {header}
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            nestedScrollEnabled
-            showsVerticalScrollIndicator
-            style={{ maxHeight: scrollMaxHeight }}>
-            {children}
-          </ScrollView>
+          {renderContent ? (
+            renderContent({ maxHeight: scrollMaxHeight })
+          ) : (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              style={{ maxHeight: scrollMaxHeight }}>
+              {children}
+            </ScrollView>
+          )}
         </AppCard>
       </View>
     </Modal>
@@ -1726,6 +1777,30 @@ function DropdownQuestion({
   );
 }
 
+function SearchableDropdownQueryPrompt({ optionCount }: { optionCount: number }) {
+  if (optionCount > SEARCHABLE_DROPDOWN_QUERY_GATE_OPTION_COUNT) {
+    return null;
+  }
+
+  return null;
+}
+
+function SearchableDropdownEmptyState({ query }: { query: string }) {
+  return (
+    <View className="px-3 py-4">
+      <AppText tone="muted">{query ? 'No results' : 'No options available'}</AppText>
+    </View>
+  );
+}
+
+function SearchableDropdownMoreResults() {
+  return (
+    <View className="px-3 py-3">
+      <AppText tone="muted">More results available</AppText>
+    </View>
+  );
+}
+
 function SearchableDropdownQuestion({
   error,
   hideSearchableDropdownResultsUntilQuery,
@@ -1742,8 +1817,12 @@ function SearchableDropdownQuestion({
     ? getSelectedLabel(question.options, currentValue)
     : '';
   const hasQuery = query.trim().length > 0;
+  const optionCount = question.options?.length ?? 0;
+  const shouldRequireQuery =
+    hideSearchableDropdownResultsUntilQuery ||
+    optionCount > SEARCHABLE_DROPDOWN_QUERY_GATE_OPTION_COUNT;
   const shouldRenderResults =
-    isOpen && (!hideSearchableDropdownResultsUntilQuery || hasQuery);
+    isOpen && (!shouldRequireQuery || hasQuery);
 
   const filteredOptions = React.useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -1757,6 +1836,19 @@ function SearchableDropdownQuestion({
       return haystack.includes(normalizedQuery);
     });
   }, [query, question.options]);
+  const visibleOptions = React.useMemo(() => {
+    if (!shouldRenderResults) {
+      return [];
+    }
+
+    return filteredOptions.slice(0, SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS);
+  }, [filteredOptions, shouldRenderResults]);
+  const groupedOptionItems = React.useMemo(
+    () => flattenGroupedOptions(visibleOptions),
+    [visibleOptions]
+  );
+  const hasMoreResults =
+    shouldRenderResults && filteredOptions.length > visibleOptions.length;
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -1845,14 +1937,39 @@ function SearchableDropdownQuestion({
           }
           maxHeight={460}
           onClose={closeDropdown}
-          visible={isOpen}>
-          {shouldRenderResults
-            ? groupOptions(filteredOptions).map(([groupName, options]) => (
-              <View key={groupName} className="gap-1 pb-2">
-                <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
-                  {groupName}
-                </AppText>
-                {options.map((option) => {
+          visible={isOpen}
+          renderContent={
+            Platform.OS === 'android'
+              ? undefined
+              : ({ maxHeight: listMaxHeight }) =>
+                shouldRenderResults ? (
+              <FlatList
+                data={groupedOptionItems}
+                extraData={currentValue}
+                initialNumToRender={18}
+                keyboardShouldPersistTaps="handled"
+                keyExtractor={(item) => item.id}
+                maxToRenderPerBatch={18}
+                nestedScrollEnabled
+                removeClippedSubviews={Platform.OS === 'android'}
+                showsVerticalScrollIndicator
+                style={{ maxHeight: listMaxHeight }}
+                updateCellsBatchingPeriod={24}
+                windowSize={7}
+                ListEmptyComponent={<SearchableDropdownEmptyState query={query} />}
+                ListFooterComponent={
+                  hasMoreResults ? <SearchableDropdownMoreResults /> : null
+                }
+                renderItem={({ item }) => {
+                  if (item.type === 'group') {
+                    return (
+                      <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
+                        {item.label}
+                      </AppText>
+                    );
+                  }
+
+                  const option = item.option;
                   const isSelected = currentValue === option.value;
 
                   return (
@@ -1873,15 +1990,50 @@ function SearchableDropdownQuestion({
                       </AppText>
                     </Pressable>
                   );
-                })}
-              </View>
-            ))
-            : null}
-          {shouldRenderResults && filteredOptions.length === 0 ? (
-            <View className="px-3 py-4">
-              <AppText tone="muted">No results</AppText>
-            </View>
-          ) : null}
+                }}
+              />
+                ) : (
+                  <SearchableDropdownQueryPrompt optionCount={optionCount} />
+                )
+          }
+        >
+          {!shouldRenderResults ? (
+            <SearchableDropdownQueryPrompt optionCount={optionCount} />
+          ) : (
+            <>
+              {groupOptions(visibleOptions).map(([groupName, options]) => (
+                <View key={groupName} className="gap-1 pb-2">
+                  <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
+                    {groupName}
+                  </AppText>
+                  {options.map((option) => {
+                    const isSelected = currentValue === option.value;
+
+                    return (
+                      <Pressable
+                        key={option.id}
+                        className={cn(
+                          'rounded-[12px] px-3 py-3',
+                          isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+                        )}
+                        onPress={() => {
+                          onChange(option.value);
+                          closeDropdown();
+                        }}>
+                        <AppText
+                          variant="bodyStrong"
+                          className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                          {option.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+              {visibleOptions.length === 0 ? <SearchableDropdownEmptyState query={query} /> : null}
+              {hasMoreResults ? <SearchableDropdownMoreResults /> : null}
+            </>
+          )}
         </DropdownOverlay>
       </View>
     </View>
