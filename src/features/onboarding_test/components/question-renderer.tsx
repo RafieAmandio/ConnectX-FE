@@ -255,7 +255,7 @@ function DropdownOverlay({
     0,
     (anchorLayout?.y ?? 0) - verticalGap - horizontalPadding
   );
-  const shouldOpenAbove = availableBelow < 180 && availableAbove > availableBelow;
+  const shouldOpenAbove = availableBelow < 96 && availableAbove > availableBelow;
   const preferredOverlayTop = anchorLayout
     ? shouldOpenAbove
       ? horizontalPadding
