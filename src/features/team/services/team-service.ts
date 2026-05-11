@@ -8,8 +8,10 @@ import {
   getMockStartupInvitationOptionsResponse,
   getMockStartupInvitationsResponse,
   getMockTeamOverviewResponse,
+  removeMockTeamMember,
   respondToMockStartupInvitation,
   revokeMockStartupInvitation,
+  updateMockTeamMember,
 } from '../mock/team.mock';
 import type {
   CreateStartupInvitationRequest,
@@ -23,9 +25,11 @@ import type {
   StartupTeamOverview,
   TeamCompleteness,
   TeamMember,
+  TeamMemberMutationResponse,
   TeamOverviewResponse,
   UpdateRequiredRolesRequest,
   UpdateRequiredRolesResponse,
+  UpdateTeamMemberRequest,
 } from '../types/team.types';
 
 export const TEAM_API = {
@@ -37,6 +41,7 @@ export const TEAM_API = {
   RESPOND_TO_STARTUP_INVITATION: (invitationId: string) =>
     `/api/v1/me/startup-invitations/${invitationId}/respond`,
   REQUIRED_ROLES: (startupId: string) => `/api/v1/startups/${startupId}/required-roles`,
+  TEAM_MEMBER: (startupId: string, memberId: string) => `/api/v1/startups/${startupId}/team-members/${memberId}`,
 } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -324,6 +329,10 @@ function hasUsableRevokeStartupInvitationResponse(
   );
 }
 
+function hasUsableTeamMemberMutationResponse(payload: unknown): payload is TeamMemberMutationResponse {
+  return isRecord(payload) && typeof payload.success === 'boolean' && typeof payload.message === 'string';
+}
+
 function getApiErrorCode(error: unknown) {
   if (!(error instanceof ApiError) || !error.payload || typeof error.payload !== 'object') {
     return null;
@@ -407,6 +416,51 @@ export async function updateRequiredRoles(startupId: string, payload: UpdateRequ
     body: payload as unknown as BodyInit,
     method: 'PUT',
   });
+}
+
+export async function updateTeamMember(
+  startupId: string,
+  memberId: string,
+  payload: UpdateTeamMemberRequest
+) {
+  try {
+    const response = await apiFetch<TeamMemberMutationResponse>(TEAM_API.TEAM_MEMBER(startupId, memberId), {
+      body: payload as unknown as BodyInit,
+      method: 'PATCH',
+    });
+
+    if (!hasUsableTeamMemberMutationResponse(response)) {
+      return updateMockTeamMember(memberId, payload);
+    }
+
+    return response;
+  } catch (error) {
+    if (!shouldUseMockInvitationFallback(error)) {
+      throw error;
+    }
+
+    return updateMockTeamMember(memberId, payload);
+  }
+}
+
+export async function removeTeamMember(startupId: string, memberId: string) {
+  try {
+    const response = await apiFetch<TeamMemberMutationResponse>(TEAM_API.TEAM_MEMBER(startupId, memberId), {
+      method: 'DELETE',
+    });
+
+    if (!hasUsableTeamMemberMutationResponse(response)) {
+      return removeMockTeamMember(memberId);
+    }
+
+    return response;
+  } catch (error) {
+    if (!shouldUseMockInvitationFallback(error)) {
+      throw error;
+    }
+
+    return removeMockTeamMember(memberId);
+  }
 }
 
 export async function createStartupInvitation(payload: CreateStartupInvitationRequest) {

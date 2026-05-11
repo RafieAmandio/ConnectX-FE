@@ -7,7 +7,9 @@ import type {
   RevokeStartupInvitationResponse,
   StartupInvitation,
   StartupInvitationOptionsResponse,
+  TeamMemberMutationResponse,
   TeamOverviewResponse,
+  UpdateTeamMemberRequest,
 } from '../types/team.types';
 
 function cloneValue<T>(value: T): T {
@@ -518,6 +520,96 @@ export function revokeMockStartupInvitation(invitationId: string): RevokeStartup
     data: {
       invitationId,
       status: 'revoked',
+    },
+  };
+}
+
+function getMockRoleOption(roleId: string) {
+  return (
+    getMockStartupInvitationOptionsResponse().data.roleOptions.find((role) => role.id === roleId) ?? {
+      id: roleId,
+      label: roleId.replace(/_/g, ' '),
+    }
+  );
+}
+
+export function updateMockTeamMember(
+  memberId: string,
+  payload: UpdateTeamMemberRequest
+): TeamMemberMutationResponse {
+  let didFindMember = false;
+  const nextRole = getMockRoleOption(payload.roleId);
+  const updateMember = <T extends TeamOverviewResponse['data']['teamRoster']['members'][number]>(member: T): T => {
+    if (member.id !== memberId) {
+      return member;
+    }
+
+    didFindMember = true;
+
+    return {
+      ...member,
+      commitment: payload.commitment,
+      equityPercent: payload.equityPercent,
+      role: nextRole,
+    };
+  };
+
+  mockTeamOverviewState = {
+    ...mockTeamOverviewState,
+    data: {
+      ...mockTeamOverviewState.data,
+      members: mockTeamOverviewState.data.members?.map(updateMember),
+      teamRoster: {
+        ...mockTeamOverviewState.data.teamRoster,
+        members: mockTeamOverviewState.data.teamRoster.members.map(updateMember),
+      },
+    },
+  };
+
+  if (!didFindMember) {
+    throw new Error(`Unknown mock team member: ${memberId}`);
+  }
+
+  return {
+    success: true,
+    message: 'Team member updated',
+    data: {
+      memberId,
+      status: 'updated',
+    },
+  };
+}
+
+export function removeMockTeamMember(memberId: string): TeamMemberMutationResponse {
+  const initialMemberCount =
+    (mockTeamOverviewState.data.members?.length ?? 0) + mockTeamOverviewState.data.teamRoster.members.length;
+  const removeMember = <T extends { id: string }>(member: T) => member.id !== memberId;
+
+  mockTeamOverviewState = {
+    ...mockTeamOverviewState,
+    data: {
+      ...mockTeamOverviewState.data,
+      members: mockTeamOverviewState.data.members?.filter(removeMember),
+      teamRoster: {
+        ...mockTeamOverviewState.data.teamRoster,
+        members: mockTeamOverviewState.data.teamRoster.members.filter(removeMember),
+      },
+    },
+  };
+
+  const nextMemberCount =
+    (mockTeamOverviewState.data.members?.length ?? 0) + mockTeamOverviewState.data.teamRoster.members.length;
+
+  if (initialMemberCount === nextMemberCount) {
+    throw new Error(`Unknown mock team member: ${memberId}`);
+  }
+
+  return {
+    success: true,
+    message: 'Team member removed',
+    data: {
+      memberId,
+      status: 'removed',
     },
   };
 }

@@ -22,10 +22,12 @@ import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import {
   useCreateStartupInvitation,
+  useRemoveTeamMember,
   useRespondToStartupInvitation,
   useRevokeStartupInvitation,
   useStartupInvitationOptions,
   useTeamOverview,
+  useUpdateTeamMember,
 } from '../hooks/use-team';
 import {
   getMockPersonTeamOverviewResponse,
@@ -49,6 +51,10 @@ function getCommitmentLabel(value: string) {
     default:
       return value.replace(/_/g, ' ');
   }
+}
+
+function getEditableCommitment(value: string): TeamInviteCommitment | null {
+  return value === 'full_time' || value === 'part_time' || value === 'advisor' ? value : null;
 }
 
 function clampSteppedValue(value: number, min: number, max: number, step: number) {
@@ -235,10 +241,12 @@ function StatusPill({ label, status }: { label?: string; status: string }) {
 }
 
 function MemberCard({
+  isRemovePending,
   member,
   onEditRole,
   onRemove,
 }: {
+  isRemovePending: boolean;
   member: TeamMember;
   onEditRole: () => void;
   onRemove: () => void;
@@ -287,13 +295,24 @@ function MemberCard({
       {memberActions.length > 0 ? (
         <View className="flex-row flex-wrap gap-2">
           {memberActions.includes('edit_role') ? (
-            <Pressable className="rounded-lg border border-white/10 bg-[#3A3A3C] px-3 py-2" onPress={onEditRole}>
+            <Pressable
+              className="rounded-lg border border-white/10 bg-[#3A3A3C] px-3 py-2"
+              disabled={isRemovePending}
+              onPress={onEditRole}
+              style={{ opacity: isRemovePending ? 0.65 : 1 }}>
               <AppText className="text-[13px]" variant="bodyStrong">Edit role</AppText>
             </Pressable>
           ) : null}
           {memberActions.includes('remove') ? (
-            <Pressable className="rounded-lg border border-danger/30 bg-danger-tint px-3 py-2" onPress={onRemove}>
-              <AppText className="text-[13px]" tone="danger" variant="bodyStrong">Remove</AppText>
+            <Pressable
+              className="flex-row items-center gap-2 rounded-lg border border-danger/30 bg-danger-tint px-3 py-2"
+              disabled={isRemovePending}
+              onPress={onRemove}
+              style={{ opacity: isRemovePending ? 0.65 : 1 }}>
+              {isRemovePending ? <ActivityIndicator color="#FF5A67" size="small" /> : null}
+              <AppText className="text-[13px]" tone="danger" variant="bodyStrong">
+                {isRemovePending ? 'Removing...' : 'Remove'}
+              </AppText>
             </Pressable>
           ) : null}
         </View>
@@ -806,16 +825,23 @@ export function TeamScreen() {
   const respondToStartupInvitationMutation = useRespondToStartupInvitation();
   const createStartupInvitationMutation = useCreateStartupInvitation();
   const revokeStartupInvitationMutation = useRevokeStartupInvitation();
+  const updateTeamMemberMutation = useUpdateTeamMember();
+  const removeTeamMemberMutation = useRemoveTeamMember();
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
   const [inviteEmail, setInviteEmail] = React.useState('');
   const [inviteRoleId, setInviteRoleId] = React.useState<string | null>(null);
   const [inviteEquityPercent, setInviteEquityPercent] = React.useState(15);
   const [inviteCommitment, setInviteCommitment] = React.useState<TeamInviteCommitment | null>(null);
+  const [editingMember, setEditingMember] = React.useState<TeamMember | null>(null);
+  const [editRoleId, setEditRoleId] = React.useState<string | null>(null);
+  const [editEquityPercent, setEditEquityPercent] = React.useState(15);
+  const [editCommitment, setEditCommitment] = React.useState<TeamInviteCommitment | null>(null);
+  const [editMemberError, setEditMemberError] = React.useState<string | null>(null);
   const [inviteError, setInviteError] = React.useState<string | null>(null);
   const [inviteSuccessMessage, setInviteSuccessMessage] = React.useState<string | null>(null);
   const [invitationFeedbackMessage, setInvitationFeedbackMessage] = React.useState<string | null>(null);
   const [invitationActionError, setInvitationActionError] = React.useState<string | null>(null);
-  const invitationOptionsQuery = useStartupInvitationOptions(inviteComposerVisible);
+  const invitationOptionsQuery = useStartupInvitationOptions(inviteComposerVisible || Boolean(editingMember));
   const insets = useSafeAreaInsets();
   const shouldRenderFounderDemo =
     appliedDiscoveryMode === 'finding_cofounder' || appliedDiscoveryMode === 'building_team';
@@ -828,6 +854,7 @@ export function TeamScreen() {
     [shouldRenderFounderDemo]
   );
   const overview = teamOverviewQuery.data ?? (isDevMode ? devOverview : undefined);
+  const activeStartupId = overview?.data.viewerContext.startupId ?? overview?.data.startup?.id ?? null;
   const invitationOptions = invitationOptionsQuery.data?.data;
   const inviteRoleOptions = invitationOptions?.roleOptions ?? [];
   const inviteCommitmentOptions = invitationOptions?.commitmentOptions ?? [];
@@ -836,6 +863,10 @@ export function TeamScreen() {
     max: 50,
     min: 1,
     step: 1,
+  };
+  const editEquityOptions = {
+    ...inviteEquityOptions,
+    step: Math.min(inviteEquityOptions.step, 0.5),
   };
 
   React.useEffect(() => {
@@ -861,11 +892,36 @@ export function TeamScreen() {
     );
   }, [invitationOptions, inviteCommitment, inviteComposerVisible, inviteRoleId]);
 
+  React.useEffect(() => {
+    if (!editingMember || !invitationOptions) {
+      return;
+    }
+
+    if (!editRoleId && invitationOptions.roleOptions[0]) {
+      setEditRoleId(invitationOptions.roleOptions[0].id);
+    }
+
+    if (!editCommitment && invitationOptions.commitmentOptions[0]) {
+      setEditCommitment(invitationOptions.commitmentOptions[0].id);
+    }
+
+    setEditEquityPercent((currentValue) =>
+      clampSteppedValue(
+        currentValue || invitationOptions.equity.defaultValue,
+        invitationOptions.equity.min,
+        invitationOptions.equity.max,
+        Math.min(invitationOptions.equity.step, 0.5)
+      )
+    );
+  }, [editCommitment, editRoleId, editingMember, invitationOptions]);
+
   const navigateToHome = React.useCallback(() => {
     router.navigate('/(tabs)' as never);
   }, [router]);
 
   const openInviteComposer = React.useCallback(() => {
+    setEditingMember(null);
+    setEditMemberError(null);
     setInviteComposerVisible(true);
     setInviteError(null);
     setInviteSuccessMessage(null);
@@ -879,6 +935,25 @@ export function TeamScreen() {
     setInviteCommitment(null);
     setInviteError(null);
   }, [inviteEquityOptions.defaultValue]);
+
+  const openMemberEditor = React.useCallback((member: TeamMember) => {
+    setInviteComposerVisible(false);
+    setEditingMember(member);
+    setEditRoleId(member.role.id);
+    setEditEquityPercent(member.equityPercent);
+    setEditCommitment(getEditableCommitment(member.commitment));
+    setEditMemberError(null);
+    setInvitationActionError(null);
+    setInvitationFeedbackMessage(null);
+  }, []);
+
+  const closeMemberEditor = React.useCallback(() => {
+    setEditingMember(null);
+    setEditRoleId(null);
+    setEditEquityPercent(editEquityOptions.defaultValue);
+    setEditCommitment(null);
+    setEditMemberError(null);
+  }, [editEquityOptions.defaultValue]);
 
   const handleInvite = React.useCallback(async () => {
     const normalizedEmail = inviteEmail.trim().toLowerCase();
@@ -954,6 +1029,84 @@ export function TeamScreen() {
     [respondToStartupInvitationMutation, teamOverviewQuery]
   );
 
+  const handleSaveMemberEdit = React.useCallback(async () => {
+    if (!editingMember || !activeStartupId) {
+      setEditMemberError('Unable to find the active startup for this member.');
+      return;
+    }
+
+    if (!editRoleId) {
+      setEditMemberError('Choose a role for this member.');
+      return;
+    }
+
+    if (!editCommitment) {
+      setEditMemberError('Choose a commitment level.');
+      return;
+    }
+
+    setEditMemberError(null);
+    setInvitationActionError(null);
+    setInvitationFeedbackMessage(null);
+
+    try {
+      const response = await updateTeamMemberMutation.mutateAsync({
+        memberId: editingMember.id,
+        payload: {
+          commitment: editCommitment,
+          equityPercent: editEquityPercent,
+          roleId: editRoleId,
+        },
+        startupId: activeStartupId,
+      });
+
+      setInvitationFeedbackMessage(response.message);
+      closeMemberEditor();
+      await teamOverviewQuery.refetch();
+    } catch (error) {
+      setEditMemberError(error instanceof Error ? error.message : 'Unable to update this member right now.');
+    }
+  }, [
+    activeStartupId,
+    closeMemberEditor,
+    editCommitment,
+    editEquityPercent,
+    editRoleId,
+    editingMember,
+    teamOverviewQuery,
+    updateTeamMemberMutation,
+  ]);
+
+  const handleRemoveMember = React.useCallback(
+    async (member: TeamMember) => {
+      if (!activeStartupId) {
+        setInvitationActionError('Unable to find the active startup for this member.');
+        return;
+      }
+
+      setEditMemberError(null);
+      setInvitationActionError(null);
+      setInvitationFeedbackMessage(null);
+
+      try {
+        const response = await removeTeamMemberMutation.mutateAsync({
+          memberId: member.id,
+          startupId: activeStartupId,
+        });
+
+        if (editingMember?.id === member.id) {
+          closeMemberEditor();
+        }
+
+        setInvitationFeedbackMessage(response.message);
+        await teamOverviewQuery.refetch();
+      } catch (error) {
+        setInvitationActionError(error instanceof Error ? error.message : 'Unable to remove this member right now.');
+      }
+    },
+    [activeStartupId, closeMemberEditor, editingMember?.id, removeTeamMemberMutation, teamOverviewQuery]
+  );
+
   const handleInviteRevoke = React.useCallback(
     async (invitation: TeamDashboardInvite) => {
       setInvitationActionError(null);
@@ -973,14 +1126,17 @@ export function TeamScreen() {
     [revokeStartupInvitationMutation, teamOverviewQuery]
   );
 
-  const handleMemberAction = React.useCallback((member: TeamMember, action: 'edit_role' | 'remove') => {
-    setInvitationActionError(null);
-    setInvitationFeedbackMessage(
-      action === 'edit_role'
-        ? `Edit role requested for ${member.name}.`
-        : `Remove requested for ${member.name}.`
-    );
-  }, []);
+  const handleMemberAction = React.useCallback(
+    (member: TeamMember, action: 'edit_role' | 'remove') => {
+      if (action === 'edit_role') {
+        openMemberEditor(member);
+        return;
+      }
+
+      void handleRemoveMember(member);
+    },
+    [handleRemoveMember, openMemberEditor]
+  );
 
   if (!isDevMode && teamOverviewQuery.isPending && !overview) {
     return (
@@ -1065,11 +1221,22 @@ export function TeamScreen() {
   const teamInvites = overview.data.teamInvites;
   const hasActiveStartup = viewerContext.hasActiveStartup && Boolean(startup);
   const screenTitle = hasActiveStartup ? 'Startup Team Builder' : 'Team Dashboard';
+  const editRoleOptions =
+    editingMember && editRoleId && !inviteRoleOptions.some((role) => role.id === editRoleId)
+      ? [editingMember.role, ...inviteRoleOptions]
+      : inviteRoleOptions;
   const canSubmitInvite =
     isValidEmail(inviteEmail.trim().toLowerCase()) &&
     Boolean(inviteRoleId) &&
     Boolean(inviteCommitment) &&
     !createStartupInvitationMutation.isPending &&
+    !invitationOptionsQuery.isPending;
+  const canSubmitMemberEdit =
+    Boolean(activeStartupId) &&
+    Boolean(editingMember) &&
+    Boolean(editRoleId) &&
+    Boolean(editCommitment) &&
+    !updateTeamMemberMutation.isPending &&
     !invitationOptionsQuery.isPending;
 
   return (
@@ -1171,6 +1338,10 @@ export function TeamScreen() {
               {teamRoster.members.map((member) => (
                 <MemberCard
                   key={member.id}
+                  isRemovePending={
+                    removeTeamMemberMutation.isPending &&
+                    removeTeamMemberMutation.variables?.memberId === member.id
+                  }
                   member={member}
                   onEditRole={() => {
                     handleMemberAction(member, 'edit_role');
@@ -1185,6 +1356,139 @@ export function TeamScreen() {
               ))}
             </View>
           </View>
+
+          {editingMember ? (
+            <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
+              <View className="gap-1">
+                <AppText variant="subtitle">Edit team member</AppText>
+                <AppText tone="muted">
+                  {`Update ${editingMember.name}'s role, equity, and commitment.`}
+                </AppText>
+              </View>
+
+              <View className="gap-3">
+                <AppText tone="muted" variant="label">Role</AppText>
+                {invitationOptionsQuery.isPending ? (
+                  <View className="flex-row items-center gap-2 rounded-[16px] border border-white/10 bg-[#343434] px-4 py-3">
+                    <ActivityIndicator color="#FF9A3E" size="small" />
+                    <AppText tone="muted">Loading roles...</AppText>
+                  </View>
+                ) : null}
+                {invitationOptionsQuery.isError ? (
+                  <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
+                    <AppText tone="danger">
+                      Unable to load member options right now.
+                    </AppText>
+                  </View>
+                ) : null}
+                <View className="flex-row flex-wrap gap-2">
+                  {editRoleOptions.map((role) => {
+                    const isSelected = editRoleId === role.id;
+
+                    return (
+                      <Pressable
+                        key={role.id}
+                        className="rounded-full border px-4 py-2"
+                        disabled={updateTeamMemberMutation.isPending}
+                        onPress={() => {
+                          setEditRoleId(role.id);
+                          setEditMemberError(null);
+                        }}
+                        style={{
+                          backgroundColor: isSelected ? '#3B2A1C' : '#343434',
+                          borderColor: isSelected ? '#FF9A3E' : 'rgba(255, 255, 255, 0.1)',
+                          opacity: updateTeamMemberMutation.isPending ? 0.65 : 1,
+                        }}>
+                        <AppText
+                          className="text-[13px]"
+                          style={{ color: isSelected ? '#FF9A3E' : '#98A2B3' }}
+                          variant="bodyStrong">
+                          {role.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <EquitySlider
+                disabled={updateTeamMemberMutation.isPending || invitationOptionsQuery.isPending}
+                max={editEquityOptions.max}
+                min={editEquityOptions.min}
+                onChange={setEditEquityPercent}
+                step={editEquityOptions.step}
+                value={editEquityPercent}
+              />
+
+              <View className="gap-3">
+                <AppText tone="muted" variant="label">Commitment</AppText>
+                <View className="flex-row gap-2">
+                  {inviteCommitmentOptions.map((commitment) => {
+                    const isSelected = editCommitment === commitment.id;
+
+                    return (
+                      <Pressable
+                        key={commitment.id}
+                        className="min-h-12 flex-1 items-center justify-center rounded-[16px] border px-3 py-3"
+                        disabled={updateTeamMemberMutation.isPending}
+                        onPress={() => {
+                          setEditCommitment(commitment.id);
+                          setEditMemberError(null);
+                        }}
+                        style={{
+                          backgroundColor: isSelected ? '#3B2A1C' : '#343434',
+                          borderColor: isSelected ? '#FF9A3E' : 'rgba(255, 255, 255, 0.1)',
+                          opacity: updateTeamMemberMutation.isPending ? 0.65 : 1,
+                        }}>
+                        <AppText
+                          className="text-[13px]"
+                          style={{ color: isSelected ? '#FF9A3E' : '#98A2B3' }}
+                          variant="bodyStrong">
+                          {commitment.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {editMemberError ? (
+                <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
+                  <AppText tone="danger">{editMemberError}</AppText>
+                </View>
+              ) : null}
+
+              <View className="flex-row gap-3">
+                <AppButton
+                  className="flex-1 bg-[#3A3A3C] border-white/10"
+                  disabled={updateTeamMemberMutation.isPending}
+                  label="Cancel"
+                  onPress={closeMemberEditor}
+                  variant="secondary"
+                />
+                <Pressable
+                  className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#FF9A3E] px-3 py-3"
+                  disabled={!canSubmitMemberEdit}
+                  onPress={() => {
+                    void handleSaveMemberEdit();
+                  }}
+                  style={{ opacity: canSubmitMemberEdit ? 1 : 0.55 }}>
+                  {updateTeamMemberMutation.isPending ? (
+                    <ActivityIndicator color="#11131A" size="small" />
+                  ) : (
+                    <Ionicons color="#11131A" name="save-outline" size={16} />
+                  )}
+                  <AppText
+                    align="center"
+                    className="flex-1 text-[12px] leading-[14px] text-[#11131A]"
+                    numberOfLines={2}
+                    variant="bodyStrong">
+                    {updateTeamMemberMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </AppText>
+                </Pressable>
+              </View>
+            </AppCard>
+          ) : null}
 
           {!hasActiveStartup ? (
             <View className="gap-4">

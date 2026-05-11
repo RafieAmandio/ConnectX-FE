@@ -21,6 +21,18 @@
       "notes": "200 success example when an outgoing startup invitation is revoked."
     },
     {
+      "method": "PATCH",
+      "path": "/startups/:startupId/team-members/:memberId",
+      "file": "update-team-member.request.json",
+      "notes": "Request body for updating a startup team member role, equity, and commitment."
+    },
+    {
+      "method": "DELETE",
+      "path": "/startups/:startupId/team-members/:memberId",
+      "file": "remove-team-member.response.json",
+      "notes": "200 success example when a startup team member is removed."
+    },
+    {
       "method": "GET",
       "path": "/me/startup-invitations",
       "file": "get-startup-invitations.response.json",

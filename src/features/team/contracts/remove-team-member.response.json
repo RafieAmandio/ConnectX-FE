@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "message": "Team member removed",
+  "data": {
+    "memberId": "tm_ardi",
+    "status": "removed"
+  }
+}

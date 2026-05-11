@@ -150,6 +150,21 @@ export type UpdateRequiredRolesResponse = {
   };
 };
 
+export type UpdateTeamMemberRequest = {
+  commitment: TeamInviteCommitment;
+  equityPercent: number;
+  roleId: string;
+};
+
+export type TeamMemberMutationResponse = {
+  success: boolean;
+  message: string;
+  data?: {
+    memberId?: string;
+    status?: string;
+  } | null;
+};
+
 export type CreateStartupInvitationRequest = {
   commitment: TeamInviteCommitment;
   email: string;

@@ -5,10 +5,12 @@ import {
   fetchStartupInvitationOptions,
   fetchStartupInvitations,
   fetchTeamOverview,
+  removeTeamMember,
   respondToStartupInvitation,
   revokeStartupInvitation,
+  updateTeamMember,
 } from '../services/team-service';
-import type { RespondToStartupInvitationRequest } from '../types/team.types';
+import type { RespondToStartupInvitationRequest, UpdateTeamMemberRequest } from '../types/team.types';
 
 export const teamQueryKeys = {
   overview: ['team', 'overview'] as const,
@@ -83,6 +85,37 @@ export function useRevokeStartupInvitation() {
         queryClient.invalidateQueries({ queryKey: teamQueryKeys.overview }),
         queryClient.invalidateQueries({ queryKey: teamQueryKeys.invitations }),
       ]);
+    },
+  });
+}
+
+export function useUpdateTeamMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      memberId,
+      payload,
+      startupId,
+    }: {
+      memberId: string;
+      payload: UpdateTeamMemberRequest;
+      startupId: string;
+    }) => updateTeamMember(startupId, memberId, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: teamQueryKeys.overview });
+    },
+  });
+}
+
+export function useRemoveTeamMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ memberId, startupId }: { memberId: string; startupId: string }) =>
+      removeTeamMember(startupId, memberId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: teamQueryKeys.overview });
     },
   });
 }
