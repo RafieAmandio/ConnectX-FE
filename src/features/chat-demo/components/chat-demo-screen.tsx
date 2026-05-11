@@ -23,6 +23,7 @@ import {
   useChatDemoConversations,
   useChatDemoMessages,
   useChatDemoRoomRealtime,
+  useMarkChatDemoConversationRead,
   useSendChatDemoMessage,
 } from '@features/chat/hooks/use-chat-demo';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
@@ -182,6 +183,7 @@ export function ChatDemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const conversationsQuery = useChatDemoConversations({ refetchInterval: 10_000 });
+  const markConversationReadMutation = useMarkChatDemoConversationRead();
   const refetchConversations = conversationsQuery.refetch;
   const conversations = conversationsQuery.data ?? [];
   const hasConversations = conversations.length > 0;
@@ -197,11 +199,18 @@ export function ChatDemoListScreen() {
       <ConversationCard
         conversation={item}
         onPress={() => {
+          if (item.unreadCount > 0 && item.lastMessageId) {
+            markConversationReadMutation.mutate({
+              conversationId: item.id,
+              lastReadMessageId: item.lastMessageId,
+            });
+          }
+
           router.push(`/chat_demo/${item.id}` as never);
         }}
       />
     ),
-    [router]
+    [markConversationReadMutation, router]
   );
 
   return (
@@ -350,6 +359,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const [invitationError, setInvitationError] = React.useState<string | null>(null);
   const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
   const listRef = React.useRef<FlatList<ChatMessage>>(null);
+  const hasPresentedLatestMessageRef = React.useRef(false);
   const containerFrameRef = React.useRef({ height: 0, y: 0 });
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = React.useMemo(
@@ -362,6 +372,12 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     Platform.OS === 'ios' || androidKeyboardOverlap === 0 ? Math.max(insets.bottom + 8, 20) : 12;
 
   useChatDemoRoomRealtime(conversationId);
+
+  const presentLatestMessage = React.useCallback((animated: boolean) => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated });
+    });
+  }, []);
 
   const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
     if (Platform.OS !== 'android') {
@@ -418,10 +434,17 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   }, [updateAndroidKeyboardOverlap]);
 
   React.useEffect(() => {
-    if (newestMessageId) {
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    hasPresentedLatestMessageRef.current = false;
+  }, [conversationId]);
+
+  React.useEffect(() => {
+    if (!newestMessageId) {
+      hasPresentedLatestMessageRef.current = false;
+      return;
     }
-  }, [newestMessageId]);
+
+    presentLatestMessage(hasPresentedLatestMessageRef.current);
+  }, [newestMessageId, presentLatestMessage]);
 
   const handleSend = React.useCallback(async () => {
     const body = draftMessage.trim();
@@ -575,6 +598,18 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
             }
           }}
           onStartReachedThreshold={0.4}
+          onContentSizeChange={() => {
+            if (newestMessageId && !hasPresentedLatestMessageRef.current) {
+              presentLatestMessage(false);
+              hasPresentedLatestMessageRef.current = true;
+            }
+          }}
+          onLayout={() => {
+            if (newestMessageId && !hasPresentedLatestMessageRef.current) {
+              presentLatestMessage(false);
+              hasPresentedLatestMessageRef.current = true;
+            }
+          }}
           renderItem={({ item }) => <MessageBubble message={item} />}
           showsVerticalScrollIndicator={false}
         />

@@ -8,6 +8,7 @@ import { isExpoDevModeEnabled } from '@shared/utils/env';
 import {
   fetchChatDemoConversations,
   fetchChatDemoMessages,
+  markChatDemoConversationRead,
   mapChatDemoMessage,
   sendChatDemoTextMessage,
   type ChatDemoMessageResponse,
@@ -162,6 +163,19 @@ function updateConversationCacheFromMessage(
       };
     })
     .sort((left, right) => right.lastMessageAt.localeCompare(left.lastMessageAt));
+}
+
+function markConversationReadInCache(
+  conversations: ChatConversation[] | undefined,
+  conversationId: string
+) {
+  if (!conversations) {
+    return conversations;
+  }
+
+  return conversations.map((conversation) =>
+    conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+  );
 }
 
 function useCurrentUserId() {
@@ -357,6 +371,38 @@ export function useSendChatDemoMessage(conversationId: string | null) {
         queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations }),
         queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
       ]);
+    },
+  });
+}
+
+export function useMarkChatDemoConversationRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      conversationId,
+      lastReadMessageId,
+    }: {
+      conversationId: string;
+      lastReadMessageId: string;
+    }) => {
+      await markChatDemoConversationRead({ conversationId, lastReadMessageId });
+    },
+    onMutate: async ({ conversationId }) => {
+      await queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations });
+      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
+        markConversationReadInCache(current, conversationId)
+      );
+
+      return { conversationId };
+    },
+    onSuccess: (_data, { conversationId }) => {
+      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
+        markConversationReadInCache(current, conversationId)
+      );
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations });
     },
   });
 }

@@ -5,6 +5,7 @@ export type ChatConversation = {
   id: string;
   kind: ChatConversationKind;
   lastMessageAt: string;
+  lastMessageId?: string | null;
   messagesStored: number;
   name: string;
   participantEmail?: string | null;

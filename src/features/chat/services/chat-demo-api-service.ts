@@ -7,6 +7,7 @@ const DEFAULT_MESSAGE_LIMIT = 50;
 export const CHAT_DEMO_API = {
   CONVERSATIONS: '/api/v1/conversations',
   MESSAGES: (conversationId: string) => `/api/v1/conversations/${conversationId}/messages`,
+  READ: (conversationId: string) => `/api/v1/conversations/${conversationId}/read`,
 } as const;
 
 type ChatDemoOtherUserResponse = {
@@ -69,6 +70,10 @@ type SendChatDemoMessageResponse =
       data?: ChatDemoMessageResponse;
       message?: ChatDemoMessageResponse | string;
     };
+
+type MarkChatDemoConversationReadResponse = {
+  status?: string;
+};
 
 export type ChatDemoMessagesPage = {
   hasMore: boolean;
@@ -172,6 +177,7 @@ function mapChatDemoConversation(conversation: ChatDemoConversationResponse): Ch
     id: conversation.id,
     kind: 'direct',
     lastMessageAt,
+    lastMessageId: conversation.last_message?.id ?? null,
     messagesStored: 0,
     name: otherUser?.name?.trim() || 'ConnectX Member',
     participantEmail: null,
@@ -254,4 +260,19 @@ export async function sendChatDemoTextMessage({
         : (response as ChatDemoMessageResponse);
 
   return mapChatDemoMessage(message, currentUserId);
+}
+
+export async function markChatDemoConversationRead({
+  conversationId,
+  lastReadMessageId,
+}: {
+  conversationId: string;
+  lastReadMessageId: string;
+}) {
+  await apiFetch<MarkChatDemoConversationReadResponse>(CHAT_DEMO_API.READ(conversationId), {
+    body: {
+      last_read_message_id: lastReadMessageId,
+    } as any,
+    method: 'POST',
+  });
 }
