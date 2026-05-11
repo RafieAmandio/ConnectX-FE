@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import Animated, {
@@ -217,6 +217,22 @@ function truncateText(value: string, maxLength: number) {
     wordBoundaryIndex > Math.floor(limit * 0.65) ? truncated.slice(0, wordBoundaryIndex) : truncated;
 
   return `${nextValue}${suffix}`;
+}
+
+function normalizeExternalUrl(url: string) {
+  const trimmedUrl = url.trim();
+
+  if (/^https?:\/\//i.test(trimmedUrl)) {
+    return trimmedUrl;
+  }
+
+  return `https://${trimmedUrl}`;
+}
+
+function openExternalUrl(url: string) {
+  void Linking.openURL(normalizeExternalUrl(url)).catch((error) => {
+    console.warn('Unable to open external URL.', error);
+  });
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -747,6 +763,7 @@ function ProfileCardContent({
 }) {
   const bio = card.bio?.trim() ?? '';
   const bioPreview = truncateText(bio, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
+  const linkedinUrl = card.linkedinUrl?.trim();
 
   return (
     <ScrollView
@@ -770,6 +787,16 @@ function ProfileCardContent({
           <View
             className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
             style={{ backgroundColor: 'rgba(17, 19, 26, 0.52)' }}>
+            {linkedinUrl ? (
+              <Pressable
+                accessibilityLabel={`Open ${card.name}'s LinkedIn profile`}
+                accessibilityRole="link"
+                className="mb-2 h-9 w-9 items-center justify-center rounded-full"
+                onPress={() => openExternalUrl(linkedinUrl)}
+                style={{ backgroundColor: 'rgba(10, 102, 194, 0.92)' }}>
+                <Ionicons color="#FFFFFF" name="logo-linkedin" size={20} />
+              </Pressable>
+            ) : null}
             <View className="flex-row items-end justify-between gap-3">
               <View className="min-w-0 flex-1 gap-1">
                 <AppText className="text-[28px] leading-[34px]" numberOfLines={1} variant="hero">

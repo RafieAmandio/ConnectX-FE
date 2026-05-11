@@ -11,6 +11,7 @@ type MockDiscoveryProfileCardBlueprint = {
   name: string;
   age: number;
   headline: string;
+  linkedinUrl?: string | null;
   city: string;
   country: string;
   distanceKm: number;
@@ -79,6 +80,7 @@ const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
     name: 'Ardi Wijaya',
     age: 28,
     headline: 'Full-Stack Engineer',
+    linkedinUrl: 'https://www.linkedin.com/in/ardi-wijaya',
     city: 'Jakarta',
     country: 'Indonesia',
     distanceKm: 3,
@@ -564,6 +566,7 @@ function createProfileCards(): DiscoveryCard[] {
     name: card.name,
     age: card.age,
     headline: card.headline,
+    linkedinUrl: card.linkedinUrl,
     location: {
       city: card.city,
       country: card.country,

@@ -62,6 +62,7 @@ export type DiscoveryProfileCard = DiscoveryBaseCard & {
   photoUrl: string | null;
   age: number | null;
   headline: string;
+  linkedinUrl?: string | null;
   location: {
     city: string;
     country: string;
