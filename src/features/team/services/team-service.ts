@@ -92,7 +92,7 @@ function isStartupOverview(payload: unknown) {
     isRecord(payload) &&
     typeof payload.id === 'string' &&
     typeof payload.name === 'string' &&
-    typeof payload.description === 'string' &&
+    (payload.description === null || typeof payload.description === 'string') &&
     isTeamEntityOption(payload.industry) &&
     isTeamEntityOption(payload.stage)
   );
@@ -112,7 +112,7 @@ function hasUsableStartupInvitation(payload: unknown): payload is StartupInvitat
     isRecord(payload.startup) &&
     typeof payload.startup.id === 'string' &&
     typeof payload.startup.name === 'string' &&
-    typeof payload.startup.description === 'string' &&
+    (payload.startup.description === null || typeof payload.startup.description === 'string') &&
     isTeamEntityOption(payload.startup.industry) &&
     isTeamEntityOption(payload.startup.stage) &&
     isRecord(payload.inviter) &&

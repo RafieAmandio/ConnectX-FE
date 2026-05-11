@@ -38,7 +38,7 @@ export type RequiredRole = TeamRole & {
 export type StartupTeamOverview = {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   industry: TeamEntityOption;
   stage: TeamEntityOption;
 };
@@ -174,7 +174,7 @@ export type StartupInvitationDecision = 'accept' | 'deny';
 export type StartupInvitationStartupSummary = {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   industry: TeamEntityOption;
   stage: TeamEntityOption;
 };

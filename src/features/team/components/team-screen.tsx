@@ -812,7 +812,7 @@ export function TeamScreen() {
         : getMockPersonTeamOverviewResponse(),
     [shouldRenderFounderDemo]
   );
-  const overview = isDevMode ? devOverview : teamOverviewQuery.data;
+  const overview = teamOverviewQuery.data ?? (isDevMode ? devOverview : undefined);
   const invitationOptions = invitationOptionsQuery.data?.data;
   const inviteRoleOptions = invitationOptions?.roleOptions ?? [];
   const inviteCommitmentOptions = invitationOptions?.commitmentOptions ?? [];

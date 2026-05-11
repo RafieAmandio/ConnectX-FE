@@ -5,7 +5,6 @@ import { supabaseChatRepository } from '@features/chat/data/supabase/SupabaseCha
 import { configureApiClient } from '@shared/services/api';
 import {
   clearSupabaseSession,
-  debugLogSupabaseUsersProbe,
   getStoredSupabaseIdentity,
   getSupabaseSession,
   signOutSupabase,
@@ -25,9 +24,9 @@ import {
   getStoredToken,
   loginWithApi,
   loginWithGoogleApi,
+  refreshAuthSession,
   registerWithApi,
   replaceStoredSession,
-  refreshAuthSession,
   resendEmailOtp as resendEmailOtpRequest,
   resendLoginOtp as resendLoginOtpRequest,
   resendWhatsappOtp as resendWhatsappOtpRequest,
@@ -140,9 +139,6 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
     usersProbeKeyRef.current = probeKey;
 
-    void debugLogSupabaseUsersProbe().catch((error) => {
-      console.log('[supabase:probe:users:unexpected-error]', error);
-    });
   }, [session]);
 
   React.useEffect(() => {
