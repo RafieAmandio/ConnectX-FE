@@ -313,13 +313,13 @@ function ApplicationCard({ application }: { application: TeamApplication }) {
         <View
           className="h-[56px] w-[56px] items-center justify-center rounded-[16px]"
           style={{ backgroundColor: '#FFB238' }}>
-          <AppText className="text-[19px] leading-[23px] text-[#1A1A1A]" variant="heading">
+          <AppText className="text-[19px] leading-[23px] text-[#1A1A1A]" variant="title">
             {getApplicationInitials(application)}
           </AppText>
         </View>
 
         <View className="min-w-0 flex-1 gap-0.5 pt-0.5">
-          <AppText className="text-[19px] leading-[23px]" numberOfLines={1} variant="heading">
+          <AppText className="text-[19px] leading-[23px]" numberOfLines={1} variant="title">
             {application.startupName}
           </AppText>
           {subtitle ? (

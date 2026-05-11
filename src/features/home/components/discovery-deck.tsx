@@ -888,6 +888,7 @@ function StartupCardContent({
   const industryLabels = getStartupIndustryLabels(card.industry);
   const industryPreview = getStartupIndustryPreview(card.industry);
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
+  const summary = card.summary?.trim() ?? '';
 
   return (
     <ScrollView
@@ -968,10 +969,12 @@ function StartupCardContent({
         </View>
       </View>
 
-      <View className="gap-5 px-4 py-4">
-        <AppText className="text-[16px] leading-7" tone="muted">
-          {card.summary}
-        </AppText>
+      <View className="gap-4 px-4 pb-4 pt-3">
+        {summary ? (
+          <AppText className="text-[16px] leading-7" tone="muted">
+            {summary}
+          </AppText>
+        ) : null}
 
         {card.openRoles.length ? (
           <View className="gap-3">
