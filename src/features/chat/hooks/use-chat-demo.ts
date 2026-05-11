@@ -3,6 +3,7 @@ import React from 'react';
 
 import { useAuth } from '@features/auth';
 import { supabaseData } from '@shared/services/supabase/client';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import {
   fetchChatDemoConversations,
@@ -49,36 +50,47 @@ function upsertMessage(messages: ChatMessage[], nextMessage: ChatMessage) {
   return [...messages, nextMessage].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
 }
 
+function createEmptyMessagesCache(): InfiniteData<ChatDemoMessagesPage> {
+  return {
+    pageParams: [null],
+    pages: [
+      {
+        hasMore: false,
+        items: [],
+        nextCursor: null,
+      },
+    ],
+  };
+}
+
 function upsertMessageInCache(
   current: InfiniteData<ChatDemoMessagesPage> | undefined,
   nextMessage: ChatMessage
 ) {
-  if (!current) {
-    return current;
-  }
+  const cache = current ?? createEmptyMessagesCache();
 
-  const hasMessage = current.pages.some((page) =>
+  const hasMessage = cache.pages.some((page) =>
     page.items.some((message) => message.id === nextMessage.id)
   );
 
   if (hasMessage) {
     return {
-      ...current,
-      pages: current.pages.map((page) => ({
+      ...cache,
+      pages: cache.pages.map((page) => ({
         ...page,
         items: page.items.map((message) => (message.id === nextMessage.id ? nextMessage : message)),
       })),
     };
   }
 
-  const [latestPage, ...olderPages] = current.pages;
+  const [latestPage, ...olderPages] = cache.pages;
 
   if (!latestPage) {
-    return current;
+    return cache;
   }
 
   return {
-    ...current,
+    ...cache,
     pages: [
       {
         ...latestPage,
@@ -86,6 +98,43 @@ function upsertMessageInCache(
       },
       ...olderPages,
     ],
+  };
+}
+
+function removeMessageFromCache(
+  current: InfiniteData<ChatDemoMessagesPage> | undefined,
+  messageId: string
+) {
+  if (!current) {
+    return current;
+  }
+
+  return {
+    ...current,
+    pages: current.pages.map((page) => ({
+      ...page,
+      items: page.items.filter((message) => message.id !== messageId),
+    })),
+  };
+}
+
+function updateMessageInCache(
+  current: InfiniteData<ChatDemoMessagesPage> | undefined,
+  messageId: string,
+  updateMessage: (message: ChatMessage) => ChatMessage
+) {
+  if (!current) {
+    return current;
+  }
+
+  return {
+    ...current,
+    pages: current.pages.map((page) => ({
+      ...page,
+      items: page.items.map((message) =>
+        message.id === messageId ? updateMessage(message) : message
+      ),
+    })),
   };
 }
 
@@ -121,6 +170,54 @@ function useCurrentUserId() {
   return session?.user?.id ?? null;
 }
 
+function getRealtimeMessageConversationId(record: ChatDemoMessageResponse) {
+  return record.conversation_id ?? record.room_id ?? null;
+}
+
+function getRealtimeMessageRecord(payload: unknown): ChatDemoMessageResponse | null {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  if ('new' in payload && payload.new && typeof payload.new === 'object') {
+    return payload.new as ChatDemoMessageResponse;
+  }
+
+  if ('record' in payload && payload.record && typeof payload.record === 'object') {
+    return payload.record as ChatDemoMessageResponse;
+  }
+
+  const nestedData = 'data' in payload ? payload.data : null;
+
+  if (nestedData && typeof nestedData === 'object' && 'record' in nestedData) {
+    const nestedRecord = nestedData.record;
+
+    if (nestedRecord && typeof nestedRecord === 'object') {
+      return nestedRecord as ChatDemoMessageResponse;
+    }
+  }
+
+  return null;
+}
+
+function getRealtimePayloadErrors(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  if ('errors' in payload) {
+    return payload.errors;
+  }
+
+  const nestedData = 'data' in payload ? payload.data : null;
+
+  if (nestedData && typeof nestedData === 'object' && 'errors' in nestedData) {
+    return nestedData.errors;
+  }
+
+  return null;
+}
+
 type ChatDemoConversationsOptions = {
   refetchInterval?: number | false;
 };
@@ -154,6 +251,10 @@ export function useChatDemoMessages(conversationId: string | null) {
   });
 }
 
+type SendChatDemoMessageContext = {
+  tempMessageId: string;
+};
+
 export function useSendChatDemoMessage(conversationId: string | null) {
   const currentUserId = useCurrentUserId();
   const queryClient = useQueryClient();
@@ -170,30 +271,103 @@ export function useSendChatDemoMessage(conversationId: string | null) {
         currentUserId,
       });
     },
-    onSuccess: (message) => {
+    onMutate: async (body) => {
+      if (!conversationId) {
+        return undefined;
+      }
+
+      const messageBody = body.trim();
+      const tempMessage: ChatMessage = {
+        body: messageBody,
+        conversationId,
+        createdAt: new Date().toISOString(),
+        direction: 'outgoing',
+        id: `temp:${Date.now()}`,
+        media: null,
+        senderId: currentUserId,
+        status: 'sending',
+        type: 'text',
+      };
+
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
+        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations }),
+      ]);
+
+      queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
+        chatDemoQueryKeys.messages(conversationId),
+        (current) => upsertMessageInCache(current, tempMessage)
+      );
+      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
+        updateConversationCacheFromMessage(current, conversationId, tempMessage)
+      );
+
+      return {
+        tempMessageId: tempMessage.id,
+      } satisfies SendChatDemoMessageContext;
+    },
+    onError: (_error, _body, context) => {
+      if (!conversationId || !context?.tempMessageId) {
+        return;
+      }
+
+      queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
+        chatDemoQueryKeys.messages(conversationId),
+        (current) =>
+          updateMessageInCache(current, context.tempMessageId, (message) => ({
+            ...message,
+            status: 'failed',
+          }))
+      );
+    },
+    onSuccess: (message, _body, context) => {
       if (!conversationId) {
         return;
       }
 
       queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
         chatDemoQueryKeys.messages(conversationId),
-        (current) => upsertMessageInCache(current, message)
+        (current) =>
+          upsertMessageInCache(
+            context?.tempMessageId
+              ? removeMessageFromCache(current, context.tempMessageId)
+              : current,
+            message
+          )
       );
       queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
         updateConversationCacheFromMessage(current, conversationId, message)
       );
     },
+    onSettled: async () => {
+      if (!conversationId) {
+        await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations });
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
+      ]);
+    },
   });
 }
 
 export function useChatDemoRoomRealtime(conversationId: string | null) {
-  const currentUserId = useCurrentUserId();
+  const { isChatEnabled, session } = useAuth();
+  const currentUserId = session?.user?.id ?? null;
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
-    if (!conversationId) {
+    if (!conversationId || !isChatEnabled) {
       return;
     }
+
+    const refetchRoom = () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations }),
+      ]);
 
     const channel = supabaseData
       .channel(`chat_room:${conversationId}`)
@@ -206,7 +380,45 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
           table: 'messages',
         },
         (payload) => {
-          const message = mapChatDemoMessage(payload.new as ChatDemoMessageResponse, currentUserId);
+          const record = getRealtimeMessageRecord(payload);
+
+          if (!record) {
+            if (isExpoDevModeEnabled()) {
+              console.log('[chat-demo:realtime] message insert missing record', {
+                conversationId,
+                errors: getRealtimePayloadErrors(payload),
+                payloadKeys:
+                  payload && typeof payload === 'object' ? Object.keys(payload) : [],
+              });
+            }
+
+            void refetchRoom();
+            return;
+          }
+
+          const realtimeConversationId = getRealtimeMessageConversationId(record);
+
+          if (isExpoDevModeEnabled()) {
+            console.log('[chat-demo:realtime] message insert received', {
+              conversationId,
+              errors: getRealtimePayloadErrors(payload),
+              eventType: payload.eventType,
+              id: record.id,
+              recordKeys: Object.keys(record),
+              realtimeConversationId,
+            });
+          }
+
+          if (!record.id || !realtimeConversationId) {
+            void refetchRoom();
+            return;
+          }
+
+          if (realtimeConversationId !== conversationId) {
+            return;
+          }
+
+          const message = mapChatDemoMessage(record, currentUserId);
 
           queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
             chatDemoQueryKeys.messages(conversationId),
@@ -217,10 +429,25 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
           );
         }
       )
-      .subscribe();
+      .subscribe((status, error) => {
+        if (!isExpoDevModeEnabled()) {
+          return;
+        }
+
+        console.log('[chat-demo:realtime] subscription status', {
+          conversationId,
+          error:
+            error instanceof Error
+              ? error.message
+              : typeof error === 'string'
+                ? error
+                : null,
+          status,
+        });
+      });
 
     return () => {
       void supabaseData.removeChannel(channel);
     };
-  }, [conversationId, currentUserId, queryClient]);
+  }, [conversationId, currentUserId, isChatEnabled, queryClient]);
 }

@@ -50,6 +50,18 @@ function formatMessageTime(value: string) {
   });
 }
 
+function formatMessageStatus(message: ChatMessage) {
+  if (message.status === 'sending') {
+    return 'sending';
+  }
+
+  if (message.status === 'failed') {
+    return 'failed';
+  }
+
+  return message.status === 'sent' ? 'sent' : 'read';
+}
+
 function getInitials(value: string) {
   return value
     .split(' ')
@@ -318,7 +330,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         ) : null}
         <AppText className={isOutgoing ? 'mt-2 text-[#7C5526]' : 'mt-2 text-[#97928B]'} variant="code">
           {formatMessageTime(message.createdAt)}
-          {message.status === 'sent' ? ' · sent' : ' · read'}
+          {` · ${formatMessageStatus(message)}`}
         </AppText>
       </View>
     </View>

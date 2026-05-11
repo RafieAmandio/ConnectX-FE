@@ -193,9 +193,7 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
       '[Discovery] fetch cards using mock; backend API was not called',
       JSON.stringify(requestLog, null, 2)
     );
-    const response = getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
-    console.log('[Discovery] fetch cards response', JSON.stringify(response, null, 2));
-    return response;
+    return getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
   }
 
   console.log('[Discovery] fetch cards using api', JSON.stringify(requestLog, null, 2));
@@ -203,11 +201,9 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
     body: payload as unknown as BodyInit,
     method: 'POST',
   });
-  console.log('[Discovery] fetch cards api response', JSON.stringify(response, null, 2));
 
   if (shouldMergeMockDiscoveryCards()) {
     const mergedResponse = mergeDiscoveryCardsWithMocks(response, input);
-    console.log('[Discovery] fetch cards response merged with mock', JSON.stringify(mergedResponse, null, 2));
     return mergedResponse;
   }
 

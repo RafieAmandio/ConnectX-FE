@@ -35,6 +35,7 @@ export type ChatDemoMessageResponse = {
   media_url?: string | null;
   message_type?: string | null;
   read_at?: string | null;
+  room_id?: string | null;
   sender_id?: string | null;
   sent_at?: string | null;
   text?: string | null;
@@ -149,7 +150,7 @@ export function mapChatDemoMessage(
 
   return {
     body: getMessageText(message),
-    conversationId: message.conversation_id ?? '',
+    conversationId: message.conversation_id ?? message.room_id ?? '',
     createdAt: getMessageSentAt(message),
     direction: currentUserId && senderId === currentUserId ? 'outgoing' : 'incoming',
     id: message.id,
@@ -240,8 +241,8 @@ export async function sendChatDemoTextMessage({
 }) {
   const response = await apiFetch<SendChatDemoMessageResponse>(CHAT_DEMO_API.MESSAGES(conversationId), {
     body: {
-      text: body,
       type: 'text',
+      text: body,
     } as any,
     method: 'POST',
   });

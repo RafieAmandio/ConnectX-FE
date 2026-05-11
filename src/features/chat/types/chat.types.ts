@@ -16,7 +16,7 @@ export type ChatConversation = {
 
 export type ChatMessageDirection = 'incoming' | 'outgoing';
 
-export type ChatMessageStatus = 'sent' | 'read';
+export type ChatMessageStatus = 'sending' | 'sent' | 'read' | 'failed';
 
 export type ChatMessage = {
   body: string;
