@@ -1,8 +1,8 @@
 import 'expo-sqlite/localStorage/install';
 import 'react-native-url-polyfill/auto';
 
-import * as SecureStore from 'expo-secure-store';
 import { createClient, type Session } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
 
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
@@ -53,10 +53,7 @@ function createRealtimeOptions() {
         return;
       }
 
-      console.log('[supabase:realtime-heartbeat]', {
-        latency: latency ?? null,
-        status,
-      });
+
     },
     logger: (kind: string, msg: string, data?: unknown) => {
       if (!isExpoDevModeEnabled()) {

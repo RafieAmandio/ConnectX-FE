@@ -8,12 +8,12 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Linking,
-  type LayoutChangeEvent,
   ListRenderItemInfo,
   Platform,
   Pressable,
   TextInput,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

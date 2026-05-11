@@ -222,6 +222,10 @@ type ChatDemoConversationsOptions = {
   refetchInterval?: number | false;
 };
 
+type ChatDemoMessagesOptions = {
+  refetchInterval?: number | false;
+};
+
 export function useChatDemoConversations(options: ChatDemoConversationsOptions = {}) {
   return useQuery({
     queryKey: chatDemoQueryKeys.conversations,
@@ -231,7 +235,10 @@ export function useChatDemoConversations(options: ChatDemoConversationsOptions =
   });
 }
 
-export function useChatDemoMessages(conversationId: string | null) {
+export function useChatDemoMessages(
+  conversationId: string | null,
+  options: ChatDemoMessagesOptions = {}
+) {
   const currentUserId = useCurrentUserId();
 
   return useInfiniteQuery({
@@ -247,6 +254,7 @@ export function useChatDemoMessages(conversationId: string | null) {
         currentUserId,
       }),
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
+    refetchInterval: options.refetchInterval ?? false,
     staleTime: 15_000,
   });
 }
@@ -363,11 +371,48 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
       return;
     }
 
-    const refetchRoom = () =>
-      Promise.all([
+    let isActive = true;
+    const refetchRoom = () => {
+      if (!isActive) {
+        return Promise.resolve();
+      }
+
+      return Promise.all([
         queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
         queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations }),
       ]);
+    };
+
+    const debugAllMessagesChannel = isExpoDevModeEnabled()
+      ? supabaseData
+          .channel(`chat_room_debug_all_messages:${conversationId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'messages',
+            },
+            (payload) => {
+              console.log('[chat-demo:realtime-debug] unfiltered messages insert payload', {
+                conversationId,
+                payload,
+              });
+            }
+          )
+          .subscribe((status, error) => {
+            console.log('[chat-demo:realtime-debug] unfiltered subscription status', {
+              conversationId,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : typeof error === 'string'
+                    ? error
+                    : null,
+              status,
+            });
+          })
+      : null;
 
     const channel = supabaseData
       .channel(`chat_room:${conversationId}`)
@@ -380,17 +425,19 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
           table: 'messages',
         },
         (payload) => {
+          console.log('[chat-demo:realtime] raw postgres payload', {
+            conversationId,
+            payload,
+          });
+
           const record = getRealtimeMessageRecord(payload);
 
           if (!record) {
-            if (isExpoDevModeEnabled()) {
-              console.log('[chat-demo:realtime] message insert missing record', {
-                conversationId,
-                errors: getRealtimePayloadErrors(payload),
-                payloadKeys:
-                  payload && typeof payload === 'object' ? Object.keys(payload) : [],
-              });
-            }
+            console.log('[chat-demo:realtime] message insert missing record', {
+              conversationId,
+              errors: getRealtimePayloadErrors(payload),
+              payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload) : [],
+            });
 
             void refetchRoom();
             return;
@@ -398,16 +445,13 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
 
           const realtimeConversationId = getRealtimeMessageConversationId(record);
 
-          if (isExpoDevModeEnabled()) {
-            console.log('[chat-demo:realtime] message insert received', {
-              conversationId,
-              errors: getRealtimePayloadErrors(payload),
-              eventType: payload.eventType,
-              id: record.id,
-              recordKeys: Object.keys(record),
-              realtimeConversationId,
-            });
-          }
+          console.log('[chat-demo:realtime] message insert received', {
+            conversationId,
+            errors: getRealtimePayloadErrors(payload),
+            eventType: payload.eventType,
+            realtimeConversationId,
+            record,
+          });
 
           if (!record.id || !realtimeConversationId) {
             void refetchRoom();
@@ -418,18 +462,37 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
             return;
           }
 
-          const message = mapChatDemoMessage(record, currentUserId);
+          void Promise.all([
+            queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
+            queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations }),
+          ]).then(() => {
+            if (!isActive) {
+              return;
+            }
 
-          queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
-            chatDemoQueryKeys.messages(conversationId),
-            (current) => upsertMessageInCache(current, message)
-          );
-          queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
-            updateConversationCacheFromMessage(current, conversationId, message)
-          );
+            const message = mapChatDemoMessage(record, currentUserId);
+
+            console.log('[chat-demo:realtime] applying message to cache', {
+              conversationId,
+              message,
+            });
+
+            queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
+              chatDemoQueryKeys.messages(conversationId),
+              (current) => upsertMessageInCache(current, message)
+            );
+            queryClient.setQueryData<ChatConversation[]>(
+              chatDemoQueryKeys.conversations,
+              (current) => updateConversationCacheFromMessage(current, conversationId, message)
+            );
+          });
         }
       )
       .subscribe((status, error) => {
+        if (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          void refetchRoom();
+        }
+
         if (!isExpoDevModeEnabled()) {
           return;
         }
@@ -447,6 +510,10 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
       });
 
     return () => {
+      isActive = false;
+      if (debugAllMessagesChannel) {
+        void supabaseData.removeChannel(debugAllMessagesChannel);
+      }
       void supabaseData.removeChannel(channel);
     };
   }, [conversationId, currentUserId, isChatEnabled, queryClient]);
