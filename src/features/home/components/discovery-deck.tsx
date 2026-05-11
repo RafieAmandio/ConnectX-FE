@@ -165,21 +165,47 @@ function getBadgeIcon(icon?: string): keyof typeof Ionicons.glyphMap {
 
 function getStartupIndustryLabels(industry: DiscoveryStartupCard['industry']) {
   const displayLabels = industry.display
-    .split(/\s+\/\s+/)
-    .map((label) => label.trim())
+    .split(/\s*\/\s*/)
+    .map(normalizeIndustryLabel)
     .filter(Boolean);
 
   if (displayLabels.length) {
     return displayLabels;
   }
 
-  return [industry.primary, industry.secondary].filter((label): label is string => Boolean(label));
+  return [industry.primary, industry.secondary]
+    .map(normalizeIndustryLabel)
+    .filter((label): label is string => Boolean(label));
 }
 
 function getStartupIndustryPreview(industry: DiscoveryStartupCard['industry']) {
   const labels = getStartupIndustryLabels(industry);
 
   return labels.slice(0, 2).join(' / ');
+}
+
+function normalizeIndustryLabel(label?: string | null) {
+  const trimmedLabel = label?.trim();
+
+  if (!trimmedLabel) {
+    return '';
+  }
+
+  if (!trimmedLabel.includes('_')) {
+    return trimmedLabel;
+  }
+
+  const normalizedLabel = trimmedLabel.replace(/_/g, ' ').replace(/\s+/g, ' ');
+
+  return normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1);
+}
+
+function normalizeIndustryDisplay(label?: string | null) {
+  return label
+    ?.split(/\s*\/\s*/)
+    .map(normalizeIndustryLabel)
+    .filter(Boolean)
+    .join(' / ');
 }
 
 function getBoundedMatchScore(score: number) {
@@ -988,6 +1014,7 @@ function StartupCardContent({
   const industryLabels = getStartupIndustryLabels(card.industry);
   const industryPreview = getStartupIndustryPreview(card.industry);
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
+  const teamStageIndustry = normalizeIndustryDisplay(card.teamStage.industry);
   const summary = card.summary?.trim() ?? '';
   const summaryPreview = truncateText(summary, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
 
@@ -1135,7 +1162,7 @@ function StartupCardContent({
                   Industry
                 </AppText>
                 <AppText className="text-[18px] leading-[23px]" variant="title">
-                  {card.teamStage.industry}
+                  {teamStageIndustry}
                 </AppText>
               </View>
             </View>

@@ -49,6 +49,7 @@ const GOAL_MODE_MAP: Record<DiscoveryGoalId, DiscoveryMode> = {
   goal_explore_startups: 'explore_startups',
   goal_joining_startups: 'joining_startups',
 };
+const IS_GOAL_SWITCHING_DISABLED = true;
 
 function isPremiumDiscoverySection(section?: DiscoveryFilterSection) {
   return Boolean(section?.access?.requiresEntitlement);
@@ -242,12 +243,14 @@ function OptionChip({
 function GoalCard({
   active,
   description,
+  disabled = false,
   goalId,
   label,
   onPress,
 }: {
   active: boolean;
   description?: string;
+  disabled?: boolean;
   goalId: string;
   label: string;
   onPress: () => void;
@@ -255,26 +258,31 @@ function GoalCard({
   return (
     <Pressable
       className="h-[82px] w-full rounded-[16px] border px-3.5 py-3"
+      disabled={disabled}
       onPress={onPress}
       style={{
-        backgroundColor: active ? '#3B2A1C' : '#2C2C2C',
-        borderColor: active ? '#FF9A3E' : 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: active ? '#3B2A1C' : disabled ? '#242529' : '#2C2C2C',
+        borderColor: active ? '#FF9A3E' : disabled ? 'rgba(102, 112, 133, 0.18)' : 'rgba(255, 255, 255, 0.1)',
+        opacity: disabled ? 0.64 : 1,
         shadowColor: active ? '#FF9A3E' : 'transparent',
         shadowOpacity: active ? 0.22 : 0,
         shadowRadius: active ? 8 : 0,
       }}>
       <View className="gap-1.5">
         <View className="flex-row items-center gap-2">
-          <Ionicons color={active ? '#FF9A3E' : '#98A2B3'} name={goalIcon(goalId)} size={16} />
+          <Ionicons color={active ? '#FF9A3E' : disabled ? '#667085' : '#98A2B3'} name={goalIcon(goalId)} size={16} />
           <AppText
             className="flex-1 text-[13px] font-semibold"
             numberOfLines={1}
-            style={{ color: active ? '#FF9A3E' : '#F2F4F7' }}>
+            style={{ color: active ? '#FF9A3E' : disabled ? '#667085' : '#F2F4F7' }}>
             {label}
           </AppText>
         </View>
         {description ? (
-          <AppText className="text-[11px] leading-[15px]" numberOfLines={2} style={{ color: active ? '#E3934B' : '#98A2B3' }}>
+          <AppText
+            className="text-[11px] leading-[15px]"
+            numberOfLines={2}
+            style={{ color: active ? '#E3934B' : disabled ? '#667085' : '#98A2B3' }}>
             {description}
           </AppText>
         ) : null}
@@ -878,7 +886,7 @@ export function DiscoveryFilterSheet({
   const handleGoalPress = React.useCallback((goalId: string) => {
     const nextMode = GOAL_MODE_MAP[goalId as DiscoveryGoalId];
 
-    if (!nextMode || nextMode === currentMode) {
+    if (IS_GOAL_SWITCHING_DISABLED || !nextMode || nextMode === currentMode) {
       return;
     }
 
@@ -1352,6 +1360,7 @@ export function DiscoveryFilterSheet({
                     <GoalCard
                       active={GOAL_MODE_MAP[goal.id as DiscoveryGoalId] === currentMode}
                       description={goal.description}
+                      disabled={GOAL_MODE_MAP[goal.id as DiscoveryGoalId] !== currentMode}
                       goalId={goal.id}
                       label={goal.label}
                       onPress={() => handleGoalPress(goal.id)}
