@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -24,10 +26,18 @@ import {
   useChatDemoMessages,
   useChatDemoRoomRealtime,
   useMarkChatDemoConversationRead,
+  useSendChatDemoImageMessage,
   useSendChatDemoMessage,
+  useUploadChatDemoMedia,
 } from '@features/chat/hooks/use-chat-demo';
+import type { ChatDemoUploadedMedia } from '@features/chat/services/chat-demo-api-service';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
 import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
+
+type PendingChatDemoMedia = {
+  localUri: string;
+  uploadedMedia: ChatDemoUploadedMedia;
+};
 
 function formatRelativeTime(value: string) {
   const deltaInMinutes = Math.max(
@@ -352,7 +362,10 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const conversationsQuery = useChatDemoConversations();
   const messagesQuery = useChatDemoMessages(conversationId);
   const sendMessageMutation = useSendChatDemoMessage(conversationId);
+  const sendImageMessageMutation = useSendChatDemoImageMessage(conversationId);
+  const uploadMediaMutation = useUploadChatDemoMedia();
   const [draftMessage, setDraftMessage] = React.useState('');
+  const [pendingMedia, setPendingMedia] = React.useState<PendingChatDemoMedia | null>(null);
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
   const [invitationSent, setInvitationSent] = React.useState(false);
   const [invitationMessage, setInvitationMessage] = React.useState<string | null>(null);
@@ -366,7 +379,8 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     [messagesQuery.data]
   );
   const visibleMessages = React.useMemo(() => [...messages].reverse(), [messages]);
-  const isSending = sendMessageMutation.isPending;
+  const isSending = sendMessageMutation.isPending || sendImageMessageMutation.isPending;
+  const isUploadingMedia = uploadMediaMutation.isPending;
   const inputBottomPadding =
     Platform.OS === 'ios' || androidKeyboardOverlap === 0 ? Math.max(insets.bottom + 8, 20) : 12;
 
@@ -426,19 +440,89 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     };
   }, [updateAndroidKeyboardOverlap]);
 
+  React.useEffect(() => {
+    setPendingMedia(null);
+  }, [conversationId]);
+
   const handleSend = React.useCallback(async () => {
     const body = draftMessage.trim();
 
-    if (!body || isSending) {
+    if ((!body && !pendingMedia) || isSending || isUploadingMedia) {
       return;
     }
 
-    await sendMessageMutation.mutateAsync(body);
+    if (pendingMedia) {
+      try {
+        await sendImageMessageMutation.mutateAsync({
+          previewUri: pendingMedia.localUri,
+          uploadedMedia: pendingMedia.uploadedMedia,
+        });
+      } catch {
+        return;
+      }
+
+      setPendingMedia(null);
+    } else {
+      try {
+        await sendMessageMutation.mutateAsync(body);
+      } catch {
+        return;
+      }
+    }
+
     setDraftMessage('');
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ animated: true, offset: 0 });
     });
-  }, [draftMessage, isSending, sendMessageMutation]);
+  }, [
+    draftMessage,
+    isSending,
+    isUploadingMedia,
+    pendingMedia,
+    sendImageMessageMutation,
+    sendMessageMutation,
+  ]);
+
+  const handlePickImage = React.useCallback(async () => {
+    if (isSending || isUploadingMedia) {
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: false,
+      allowsMultipleSelection: false,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      selectionLimit: 1,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+
+    if (!asset?.uri) {
+      Alert.alert('Image unavailable', 'The selected image could not be read.');
+      return;
+    }
+
+    try {
+      const uploadedMedia = await uploadMediaMutation.mutateAsync({
+        fileName: asset.fileName ?? null,
+        fileSize: asset.fileSize ?? null,
+        mimeType: asset.mimeType ?? null,
+        uri: asset.uri,
+      });
+
+      setPendingMedia({
+        localUri: asset.uri,
+        uploadedMedia,
+      });
+    } catch {
+      return;
+    }
+  }, [isSending, isUploadingMedia, uploadMediaMutation]);
 
   const handleAddToTeam = React.useCallback(() => {
     if (!conversation?.participantEmail || invitationSent) {
@@ -600,10 +684,58 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           </View>
         ) : null}
 
+        {!(sendMessageMutation.error instanceof Error) && sendImageMessageMutation.error instanceof Error ? (
+          <View className="px-4 py-2">
+            <AppText tone="danger">Send failed: {sendImageMessageMutation.error.message}</AppText>
+          </View>
+        ) : null}
+
+        {uploadMediaMutation.error instanceof Error ? (
+          <View className="px-4 py-2">
+            <AppText tone="danger">Upload failed: {uploadMediaMutation.error.message}</AppText>
+          </View>
+        ) : null}
+
         <View
           className="border-t border-[#3A3938] px-4 pt-3"
           style={{ marginBottom: androidKeyboardOverlap, paddingBottom: inputBottomPadding }}>
+          {pendingMedia ? (
+            <View className="mb-3 flex-row items-center gap-3 rounded-[18px] border border-[#444240] bg-[#2E2C2B] p-2">
+              <Image
+                contentFit="cover"
+                source={{ uri: pendingMedia.localUri }}
+                style={{ borderRadius: 12, height: 64, width: 64 }}
+              />
+              <View className="flex-1">
+                <AppText className="text-[#F3F0EB]" numberOfLines={1} variant="bodyStrong">
+                  Image attached
+                </AppText>
+                <AppText className="text-[#9C9893]" numberOfLines={1} variant="code">
+                  Ready to send
+                </AppText>
+              </View>
+              <Pressable
+                className="h-9 w-9 items-center justify-center rounded-full bg-[#3A3938] active:opacity-70"
+                disabled={isSending}
+                onPress={() => setPendingMedia(null)}>
+                <Ionicons color="#F3F0EB" name="close-outline" size={22} />
+              </Pressable>
+            </View>
+          ) : null}
+
           <View className="flex-row items-end gap-3">
+            <Pressable
+              className="h-11 w-11 items-center justify-center rounded-full bg-transparent active:opacity-70"
+              disabled={isSending || isUploadingMedia}
+              onPress={() => void handlePickImage()}
+              style={{ opacity: isSending || isUploadingMedia ? 0.45 : 1 }}>
+              {isUploadingMedia ? (
+                <ActivityIndicator color="#9C9893" size="small" />
+              ) : (
+                <Ionicons color="#9C9893" name="attach-outline" size={26} />
+              )}
+            </Pressable>
+
             <View className="min-h-11 flex-1 rounded-full border border-[#444240] bg-[#2E2C2B] px-4 py-2">
               <TextInput
                 className="font-body text-[15px] text-white"
@@ -619,10 +751,12 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
             <Pressable
               className="h-11 w-11 items-center justify-center rounded-full bg-[#FF9D3D] active:opacity-70"
-              disabled={!draftMessage.trim() || isSending}
+              disabled={(!draftMessage.trim() && !pendingMedia) || isSending || isUploadingMedia}
               onPress={() => void handleSend()}
-              style={{ opacity: !draftMessage.trim() || isSending ? 0.5 : 1 }}>
-              {isSending ? (
+              style={{
+                opacity: (!draftMessage.trim() && !pendingMedia) || isSending || isUploadingMedia ? 0.5 : 1,
+              }}>
+              {sendMessageMutation.isPending || sendImageMessageMutation.isPending ? (
                 <ActivityIndicator color="#1F160C" size="small" />
               ) : (
                 <Ionicons color="#1F160C" name="paper-plane-outline" size={24} />

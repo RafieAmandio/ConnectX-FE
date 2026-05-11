@@ -1,4 +1,4 @@
-import { type InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import React from 'react';
 
 import { useAuth } from '@features/auth';
@@ -8,11 +8,14 @@ import { isExpoDevModeEnabled } from '@shared/utils/env';
 import {
   fetchChatDemoConversations,
   fetchChatDemoMessages,
-  markChatDemoConversationRead,
   mapChatDemoMessage,
+  markChatDemoConversationRead,
+  sendChatDemoImageMessage,
   sendChatDemoTextMessage,
+  uploadChatDemoMedia,
   type ChatDemoMessageResponse,
   type ChatDemoMessagesPage,
+  type ChatDemoUploadedMedia,
 } from '../services/chat-demo-api-service';
 import type { ChatConversation, ChatMessage } from '../types/chat.types';
 
@@ -157,6 +160,7 @@ function updateConversationCacheFromMessage(
       return {
         ...conversation,
         lastMessageAt: message.createdAt,
+        lastMessageId: message.id,
         preview: getMessagePreview(message),
         unreadCount:
           message.direction === 'incoming' ? conversation.unreadCount + 1 : conversation.unreadCount,
@@ -277,6 +281,11 @@ type SendChatDemoMessageContext = {
   tempMessageId: string;
 };
 
+type SendChatDemoImageInput = {
+  previewUri: string;
+  uploadedMedia: ChatDemoUploadedMedia;
+};
+
 export function useSendChatDemoMessage(conversationId: string | null) {
   const currentUserId = useCurrentUserId();
   const queryClient = useQueryClient();
@@ -375,6 +384,114 @@ export function useSendChatDemoMessage(conversationId: string | null) {
   });
 }
 
+export function useUploadChatDemoMedia() {
+  return useMutation({
+    mutationFn: uploadChatDemoMedia,
+  });
+}
+
+export function useSendChatDemoImageMessage(conversationId: string | null) {
+  const currentUserId = useCurrentUserId();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ uploadedMedia }: SendChatDemoImageInput) => {
+      if (!conversationId) {
+        throw new Error('Pick a conversation before sending an image.');
+      }
+
+      return sendChatDemoImageMessage({
+        conversationId,
+        currentUserId,
+        mediaId: uploadedMedia.media_id,
+      });
+    },
+    onMutate: async ({ previewUri, uploadedMedia }) => {
+      if (!conversationId) {
+        return undefined;
+      }
+
+      const tempMessage: ChatMessage = {
+        body: '',
+        conversationId,
+        createdAt: new Date().toISOString(),
+        direction: 'outgoing',
+        id: `temp:image:${Date.now()}`,
+        media: {
+          mimeType: uploadedMedia.mime_type ?? 'image/jpeg',
+          sizeBytes: uploadedMedia.size_bytes ?? null,
+          thumbnailUrl: uploadedMedia.thumbnail_url ?? uploadedMedia.url ?? previewUri,
+          url: uploadedMedia.url ?? previewUri,
+        },
+        senderId: currentUserId,
+        status: 'sending',
+        type: 'image',
+      };
+
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
+        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations }),
+      ]);
+
+      queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
+        chatDemoQueryKeys.messages(conversationId),
+        (current) => upsertMessageInCache(current, tempMessage)
+      );
+      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
+        updateConversationCacheFromMessage(current, conversationId, tempMessage)
+      );
+
+      return {
+        tempMessageId: tempMessage.id,
+      } satisfies SendChatDemoMessageContext;
+    },
+    onError: (_error, _image, context) => {
+      if (!conversationId || !context?.tempMessageId) {
+        return;
+      }
+
+      queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
+        chatDemoQueryKeys.messages(conversationId),
+        (current) =>
+          updateMessageInCache(current, context.tempMessageId, (message) => ({
+            ...message,
+            status: 'failed',
+          }))
+      );
+    },
+    onSuccess: (message, _image, context) => {
+      if (!conversationId) {
+        return;
+      }
+
+      queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
+        chatDemoQueryKeys.messages(conversationId),
+        (current) =>
+          upsertMessageInCache(
+            context?.tempMessageId
+              ? removeMessageFromCache(current, context.tempMessageId)
+              : current,
+            message
+          )
+      );
+      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
+        updateConversationCacheFromMessage(current, conversationId, message)
+      );
+    },
+    onSettled: async () => {
+      if (!conversationId) {
+        await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations });
+        return;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
+      ]);
+    },
+  });
+}
+
 export function useMarkChatDemoConversationRead() {
   const queryClient = useQueryClient();
 
@@ -431,37 +548,37 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
 
     const debugAllMessagesChannel = isExpoDevModeEnabled()
       ? supabaseData
-          .channel(`chat_room_debug_all_messages:${conversationId}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'messages',
-            },
-            (payload) => {
-              console.log('[chat-demo:realtime-debug] unfiltered messages insert payload', {
-                conversationId,
-                payload,
-              });
-            }
-          )
-          .subscribe((status, error) => {
-            console.log('[chat-demo:realtime-debug] unfiltered subscription status', {
+        .channel(`chat_room_debug_all_messages:${conversationId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+          },
+          (payload) => {
+            console.log('[chat-demo:realtime-debug] unfiltered messages insert payload', {
               conversationId,
-              error:
-                error instanceof Error
-                  ? error.message
-                  : typeof error === 'string'
-                    ? error
-                    : null,
-              status,
+              payload,
             });
-          })
+          }
+        )
+        .subscribe((status, error) => {
+          console.log('[chat-demo:realtime-debug] unfiltered subscription status', {
+            conversationId,
+            error:
+              error instanceof Error
+                ? error.message
+                : typeof error === 'string'
+                  ? error
+                  : null,
+            status,
+          });
+        })
       : null;
 
     const channel = supabaseData
-      .channel(`chat_room:${conversationId}`)
+      .channel(`chat:${conversationId}`)
       .on(
         'postgres_changes',
         {

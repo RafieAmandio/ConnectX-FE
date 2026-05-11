@@ -8,6 +8,7 @@ export const CHAT_DEMO_API = {
   CONVERSATIONS: '/api/v1/conversations',
   MESSAGES: (conversationId: string) => `/api/v1/conversations/${conversationId}/messages`,
   READ: (conversationId: string) => `/api/v1/conversations/${conversationId}/read`,
+  UPLOAD: '/api/v1/upload',
 } as const;
 
 type ChatDemoOtherUserResponse = {
@@ -71,8 +72,23 @@ type SendChatDemoMessageResponse =
       message?: ChatDemoMessageResponse | string;
     };
 
+export type ChatDemoUploadedMedia = {
+  media_id: string;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  thumbnail_url?: string | null;
+  url?: string | null;
+};
+
 type MarkChatDemoConversationReadResponse = {
   status?: string;
+};
+
+export type ChatDemoMediaAsset = {
+  fileName?: string | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  uri: string;
 };
 
 export type ChatDemoMessagesPage = {
@@ -200,6 +216,27 @@ function buildMessagesPath(conversationId: string, before?: string | null, limit
   return `${CHAT_DEMO_API.MESSAGES(conversationId)}?${params.toString()}`;
 }
 
+function extractMediaFileName(media: ChatDemoMediaAsset) {
+  const fallbackName = `chat-media-${Date.now()}.jpg`;
+  const fileName = media.fileName?.trim();
+
+  if (fileName) {
+    return fileName;
+  }
+
+  const uriFileName = media.uri.split('/').pop()?.split('?')[0]?.trim();
+
+  return uriFileName || fallbackName;
+}
+
+function getMessageFromSendResponse(response: SendChatDemoMessageResponse) {
+  return 'data' in response && response.data
+    ? response.data
+    : 'message' in response && response.message && typeof response.message === 'object'
+      ? response.message
+      : (response as ChatDemoMessageResponse);
+}
+
 export async function fetchChatDemoConversations() {
   const response = await apiFetch<ChatDemoConversationsResponse>(CHAT_DEMO_API.CONVERSATIONS);
 
@@ -252,14 +289,46 @@ export async function sendChatDemoTextMessage({
     } as any,
     method: 'POST',
   });
-  const message =
-    'data' in response && response.data
-      ? response.data
-      : 'message' in response && response.message && typeof response.message === 'object'
-        ? response.message
-        : (response as ChatDemoMessageResponse);
 
-  return mapChatDemoMessage(message, currentUserId);
+  return mapChatDemoMessage(getMessageFromSendResponse(response), currentUserId);
+}
+
+export async function uploadChatDemoMedia(media: ChatDemoMediaAsset) {
+  const formData = new FormData();
+
+  formData.append(
+    'file',
+    {
+      name: extractMediaFileName(media),
+      type: media.mimeType?.trim() || 'image/jpeg',
+      uri: media.uri,
+    } as any
+  );
+
+  return apiFetch<ChatDemoUploadedMedia>(CHAT_DEMO_API.UPLOAD, {
+    body: formData,
+    method: 'POST',
+  });
+}
+
+export async function sendChatDemoImageMessage({
+  conversationId,
+  currentUserId,
+  mediaId,
+}: {
+  conversationId: string;
+  currentUserId?: string | null;
+  mediaId: string;
+}) {
+  const response = await apiFetch<SendChatDemoMessageResponse>(CHAT_DEMO_API.MESSAGES(conversationId), {
+    body: {
+      media_id: mediaId,
+      type: 'image',
+    } as any,
+    method: 'POST',
+  });
+
+  return mapChatDemoMessage(getMessageFromSendResponse(response), currentUserId);
 }
 
 export async function markChatDemoConversationRead({
