@@ -55,6 +55,8 @@ import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discov
 import type {
   DiscoveryAppliedFilters,
   DiscoveryCard,
+  DiscoveryCardEducation,
+  DiscoveryCardExperience,
   DiscoveryCardsRequest,
   DiscoveryFilterField,
   DiscoveryFilterSection,
@@ -233,6 +235,18 @@ function openExternalUrl(url: string) {
   void Linking.openURL(normalizeExternalUrl(url)).catch((error) => {
     console.warn('Unable to open external URL.', error);
   });
+}
+
+function getExperienceOrganization(item: DiscoveryCardExperience) {
+  return item.organization ?? item.company ?? '';
+}
+
+function getExperienceKey(item: DiscoveryCardExperience, index: number) {
+  return item.id ?? `${item.title}-${getExperienceOrganization(item)}-${item.period ?? index}`;
+}
+
+function getEducationKey(item: DiscoveryCardEducation, index: number) {
+  return item.id ?? `${item.degree}-${item.school}-${item.period ?? index}`;
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -878,14 +892,39 @@ function ProfileCardContent({
         {card.experience?.length ? (
           <View className="gap-3">
             <SectionLabel icon="briefcase-outline" title="Experience" />
-            {card.experience.map((item) => (
-              <AppCard key={item.id} className="gap-1.5 rounded-[16px] p-4 bg-[#2C2C2C] border border-white/10 border-l-[2.5px] border-l-[#FF9A3E]">
-                <AppText className="text-[16px]" variant="title">
-                  {item.title}
-                </AppText>
-                <AppText className="text-[13px] text-[#FF9A3E]">
-                  {item.organization} · {item.period}
-                </AppText>
+            {card.experience.map((item, index) => (
+              <AppCard
+                key={getExperienceKey(item, index)}
+                className="rounded-[16px] bg-[#2C2C2C] border border-white/10 border-l-[2.5px] border-l-[#FF9A3E] p-4">
+                <View className="flex-row gap-3.5">
+                  {item.companyLogo ? (
+                    <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+                      <Image
+                        contentFit="contain"
+                        source={{ uri: item.companyLogo }}
+                        style={{ height: '100%', width: '100%' }}
+                      />
+                    </View>
+                  ) : null}
+                  <View className="min-w-0 flex-1 gap-1.5">
+                    <AppText className="text-[16px]" numberOfLines={2} variant="title">
+                      {item.title}
+                    </AppText>
+                    {getExperienceOrganization(item) || item.period ? (
+                      <AppText className="text-[13px] text-[#FF9A3E]" numberOfLines={2}>
+                        {[getExperienceOrganization(item), item.period].filter(Boolean).join(' · ')}
+                      </AppText>
+                    ) : null}
+                    {item.location ? (
+                      <View className="flex-row items-center gap-1">
+                        <Ionicons color="#98A2B3" name="location-outline" size={13} />
+                        <AppText className="text-[12px]" numberOfLines={1} tone="muted">
+                          {item.location}
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
               </AppCard>
             ))}
           </View>
@@ -893,16 +932,31 @@ function ProfileCardContent({
 
         {card.education?.length ? (
           <View className="gap-3">
-            {card.education.map((item) => (
-              <AppCard key={item.id} className="flex-row items-center gap-3.5 rounded-[16px] p-4 bg-[#2C2C2C] border-white/10">
-                <Ionicons color="#FFCD38" name="school-outline" size={24} />
+            {card.education.map((item, index) => (
+              <AppCard key={getEducationKey(item, index)} className="flex-row items-center gap-3.5 rounded-[16px] p-4 bg-[#2C2C2C] border-white/10">
+                {item.schoolLogo ? (
+                  <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+                    <Image
+                      contentFit="contain"
+                      source={{ uri: item.schoolLogo }}
+                      style={{ height: '100%', width: '100%' }}
+                    />
+                  </View>
+                ) : (
+                  <Ionicons color="#FFCD38" name="school-outline" size={24} />
+                )}
                 <View className="flex-1 gap-0.5">
-                  <AppText className="text-[16px]" variant="title">
+                  <AppText className="text-[16px]" numberOfLines={2} variant="title">
                     {item.degree}
                   </AppText>
-                  <AppText className="text-[13px]" style={{ color: '#FFCD38' }}>
+                  <AppText className="text-[13px]" numberOfLines={2} style={{ color: '#FFCD38' }}>
                     {item.school}
                   </AppText>
+                  {item.period ? (
+                    <AppText className="text-[12px]" numberOfLines={1} tone="muted">
+                      {item.period}
+                    </AppText>
+                  ) : null}
                 </View>
               </AppCard>
             ))}

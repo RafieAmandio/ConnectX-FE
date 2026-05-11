@@ -25,16 +25,25 @@ export type DiscoveryCardTag = {
 };
 
 export type DiscoveryCardExperience = {
-  id: string;
+  id?: string;
   title: string;
-  organization: string;
-  period: string;
+  organization?: string;
+  company?: string;
+  period?: string;
+  location?: string | null;
+  isCurrent?: boolean;
+  companyLogo?: string | null;
+  description?: string | null;
 };
 
 export type DiscoveryCardEducation = {
-  id: string;
+  id?: string;
   degree: string;
   school: string;
+  field?: string | null;
+  period?: string | null;
+  schoolLogo?: string | null;
+  description?: string | null;
 };
 
 export type DiscoveryStageJourneyState = 'completed' | 'current' | 'upcoming';
