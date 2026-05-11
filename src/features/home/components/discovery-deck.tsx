@@ -644,6 +644,27 @@ function MatchScoreRing({ score }: { score: number }) {
   );
 }
 
+function MatchScoreBadge({ label, score }: { label?: string; score: number }) {
+  const color = getMatchScoreColor(getBoundedMatchScore(score));
+
+  return (
+    <View className="shrink-0 items-center gap-1">
+      <MatchScoreRing score={score} />
+      <View className="max-w-[104px] flex-row items-center justify-center gap-1">
+        <Ionicons color={color} name="star" size={12} />
+        <AppText
+          className="min-w-0 text-[11px] leading-[14px]"
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          style={{ color, flexShrink: 1 }}
+          variant="bodyStrong">
+          {label ?? 'Strong Match'}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 function StartupRoleChip({ title }: { title: string }) {
   return (
     <View
@@ -708,8 +729,6 @@ function ProfileCardContent({
   bottomInset?: number;
   scrollEnabled?: boolean;
 }) {
-  const matchColor = getMatchScoreColor(getBoundedMatchScore(card.match.score));
-
   return (
     <ScrollView
       className="flex-1"
@@ -732,54 +751,41 @@ function ProfileCardContent({
           <View
             className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
             style={{ backgroundColor: 'rgba(17, 19, 26, 0.52)' }}>
-            <AppText className="text-[28px] leading-[34px]" variant="hero">
-              {card.age ? `${card.name}, ${card.age}` : card.name}
-            </AppText>
-            <View className="mt-1 flex-row items-center gap-1.5">
-              <Ionicons color="#98A2B3" name="location-outline" size={16} />
-              <AppText className="text-[14px]" tone="muted">
-                {card.location.display}
-              </AppText>
-              {typeof card.location.distanceKm === 'number' ? (
-                <AppText className="text-[14px]" tone="signal">
-                  • {card.location.distanceKm} km
+            <View className="flex-row items-end justify-between gap-3">
+              <View className="min-w-0 flex-1 gap-1">
+                <AppText className="text-[28px] leading-[34px]" numberOfLines={1} variant="hero">
+                  {card.age ? `${card.name}, ${card.age}` : card.name}
                 </AppText>
-              ) : null}
+                <AppText className="text-[15px] leading-tight" numberOfLines={2} style={{ color: '#E4E7EC' }}>
+                  {card.headline}
+                </AppText>
+                <View className="flex-row items-center gap-1.5">
+                  <Ionicons color="#98A2B3" name="location-outline" size={16} />
+                  <AppText className="text-[14px]" tone="muted">
+                    {card.location.display}
+                  </AppText>
+                  {typeof card.location.distanceKm === 'number' ? (
+                    <AppText className="text-[14px]" tone="signal">
+                      • {card.location.distanceKm} km
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+              <MatchScoreBadge label={card.match.label} score={card.match.score} />
             </View>
           </View>
         </View>
 
-        <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
-          <View className="flex-row items-center gap-3">
-            <MatchScoreRing score={card.match.score} />
-
-            <View className="gap-0.5">
-              <View className="flex-row items-center gap-1">
-                <Ionicons color={matchColor} name="star" size={14} />
-                <AppText className="text-[14px]" style={{ color: matchColor }} variant="bodyStrong">
-                  {card.match.label ?? 'Strong Match'}
-                </AppText>
-              </View>
-              <AppText className="text-[12px]" tone="muted">
-                Match quality
+        {card.badges[0] ? (
+          <View className="border-b border-border px-4 py-4">
+            <View className="flex-row items-center gap-1">
+              <Ionicons color="#FF9A3E" name={getBadgeIcon(card.badges[0].icon)} size={12} />
+              <AppText className="text-[13px]" tone="muted">
+                {card.badges[0].label}
               </AppText>
             </View>
           </View>
-
-          <View className="items-end gap-1">
-            <AppText className="text-[17px] leading-tight" align="right" variant="title">
-              {card.headline}
-            </AppText>
-            {card.badges[0] ? (
-              <View className="flex-row items-center gap-1">
-                <Ionicons color="#FF9A3E" name={getBadgeIcon(card.badges[0].icon)} size={12} />
-                <AppText className="text-[13px]" tone="muted">
-                  {card.badges[0].label}
-                </AppText>
-              </View>
-            ) : null}
-          </View>
-        </View>
+        ) : null}
       </View>
 
       <View className="gap-5 px-4 py-4">
@@ -882,7 +888,6 @@ function StartupCardContent({
   const industryLabels = getStartupIndustryLabels(card.industry);
   const industryPreview = getStartupIndustryPreview(card.industry);
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
-  const matchColor = getMatchScoreColor(getBoundedMatchScore(card.match.score));
 
   return (
     <ScrollView
@@ -913,37 +918,27 @@ function StartupCardContent({
             <StartupLogo card={card} />
           </View>
 
-          <View className="mt-5 gap-1">
-            <AppText className="text-[30px] leading-[34px]" variant="hero">
-              {card.name}
-            </AppText>
-            <View className="flex-row items-center gap-1.5">
-              <Ionicons color="#C7CCD4" name="briefcase-outline" size={15} />
-              <AppText className="text-[14px]" tone="muted">
-                {card.founder.title ? `${card.founder.title} by ${card.founder.name}` : card.founder.name}
+          <View className="mt-5 flex-row items-end justify-between gap-3">
+            <View className="min-w-0 flex-1 gap-1">
+              <AppText className="text-[30px] leading-[34px]" numberOfLines={2} variant="hero">
+                {card.name}
               </AppText>
-            </View>
-          </View>
-        </View>
-
-        <View className="flex-row items-center justify-between gap-3 border-b border-border px-4 py-4">
-          <View className="shrink-0 flex-row items-center gap-3">
-            <MatchScoreRing score={card.match.score} />
-            <View className="gap-0.5">
-              <View className="flex-row items-center gap-1">
-                <Ionicons color={matchColor} name="star" size={14} />
-                <AppText className="text-[14px]" style={{ color: matchColor }} variant="bodyStrong">
-                  {card.match.label ?? 'Strong Match'}
+              <View className="flex-row items-center gap-1.5">
+                <Ionicons color="#C7CCD4" name="briefcase-outline" size={15} />
+                <AppText className="min-w-0 flex-1 text-[14px]" numberOfLines={2} tone="muted">
+                  {card.founder.title ? `${card.founder.title} by ${card.founder.name}` : card.founder.name}
                 </AppText>
               </View>
             </View>
+            <MatchScoreBadge label={card.match.label} score={card.match.score} />
           </View>
+        </View>
 
-          <View className="min-w-0 flex-1 items-end gap-1">
-            <View className="w-full flex-row flex-wrap items-center justify-end gap-1.5">
+        <View className="border-b border-border px-4 py-4">
+          <View className="min-w-0 gap-1">
+            <View className="w-full flex-row flex-wrap items-center gap-1.5">
               <AppText
                 className="min-w-0 text-[17px] leading-tight"
-                align="right"
                 ellipsizeMode="tail"
                 numberOfLines={2}
                 style={{ flexShrink: 1 }}
