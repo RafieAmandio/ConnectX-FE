@@ -90,6 +90,7 @@ const FLOATING_ACTIONS_CONTENT_PADDING = 72;
 const DISCOVERY_LOCATION_TIMEOUT_MS = 6000;
 const MATCH_SCORE_RING_SIZE = 52;
 const MATCH_SCORE_RING_STROKE_WIDTH = 3.5;
+const DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH = 160;
 
 const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
   finding_cofounder: 'goal_finding_cofounder',
@@ -201,6 +202,21 @@ function getMatchScoreColor(score: number) {
   }
 
   return '#F04438';
+}
+
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  const suffix = '...';
+  const limit = Math.max(maxLength - suffix.length, 0);
+  const truncated = value.slice(0, limit).trimEnd();
+  const wordBoundaryIndex = truncated.lastIndexOf(' ');
+  const nextValue =
+    wordBoundaryIndex > Math.floor(limit * 0.65) ? truncated.slice(0, wordBoundaryIndex) : truncated;
+
+  return `${nextValue}${suffix}`;
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -729,6 +745,9 @@ function ProfileCardContent({
   bottomInset?: number;
   scrollEnabled?: boolean;
 }) {
+  const bio = card.bio?.trim() ?? '';
+  const bioPreview = truncateText(bio, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
+
   return (
     <ScrollView
       className="flex-1"
@@ -789,9 +808,9 @@ function ProfileCardContent({
       </View>
 
       <View className="gap-5 px-4 py-4">
-        {card.bio ? (
+        {bio ? (
           <AppText className="text-[16px] leading-7" tone="muted">
-            {card.bio}
+            {bioPreview}
           </AppText>
         ) : null}
 
@@ -889,6 +908,7 @@ function StartupCardContent({
   const industryPreview = getStartupIndustryPreview(card.industry);
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
   const summary = card.summary?.trim() ?? '';
+  const summaryPreview = truncateText(summary, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
 
   return (
     <ScrollView
@@ -972,7 +992,7 @@ function StartupCardContent({
       <View className="gap-4 px-4 pb-4 pt-3">
         {summary ? (
           <AppText className="text-[16px] leading-7" tone="muted">
-            {summary}
+            {summaryPreview}
           </AppText>
         ) : null}
 
