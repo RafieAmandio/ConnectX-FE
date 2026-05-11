@@ -7,6 +7,7 @@ import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   type LayoutChangeEvent,
   ListRenderItemInfo,
   Platform,
@@ -19,10 +20,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton, AppText, AppTopBar } from '@shared/components';
 
 import {
-  useAppendMockMessage,
-  useChatConversations,
-  useConversationMessages,
-} from '@features/chat/hooks/use-mock-chat';
+  useChatDemoConversations,
+  useChatDemoMessages,
+  useChatDemoRoomRealtime,
+  useSendChatDemoMessage,
+} from '@features/chat/hooks/use-chat-demo';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
 import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 
@@ -147,8 +149,8 @@ function EmptyState({
             </AppText>
             <AppText align="center" className="text-[#B8B2AB]">
               {isUnavailable
-                ? 'SQLite could not load the demo inbox. Try reseeding the local data.'
-                : 'Seed the local demo inbox to show match-linked conversations.'}
+                ? 'We could not load your conversations right now. Try again in a moment.'
+                : 'Your conversations will appear here once someone reaches out.'}
             </AppText>
           </View>
           <AppButton
@@ -167,7 +169,7 @@ function EmptyState({
 export function ChatDemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const conversationsQuery = useChatConversations();
+  const conversationsQuery = useChatDemoConversations();
   const conversations = conversationsQuery.data ?? [];
   const hasConversations = conversations.length > 0;
   const renderConversation = React.useCallback(
@@ -242,6 +244,8 @@ export function ChatDemoListScreen() {
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isOutgoing = message.direction === 'outgoing';
+  const hasMediaUrl = Boolean(message.media?.url);
+  const showBody = Boolean(message.body.trim());
 
   return (
     <View className={isOutgoing ? 'items-end' : 'items-start'}>
@@ -251,9 +255,59 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             ? 'max-w-[82%] rounded-[26px] rounded-br-[10px] bg-[#FF9D3D] px-5 py-4'
             : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] px-5 py-4'
         }>
-        <AppText className={isOutgoing ? 'text-[#201507]' : 'text-[#F3F0EB]'}>
-          {message.body}
-        </AppText>
+        {message.type === 'image' && hasMediaUrl ? (
+          <Pressable
+            className="active:opacity-90"
+            onPress={() => {
+              void Linking.openURL(message.media?.url ?? '');
+            }}>
+            <Image
+              contentFit="cover"
+              source={{ uri: message.media?.url ?? undefined }}
+              style={{ borderRadius: 18, height: 220, width: 240 }}
+            />
+          </Pressable>
+        ) : null}
+
+        {message.type === 'image' && !hasMediaUrl ? (
+          <View
+            className="w-56 items-center gap-2 rounded-[18px] border border-white/10 px-4 py-5"
+            style={{ backgroundColor: isOutgoing ? 'rgba(32, 21, 7, 0.08)' : '#292929' }}>
+            <Ionicons color={isOutgoing ? '#5C3D18' : '#F7B05B'} name="image-outline" size={24} />
+            <AppText
+              align="center"
+              className={isOutgoing ? 'text-[#5C3D18]' : 'text-[#B8B2AB]'}
+              variant="code">
+              Image unavailable
+            </AppText>
+          </View>
+        ) : null}
+
+        {message.type !== 'image' && hasMediaUrl ? (
+          <Pressable
+            className="w-56 flex-row items-center gap-3 rounded-[18px] border border-white/10 px-4 py-3 active:opacity-80"
+            onPress={() => {
+              void Linking.openURL(message.media?.url ?? '');
+            }}>
+            <Ionicons color={isOutgoing ? '#5C3D18' : '#F7B05B'} name="document-outline" size={22} />
+            <AppText
+              className={isOutgoing ? 'flex-1 text-[#201507]' : 'flex-1 text-[#F3F0EB]'}
+              numberOfLines={1}
+              variant="bodyStrong">
+              Open attachment
+            </AppText>
+          </Pressable>
+        ) : null}
+
+        {showBody || !message.type || message.type === 'text' ? (
+          <AppText
+            className={[
+              isOutgoing ? 'text-[#201507]' : 'text-[#F3F0EB]',
+              hasMediaUrl || message.type === 'image' ? 'mt-3' : '',
+            ].join(' ')}>
+            {showBody ? message.body : 'Message'}
+          </AppText>
+        ) : null}
         <AppText className={isOutgoing ? 'mt-2 text-[#7C5526]' : 'mt-2 text-[#97928B]'} variant="code">
           {formatMessageTime(message.createdAt)}
           {message.status === 'sent' ? ' · sent' : ' · read'}
@@ -266,9 +320,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 export function ChatDemoConversationScreen({ conversationId }: { conversationId: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const conversationsQuery = useChatConversations();
-  const messagesQuery = useConversationMessages(conversationId);
-  const appendMessageMutation = useAppendMockMessage(conversationId);
+  const conversationsQuery = useChatDemoConversations();
+  const messagesQuery = useChatDemoMessages(conversationId);
+  const sendMessageMutation = useSendChatDemoMessage(conversationId);
   const [draftMessage, setDraftMessage] = React.useState('');
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
   const [invitationSent, setInvitationSent] = React.useState(false);
@@ -278,10 +332,16 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const listRef = React.useRef<FlatList<ChatMessage>>(null);
   const containerFrameRef = React.useRef({ height: 0, y: 0 });
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
-  const messages = messagesQuery.data ?? [];
-  const isSending = appendMessageMutation.isPending;
+  const messages = React.useMemo(
+    () => [...(messagesQuery.data?.pages ?? [])].reverse().flatMap((page) => page.items),
+    [messagesQuery.data]
+  );
+  const newestMessageId = messages.at(-1)?.id ?? null;
+  const isSending = sendMessageMutation.isPending;
   const inputBottomPadding =
     Platform.OS === 'ios' || androidKeyboardOverlap === 0 ? Math.max(insets.bottom + 8, 20) : 12;
+
+  useChatDemoRoomRealtime(conversationId);
 
   const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
     if (Platform.OS !== 'android') {
@@ -338,10 +398,10 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   }, [updateAndroidKeyboardOverlap]);
 
   React.useEffect(() => {
-    if (messages.length > 0) {
+    if (newestMessageId) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     }
-  }, [messages.length]);
+  }, [newestMessageId]);
 
   const handleSend = React.useCallback(async () => {
     const body = draftMessage.trim();
@@ -350,9 +410,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
       return;
     }
 
-    await appendMessageMutation.mutateAsync(body);
+    await sendMessageMutation.mutateAsync(body);
     setDraftMessage('');
-  }, [appendMessageMutation, draftMessage, isSending]);
+  }, [draftMessage, isSending, sendMessageMutation]);
 
   const handleAddToTeam = React.useCallback(() => {
     if (!conversation?.participantEmail || invitationSent) {
@@ -422,7 +482,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               {conversation.name}
             </AppText>
             <AppText className="text-[#9C9893]" numberOfLines={1}>
-              Direct message
+              {conversation.headline?.trim() || 'Direct message'}
             </AppText>
             {invitationMessage ? (
               <AppText className="text-[#7DD37D]" numberOfLines={1} variant="code">
@@ -438,9 +498,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
           <Pressable
             className="min-h-11 flex-row items-center justify-center gap-2 rounded-full bg-[#FF9D3D] px-4 active:opacity-80"
-            disabled={invitationSent}
+            disabled={invitationSent || !conversation.participantEmail}
             onPress={handleAddToTeam}
-            style={{ opacity: invitationSent ? 0.6 : 1 }}>
+            style={{ opacity: invitationSent || !conversation.participantEmail ? 0.6 : 1 }}>
             <Ionicons
               color="#1F160C"
               name={invitationSent ? 'checkmark-outline' : 'person-add-outline'}
@@ -460,6 +520,24 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           contentContainerStyle={{ gap: 16, paddingHorizontal: 16, paddingVertical: 20 }}
           data={messages}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={
+            messagesQuery.hasNextPage ? (
+              <Pressable
+                className="items-center py-2 active:opacity-80"
+                disabled={messagesQuery.isFetchingNextPage}
+                onPress={() => {
+                  void messagesQuery.fetchNextPage();
+                }}>
+                {messagesQuery.isFetchingNextPage ? (
+                  <ActivityIndicator color="#F59E0B" size="small" />
+                ) : (
+                  <AppText className="text-[#F7B05B]" variant="code">
+                    Load earlier messages
+                  </AppText>
+                )}
+              </Pressable>
+            ) : null
+          }
           ListEmptyComponent={
             messagesQuery.isLoading ? (
               <View className="items-center py-8">
@@ -471,6 +549,12 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               </View>
             )
           }
+          onStartReached={() => {
+            if (messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage) {
+              void messagesQuery.fetchNextPage();
+            }
+          }}
+          onStartReachedThreshold={0.4}
           renderItem={({ item }) => <MessageBubble message={item} />}
           showsVerticalScrollIndicator={false}
         />
@@ -481,9 +565,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           </View>
         ) : null}
 
-        {appendMessageMutation.error instanceof Error ? (
+        {sendMessageMutation.error instanceof Error ? (
           <View className="px-4 py-2">
-            <AppText tone="danger">Send failed: {appendMessageMutation.error.message}</AppText>
+            <AppText tone="danger">Send failed: {sendMessageMutation.error.message}</AppText>
           </View>
         ) : null}
 
@@ -496,7 +580,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
                 className="font-body text-[15px] text-white"
                 multiline
                 onChangeText={setDraftMessage}
-                placeholder="Type a demo message..."
+                placeholder="Type a message..."
                 placeholderTextColor="#7D7974"
                 showSoftInputOnFocus
                 style={{ maxHeight: 96, padding: 0 }}
@@ -519,7 +603,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
         </View>
       </KeyboardAvoidingView>
       <StartupInvitationComposer
-        initialEmail={conversation.participantEmail}
+        initialEmail={conversation.participantEmail ?? ''}
         onClose={() => {
           setInviteComposerVisible(false);
         }}

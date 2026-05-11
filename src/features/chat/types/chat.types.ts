@@ -1,12 +1,14 @@
 export type ChatConversationKind = 'direct' | 'group';
 
 export type ChatConversation = {
+  headline?: string | null;
   id: string;
   kind: ChatConversationKind;
   lastMessageAt: string;
   messagesStored: number;
   name: string;
-  participantEmail: string;
+  participantEmail?: string | null;
+  participantUserId?: string | null;
   photoUrl: string | null;
   preview: string;
   unreadCount: number;
@@ -22,5 +24,13 @@ export type ChatMessage = {
   createdAt: string;
   direction: ChatMessageDirection;
   id: string;
+  media?: {
+    mimeType: string | null;
+    sizeBytes: number | null;
+    thumbnailUrl: string | null;
+    url: string | null;
+  } | null;
+  senderId?: string | null;
   status: ChatMessageStatus;
+  type?: 'text' | 'image' | 'video' | 'file';
 };
