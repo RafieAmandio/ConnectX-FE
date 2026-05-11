@@ -15,6 +15,12 @@
       "notes": "Request body for sending an outgoing startup invitation with assignment details."
     },
     {
+      "method": "DELETE",
+      "path": "/me/startup/invitations/:invitationId",
+      "file": "revoke-startup-invitation.response.json",
+      "notes": "200 success example when an outgoing startup invitation is revoked."
+    },
+    {
       "method": "GET",
       "path": "/me/startup-invitations",
       "file": "get-startup-invitations.response.json",

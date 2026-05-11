@@ -4,6 +4,7 @@ import type {
   FetchStartupInvitationsResponse,
   RespondToStartupInvitationRequest,
   RespondToStartupInvitationResponse,
+  RevokeStartupInvitationResponse,
   StartupInvitation,
   StartupInvitationOptionsResponse,
   TeamOverviewResponse,
@@ -458,6 +459,65 @@ export function createMockStartupInvitationResponse(
       invitationId: `inv_${Date.now().toString(36)}`,
       email: payload.email.trim().toLowerCase(),
       status: 'pending',
+    },
+  };
+}
+
+function markMockDashboardInvitationRevoked(invitationId: string) {
+  let didFindInvitation = false;
+  const revokeInvitation = <T extends { id: string; status: string; statusLabel?: string; availableActions?: string[] }>(
+    invitation: T
+  ): T => {
+    if (invitation.id !== invitationId) {
+      return invitation;
+    }
+
+    didFindInvitation = true;
+
+    return {
+      ...invitation,
+      availableActions: [],
+      status: 'revoked',
+      statusLabel: 'Revoked',
+    };
+  };
+
+  mockTeamOverviewState = {
+    ...mockTeamOverviewState,
+    data: {
+      ...mockTeamOverviewState.data,
+      teamInvites: {
+        ...mockTeamOverviewState.data.teamInvites,
+        items: mockTeamOverviewState.data.teamInvites.items.map(revokeInvitation),
+      },
+    },
+  };
+
+  mockPersonOverviewState = {
+    ...mockPersonOverviewState,
+    data: {
+      ...mockPersonOverviewState.data,
+      teamInvites: {
+        ...mockPersonOverviewState.data.teamInvites,
+        items: mockPersonOverviewState.data.teamInvites.items.map(revokeInvitation),
+      },
+    },
+  };
+
+  return didFindInvitation;
+}
+
+export function revokeMockStartupInvitation(invitationId: string): RevokeStartupInvitationResponse {
+  if (!markMockDashboardInvitationRevoked(invitationId)) {
+    throw new Error(`Unknown mock invitation: ${invitationId}`);
+  }
+
+  return {
+    success: true,
+    message: 'Invitation revoked',
+    data: {
+      invitationId,
+      status: 'revoked',
     },
   };
 }

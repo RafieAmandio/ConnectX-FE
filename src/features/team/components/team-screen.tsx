@@ -23,6 +23,7 @@ import { isExpoDevModeEnabled } from '@shared/utils/env';
 import {
   useCreateStartupInvitation,
   useRespondToStartupInvitation,
+  useRevokeStartupInvitation,
   useStartupInvitationOptions,
   useTeamOverview,
 } from '../hooks/use-team';
@@ -109,6 +110,8 @@ function getInvitationStatusLabel(status: string) {
       return 'Denied';
     case 'expired':
       return 'Expired';
+    case 'revoked':
+      return 'Revoked';
     case 'in_review':
       return 'In Review';
     case 'interview':
@@ -393,6 +396,7 @@ function DashboardInviteCard({
   invitation,
   isAcceptPending,
   isDeclinePending,
+  isRevokePending,
   onAccept,
   onDecline,
   onRevoke,
@@ -400,6 +404,7 @@ function DashboardInviteCard({
   invitation: TeamDashboardInvite;
   isAcceptPending: boolean;
   isDeclinePending: boolean;
+  isRevokePending: boolean;
   onAccept: () => void;
   onDecline: () => void;
   onRevoke: () => void;
@@ -408,6 +413,7 @@ function DashboardInviteCard({
   const canAccept = invitation.availableActions.includes('accept');
   const canDecline = invitation.availableActions.includes('decline');
   const canRevoke = invitation.availableActions.includes('revoke');
+  const isActionPending = isAcceptPending || isDeclinePending || isRevokePending;
 
   return (
     <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
@@ -441,9 +447,9 @@ function DashboardInviteCard({
           {canDecline ? (
             <Pressable
               className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] border border-white/10 bg-[#3A3A3C] px-4 py-3"
-              disabled={isAcceptPending || isDeclinePending}
+              disabled={isActionPending}
               onPress={onDecline}
-              style={{ opacity: isAcceptPending || isDeclinePending ? 0.65 : 1 }}>
+              style={{ opacity: isActionPending ? 0.65 : 1 }}>
               {isDeclinePending ? (
                 <ActivityIndicator color="#F5F7FA" size="small" />
               ) : (
@@ -457,9 +463,9 @@ function DashboardInviteCard({
           {canAccept ? (
             <Pressable
               className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] bg-[#FF9A3E] px-4 py-3"
-              disabled={isAcceptPending || isDeclinePending}
+              disabled={isActionPending}
               onPress={onAccept}
-              style={{ opacity: isAcceptPending || isDeclinePending ? 0.65 : 1 }}>
+              style={{ opacity: isActionPending ? 0.65 : 1 }}>
               {isAcceptPending ? (
                 <ActivityIndicator color="#11131A" size="small" />
               ) : (
@@ -473,9 +479,17 @@ function DashboardInviteCard({
           {canRevoke ? (
             <Pressable
               className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3"
-              onPress={onRevoke}>
-              <Ionicons color="#FF5A67" name="trash-outline" size={18} />
-              <AppText tone="danger" variant="bodyStrong">Revoke</AppText>
+              disabled={isActionPending}
+              onPress={onRevoke}
+              style={{ opacity: isActionPending ? 0.65 : 1 }}>
+              {isRevokePending ? (
+                <ActivityIndicator color="#FF5A67" size="small" />
+              ) : (
+                <Ionicons color="#FF5A67" name="trash-outline" size={18} />
+              )}
+              <AppText tone="danger" variant="bodyStrong">
+                {isRevokePending ? 'Revoking...' : 'Revoke'}
+              </AppText>
             </Pressable>
           ) : null}
         </View>
@@ -791,6 +805,7 @@ export function TeamScreen() {
   const isNoStartupState = teamOverviewQuery.isError && isNoActiveStartupError(teamOverviewQuery.error);
   const respondToStartupInvitationMutation = useRespondToStartupInvitation();
   const createStartupInvitationMutation = useCreateStartupInvitation();
+  const revokeStartupInvitationMutation = useRevokeStartupInvitation();
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
   const [inviteEmail, setInviteEmail] = React.useState('');
   const [inviteRoleId, setInviteRoleId] = React.useState<string | null>(null);
@@ -939,10 +954,24 @@ export function TeamScreen() {
     [respondToStartupInvitationMutation, teamOverviewQuery]
   );
 
-  const handleInviteRevoke = React.useCallback((invitation: TeamDashboardInvite) => {
-    setInvitationActionError(null);
-    setInvitationFeedbackMessage(`Revoke requested for ${invitation.email}.`);
-  }, []);
+  const handleInviteRevoke = React.useCallback(
+    async (invitation: TeamDashboardInvite) => {
+      setInvitationActionError(null);
+      setInvitationFeedbackMessage(null);
+
+      try {
+        const response = await revokeStartupInvitationMutation.mutateAsync(invitation.id);
+
+        setInvitationFeedbackMessage(response.message);
+        await teamOverviewQuery.refetch();
+      } catch (error) {
+        setInvitationActionError(
+          error instanceof Error ? error.message : 'Unable to revoke this invitation right now.'
+        );
+      }
+    },
+    [revokeStartupInvitationMutation, teamOverviewQuery]
+  );
 
   const handleMemberAction = React.useCallback((member: TeamMember, action: 'edit_role' | 'remove') => {
     setInvitationActionError(null);
@@ -1221,6 +1250,9 @@ export function TeamScreen() {
                 const isCurrentInvitation =
                   respondToStartupInvitationMutation.isPending &&
                   activeVariables?.invitationId === invitation.id;
+                const isCurrentRevokeInvitation =
+                  revokeStartupInvitationMutation.isPending &&
+                  revokeStartupInvitationMutation.variables === invitation.id;
 
                 return (
                   <DashboardInviteCard
@@ -1232,6 +1264,7 @@ export function TeamScreen() {
                     isDeclinePending={
                       isCurrentInvitation && activeVariables?.payload.decision === 'deny'
                     }
+                    isRevokePending={isCurrentRevokeInvitation}
                     onAccept={() => {
                       void handleInvitationDecision(invitation.id, 'accept');
                     }}
@@ -1239,7 +1272,7 @@ export function TeamScreen() {
                       void handleInvitationDecision(invitation.id, 'decline');
                     }}
                     onRevoke={() => {
-                      handleInviteRevoke(invitation);
+                      void handleInviteRevoke(invitation);
                     }}
                   />
                 );

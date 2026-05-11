@@ -167,7 +167,16 @@ export type CreateStartupInvitationResponse = {
   };
 };
 
-export type StartupInvitationStatus = 'pending' | 'accepted' | 'denied' | 'expired' | string;
+export type RevokeStartupInvitationResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    invitationId: string;
+    status: 'revoked' | string;
+  };
+};
+
+export type StartupInvitationStatus = 'pending' | 'accepted' | 'denied' | 'expired' | 'revoked' | string;
 
 export type StartupInvitationDecision = 'accept' | 'deny';
 

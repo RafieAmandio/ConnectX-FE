@@ -6,6 +6,7 @@ import {
   fetchStartupInvitations,
   fetchTeamOverview,
   respondToStartupInvitation,
+  revokeStartupInvitation,
 } from '../services/team-service';
 import type { RespondToStartupInvitationRequest } from '../types/team.types';
 
@@ -63,6 +64,20 @@ export function useRespondToStartupInvitation() {
       invitationId: string;
       payload: RespondToStartupInvitationRequest;
     }) => respondToStartupInvitation(invitationId, payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: teamQueryKeys.overview }),
+        queryClient.invalidateQueries({ queryKey: teamQueryKeys.invitations }),
+      ]);
+    },
+  });
+}
+
+export function useRevokeStartupInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: revokeStartupInvitation,
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: teamQueryKeys.overview }),

@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "message": "Invitation revoked",
+  "data": {
+    "invitationId": "a1bdd4ea-bad6-4544-94e9-6c303d3092ec",
+    "status": "revoked"
+  }
+}

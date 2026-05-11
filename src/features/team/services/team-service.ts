@@ -9,6 +9,7 @@ import {
   getMockStartupInvitationsResponse,
   getMockTeamOverviewResponse,
   respondToMockStartupInvitation,
+  revokeMockStartupInvitation,
 } from '../mock/team.mock';
 import type {
   CreateStartupInvitationRequest,
@@ -16,6 +17,7 @@ import type {
   FetchStartupInvitationsResponse,
   RespondToStartupInvitationRequest,
   RespondToStartupInvitationResponse,
+  RevokeStartupInvitationResponse,
   StartupInvitation,
   StartupInvitationOptionsResponse,
   StartupTeamOverview,
@@ -29,6 +31,7 @@ import type {
 export const TEAM_API = {
   OVERVIEW: '/api/v1/me/startup/team-overview',
   INVITATIONS: '/api/v1/me/startup/invitations',
+  INVITATION: (invitationId: string) => `/api/v1/me/startup/invitations/${invitationId}`,
   INVITATION_OPTIONS: '/api/v1/me/startup/invitation-options',
   STARTUP_INVITATIONS: '/api/v1/me/startup-invitations',
   RESPOND_TO_STARTUP_INVITATION: (invitationId: string) =>
@@ -306,6 +309,21 @@ function hasUsableRespondToStartupInvitationResponse(
   );
 }
 
+function hasUsableRevokeStartupInvitationResponse(
+  payload: unknown
+): payload is RevokeStartupInvitationResponse {
+  if (!isRecord(payload) || !('data' in payload) || !isRecord(payload.data)) {
+    return false;
+  }
+
+  return (
+    typeof payload.success === 'boolean' &&
+    typeof payload.message === 'string' &&
+    typeof payload.data.invitationId === 'string' &&
+    typeof payload.data.status === 'string'
+  );
+}
+
 function getApiErrorCode(error: unknown) {
   if (!(error instanceof ApiError) || !error.payload || typeof error.payload !== 'object') {
     return null;
@@ -403,6 +421,26 @@ export async function createStartupInvitation(payload: CreateStartupInvitationRe
     }
 
     return createMockStartupInvitationResponse(payload);
+  }
+}
+
+export async function revokeStartupInvitation(invitationId: string) {
+  try {
+    const response = await apiFetch<RevokeStartupInvitationResponse>(TEAM_API.INVITATION(invitationId), {
+      method: 'DELETE',
+    });
+
+    if (!hasUsableRevokeStartupInvitationResponse(response)) {
+      return revokeMockStartupInvitation(invitationId);
+    }
+
+    return response;
+  } catch (error) {
+    if (!shouldUseMockInvitationFallback(error)) {
+      throw error;
+    }
+
+    return revokeMockStartupInvitation(invitationId);
   }
 }
 
