@@ -19,6 +19,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 
 import { useAuth } from '@features/auth';
 import { chatQueryKeys } from '@features/chat/hooks/use-mock-chat';
@@ -87,6 +88,8 @@ const DEFAULT_FILTER_MODE: DiscoveryMode = 'joining_startups';
 const MOCK_MATCH_RANDOM_CHANCE = 0.35;
 const FLOATING_ACTIONS_CONTENT_PADDING = 72;
 const DISCOVERY_LOCATION_TIMEOUT_MS = 6000;
+const MATCH_SCORE_RING_SIZE = 52;
+const MATCH_SCORE_RING_STROKE_WIDTH = 3.5;
 
 const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
   finding_cofounder: 'goal_finding_cofounder',
@@ -174,6 +177,30 @@ function getStartupIndustryPreview(industry: DiscoveryStartupCard['industry']) {
   const labels = getStartupIndustryLabels(industry);
 
   return labels.slice(0, 2).join(' / ');
+}
+
+function getBoundedMatchScore(score: number) {
+  if (!Number.isFinite(score)) {
+    return 0;
+  }
+
+  return Math.min(Math.max(Math.round(score), 0), 100);
+}
+
+function getMatchScoreColor(score: number) {
+  if (score >= 90) {
+    return '#31D47A';
+  }
+
+  if (score >= 75) {
+    return '#FFCD38';
+  }
+
+  if (score >= 60) {
+    return '#FF9A3E';
+  }
+
+  return '#F04438';
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -574,6 +601,49 @@ function StartupLogo({
   );
 }
 
+function MatchScoreRing({ score }: { score: number }) {
+  const boundedScore = getBoundedMatchScore(score);
+  const color = getMatchScoreColor(boundedScore);
+  const radius = (MATCH_SCORE_RING_SIZE - MATCH_SCORE_RING_STROKE_WIDTH) / 2;
+  const center = MATCH_SCORE_RING_SIZE / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - boundedScore / 100);
+
+  return (
+    <View
+      className="items-center justify-center"
+      style={{ height: MATCH_SCORE_RING_SIZE, width: MATCH_SCORE_RING_SIZE }}>
+      <Svg height={MATCH_SCORE_RING_SIZE} width={MATCH_SCORE_RING_SIZE}>
+        <Circle
+          cx={center}
+          cy={center}
+          fill="none"
+          r={radius}
+          stroke={withAlpha(color, 0.18)}
+          strokeWidth={MATCH_SCORE_RING_STROKE_WIDTH}
+        />
+        <Circle
+          cx={center}
+          cy={center}
+          fill="none"
+          r={radius}
+          stroke={color}
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          strokeWidth={MATCH_SCORE_RING_STROKE_WIDTH}
+          transform={`rotate(-90 ${center} ${center})`}
+        />
+      </Svg>
+      <View className="absolute inset-0 items-center justify-center">
+        <AppText className="text-[16px] font-bold" style={{ color }}>
+          {boundedScore}%
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 function StartupRoleChip({ title }: { title: string }) {
   return (
     <View
@@ -638,6 +708,8 @@ function ProfileCardContent({
   bottomInset?: number;
   scrollEnabled?: boolean;
 }) {
+  const matchColor = getMatchScoreColor(getBoundedMatchScore(card.match.score));
+
   return (
     <ScrollView
       className="flex-1"
@@ -679,16 +751,12 @@ function ProfileCardContent({
 
         <View className="flex-row items-center justify-between border-b border-border px-4 py-4">
           <View className="flex-row items-center gap-3">
-            <View className="h-[52px] w-[52px] items-center justify-center rounded-full border-[2.5px] border-[#FFCD38]">
-              <AppText className="text-[16px] font-bold" style={{ color: '#FFCD38' }}>
-                {card.match.score}%
-              </AppText>
-            </View>
+            <MatchScoreRing score={card.match.score} />
 
             <View className="gap-0.5">
               <View className="flex-row items-center gap-1">
-                <Ionicons color="#FFCD38" name="star" size={14} />
-                <AppText className="text-[14px]" style={{ color: '#FFCD38' }} variant="bodyStrong">
+                <Ionicons color={matchColor} name="star" size={14} />
+                <AppText className="text-[14px]" style={{ color: matchColor }} variant="bodyStrong">
                   {card.match.label ?? 'Strong Match'}
                 </AppText>
               </View>
@@ -814,6 +882,7 @@ function StartupCardContent({
   const industryLabels = getStartupIndustryLabels(card.industry);
   const industryPreview = getStartupIndustryPreview(card.industry);
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
+  const matchColor = getMatchScoreColor(getBoundedMatchScore(card.match.score));
 
   return (
     <ScrollView
@@ -859,15 +928,11 @@ function StartupCardContent({
 
         <View className="flex-row items-center justify-between gap-3 border-b border-border px-4 py-4">
           <View className="shrink-0 flex-row items-center gap-3">
-            <View className="h-[52px] w-[52px] items-center justify-center rounded-full border-[2.5px] border-[#31D47A]">
-              <AppText className="text-[16px] font-bold" style={{ color: '#58EA93' }}>
-                {card.match.score}%
-              </AppText>
-            </View>
+            <MatchScoreRing score={card.match.score} />
             <View className="gap-0.5">
               <View className="flex-row items-center gap-1">
-                <Ionicons color="#58EA93" name="star" size={14} />
-                <AppText className="text-[14px]" style={{ color: '#58EA93' }} variant="bodyStrong">
+                <Ionicons color={matchColor} name="star" size={14} />
+                <AppText className="text-[14px]" style={{ color: matchColor }} variant="bodyStrong">
                   {card.match.label ?? 'Strong Match'}
                 </AppText>
               </View>
