@@ -168,12 +168,12 @@ function EmptyState({
           </View>
           <View className="gap-2">
             <AppText align="center" className="text-white" variant="title">
-              {isUnavailable ? 'Demo chats unavailable' : 'No demo chats yet'}
+              {isUnavailable ? 'Chats unavailable' : 'No messages yet'}
             </AppText>
             <AppText align="center" className="text-[#B8B2AB]">
               {isUnavailable
                 ? 'We could not load your conversations right now. Try again in a moment.'
-                : 'Your conversations will appear here once someone reaches out.'}
+                : 'Your conversations will appear here once you connect with someone.'}
             </AppText>
           </View>
           <AppButton
@@ -255,7 +255,7 @@ export function ChatDemoListScreen() {
             ListHeaderComponent={
               <View className="pb-3 pt-1">
                 <AppText className="text-white" variant="display">
-                  Chat Demo
+                  Messages
                 </AppText>
 
                 {conversationsQuery.error instanceof Error && hasConversations ? (
@@ -263,7 +263,7 @@ export function ChatDemoListScreen() {
                     className="mt-4 rounded-[22px] border px-4 py-4"
                     style={{ backgroundColor: '#30251E', borderColor: 'rgba(255, 179, 94, 0.2)' }}>
                     <AppText className="text-[#FFE0BA]" variant="bodyStrong">
-                      Some demo chats may be out of date
+                      Some messages may be out of date
                     </AppText>
                     <AppText className="mt-1 text-[#D9B98E]">
                       {conversationsQuery.error.message}
@@ -559,7 +559,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               This chat could not be found right now.
             </AppText>
             <Pressable className="mt-5" onPress={() => router.replace('/chat_demo' as never)}>
-              <AppText tone="signal">Open chat demo</AppText>
+              <AppText tone="signal">Back to chats</AppText>
             </Pressable>
           </View>
         </View>
