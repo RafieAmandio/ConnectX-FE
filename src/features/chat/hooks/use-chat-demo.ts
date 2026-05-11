@@ -121,10 +121,15 @@ function useCurrentUserId() {
   return session?.user?.id ?? null;
 }
 
-export function useChatDemoConversations() {
+type ChatDemoConversationsOptions = {
+  refetchInterval?: number | false;
+};
+
+export function useChatDemoConversations(options: ChatDemoConversationsOptions = {}) {
   return useQuery({
     queryKey: chatDemoQueryKeys.conversations,
     queryFn: fetchChatDemoConversations,
+    refetchInterval: options.refetchInterval ?? false,
     staleTime: 30_000,
   });
 }

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -169,9 +169,17 @@ function EmptyState({
 export function ChatDemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const conversationsQuery = useChatDemoConversations();
+  const conversationsQuery = useChatDemoConversations({ refetchInterval: 10_000 });
+  const refetchConversations = conversationsQuery.refetch;
   const conversations = conversationsQuery.data ?? [];
   const hasConversations = conversations.length > 0;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void refetchConversations();
+    }, [refetchConversations])
+  );
+
   const renderConversation = React.useCallback(
     ({ item }: ListRenderItemInfo<ChatConversation>) => (
       <ConversationCard
