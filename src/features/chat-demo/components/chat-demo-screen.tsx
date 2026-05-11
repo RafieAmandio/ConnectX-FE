@@ -359,25 +359,18 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const [invitationError, setInvitationError] = React.useState<string | null>(null);
   const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
   const listRef = React.useRef<FlatList<ChatMessage>>(null);
-  const hasPresentedLatestMessageRef = React.useRef(false);
   const containerFrameRef = React.useRef({ height: 0, y: 0 });
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = React.useMemo(
     () => [...(messagesQuery.data?.pages ?? [])].reverse().flatMap((page) => page.items),
     [messagesQuery.data]
   );
-  const newestMessageId = messages.at(-1)?.id ?? null;
+  const visibleMessages = React.useMemo(() => [...messages].reverse(), [messages]);
   const isSending = sendMessageMutation.isPending;
   const inputBottomPadding =
     Platform.OS === 'ios' || androidKeyboardOverlap === 0 ? Math.max(insets.bottom + 8, 20) : 12;
 
   useChatDemoRoomRealtime(conversationId);
-
-  const presentLatestMessage = React.useCallback((animated: boolean) => {
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToEnd({ animated });
-    });
-  }, []);
 
   const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
     if (Platform.OS !== 'android') {
@@ -433,19 +426,6 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     };
   }, [updateAndroidKeyboardOverlap]);
 
-  React.useEffect(() => {
-    hasPresentedLatestMessageRef.current = false;
-  }, [conversationId]);
-
-  React.useEffect(() => {
-    if (!newestMessageId) {
-      hasPresentedLatestMessageRef.current = false;
-      return;
-    }
-
-    presentLatestMessage(hasPresentedLatestMessageRef.current);
-  }, [newestMessageId, presentLatestMessage]);
-
   const handleSend = React.useCallback(async () => {
     const body = draftMessage.trim();
 
@@ -455,6 +435,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
     await sendMessageMutation.mutateAsync(body);
     setDraftMessage('');
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ animated: true, offset: 0 });
+    });
   }, [draftMessage, isSending, sendMessageMutation]);
 
   const handleAddToTeam = React.useCallback(() => {
@@ -561,9 +544,10 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           ref={listRef}
           className="flex-1"
           contentContainerStyle={{ gap: 16, paddingHorizontal: 16, paddingVertical: 20 }}
-          data={messages}
+          data={visibleMessages}
+          inverted
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={
+          ListFooterComponent={
             messagesQuery.hasNextPage ? (
               <Pressable
                 className="items-center py-2 active:opacity-80"
@@ -592,25 +576,15 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               </View>
             )
           }
-          onStartReached={() => {
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          onEndReached={() => {
             if (messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage) {
               void messagesQuery.fetchNextPage();
             }
           }}
-          onStartReachedThreshold={0.4}
-          onContentSizeChange={() => {
-            if (newestMessageId && !hasPresentedLatestMessageRef.current) {
-              presentLatestMessage(false);
-              hasPresentedLatestMessageRef.current = true;
-            }
-          }}
-          onLayout={() => {
-            if (newestMessageId && !hasPresentedLatestMessageRef.current) {
-              presentLatestMessage(false);
-              hasPresentedLatestMessageRef.current = true;
-            }
-          }}
+          onEndReachedThreshold={0.2}
           renderItem={({ item }) => <MessageBubble message={item} />}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
         />
 
