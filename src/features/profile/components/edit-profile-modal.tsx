@@ -479,6 +479,7 @@ export function EditProfileScreen() {
               onChangeText={(value) => updateField('about', value)}
               placeholder={aboutCopy.placeholder}
               shellClassName="gap-2.5"
+              style={{ paddingHorizontal: 16, paddingVertical: 16 }}
               textAlignVertical="top"
               value={formState.about}
             />
