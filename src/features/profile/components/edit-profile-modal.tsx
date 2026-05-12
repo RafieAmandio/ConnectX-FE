@@ -8,12 +8,14 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  TextInput,
+  type TextInputProps,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppCard, AppInput, AppText } from '@shared/components';
-import { Colors } from '@shared/theme';
+import { AppCard, AppText } from '@shared/components';
+import { cn } from '@shared/utils/cn';
 
 import { useMyProfile, useProfileOptions, useUpdateMyProfile } from '../hooks/use-profile';
 import { mockMyProfileResponse, mockProfileOptionsResponse } from '../mock/profile.mock';
@@ -28,7 +30,28 @@ import type {
 type FormErrors = Partial<Record<keyof UpdateMyProfileRequest, string>>;
 
 const MAX_PERSONALITY_SELECTIONS = 6;
-const palette = Colors.dark;
+const profilePalette = {
+  accent: '#FF9A3E',
+  accentSoft: '#2A2117',
+  canvas: '#262626',
+  header: '#262626',
+  field: '#292929',
+  selected: '#1F1712',
+  border: '#383838',
+  borderSoft: 'rgba(255, 255, 255, 0.08)',
+  text: '#FFFFFF',
+  textMuted: '#98A2B3',
+  textSoft: '#8F8F8F',
+  buttonText: '#1A1208',
+  danger: '#FF5A67',
+};
+
+type ProfileInputProps = TextInputProps & {
+  className?: string;
+  error?: string;
+  label?: string;
+  shellClassName?: string;
+};
 
 function hasUsableProfile(response?: MyProfileResponse) {
   return typeof response?.data?.id === 'string' && response.data.id.length > 0;
@@ -108,6 +131,68 @@ function validateForm(formState: UpdateMyProfileRequest, aboutErrorLabel: string
   return nextErrors;
 }
 
+function ProfileInput({
+  className,
+  error,
+  label,
+  placeholderTextColor = profilePalette.textSoft,
+  shellClassName,
+  style,
+  ...props
+}: ProfileInputProps) {
+  const [isFocused, setIsFocused] = React.useState(false);
+
+  return (
+    <View className={cn('gap-2', shellClassName)}>
+      {label ? (
+        <AppText
+          style={{ color: isFocused ? profilePalette.accent : profilePalette.textMuted }}
+          variant="label">
+          {label}
+        </AppText>
+      ) : null}
+      <TextInput
+        className={cn(
+          'min-h-14 rounded-[16px] border py-3 pl-3 pr-4 font-body text-[15px]',
+          className
+        )}
+        onBlur={(event) => {
+          setIsFocused(false);
+          props.onBlur?.(event);
+        }}
+        onFocus={(event) => {
+          setIsFocused(true);
+          props.onFocus?.(event);
+        }}
+        placeholderTextColor={placeholderTextColor}
+        style={[
+          {
+            backgroundColor: profilePalette.field,
+            borderColor: error
+              ? profilePalette.danger
+              : isFocused
+                ? profilePalette.accent
+                : profilePalette.border,
+            color: profilePalette.text,
+            letterSpacing: 0,
+          },
+          style,
+        ]}
+        {...props}
+      />
+      {error ? (
+        <AppText
+          className="px-1"
+          selectable
+          style={{ color: profilePalette.danger }}
+          variant="code">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
 function ActionButton({
   disabled,
   icon,
@@ -121,9 +206,10 @@ function ActionButton({
   onPress: () => void;
   tone?: 'primary' | 'secondary';
 }) {
-  const backgroundColor = tone === 'primary' ? palette.accent : palette.surfaceRaised;
-  const borderColor = tone === 'primary' ? palette.accent : palette.borderStrong;
-  const textColor = tone === 'primary' ? palette.text : palette.text;
+  const backgroundColor =
+    tone === 'primary' ? profilePalette.accent : profilePalette.field;
+  const borderColor = tone === 'primary' ? profilePalette.accent : profilePalette.border;
+  const textColor = tone === 'primary' ? profilePalette.buttonText : profilePalette.text;
 
   return (
     <Pressable
@@ -255,19 +341,23 @@ export function EditProfileScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
-        style={{ backgroundColor: palette.canvas }}>
+        style={{ backgroundColor: profilePalette.canvas }}>
         <View
           className="flex-row items-center justify-between border-b border-border px-5 pb-4"
           style={{
-            backgroundColor: palette.background,
+            backgroundColor: profilePalette.header,
+            borderBottomColor: profilePalette.border,
             paddingTop: Math.max(insets.top + 14, 24),
           }}>
           <Pressable
             className="h-11 w-11 items-center justify-center rounded-full border active:opacity-80"
             hitSlop={12}
             onPress={() => router.back()}
-            style={{ backgroundColor: palette.surfaceRaised, borderColor: palette.border }}>
-            <Ionicons color={palette.text} name="chevron-back" size={22} />
+            style={{
+              backgroundColor: profilePalette.field,
+              borderColor: profilePalette.border,
+            }}>
+            <Ionicons color={profilePalette.text} name="chevron-back" size={22} />
           </Pressable>
 
           <View className="min-w-0 flex-1 px-4">
@@ -280,7 +370,7 @@ export function EditProfileScreen() {
           </View>
 
           {myProfileQuery.isFetching ? (
-            <ActivityIndicator color={palette.accent} size="small" />
+            <ActivityIndicator color={profilePalette.accent} size="small" />
           ) : (
             <View className="h-11 w-11" />
           )}
@@ -294,14 +384,16 @@ export function EditProfileScreen() {
             paddingHorizontal: 20,
             paddingTop: 20,
           }}>
-          <AppCard className="gap-6">
+          <AppCard
+            className="gap-6"
+            style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
             <View className="flex-row items-center gap-4">
               {profile.photoUrl ? (
                 <Image
                   contentFit="cover"
                   source={{ uri: profile.photoUrl }}
                   style={{
-                    borderColor: palette.accent,
+                    borderColor: profilePalette.accent,
                     borderRadius: 999,
                     borderWidth: 2,
                     height: 76,
@@ -312,15 +404,15 @@ export function EditProfileScreen() {
                 <View
                   className="items-center justify-center rounded-full"
                   style={{
-                    backgroundColor: palette.accentTint,
-                    borderColor: palette.accent,
+                    backgroundColor: profilePalette.accentSoft,
+                    borderColor: profilePalette.accent,
                     borderWidth: 2,
                     height: 76,
                     width: 76,
                   }}>
                   <AppText
                     className="text-[24px] leading-[28px]"
-                    style={{ color: palette.accentStrong }}
+                    style={{ color: profilePalette.accent }}
                     variant="title">
                     {initials}
                   </AppText>
@@ -338,7 +430,7 @@ export function EditProfileScreen() {
             </View>
 
             <View className="gap-5">
-              <AppInput
+              <ProfileInput
                 autoCapitalize="words"
                 className="min-h-14 text-[15px]"
                 error={formErrors.name}
@@ -348,7 +440,7 @@ export function EditProfileScreen() {
                 shellClassName="gap-2.5"
                 value={formState.name}
               />
-              <AppInput
+              <ProfileInput
                 autoCapitalize="words"
                 className="min-h-14 text-[15px]"
                 error={formErrors.headline}
@@ -358,7 +450,7 @@ export function EditProfileScreen() {
                 shellClassName="gap-2.5"
                 value={formState.headline}
               />
-              <AppInput
+              <ProfileInput
                 autoCapitalize="words"
                 className="min-h-14 text-[15px]"
                 error={formErrors.location}
@@ -371,14 +463,16 @@ export function EditProfileScreen() {
             </View>
           </AppCard>
 
-          <AppCard className="mt-4 gap-5">
+          <AppCard
+            className="mt-4 gap-5"
+            style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
             <View className="gap-1">
               <AppText variant="subtitle">{aboutCopy.label}</AppText>
               <AppText className="text-[13px]" tone="muted">
                 Add context for matches before they start a conversation.
               </AppText>
             </View>
-            <AppInput
+            <ProfileInput
               className="min-h-[148px] px-4 py-4 text-[15px]"
               error={formErrors.about}
               multiline
@@ -390,10 +484,12 @@ export function EditProfileScreen() {
             />
           </AppCard>
 
-          <AppCard className="mt-4 gap-5">
+          <AppCard
+            className="mt-4 gap-5"
+            style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
             <View className="flex-row items-center justify-between gap-3">
               <View className="flex-row items-center gap-2">
-                <Ionicons color={palette.accent} name="flash-outline" size={16} />
+                <Ionicons color={profilePalette.accent} name="flash-outline" size={16} />
                 <AppText className="text-[15px]" variant="subtitle">
                   Personality & Hobbies
                 </AppText>
@@ -401,8 +497,14 @@ export function EditProfileScreen() {
 
               <View
                 className="rounded-full border px-2.5 py-1"
-                style={{ backgroundColor: palette.accentTint, borderColor: palette.accent }}>
-                <AppText className="text-[11px]" tone="accent" variant="bodyStrong">
+                style={{
+                  backgroundColor: profilePalette.accentSoft,
+                  borderColor: profilePalette.accent,
+                }}>
+                <AppText
+                  className="text-[11px]"
+                  style={{ color: profilePalette.accent }}
+                  variant="bodyStrong">
                   {selectedCount}/6 selected
                 </AppText>
               </View>
@@ -420,8 +522,10 @@ export function EditProfileScreen() {
                     disabled={isDisabled}
                     onPress={() => togglePersonalityAndHobby(item.id)}
                     style={{
-                      backgroundColor: isSelected ? palette.accentTint : palette.surfaceRaised,
-                      borderColor: isSelected ? palette.accent : palette.borderStrong,
+                      backgroundColor: isSelected
+                        ? profilePalette.selected
+                        : profilePalette.field,
+                      borderColor: isSelected ? profilePalette.accent : profilePalette.border,
                       minWidth: '48%',
                       opacity: isDisabled ? 0.45 : 1,
                       width: '48%',
@@ -429,18 +533,18 @@ export function EditProfileScreen() {
                     <View
                       className="items-center justify-center rounded-full border"
                       style={{
-                        backgroundColor: isSelected ? palette.accent : 'transparent',
-                        borderColor: isSelected ? palette.accent : palette.textSoft,
+                        backgroundColor: isSelected ? profilePalette.accent : 'transparent',
+                        borderColor: isSelected ? profilePalette.accent : profilePalette.textSoft,
                         height: 20,
                         width: 20,
                       }}>
                       {isSelected ? (
-                        <Ionicons color={palette.text} name="checkmark" size={14} />
+                        <Ionicons color={profilePalette.buttonText} name="checkmark" size={14} />
                       ) : null}
                     </View>
                     <AppText
                       className="flex-1 text-[13px] leading-5"
-                      tone={isSelected ? 'accent' : 'muted'}>
+                      style={{ color: isSelected ? profilePalette.accent : profilePalette.textMuted }}>
                       {item.name}
                     </AppText>
                   </Pressable>
@@ -472,16 +576,19 @@ export function EditProfileScreen() {
               disabled={updateProfileMutation.isPending}
               onPress={handleSave}
               style={{
-                backgroundColor: palette.accent,
-                borderColor: palette.accent,
+                backgroundColor: profilePalette.accent,
+                borderColor: profilePalette.accent,
                 opacity: updateProfileMutation.isPending ? 0.7 : 1,
               }}>
               {updateProfileMutation.isPending ? (
-                <ActivityIndicator color={palette.text} size="small" />
+                <ActivityIndicator color={profilePalette.buttonText} size="small" />
               ) : (
                 <>
-                  <Ionicons color={palette.text} name="save-outline" size={18} />
-                  <AppText className="text-[14px]" style={{ color: palette.text }} variant="bodyStrong">
+                  <Ionicons color={profilePalette.buttonText} name="save-outline" size={18} />
+                  <AppText
+                    className="text-[14px]"
+                    style={{ color: profilePalette.buttonText }}
+                    variant="bodyStrong">
                     Save Changes
                   </AppText>
                 </>
