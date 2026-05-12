@@ -24,6 +24,8 @@ import type {
   MyProfileResponse,
   ProfileAboutKind,
   ProfileBadge,
+  ProfileEducationItem,
+  ProfileExperienceItem,
   ProfileNamedItem,
 } from '../types/profile.types';
 
@@ -470,6 +472,206 @@ function HighlightList({ items }: { items: string[] }) {
   );
 }
 
+type ProfileDetailTab = 'experience' | 'education';
+
+function getExperienceKey(item: ProfileExperienceItem, index: number) {
+  return item.id ?? `${item.title}-${item.organization}-${item.period ?? index}`;
+}
+
+function getEducationKey(item: ProfileEducationItem, index: number) {
+  return item.id ?? `${item.degree}-${item.school}-${item.period ?? index}`;
+}
+
+function ProfileDetailTabButton({
+  active,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      className="min-h-10 flex-1 items-center justify-center rounded-[14px] px-3 active:opacity-80"
+      onPress={onPress}
+      style={{
+        backgroundColor: active ? ACCENT_SOFT_BG : 'transparent',
+        borderColor: active ? ACCENT_BORDER : 'transparent',
+        borderWidth: 1,
+      }}
+    >
+      <AppText className="text-[13px]" tone={active ? 'signal' : 'muted'} variant="bodyStrong">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+function ExperienceRow({ item }: { item: ProfileExperienceItem }) {
+  return (
+    <View
+      className="rounded-[16px] border border-l-[2.5px] p-4"
+      style={{
+        backgroundColor: SURFACE_MUTED,
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderLeftColor: ACCENT,
+      }}
+    >
+      <View className="flex-row gap-3.5">
+        {item.companyLogo ? (
+          <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+            <Image
+              contentFit="contain"
+              source={{ uri: item.companyLogo }}
+              style={{ height: '100%', width: '100%' }}
+            />
+          </View>
+        ) : (
+          <View
+            className="h-11 w-11 items-center justify-center rounded-[12px] border"
+            style={{ backgroundColor: ACCENT_SOFT_BG, borderColor: ACCENT_BORDER }}
+          >
+            <Ionicons color={ACCENT} name="briefcase-outline" size={20} />
+          </View>
+        )}
+
+        <View className="min-w-0 flex-1 gap-1.5">
+          <AppText className="text-[16px]" numberOfLines={2} variant="title">
+            {item.title}
+          </AppText>
+          {item.organization || item.period ? (
+            <AppText className="text-[13px]" numberOfLines={2} style={{ color: ACCENT }}>
+              {[item.organization, item.period].filter(Boolean).join(' · ')}
+            </AppText>
+          ) : null}
+          {item.location ? (
+            <View className="flex-row items-center gap-1">
+              <Ionicons color="#98A2B3" name="location-outline" size={13} />
+              <AppText className="text-[12px]" numberOfLines={1} tone="muted">
+                {item.location}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function EducationRow({ item }: { item: ProfileEducationItem }) {
+  return (
+    <View
+      className="flex-row items-center gap-3.5 rounded-[16px] border p-4"
+      style={{ backgroundColor: SURFACE_MUTED, borderColor: 'rgba(255,255,255,0.1)' }}
+    >
+      {item.schoolLogo ? (
+        <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+          <Image
+            contentFit="contain"
+            source={{ uri: item.schoolLogo }}
+            style={{ height: '100%', width: '100%' }}
+          />
+        </View>
+      ) : (
+        <View
+          className="h-11 w-11 items-center justify-center rounded-[12px] border"
+          style={{ backgroundColor: '#302712', borderColor: 'rgba(245, 208, 84, 0.28)' }}
+        >
+          <Ionicons color="#F4D03F" name="school-outline" size={22} />
+        </View>
+      )}
+
+      <View className="min-w-0 flex-1 gap-0.5">
+        <AppText className="text-[16px]" numberOfLines={2} variant="title">
+          {item.degree}
+        </AppText>
+        <AppText className="text-[13px]" numberOfLines={2} style={{ color: '#F4D03F' }}>
+          {[item.school, item.field].filter(Boolean).join(' · ')}
+        </AppText>
+        {item.period ? (
+          <AppText className="text-[12px]" numberOfLines={1} tone="muted">
+            {item.period}
+          </AppText>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function EmptyDetailTab({ label }: { label: string }) {
+  return (
+    <View
+      className="items-center gap-2 rounded-[16px] border px-4 py-6"
+      style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+    >
+      <Ionicons color="#667085" name="file-tray-outline" size={24} />
+      <AppText align="center" className="text-[13px]" tone="muted">
+        No {label.toLowerCase()} added yet.
+      </AppText>
+    </View>
+  );
+}
+
+function ExperienceEducationTabs({
+  education,
+  experience,
+}: {
+  education: ProfileEducationItem[];
+  experience: ProfileExperienceItem[];
+}) {
+  const [activeTab, setActiveTab] = React.useState<ProfileDetailTab>(
+    experience.length > 0 ? 'experience' : 'education'
+  );
+
+  React.useEffect(() => {
+    if (activeTab === 'experience' && experience.length === 0 && education.length > 0) {
+      setActiveTab('education');
+    }
+  }, [activeTab, education.length, experience.length]);
+
+  return (
+    <SectionCard className="gap-4 rounded-[24px] px-4 py-4">
+      <SectionHeader
+        description="Roles and education that give matches more context."
+        eyebrow="Background"
+        icon="briefcase-outline"
+        title="Experience & Education"
+      />
+
+      <View
+        className="flex-row rounded-[18px] border p-1"
+        style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+      >
+        <ProfileDetailTabButton
+          active={activeTab === 'experience'}
+          label="Experience"
+          onPress={() => setActiveTab('experience')}
+        />
+        <ProfileDetailTabButton
+          active={activeTab === 'education'}
+          label="Education"
+          onPress={() => setActiveTab('education')}
+        />
+      </View>
+
+      <View className="gap-3">
+        {activeTab === 'experience' ? (
+          experience.length ? (
+            experience.map((item, index) => <ExperienceRow key={getExperienceKey(item, index)} item={item} />)
+          ) : (
+            <EmptyDetailTab label="Experience" />
+          )
+        ) : education.length ? (
+          education.map((item, index) => <EducationRow key={getEducationKey(item, index)} item={item} />)
+        ) : (
+          <EmptyDetailTab label="Education" />
+        )}
+      </View>
+    </SectionCard>
+  );
+}
+
 function BottomSignOut({ onPress }: { onPress: () => void }) {
   return (
     <View className="gap-3 px-1 pt-2">
@@ -515,7 +717,10 @@ export function ProfileScreen() {
   const personalitySection = effectiveProfile.sections.personalityAndHobbies;
   const skillsSection = effectiveProfile.sections.skills;
   const interestsSection = effectiveProfile.sections.interests;
+  const experienceItems = effectiveProfile.sections.experience?.items ?? [];
+  const educationItems = effectiveProfile.sections.education?.items ?? [];
   const highlightsSection = effectiveProfile.sections.highlights;
+  const shouldShowBackgroundTabs = !startup && (experienceItems.length > 0 || educationItems.length > 0);
   const shouldStackPanels = width < 390;
   const topBarAccessory = (
     <Pressable
@@ -605,6 +810,10 @@ export function ProfileScreen() {
                   </SectionCard>
                 ) : null}
               </View>
+            ) : null}
+
+            {shouldShowBackgroundTabs ? (
+              <ExperienceEducationTabs education={educationItems} experience={experienceItems} />
             ) : null}
 
             {highlightsSection?.items?.length ? (

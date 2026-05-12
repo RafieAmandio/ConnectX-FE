@@ -23,11 +23,15 @@ import type {
   MyProfileData,
   MyProfileResponse,
   ProfileAboutSection,
+  ProfileEducationItem,
+  ProfileExperienceItem,
   ProfileOptionsResponse,
   UpdateMyProfileRequest,
 } from '../types/profile.types';
 
 type FormErrors = Partial<Record<keyof UpdateMyProfileRequest, string>>;
+type EditableBackgroundTab = 'experience' | 'education';
+type ProfileLocationOption = ProfileOptionsResponse['data']['locations'][number];
 
 const MAX_PERSONALITY_SELECTIONS = 6;
 const profilePalette = {
@@ -57,8 +61,12 @@ function hasUsableProfile(response?: MyProfileResponse) {
   return typeof response?.data?.id === 'string' && response.data.id.length > 0;
 }
 
-function hasUsableOptions(response?: ProfileOptionsResponse) {
+function hasUsablePersonalityOptions(response?: ProfileOptionsResponse) {
   return Array.isArray(response?.data?.personalityAndHobbies);
+}
+
+function hasUsableLocationOptions(response?: ProfileOptionsResponse) {
+  return Array.isArray(response?.data?.locations);
 }
 
 function getInitials(name: string) {
@@ -70,14 +78,44 @@ function getInitials(name: string) {
     .join('');
 }
 
-function buildInitialFormState(profile: MyProfileData): UpdateMyProfileRequest {
+function slugifyLocationLabel(value: string) {
+  return value
+    .split(',')[0]
+    ?.trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') ?? '';
+}
+
+function resolveInitialLocationId(profile: MyProfileData, locations: ProfileLocationOption[]) {
+  const locationId = profile.location.id?.trim();
+
+  if (locationId) {
+    return locationId;
+  }
+
+  const matchingLocation = locations.find(
+    (location) =>
+      location.label === profile.location.display ||
+      location.value === profile.location.city.toLowerCase()
+  );
+
+  return matchingLocation?.value ?? slugifyLocationLabel(profile.location.display);
+}
+
+function buildInitialFormState(
+  profile: MyProfileData,
+  locations: ProfileLocationOption[] = mockProfileOptionsResponse.data.locations
+): UpdateMyProfileRequest {
   return {
     name: profile.name,
     headline: profile.headline,
-    location: profile.location.display,
+    locationId: resolveInitialLocationId(profile, locations),
     about: profile.sections.about?.value ?? '',
     personalityAndHobbyIds:
       profile.sections.personalityAndHobbies?.items.map((item) => item.id) ?? [],
+    experience: profile.sections.experience?.items ?? [],
+    education: profile.sections.education?.items ?? [],
   };
 }
 
@@ -112,10 +150,8 @@ function validateForm(formState: UpdateMyProfileRequest, aboutErrorLabel: string
     nextErrors.headline = 'Headline must be 120 characters or fewer.';
   }
 
-  if (!formState.location.trim()) {
-    nextErrors.location = 'Location is required.';
-  } else if (formState.location.trim().length > 120) {
-    nextErrors.location = 'Location must be 120 characters or fewer.';
+  if (!formState.locationId.trim()) {
+    nextErrors.locationId = 'Location is required.';
   }
 
   if (!formState.about.trim()) {
@@ -126,6 +162,22 @@ function validateForm(formState: UpdateMyProfileRequest, aboutErrorLabel: string
 
   if (formState.personalityAndHobbyIds.length > MAX_PERSONALITY_SELECTIONS) {
     nextErrors.personalityAndHobbyIds = 'You can select up to 6 personality and hobby tags.';
+  }
+
+  const hasInvalidExperience = formState.experience.some(
+    (item) => !item.title.trim() || !item.organization.trim()
+  );
+
+  if (hasInvalidExperience) {
+    nextErrors.experience = 'Each experience needs a title and organization.';
+  }
+
+  const hasInvalidEducation = formState.education.some(
+    (item) => !item.degree.trim() || !item.school.trim()
+  );
+
+  if (hasInvalidEducation) {
+    nextErrors.education = 'Each education item needs a degree and school.';
   }
 
   return nextErrors;
@@ -229,6 +281,444 @@ function ActionButton({
   );
 }
 
+function getLocationOptionLabel(options: ProfileLocationOption[], value: string) {
+  return options.find((option) => option.value === value || option.id === value)?.label ?? '';
+}
+
+function filterLocationOptions(options: ProfileLocationOption[], searchTerm: string) {
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  if (!normalizedSearch) {
+    return [];
+  }
+
+  return options.filter((option) => {
+    const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+    return haystack.includes(normalizedSearch);
+  });
+}
+
+function groupLocationOptions(options: ProfileLocationOption[]) {
+  const groups = new Map<string, ProfileLocationOption[]>();
+
+  options.forEach((option) => {
+    const groupName = option.group || 'Other';
+    groups.set(groupName, [...(groups.get(groupName) ?? []), option]);
+  });
+
+  return Array.from(groups.entries());
+}
+
+function LocationSelector({
+  error,
+  locations,
+  onChange,
+  value,
+}: {
+  error?: string;
+  locations: ProfileLocationOption[];
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const selectedLabel = getLocationOptionLabel(locations, value);
+  const visibleOptions = filterLocationOptions(locations, searchTerm);
+  const hasSearchTerm = searchTerm.trim().length > 0;
+
+  return (
+    <View className="gap-2.5">
+      <AppText style={{ color: profilePalette.textMuted }} variant="label">
+        Location
+      </AppText>
+      <View
+        className="gap-3 rounded-[16px] border p-3"
+        style={{
+          backgroundColor: profilePalette.field,
+          borderColor: error ? profilePalette.danger : profilePalette.border,
+        }}>
+        {selectedLabel ? (
+          <View
+            className="flex-row items-center justify-between gap-3 rounded-[14px] px-3 py-2.5"
+            style={{ backgroundColor: profilePalette.accentSoft }}>
+            <View className="min-w-0 flex-1 gap-0.5">
+              <AppText className="text-[11px]" tone="muted" variant="label">
+                Selected city
+              </AppText>
+              <AppText
+                className="text-[14px]"
+                numberOfLines={1}
+                style={{ color: profilePalette.accent }}
+                variant="bodyStrong">
+                {selectedLabel}
+              </AppText>
+            </View>
+            <Pressable hitSlop={10} onPress={() => onChange('')}>
+              <Ionicons color={profilePalette.textMuted} name="close-circle" size={20} />
+            </Pressable>
+          </View>
+        ) : null}
+
+        <View
+          className="flex-row items-center gap-2 rounded-[14px] border px-4"
+          style={{
+            backgroundColor: '#2C2C2C',
+            borderColor: 'rgba(255,255,255,0.1)',
+            minHeight: 46,
+          }}>
+          <Ionicons color={profilePalette.textSoft} name="search-outline" size={16} />
+          <TextInput
+            autoCapitalize="words"
+            className="flex-1 font-body text-[14px]"
+            onChangeText={setSearchTerm}
+            placeholder="Search a city"
+            placeholderTextColor={profilePalette.textSoft}
+            style={{ color: profilePalette.text, letterSpacing: 0 }}
+            value={searchTerm}
+          />
+        </View>
+
+        {hasSearchTerm ? (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            style={{ maxHeight: 240 }}>
+            <View className="gap-2">
+              {groupLocationOptions(visibleOptions).map(([groupName, options]) => (
+                <View key={groupName} className="gap-1">
+                  <AppText className="px-1 text-[12px]" tone="muted" variant="label">
+                    {groupName}
+                  </AppText>
+                  {options.map((option) => {
+                    const active = value === option.value;
+
+                    return (
+                      <Pressable
+                        key={option.id}
+                        className="flex-row items-center justify-between gap-3 rounded-[14px] px-3 py-3"
+                        onPress={() => {
+                          onChange(option.value);
+                          setSearchTerm('');
+                        }}
+                        style={{ backgroundColor: active ? profilePalette.accentSoft : '#2C2C2C' }}>
+                        <AppText
+                          className="flex-1 text-[14px]"
+                          style={{ color: active ? profilePalette.accent : profilePalette.text }}
+                          variant="bodyStrong">
+                          {option.label}
+                        </AppText>
+                        {active ? (
+                          <Ionicons color={profilePalette.accent} name="checkmark" size={18} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+            {visibleOptions.length === 0 ? (
+              <View className="px-4 py-6">
+                <AppText align="center" tone="muted">
+                  {`No results for "${searchTerm}"`}
+                </AppText>
+              </View>
+            ) : null}
+          </ScrollView>
+        ) : null}
+      </View>
+      {error ? (
+        <AppText className="px-1" selectable style={{ color: profilePalette.danger }} variant="code">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function BackgroundTabButton({
+  active,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      className="min-h-10 flex-1 items-center justify-center rounded-[14px] px-3 active:opacity-80"
+      onPress={onPress}
+      style={{
+        backgroundColor: active ? profilePalette.accentSoft : 'transparent',
+        borderColor: active ? profilePalette.accent : 'transparent',
+        borderWidth: 1,
+      }}>
+      <AppText
+        className="text-[13px]"
+        style={{ color: active ? profilePalette.accent : profilePalette.textMuted }}
+        variant="bodyStrong">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+function BackgroundEditorHeader({
+  icon,
+  label,
+  onAdd,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onAdd: () => void;
+}) {
+  return (
+    <View className="flex-row items-center justify-between gap-3">
+      <View className="flex-row items-center gap-2">
+        <Ionicons color={profilePalette.accent} name={icon} size={16} />
+        <AppText className="text-[15px]" variant="subtitle">
+          {label}
+        </AppText>
+      </View>
+      <Pressable
+        className="min-h-9 flex-row items-center gap-1.5 rounded-full border px-3 active:opacity-80"
+        onPress={onAdd}
+        style={{ backgroundColor: profilePalette.accentSoft, borderColor: profilePalette.accent }}>
+        <Ionicons color={profilePalette.accent} name="add" size={16} />
+        <AppText className="text-[12px]" style={{ color: profilePalette.accent }} variant="bodyStrong">
+          Add
+        </AppText>
+      </Pressable>
+    </View>
+  );
+}
+
+function sanitizeExperience(items: ProfileExperienceItem[]) {
+  return items.map((item) => ({
+    ...item,
+    title: item.title.trim(),
+    organization: item.organization.trim(),
+    period: item.period?.trim() || null,
+    location: item.location?.trim() || null,
+    companyLogo: item.companyLogo?.trim() || null,
+    description: item.description?.trim() || null,
+  }));
+}
+
+function sanitizeEducation(items: ProfileEducationItem[]) {
+  return items.map((item) => ({
+    ...item,
+    degree: item.degree.trim(),
+    school: item.school.trim(),
+    field: item.field?.trim() || null,
+    period: item.period?.trim() || null,
+    schoolLogo: item.schoolLogo?.trim() || null,
+    description: item.description?.trim() || null,
+  }));
+}
+
+function ExperienceEditor({
+  error,
+  items,
+  onChange,
+}: {
+  error?: string;
+  items: ProfileExperienceItem[];
+  onChange: (items: ProfileExperienceItem[]) => void;
+}) {
+  function updateItem(index: number, patch: Partial<ProfileExperienceItem>) {
+    onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+  }
+
+  function removeItem(index: number) {
+    onChange(items.filter((_item, itemIndex) => itemIndex !== index));
+  }
+
+  return (
+    <View className="gap-4">
+      <BackgroundEditorHeader
+        icon="briefcase-outline"
+        label={`Experience (${items.length})`}
+        onAdd={() => onChange([...items, { title: '', organization: '', period: '', location: '' }])}
+      />
+
+      {items.length ? (
+        items.map((item, index) => (
+          <View
+            key={item.id ?? `experience-${index}`}
+            className="gap-4 rounded-[18px] border p-4"
+            style={{ backgroundColor: '#252525', borderColor: profilePalette.border }}>
+            <View className="flex-row items-center justify-between gap-3">
+              <AppText className="text-[13px]" tone="muted" variant="label">
+                Experience {index + 1}
+              </AppText>
+              <Pressable hitSlop={10} onPress={() => removeItem(index)}>
+                <Ionicons color={profilePalette.danger} name="trash-outline" size={18} />
+              </Pressable>
+            </View>
+            <ProfileInput
+              autoCapitalize="words"
+              label="Title"
+              onChangeText={(value) => updateItem(index, { title: value })}
+              placeholder="Growth Lead"
+              value={item.title}
+            />
+            <ProfileInput
+              autoCapitalize="words"
+              label="Organization"
+              onChangeText={(value) => updateItem(index, { organization: value })}
+              placeholder="Company name"
+              value={item.organization}
+            />
+            <View className="flex-row gap-3">
+              <ProfileInput
+                autoCapitalize="words"
+                label="Period"
+                onChangeText={(value) => updateItem(index, { period: value })}
+                placeholder="2023 - Present"
+                shellClassName="flex-1"
+                value={item.period ?? ''}
+              />
+              <ProfileInput
+                autoCapitalize="words"
+                label="Location"
+                onChangeText={(value) => updateItem(index, { location: value })}
+                placeholder="Jakarta"
+                shellClassName="flex-1"
+                value={item.location ?? ''}
+              />
+            </View>
+            <ProfileInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              label="Logo URL"
+              onChangeText={(value) => updateItem(index, { companyLogo: value })}
+              placeholder="https://..."
+              value={item.companyLogo ?? ''}
+            />
+          </View>
+        ))
+      ) : (
+        <View
+          className="items-center gap-2 rounded-[16px] border px-4 py-6"
+          style={{ backgroundColor: '#252525', borderColor: profilePalette.border }}>
+          <Ionicons color={profilePalette.textSoft} name="briefcase-outline" size={24} />
+          <AppText align="center" className="text-[13px]" tone="muted">
+            Add experience so matches can understand your background.
+          </AppText>
+        </View>
+      )}
+
+      {error ? (
+        <AppText className="text-[12px]" tone="danger" variant="code">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function EducationEditor({
+  error,
+  items,
+  onChange,
+}: {
+  error?: string;
+  items: ProfileEducationItem[];
+  onChange: (items: ProfileEducationItem[]) => void;
+}) {
+  function updateItem(index: number, patch: Partial<ProfileEducationItem>) {
+    onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+  }
+
+  function removeItem(index: number) {
+    onChange(items.filter((_item, itemIndex) => itemIndex !== index));
+  }
+
+  return (
+    <View className="gap-4">
+      <BackgroundEditorHeader
+        icon="school-outline"
+        label={`Education (${items.length})`}
+        onAdd={() => onChange([...items, { degree: '', school: '', field: '', period: '' }])}
+      />
+
+      {items.length ? (
+        items.map((item, index) => (
+          <View
+            key={item.id ?? `education-${index}`}
+            className="gap-4 rounded-[18px] border p-4"
+            style={{ backgroundColor: '#252525', borderColor: profilePalette.border }}>
+            <View className="flex-row items-center justify-between gap-3">
+              <AppText className="text-[13px]" tone="muted" variant="label">
+                Education {index + 1}
+              </AppText>
+              <Pressable hitSlop={10} onPress={() => removeItem(index)}>
+                <Ionicons color={profilePalette.danger} name="trash-outline" size={18} />
+              </Pressable>
+            </View>
+            <ProfileInput
+              autoCapitalize="words"
+              label="Degree"
+              onChangeText={(value) => updateItem(index, { degree: value })}
+              placeholder="Bachelor of Business Administration"
+              value={item.degree}
+            />
+            <ProfileInput
+              autoCapitalize="words"
+              label="School"
+              onChangeText={(value) => updateItem(index, { school: value })}
+              placeholder="University name"
+              value={item.school}
+            />
+            <View className="flex-row gap-3">
+              <ProfileInput
+                autoCapitalize="words"
+                label="Field"
+                onChangeText={(value) => updateItem(index, { field: value })}
+                placeholder="Product"
+                shellClassName="flex-1"
+                value={item.field ?? ''}
+              />
+              <ProfileInput
+                autoCapitalize="words"
+                label="Period"
+                onChangeText={(value) => updateItem(index, { period: value })}
+                placeholder="2017 - 2021"
+                shellClassName="flex-1"
+                value={item.period ?? ''}
+              />
+            </View>
+            <ProfileInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              label="Logo URL"
+              onChangeText={(value) => updateItem(index, { schoolLogo: value })}
+              placeholder="https://..."
+              value={item.schoolLogo ?? ''}
+            />
+          </View>
+        ))
+      ) : (
+        <View
+          className="items-center gap-2 rounded-[16px] border px-4 py-6"
+          style={{ backgroundColor: '#252525', borderColor: profilePalette.border }}>
+          <Ionicons color={profilePalette.textSoft} name="school-outline" size={24} />
+          <AppText align="center" className="text-[13px]" tone="muted">
+            Add education so matches can read your training and credentials.
+          </AppText>
+        </View>
+      )}
+
+      {error ? (
+        <AppText className="text-[12px]" tone="danger" variant="code">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
 export function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -240,10 +730,17 @@ export function EditProfileScreen() {
     profileResponse && hasUsableProfile(profileResponse)
       ? profileResponse.data
       : mockMyProfileResponse.data;
-  const [formState, setFormState] = React.useState(() => buildInitialFormState(profile));
+  const profileOptionsResponse = optionsQuery.data;
+  const options = profileOptionsResponse && hasUsablePersonalityOptions(profileOptionsResponse)
+    ? profileOptionsResponse.data.personalityAndHobbies
+    : mockProfileOptionsResponse.data.personalityAndHobbies;
+  const locationOptions = profileOptionsResponse && hasUsableLocationOptions(profileOptionsResponse)
+    ? profileOptionsResponse.data.locations
+    : mockProfileOptionsResponse.data.locations;
+  const [formState, setFormState] = React.useState(() => buildInitialFormState(profile, locationOptions));
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
-  const profileOptionsResponse = optionsQuery.data;
+  const [backgroundTab, setBackgroundTab] = React.useState<EditableBackgroundTab>('experience');
   const aboutCopy = getAboutCopy(profile.sections.about);
 
   React.useEffect(() => {
@@ -259,14 +756,10 @@ export function EditProfileScreen() {
   }, [profileOptionsResponse]);
 
   React.useEffect(() => {
-    setFormState(buildInitialFormState(profile));
+    setFormState(buildInitialFormState(profile, locationOptions));
     setFormErrors({});
     setSubmitError(null);
-  }, [profile]);
-
-  const options = profileOptionsResponse && hasUsableOptions(profileOptionsResponse)
-    ? profileOptionsResponse.data.personalityAndHobbies
-    : mockProfileOptionsResponse.data.personalityAndHobbies;
+  }, [locationOptions, profile]);
 
   const selectedCount = formState.personalityAndHobbyIds.length;
 
@@ -311,9 +804,11 @@ export function EditProfileScreen() {
     const payload: UpdateMyProfileRequest = {
       name: formState.name.trim(),
       headline: formState.headline.trim(),
-      location: formState.location.trim(),
+      locationId: formState.locationId.trim(),
       about: formState.about.trim(),
       personalityAndHobbyIds: formState.personalityAndHobbyIds,
+      experience: sanitizeExperience(formState.experience),
+      education: sanitizeEducation(formState.education),
     };
 
     const validationErrors = validateForm(payload, aboutCopy.errorLabel);
@@ -450,15 +945,11 @@ export function EditProfileScreen() {
                 shellClassName="gap-2.5"
                 value={formState.headline}
               />
-              <ProfileInput
-                autoCapitalize="words"
-                className="min-h-14 text-[15px]"
-                error={formErrors.location}
-                label="Location"
-                onChangeText={(value) => updateField('location', value)}
-                placeholder="City, Country"
-                shellClassName="gap-2.5"
-                value={formState.location}
+              <LocationSelector
+                error={formErrors.locationId}
+                locations={locationOptions}
+                onChange={(value) => updateField('locationId', value)}
+                value={formState.locationId}
               />
             </View>
           </AppCard>
@@ -483,6 +974,46 @@ export function EditProfileScreen() {
               textAlignVertical="top"
               value={formState.about}
             />
+          </AppCard>
+
+          <AppCard
+            className="mt-4 gap-5"
+            style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
+            <View className="gap-1">
+              <AppText variant="subtitle">Experience & Education</AppText>
+              <AppText className="text-[13px]" tone="muted">
+                Add the background people will scan before matching.
+              </AppText>
+            </View>
+
+            <View
+              className="flex-row rounded-[18px] border p-1"
+              style={{ backgroundColor: '#252525', borderColor: profilePalette.border }}>
+              <BackgroundTabButton
+                active={backgroundTab === 'experience'}
+                label="Experience"
+                onPress={() => setBackgroundTab('experience')}
+              />
+              <BackgroundTabButton
+                active={backgroundTab === 'education'}
+                label="Education"
+                onPress={() => setBackgroundTab('education')}
+              />
+            </View>
+
+            {backgroundTab === 'experience' ? (
+              <ExperienceEditor
+                error={formErrors.experience}
+                items={formState.experience}
+                onChange={(items) => updateField('experience', items)}
+              />
+            ) : (
+              <EducationEditor
+                error={formErrors.education}
+                items={formState.education}
+                onChange={(items) => updateField('education', items)}
+              />
+            )}
           </AppCard>
 
           <AppCard

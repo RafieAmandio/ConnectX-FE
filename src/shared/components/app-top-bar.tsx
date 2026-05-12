@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import React from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { useAuth } from '@features/auth';
 import { useRevenueCat } from '@features/revenuecat';
 
 import { AppText } from './app-text';
@@ -16,6 +17,7 @@ type AppTopBarProps = {
 };
 
 export function AppTopBar({ rightAccessory }: AppTopBarProps) {
+  const { session } = useAuth();
   const { isConnectXProActive } = useRevenueCat();
   const badgeLabel = isConnectXProActive ? 'BETA VERSION' : 'BETA VERSION';
 
@@ -46,6 +48,9 @@ export function AppTopBar({ rightAccessory }: AppTopBarProps) {
         </AppText>
       </View>
       <View className="flex-1" />
+      <Pressable onPress={() => console.log('Current Session:', session)}>
+        <AppText style={{ color: 'white' }}>Debug Session</AppText>
+      </Pressable>
       {rightAccessory}
     </View>
   );

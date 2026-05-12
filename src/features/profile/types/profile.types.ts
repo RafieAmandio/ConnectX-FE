@@ -1,6 +1,7 @@
 export type ProfileType = 'founder' | 'builder' | 'investor' | 'operator' | 'student';
 
 export type ProfileLocation = {
+  id?: string;
   city: string;
   country: string;
   display: string;
@@ -42,6 +43,37 @@ export type ProfileHighlightsSection = {
   items: string[];
 };
 
+export type ProfileExperienceItem = {
+  id?: string;
+  title: string;
+  organization: string;
+  period?: string | null;
+  location?: string | null;
+  isCurrent?: boolean;
+  companyLogo?: string | null;
+  description?: string | null;
+};
+
+export type ProfileEducationItem = {
+  id?: string;
+  degree: string;
+  school: string;
+  field?: string | null;
+  period?: string | null;
+  schoolLogo?: string | null;
+  description?: string | null;
+};
+
+export type ProfileExperienceSection = {
+  title: string;
+  items: ProfileExperienceItem[];
+};
+
+export type ProfileEducationSection = {
+  title: string;
+  items: ProfileEducationItem[];
+};
+
 export type ProfileStartupStageValue = 'idea' | 'mvp' | 'live' | 'scale';
 
 export type ProfileStartupStageDetailValue = string | number | string[] | null;
@@ -72,6 +104,8 @@ export type MyProfileSections = {
   personalityAndHobbies?: ProfileListSection;
   skills?: ProfileListSection;
   interests?: ProfileListSection;
+  experience?: ProfileExperienceSection;
+  education?: ProfileEducationSection;
   highlights?: ProfileHighlightsSection;
 };
 
@@ -100,9 +134,11 @@ export type MyProfileResponse = {
 export type UpdateMyProfileRequest = {
   name: string;
   headline: string;
-  location: string;
+  locationId: string;
   about: string;
   personalityAndHobbyIds: string[];
+  experience: ProfileExperienceItem[];
+  education: ProfileEducationItem[];
 };
 
 export type UpdateMyProfileResponse = {
@@ -117,6 +153,8 @@ export type UpdateMyProfileResponse = {
     sections: {
       about: ProfileAboutSection;
       personalityAndHobbies: ProfileListSection;
+      experience?: ProfileExperienceSection;
+      education?: ProfileEducationSection;
     };
     updatedAt: string;
   };
@@ -158,5 +196,11 @@ export type ProfileOptionsResponse = {
   success: boolean;
   data: {
     personalityAndHobbies: ProfileNamedItem[];
+    locations: {
+      id: string;
+      label: string;
+      value: string;
+      group?: string | null;
+    }[];
   };
 };

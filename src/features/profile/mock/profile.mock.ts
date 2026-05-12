@@ -11,6 +11,7 @@ export const mockStartupProfileResponse: MyProfileResponse = {
     headline: 'Startup Founder',
     photoUrl: 'https://cdn.connectx.app/profiles/usr_123456/photo.jpg',
     location: {
+      id: 'jakarta',
       city: 'Jakarta',
       country: 'Indonesia',
       display: 'Jakarta, Indonesia',
@@ -198,6 +199,7 @@ export const mockIndividualProfileResponse: MyProfileResponse = {
     headline: 'Product-minded growth operator',
     photoUrl: null,
     location: {
+      id: 'bandung',
       city: 'Bandung',
       country: 'Indonesia',
       display: 'Bandung, Indonesia',
@@ -283,6 +285,48 @@ export const mockIndividualProfileResponse: MyProfileResponse = {
           },
         ],
       },
+      experience: {
+        title: 'Experience',
+        items: [
+          {
+            id: 'exp_maya_1',
+            title: 'Growth Operations Lead',
+            organization: 'KaryaCloud',
+            period: '2023 - Present',
+            location: 'Bandung, Indonesia',
+            isCurrent: true,
+            companyLogo: 'https://logo.clearbit.com/notion.so',
+          },
+          {
+            id: 'exp_maya_2',
+            title: 'Product Operations Associate',
+            organization: 'MarketHub',
+            period: '2021 - 2023',
+            location: 'Jakarta, Indonesia',
+            companyLogo: 'https://logo.clearbit.com/airtable.com',
+          },
+        ],
+      },
+      education: {
+        title: 'Education',
+        items: [
+          {
+            id: 'edu_maya_1',
+            degree: 'Bachelor of Business Administration',
+            school: 'Institut Teknologi Bandung',
+            field: 'Business & Management',
+            period: '2017 - 2021',
+            schoolLogo: 'https://logo.clearbit.com/itb.ac.id',
+          },
+          {
+            id: 'edu_maya_2',
+            degree: 'Product Growth Fellowship',
+            school: 'Reforge',
+            period: '2024',
+            schoolLogo: 'https://logo.clearbit.com/reforge.com',
+          },
+        ],
+      },
       highlights: {
         items: [
           '4+ years building growth systems',
@@ -301,6 +345,15 @@ export const mockMyProfileResponse = mockStartupProfileResponse;
 export const mockProfileOptionsResponse: ProfileOptionsResponse = {
   success: true,
   data: {
+    locations: [
+      { id: 'opt_city_jakarta', label: 'Jakarta, Indonesia', value: 'jakarta', group: 'Indonesia' },
+      { id: 'opt_city_bandung', label: 'Bandung, Indonesia', value: 'bandung', group: 'Indonesia' },
+      { id: 'opt_city_yogyakarta', label: 'Yogyakarta, Indonesia', value: 'yogyakarta', group: 'Indonesia' },
+      { id: 'opt_city_singapore', label: 'Singapore, Singapore', value: 'singapore', group: 'Singapore' },
+      { id: 'opt_city_bangalore', label: 'Bangalore, India', value: 'bangalore', group: 'India' },
+      { id: 'opt_city_hcmc', label: 'Ho Chi Minh City, Vietnam', value: 'hcmc', group: 'Vietnam' },
+      { id: 'opt_city_dubai', label: 'Dubai, United Arab Emirates', value: 'dubai', group: 'United Arab Emirates' },
+    ],
     personalityAndHobbies: [
       { id: 'ph_1', name: 'Goal-Oriented' },
       { id: 'ph_2', name: 'Problem Solver' },

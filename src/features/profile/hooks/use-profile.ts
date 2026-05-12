@@ -41,6 +41,8 @@ function mergeProfileResponse(
       sections: {
         ...baseResponse.data.sections,
         about: updateResponse.data.sections.about,
+        education: updateResponse.data.sections.education ?? baseResponse.data.sections.education,
+        experience: updateResponse.data.sections.experience ?? baseResponse.data.sections.experience,
         personalityAndHobbies: updateResponse.data.sections.personalityAndHobbies,
       },
       updatedAt: updateResponse.data.updatedAt,
