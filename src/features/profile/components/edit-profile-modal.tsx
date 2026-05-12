@@ -160,7 +160,7 @@ function validateForm(formState: UpdateMyProfileRequest, aboutErrorLabel: string
     nextErrors.about = `${aboutErrorLabel} must be 500 characters or fewer.`;
   }
 
-  if (formState.personalityAndHobbyIds.length > MAX_PERSONALITY_SELECTIONS) {
+  if ((formState.personalityAndHobbyIds?.length ?? 0) > MAX_PERSONALITY_SELECTIONS) {
     nextErrors.personalityAndHobbyIds = 'You can select up to 6 personality and hobby tags.';
   }
 
@@ -742,6 +742,7 @@ export function EditProfileScreen() {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [backgroundTab, setBackgroundTab] = React.useState<EditableBackgroundTab>('experience');
   const aboutCopy = getAboutCopy(profile.sections.about);
+  const isStartupOwnerProfile = Boolean(profile.startup);
 
   React.useEffect(() => {
     if (profileResponse) {
@@ -761,7 +762,8 @@ export function EditProfileScreen() {
     setSubmitError(null);
   }, [locationOptions, profile]);
 
-  const selectedCount = formState.personalityAndHobbyIds.length;
+  const selectedPersonalityIds = formState.personalityAndHobbyIds ?? [];
+  const selectedCount = selectedPersonalityIds.length;
 
   function updateField<K extends keyof UpdateMyProfileRequest>(
     field: K,
@@ -779,12 +781,12 @@ export function EditProfileScreen() {
   }
 
   function togglePersonalityAndHobby(itemId: string) {
-    const isSelected = formState.personalityAndHobbyIds.includes(itemId);
+    const isSelected = selectedPersonalityIds.includes(itemId);
 
     if (isSelected) {
       updateField(
         'personalityAndHobbyIds',
-        formState.personalityAndHobbyIds.filter((currentId) => currentId !== itemId)
+        selectedPersonalityIds.filter((currentId) => currentId !== itemId)
       );
       return;
     }
@@ -797,7 +799,7 @@ export function EditProfileScreen() {
       return;
     }
 
-    updateField('personalityAndHobbyIds', [...formState.personalityAndHobbyIds, itemId]);
+    updateField('personalityAndHobbyIds', [...selectedPersonalityIds, itemId]);
   }
 
   async function handleSave() {
@@ -806,7 +808,7 @@ export function EditProfileScreen() {
       headline: formState.headline.trim(),
       locationId: formState.locationId.trim(),
       about: formState.about.trim(),
-      personalityAndHobbyIds: formState.personalityAndHobbyIds,
+      ...(isStartupOwnerProfile ? {} : { personalityAndHobbyIds: selectedPersonalityIds }),
       experience: sanitizeExperience(formState.experience),
       education: sanitizeEducation(formState.education),
     };
@@ -1016,86 +1018,92 @@ export function EditProfileScreen() {
             )}
           </AppCard>
 
-          <AppCard
-            className="mt-4 gap-5"
-            style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
-            <View className="flex-row items-center justify-between gap-3">
-              <View className="flex-row items-center gap-2">
-                <Ionicons color={profilePalette.accent} name="flash-outline" size={16} />
-                <AppText className="text-[15px]" variant="subtitle">
-                  Personality & Hobbies
-                </AppText>
+          {!isStartupOwnerProfile ? (
+            <AppCard
+              className="mt-4 gap-5"
+              style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
+              <View className="flex-row items-center justify-between gap-3">
+                <View className="flex-row items-center gap-2">
+                  <Ionicons color={profilePalette.accent} name="flash-outline" size={16} />
+                  <AppText className="text-[15px]" variant="subtitle">
+                    Personality & Hobbies
+                  </AppText>
+                </View>
+
+                <View
+                  className="rounded-full border px-2.5 py-1"
+                  style={{
+                    backgroundColor: profilePalette.accentSoft,
+                    borderColor: profilePalette.accent,
+                  }}>
+                  <AppText
+                    className="text-[11px]"
+                    style={{ color: profilePalette.accent }}
+                    variant="bodyStrong">
+                    {selectedCount}/6 selected
+                  </AppText>
+                </View>
               </View>
 
-              <View
-                className="rounded-full border px-2.5 py-1"
-                style={{
-                  backgroundColor: profilePalette.accentSoft,
-                  borderColor: profilePalette.accent,
-                }}>
-                <AppText
-                  className="text-[11px]"
-                  style={{ color: profilePalette.accent }}
-                  variant="bodyStrong">
-                  {selectedCount}/6 selected
-                </AppText>
-              </View>
-            </View>
+              <View className="flex-row flex-wrap gap-3">
+                {options.map((item) => {
+                  const isSelected = selectedPersonalityIds.includes(item.id);
+                  const isDisabled = !isSelected && selectedCount >= MAX_PERSONALITY_SELECTIONS;
 
-            <View className="flex-row flex-wrap gap-3">
-              {options.map((item) => {
-                const isSelected = formState.personalityAndHobbyIds.includes(item.id);
-                const isDisabled = !isSelected && selectedCount >= MAX_PERSONALITY_SELECTIONS;
-
-                return (
-                  <Pressable
-                    key={item.id}
-                    className="flex-row items-center gap-2.5 rounded-[14px] border px-3.5 py-3"
-                    disabled={isDisabled}
-                    onPress={() => togglePersonalityAndHobby(item.id)}
-                    style={{
-                      backgroundColor: isSelected
-                        ? profilePalette.selected
-                        : profilePalette.field,
-                      borderColor: isSelected ? profilePalette.accent : profilePalette.border,
-                      minWidth: '48%',
-                      opacity: isDisabled ? 0.45 : 1,
-                      width: '48%',
-                    }}>
-                    <View
-                      className="items-center justify-center rounded-full border"
+                  return (
+                    <Pressable
+                      key={item.id}
+                      className="flex-row items-center gap-2.5 rounded-[14px] border px-3.5 py-3"
+                      disabled={isDisabled}
+                      onPress={() => togglePersonalityAndHobby(item.id)}
                       style={{
-                        backgroundColor: isSelected ? profilePalette.accent : 'transparent',
-                        borderColor: isSelected ? profilePalette.accent : profilePalette.textSoft,
-                        height: 20,
-                        width: 20,
+                        backgroundColor: isSelected
+                          ? profilePalette.selected
+                          : profilePalette.field,
+                        borderColor: isSelected ? profilePalette.accent : profilePalette.border,
+                        minWidth: '48%',
+                        opacity: isDisabled ? 0.45 : 1,
+                        width: '48%',
                       }}>
-                      {isSelected ? (
-                        <Ionicons color={profilePalette.buttonText} name="checkmark" size={14} />
-                      ) : null}
-                    </View>
-                    <AppText
-                      className="flex-1 text-[13px] leading-5"
-                      style={{ color: isSelected ? profilePalette.accent : profilePalette.textMuted }}>
-                      {item.name}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
+                      <View
+                        className="items-center justify-center rounded-full border"
+                        style={{
+                          backgroundColor: isSelected ? profilePalette.accent : 'transparent',
+                          borderColor: isSelected ? profilePalette.accent : profilePalette.textSoft,
+                          height: 20,
+                          width: 20,
+                        }}>
+                        {isSelected ? (
+                          <Ionicons color={profilePalette.buttonText} name="checkmark" size={14} />
+                        ) : null}
+                      </View>
+                      <AppText
+                        className="flex-1 text-[13px] leading-5"
+                        style={{ color: isSelected ? profilePalette.accent : profilePalette.textMuted }}>
+                        {item.name}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-            {formErrors.personalityAndHobbyIds ? (
-              <AppText className="text-[12px]" tone="danger" variant="code">
-                {formErrors.personalityAndHobbyIds}
-              </AppText>
-            ) : null}
+              {formErrors.personalityAndHobbyIds ? (
+                <AppText className="text-[12px]" tone="danger" variant="code">
+                  {formErrors.personalityAndHobbyIds}
+                </AppText>
+              ) : null}
 
-            {submitError ? (
-              <AppText className="text-[12px]" tone="danger" variant="code">
-                {submitError}
-              </AppText>
-            ) : null}
-          </AppCard>
+              {submitError ? (
+                <AppText className="text-[12px]" tone="danger" variant="code">
+                  {submitError}
+                </AppText>
+              ) : null}
+            </AppCard>
+          ) : submitError ? (
+            <AppText className="mt-4 text-[12px]" tone="danger" variant="code">
+              {submitError}
+            </AppText>
+          ) : null}
 
           <View className="mt-5 flex-row gap-3 pt-1">
             <ActionButton

@@ -136,7 +136,7 @@ export type UpdateMyProfileRequest = {
   headline: string;
   locationId: string;
   about: string;
-  personalityAndHobbyIds: string[];
+  personalityAndHobbyIds?: string[];
   experience: ProfileExperienceItem[];
   education: ProfileEducationItem[];
 };
@@ -152,7 +152,7 @@ export type UpdateMyProfileResponse = {
     location: ProfileLocation;
     sections: {
       about: ProfileAboutSection;
-      personalityAndHobbies: ProfileListSection;
+      personalityAndHobbies?: ProfileListSection;
       experience?: ProfileExperienceSection;
       education?: ProfileEducationSection;
     };

@@ -714,13 +714,15 @@ export function ProfileScreen() {
 
   const aboutSection = effectiveProfile.sections.about;
   const startup = effectiveProfile.startup;
+  const isStartupOwnerProfile = Boolean(startup);
   const personalitySection = effectiveProfile.sections.personalityAndHobbies;
   const skillsSection = effectiveProfile.sections.skills;
   const interestsSection = effectiveProfile.sections.interests;
   const experienceItems = effectiveProfile.sections.experience?.items ?? [];
   const educationItems = effectiveProfile.sections.education?.items ?? [];
   const highlightsSection = effectiveProfile.sections.highlights;
-  const shouldShowBackgroundTabs = !startup && (experienceItems.length > 0 || educationItems.length > 0);
+  const shouldShowBackgroundTabs =
+    !isStartupOwnerProfile && (experienceItems.length > 0 || educationItems.length > 0);
   const shouldStackPanels = width < 390;
   const topBarAccessory = (
     <Pressable
@@ -774,7 +776,7 @@ export function ProfileScreen() {
               </SectionCard>
             ) : null}
 
-            {personalitySection ? (
+            {!isStartupOwnerProfile && personalitySection ? (
               <SectionCard>
                 <SectionHeader
                   description="Traits and hobbies that make the collaboration style easier to read."
