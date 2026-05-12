@@ -517,12 +517,23 @@ export function ProfileScreen() {
   const interestsSection = effectiveProfile.sections.interests;
   const highlightsSection = effectiveProfile.sections.highlights;
   const shouldStackPanels = width < 390;
+  const topBarAccessory = (
+    <Pressable
+      accessibilityLabel="Open profile settings"
+      className="h-10 w-10 items-center justify-center rounded-full border active:opacity-80"
+      hitSlop={10}
+      onPress={() => router.push('/profile/settings' as never)}
+      style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}
+    >
+      <Ionicons color={ACCENT} name="settings-outline" size={19} />
+    </Pressable>
+  );
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false, title: '' }} />
       <View className="flex-1" style={{ backgroundColor: '#262626' }}>
-        <AppTopBar />
+        <AppTopBar rightAccessory={topBarAccessory} />
         {!shouldUseMockProfile && !hasUsableProfile(myProfileResponse) ? (
           <ProfileSkeleton shouldStackPanels={shouldStackPanels} />
         ) : (

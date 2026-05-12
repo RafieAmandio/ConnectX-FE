@@ -1,0 +1,12 @@
+{
+  "_endpoint": "POST /api/v1/me/account/deletion-requests",
+  "success": true,
+  "message": "Your account deletion request has been scheduled.",
+  "data": {
+    "deletionRequestId": "delreq_01HTXYZABC123",
+    "userId": "usr_01HSXYZABC123",
+    "status": "scheduled",
+    "requestedAt": "2026-05-12T09:18:12.205Z",
+    "scheduledDeletionAt": null
+  }
+}

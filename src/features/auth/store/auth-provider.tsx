@@ -62,6 +62,7 @@ type AuthContextValue = {
   enterWithDevBypass: () => Promise<void>;
   login: (payload: LoginPayload) => ReturnType<typeof loginWithApi>;
   register: (payload: RegisterPayload) => ReturnType<typeof registerWithApi>;
+  refreshSession: () => Promise<AuthSession | null>;
   resendLoginOtp: () => ReturnType<typeof resendLoginOtpRequest>;
   resendEmailOtp: () => ReturnType<typeof resendEmailOtpRequest>;
   resendWhatsappOtp: () => ReturnType<typeof resendWhatsappOtpRequest>;
@@ -291,6 +292,22 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     setSession(resolvedSession);
     setAuthPhase(resolvedSession.authPhase);
   }, [refreshBackendAuthSession, session]);
+
+  const refreshSession = React.useCallback(async () => {
+    const currentSession = sessionRef.current;
+
+    if (!currentSession) {
+      return null;
+    }
+
+    const resolvedSession = await refreshBackendAuthSession(currentSession);
+
+    await replaceStoredSession(resolvedSession);
+    setSession(resolvedSession);
+    setAuthPhase(resolvedSession.authPhase);
+
+    return resolvedSession;
+  }, [refreshBackendAuthSession]);
 
   React.useEffect(() => {
     let isActive = true;
@@ -621,6 +638,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       isAuthBypassEnabled: authBypassEnabled,
       login,
       register,
+      refreshSession,
       resendLoginOtp,
       resendEmailOtp,
       resendWhatsappOtp,
@@ -648,6 +666,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       isHydrated,
       login,
       register,
+      refreshSession,
       resendLoginOtp,
       resendEmailOtp,
       resendWhatsappOtp,

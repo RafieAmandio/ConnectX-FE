@@ -122,6 +122,38 @@ export type UpdateMyProfileResponse = {
   };
 };
 
+export type PauseAccountResponse = {
+  success: true;
+  message: string;
+  data: {
+    userId: string;
+    status: 'paused';
+    pausedAt: string;
+  };
+};
+
+export type ActivateAccountResponse = {
+  success: true;
+  message: string;
+  data: {
+    userId: string;
+    status: 'active';
+    activatedAt: string;
+  };
+};
+
+export type RequestAccountDeletionResponse = {
+  success: true;
+  message: string;
+  data: {
+    deletionRequestId: string;
+    userId: string;
+    status: 'scheduled';
+    requestedAt: string;
+    scheduledDeletionAt: string | null;
+  };
+};
+
 export type ProfileOptionsResponse = {
   success: boolean;
   data: {

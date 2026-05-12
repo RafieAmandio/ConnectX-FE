@@ -30,12 +30,13 @@ import type {
   AuthPremiumState,
   AuthSession,
   AuthSessionResponse,
-  ForgotPasswordPayload,
-  ForgotPasswordResponse,
   AuthSuccessResponse,
   AuthSupabaseSessionPayload,
   AuthUser,
   EmailAlreadyVerifiedResponse,
+  ForgotPasswordPayload,
+  ForgotPasswordResponse,
+  LinkedInAuthResult,
   LoginOtpMessageResponse,
   LoginOtpSendPayload,
   LoginOtpVerifyPayload,
@@ -45,7 +46,6 @@ import type {
   OtpMessageResponse,
   OtpRateLimitResponse,
   RegisterPayload,
-  LinkedInAuthResult,
   VerifyEmailErrorResponse,
   VerifyEmailPayload,
   VerifyEmailSuccessResponse,
@@ -829,7 +829,6 @@ export async function refreshAuthSession(baseSession?: AuthSession): Promise<Ses
     ? { session: baseSession }
     : await requireStoredAuthStateWithOptions({ requireToken: true });
   const { response, source } = await fetchAuthSessionWithSource();
-  console.log('[auth:session] refresh response', JSON.stringify({ response, source }, null, 2));
   const nextSession = mergeAuthSessionResponse(session, response, source);
 
   await replaceStoredSession(nextSession);

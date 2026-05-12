@@ -1,0 +1,10 @@
+{
+  "_endpoint": "POST /api/v1/me/account/pause",
+  "success": true,
+  "message": "Your profile has been paused.",
+  "data": {
+    "userId": "usr_01HSXYZABC123",
+    "status": "paused",
+    "pausedAt": "2026-05-12T09:15:46.515Z"
+  }
+}

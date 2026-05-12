@@ -4,9 +4,12 @@ import { createApiQueryOptions } from '@shared/services/api';
 
 import { mockMyProfileResponse } from '../mock/profile.mock';
 import {
+  activateMyAccount,
   fetchMyProfile,
   fetchProfileOptions,
+  pauseMyAccount,
   PROFILE_API,
+  requestMyAccountDeletion,
   updateMyProfile,
 } from '../services/profile-service';
 import type {
@@ -71,6 +74,39 @@ export function useUpdateMyProfile() {
         return mergeProfileResponse(baseResponse, response);
       });
 
+      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+    },
+  });
+}
+
+export function usePauseMyAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: pauseMyAccount,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+    },
+  });
+}
+
+export function useActivateMyAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: activateMyAccount,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+    },
+  });
+}
+
+export function useRequestMyAccountDeletion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: requestMyAccountDeletion,
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
     },
   });

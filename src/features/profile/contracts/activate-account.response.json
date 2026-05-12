@@ -1,0 +1,10 @@
+{
+  "_endpoint": "POST /api/v1/me/account/activate",
+  "success": true,
+  "message": "Your profile is active again.",
+  "data": {
+    "userId": "usr_01HSXYZABC123",
+    "status": "active",
+    "activatedAt": "2026-05-12T09:20:01.104Z"
+  }
+}
