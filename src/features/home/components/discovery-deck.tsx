@@ -163,8 +163,12 @@ function getBadgeIcon(icon?: string): keyof typeof Ionicons.glyphMap {
   }
 }
 
-function getStartupIndustryLabels(industry: DiscoveryStartupCard['industry']) {
-  const displayLabels = industry.display
+function getStartupIndustryLabels(industry?: DiscoveryStartupCard['industry']) {
+  if (!industry) {
+    return [];
+  }
+
+  const displayLabels = (industry.display || '')
     .split(/\s*\/\s*/)
     .map(normalizeIndustryLabel)
     .filter(Boolean);
@@ -178,7 +182,7 @@ function getStartupIndustryLabels(industry: DiscoveryStartupCard['industry']) {
     .filter((label): label is string => Boolean(label));
 }
 
-function getStartupIndustryPreview(industry: DiscoveryStartupCard['industry']) {
+function getStartupIndustryPreview(industry?: DiscoveryStartupCard['industry']) {
   const labels = getStartupIndustryLabels(industry);
 
   return labels.slice(0, 2).join(' / ');
@@ -753,6 +757,10 @@ function StartupRoleChip({ title }: { title: string }) {
 }
 
 function StartupJourney({ card }: { card: DiscoveryStartupCard }) {
+  if (!card.journey?.stages?.length) {
+    return null;
+  }
+
   return (
     <View
       className="gap-4 rounded-[22px] border px-4 py-4"
@@ -845,24 +853,26 @@ function ProfileCardContent({
                 <AppText className="text-[15px] leading-tight" numberOfLines={2} style={{ color: '#E4E7EC' }}>
                   {card.headline}
                 </AppText>
-                <View className="flex-row items-center gap-1.5">
-                  <Ionicons color="#98A2B3" name="location-outline" size={16} />
-                  <AppText className="text-[14px]" tone="muted">
-                    {card.location.display}
-                  </AppText>
-                  {typeof card.location.distanceKm === 'number' ? (
-                    <AppText className="text-[14px]" tone="signal">
-                      • {card.location.distanceKm} km
+                {card.location ? (
+                  <View className="flex-row items-center gap-1.5">
+                    <Ionicons color="#98A2B3" name="location-outline" size={16} />
+                    <AppText className="text-[14px]" tone="muted">
+                      {card.location.display}
                     </AppText>
-                  ) : null}
-                </View>
+                    {typeof card.location.distanceKm === 'number' ? (
+                      <AppText className="text-[14px]" tone="signal">
+                        • {card.location.distanceKm} km
+                      </AppText>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
-              <MatchScoreBadge label={card.match.label} score={card.match.score} />
+              {card.match ? <MatchScoreBadge label={card.match.label} score={card.match.score ?? 0} /> : null}
             </View>
           </View>
         </View>
 
-        {card.badges[0] ? (
+        {card.badges?.[0] ? (
           <View className="border-b border-border px-4 py-4">
             <View className="flex-row items-center gap-1">
               <Ionicons color="#FF9A3E" name={getBadgeIcon(card.badges[0].icon)} size={12} />
@@ -893,27 +903,31 @@ function ProfileCardContent({
           </View>
         ) : null}
 
-        <View className="gap-2.5">
-          <SectionLabel title="Industries & Interests" />
-          <View className="flex-row flex-wrap gap-2">
-            {card.interests.map((item) => (
-              <DiscoveryTag
-                key={item.id}
-                item={item}
-                tone={item.type === 'availability' ? 'availability' : 'default'}
-              />
-            ))}
+        {card.interests?.length ? (
+          <View className="gap-2.5">
+            <SectionLabel title="Industries & Interests" />
+            <View className="flex-row flex-wrap gap-2">
+              {card.interests.map((item) => (
+                <DiscoveryTag
+                  key={item.id}
+                  item={item}
+                  tone={item.type === 'availability' ? 'availability' : 'default'}
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
 
-        <View className="gap-2.5">
-          <SectionLabel title="Skills" />
-          <View className="flex-row flex-wrap gap-2">
-            {card.skills.map((item) => (
-              <DiscoveryTag key={item.id} item={item} />
-            ))}
+        {card.skills?.length ? (
+          <View className="gap-2.5">
+            <SectionLabel title="Skills" />
+            <View className="flex-row flex-wrap gap-2">
+              {card.skills.map((item) => (
+                <DiscoveryTag key={item.id} item={item} />
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
 
         {card.experience?.length ? (
           <View className="gap-3">
@@ -1014,7 +1028,7 @@ function StartupCardContent({
   const industryLabels = getStartupIndustryLabels(card.industry);
   const industryPreview = getStartupIndustryPreview(card.industry);
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
-  const teamStageIndustry = normalizeIndustryDisplay(card.teamStage.industry);
+  const teamStageIndustry = normalizeIndustryDisplay(card.teamStage?.industry);
   const summary = card.summary?.trim() ?? '';
   const summaryPreview = truncateText(summary, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
 
@@ -1055,11 +1069,11 @@ function StartupCardContent({
               <View className="flex-row items-center gap-1.5">
                 <Ionicons color="#C7CCD4" name="briefcase-outline" size={15} />
                 <AppText className="min-w-0 flex-1 text-[14px]" numberOfLines={2} tone="muted">
-                  {card.founder.title ? `${card.founder.title} by ${card.founder.name}` : card.founder.name}
+                  {card.founder?.title && card.founder?.name ? `${card.founder.title} by ${card.founder.name}` : card.founder?.name}
                 </AppText>
               </View>
             </View>
-            <MatchScoreBadge label={card.match.label} score={card.match.score} />
+            {card.match ? <MatchScoreBadge label={card.match.label} score={card.match.score ?? 0} /> : null}
           </View>
         </View>
 
@@ -1090,7 +1104,7 @@ function StartupCardContent({
             <View className="flex-row items-center gap-1">
               <Ionicons color="#98A2B3" name="people-outline" size={14} />
               <AppText className="text-[13px]" tone="muted">
-                {card.team.display}
+                {card.team?.display ?? ''}
               </AppText>
             </View>
           </View>
@@ -1104,7 +1118,7 @@ function StartupCardContent({
           </AppText>
         ) : null}
 
-        {card.openRoles.length ? (
+        {card.openRoles?.length ? (
           <View className="gap-3">
             <SectionLabel icon="briefcase-outline" title="Open Roles" />
             <View className="flex-row flex-wrap gap-2">
@@ -1115,7 +1129,7 @@ function StartupCardContent({
           </View>
         ) : null}
 
-        {card.lookingFor.length ? (
+        {card.lookingFor?.length ? (
           <View
             className="gap-2.5 rounded-[20px] border px-4 py-4"
             style={{
@@ -1129,45 +1143,47 @@ function StartupCardContent({
           </View>
         ) : null}
 
-        <View className="gap-3">
-          <SectionLabel icon="people-outline" title="Team & Stage" />
-          <AppCard className="rounded-[18px] p-4 bg-[#2C2C2C] border-white/10">
-            <View className="flex-row flex-wrap gap-y-4">
-              <View className="w-1/2 gap-1 pr-2">
-                <AppText className="text-[12px]" tone="muted">
-                  Team Size
-                </AppText>
-                <AppText className="text-[18px]" variant="title">
-                  {card.teamStage.teamSize} members
-                </AppText>
+        {card.teamStage ? (
+          <View className="gap-3">
+            <SectionLabel icon="people-outline" title="Team & Stage" />
+            <AppCard className="rounded-[18px] p-4 bg-[#2C2C2C] border-white/10">
+              <View className="flex-row flex-wrap gap-y-4">
+                <View className="w-1/2 gap-1 pr-2">
+                  <AppText className="text-[12px]" tone="muted">
+                    Team Size
+                  </AppText>
+                  <AppText className="text-[18px]" variant="title">
+                    {card.teamStage.teamSize} members
+                  </AppText>
+                </View>
+                <View className="w-1/2 gap-1 pl-2">
+                  <AppText className="text-[12px]" tone="muted">
+                    Stage
+                  </AppText>
+                  <AppText className="text-[18px]" variant="title">
+                    {card.teamStage.stage}
+                  </AppText>
+                </View>
+                <View className="w-1/2 gap-1 pr-2">
+                  <AppText className="text-[12px]" tone="muted">
+                    Hiring
+                  </AppText>
+                  <AppText className="text-[18px]" variant="title">
+                    {card.teamStage.hiringCount} roles
+                  </AppText>
+                </View>
+                <View className="w-full gap-1">
+                  <AppText className="text-[12px]" tone="muted">
+                    Industry
+                  </AppText>
+                  <AppText className="text-[18px] leading-[23px]" variant="title">
+                    {teamStageIndustry}
+                  </AppText>
+                </View>
               </View>
-              <View className="w-1/2 gap-1 pl-2">
-                <AppText className="text-[12px]" tone="muted">
-                  Stage
-                </AppText>
-                <AppText className="text-[18px]" variant="title">
-                  {card.teamStage.stage}
-                </AppText>
-              </View>
-              <View className="w-1/2 gap-1 pr-2">
-                <AppText className="text-[12px]" tone="muted">
-                  Hiring
-                </AppText>
-                <AppText className="text-[18px]" variant="title">
-                  {card.teamStage.hiringCount} roles
-                </AppText>
-              </View>
-              <View className="w-full gap-1">
-                <AppText className="text-[12px]" tone="muted">
-                  Industry
-                </AppText>
-                <AppText className="text-[18px] leading-[23px]" variant="title">
-                  {teamStageIndustry}
-                </AppText>
-              </View>
-            </View>
-          </AppCard>
-        </View>
+            </AppCard>
+          </View>
+        ) : null}
 
         <StartupJourney card={card} />
       </View>
