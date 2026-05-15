@@ -3,6 +3,7 @@ import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 
 import { AppCard, AppPill, AppText } from '@shared/components';
 
@@ -14,6 +15,10 @@ const PANEL_BACKGROUND = '#2E2C2B';
 const PANEL_BACKGROUND_STRONG = '#332E29';
 const PANEL_BORDER = '#414141';
 const TEXT_PRIMARY = '#F1F1F1';
+const RING_SIZE = 172;
+const RING_STROKE_WIDTH = 12;
+const RING_RADIUS = (RING_SIZE - RING_STROKE_WIDTH) / 2;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 type AnalysisPalette = {
   accent: string;
@@ -63,6 +68,63 @@ function getAnalysisPalette(score: number, label: string): AnalysisPalette {
     label: 'Review fit',
     ringTrack: '#382C2C',
   };
+}
+
+function clampCompatibilityScore(score: number) {
+  if (Number.isNaN(score)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function CompatibilityRing({
+  palette,
+  score,
+}: {
+  palette: AnalysisPalette;
+  score: number;
+}) {
+  const normalizedScore = clampCompatibilityScore(score);
+  const progress = normalizedScore / 100;
+  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - progress);
+
+  return (
+    <View className="relative h-[172px] w-[172px] items-center justify-center">
+      <Svg
+        height={RING_SIZE}
+        style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}
+        viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+        width={RING_SIZE}>
+        <Circle
+          cx={RING_SIZE / 2}
+          cy={RING_SIZE / 2}
+          fill="none"
+          r={RING_RADIUS}
+          stroke={palette.ringTrack}
+          strokeWidth={RING_STROKE_WIDTH}
+        />
+        <Circle
+          cx={RING_SIZE / 2}
+          cy={RING_SIZE / 2}
+          fill="none"
+          r={RING_RADIUS}
+          stroke={palette.accent}
+          strokeDasharray={`${RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}`}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          strokeWidth={RING_STROKE_WIDTH}
+        />
+      </Svg>
+
+      <View className="items-center gap-1">
+        <AppText className="text-[38px]" style={{ color: palette.accent }} variant="hero">
+          {normalizedScore}%
+        </AppText>
+        <AppText className="text-[12px] text-[#A7A29E]">Compatibility</AppText>
+      </View>
+    </View>
+  );
 }
 
 function BulletList({
@@ -194,40 +256,9 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
           ) : null}
 
           <View
-            className="items-center gap-3 rounded-[28px] px-4 py-5"
-          >
-            <View className="relative h-[172px] w-[172px] items-center justify-center">
-              {/* Track ring */}
-              <View
-                className="absolute rounded-full border-[12px]"
-                style={{
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  borderColor: palette.ringTrack,
-                }}
-              />
-              {/* Accent arc */}
-              <View
-                className="absolute rounded-full border-[12px]"
-                style={{
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  borderColor: palette.accent,
-                  borderLeftColor: palette.ringTrack,
-                  transform: [{ rotate: '-35deg' }],
-                }}
-              />
-              <View className="items-center gap-1">
-                <AppText className="text-[38px]" style={{ color: palette.accent }} variant="hero">
-                  {analysis.compatibilityScore}%
-                </AppText>
-                <AppText className="text-[12px] text-[#A7A29E]">Compatibility</AppText>
-              </View>
-            </View>
+            className="items-center gap-3 rounded-[28px] border px-4 py-5"
+            style={dynamicPanelStyle}>
+            <CompatibilityRing palette={palette} score={analysis.compatibilityScore} />
 
             <View className="items-center gap-0.5">
               <View
