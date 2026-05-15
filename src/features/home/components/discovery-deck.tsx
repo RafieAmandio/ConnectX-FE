@@ -803,10 +803,12 @@ function StartupJourney({ card }: { card: DiscoveryStartupCard }) {
 function ProfileCardContent({
   card,
   bottomInset = 24,
+  refreshControl,
   scrollEnabled = true,
 }: {
   card: DiscoveryProfileCard;
   bottomInset?: number;
+  refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
   scrollEnabled?: boolean;
 }) {
   const bio = card.bio?.trim() ?? '';
@@ -817,6 +819,7 @@ function ProfileCardContent({
     <ScrollView
       className="flex-1"
       showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
       scrollEnabled={scrollEnabled}
       contentContainerStyle={{ paddingBottom: bottomInset }}>
       <View>
@@ -1019,10 +1022,12 @@ function ProfileCardContent({
 function StartupCardContent({
   card,
   bottomInset = 24,
+  refreshControl,
   scrollEnabled = true,
 }: {
   card: DiscoveryStartupCard;
   bottomInset?: number;
+  refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
   scrollEnabled?: boolean;
 }) {
   const industryLabels = getStartupIndustryLabels(card.industry);
@@ -1036,6 +1041,7 @@ function StartupCardContent({
     <ScrollView
       className="flex-1"
       showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
       scrollEnabled={scrollEnabled}
       contentContainerStyle={{ paddingBottom: bottomInset }}>
       <View>
@@ -1194,16 +1200,28 @@ function StartupCardContent({
 function DiscoveryCardContent({
   bottomInset = 24,
   card,
+  refreshControl,
   scrollEnabled = true,
 }: {
   bottomInset?: number;
   card: DiscoveryCard;
+  refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
   scrollEnabled?: boolean;
 }) {
   return isDiscoveryProfileCard(card) ? (
-    <ProfileCardContent bottomInset={bottomInset} card={card} scrollEnabled={scrollEnabled} />
+    <ProfileCardContent
+      bottomInset={bottomInset}
+      card={card}
+      refreshControl={refreshControl}
+      scrollEnabled={scrollEnabled}
+    />
   ) : (
-    <StartupCardContent bottomInset={bottomInset} card={card} scrollEnabled={scrollEnabled} />
+    <StartupCardContent
+      bottomInset={bottomInset}
+      card={card}
+      refreshControl={refreshControl}
+      scrollEnabled={scrollEnabled}
+    />
   );
 }
 
@@ -2297,6 +2315,13 @@ export function DiscoveryDeck() {
                 <DiscoveryCardContent
                   bottomInset={floatingActionsContentPadding}
                   card={currentItem}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={discoveryQuery.isRefetching}
+                      tintColor="#FF9A3E"
+                      onRefresh={handleRefreshDiscovery}
+                    />
+                  }
                 />
 
                 <Animated.View

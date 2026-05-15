@@ -5,6 +5,7 @@ import React from 'react';
 import {
   Linking,
   Pressable,
+  RefreshControl,
   ScrollView,
   View,
   useWindowDimensions,
@@ -742,12 +743,28 @@ export function ProfileScreen() {
       <View className="flex-1" style={{ backgroundColor: '#262626' }}>
         <AppTopBar rightAccessory={topBarAccessory} />
         {!shouldUseMockProfile && !hasUsableProfile(myProfileResponse) ? (
-          <ProfileSkeleton shouldStackPanels={shouldStackPanels} />
+          <ProfileSkeleton
+            refreshControl={
+              <RefreshControl
+                onRefresh={myProfileQuery.refetch}
+                refreshing={myProfileQuery.isRefetching}
+                tintColor={ACCENT}
+              />
+            }
+            shouldStackPanels={shouldStackPanels}
+          />
         ) : (
           <ScrollView
             className="flex-1"
             contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
             contentInsetAdjustmentBehavior="automatic"
+            refreshControl={
+              <RefreshControl
+                onRefresh={myProfileQuery.refetch}
+                refreshing={myProfileQuery.isRefetching}
+                tintColor={ACCENT}
+              />
+            }
           >
             <ProfileHero
               onEdit={() => router.push('/profile/edit' as never)}

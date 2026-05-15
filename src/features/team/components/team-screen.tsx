@@ -7,6 +7,7 @@ import {
   LayoutChangeEvent,
   PanResponder,
   Pressable,
+  RefreshControl,
   ScrollView,
   View,
 } from 'react-native';
@@ -1151,7 +1152,14 @@ export function TeamScreen() {
               paddingHorizontal: 20,
               paddingTop: 16,
             }}
-            contentInsetAdjustmentBehavior="automatic">
+            contentInsetAdjustmentBehavior="automatic"
+            refreshControl={
+              <RefreshControl
+                onRefresh={teamOverviewQuery.refetch}
+                refreshing={teamOverviewQuery.isRefetching}
+                tintColor="#FF9A3E"
+              />
+            }>
 
             <AppCard className="gap-3">
               <AppText variant="subtitle">Loading team</AppText>
@@ -1178,7 +1186,14 @@ export function TeamScreen() {
               paddingHorizontal: 20,
               paddingTop: 16,
             }}
-            contentInsetAdjustmentBehavior="automatic">
+            contentInsetAdjustmentBehavior="automatic"
+            refreshControl={
+              <RefreshControl
+                onRefresh={teamOverviewQuery.refetch}
+                refreshing={teamOverviewQuery.isRefetching}
+                tintColor="#FF9A3E"
+              />
+            }>
             <AppCard className="gap-4">
               <View className="flex-row items-center gap-3">
                 <Ionicons
@@ -1259,6 +1274,14 @@ export function TeamScreen() {
             paddingBottom: insets.bottom + 128,
             paddingHorizontal: 20,
           }}
+          contentInsetAdjustmentBehavior="automatic"
+          refreshControl={
+            <RefreshControl
+              onRefresh={teamOverviewQuery.refetch}
+              refreshing={teamOverviewQuery.isRefetching}
+              tintColor="#FF9A3E"
+            />
+          }
           showsVerticalScrollIndicator={false}>
 
           {startup ? (

@@ -13,6 +13,7 @@ import {
   ListRenderItemInfo,
   Platform,
   Pressable,
+  RefreshControl,
   TextInput,
   View,
   type LayoutChangeEvent,
@@ -271,6 +272,13 @@ export function ChatDemoListScreen() {
                   </View>
                 ) : null}
               </View>
+            }
+            refreshControl={
+              <RefreshControl
+                onRefresh={conversationsQuery.refetch}
+                refreshing={conversationsQuery.isRefetching}
+                tintColor="#F59E0B"
+              />
             }
             renderItem={renderConversation}
             showsVerticalScrollIndicator={false}

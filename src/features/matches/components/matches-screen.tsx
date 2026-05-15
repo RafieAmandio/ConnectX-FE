@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
@@ -340,6 +340,13 @@ export function MatchesScreen() {
           className="flex-1"
           contentContainerStyle={{ paddingBottom: insets.bottom + 36, paddingHorizontal: 16, paddingTop: 10 }}
           contentInsetAdjustmentBehavior="automatic"
+          refreshControl={
+            <RefreshControl
+              onRefresh={matchesQuery.refetch}
+              refreshing={matchesQuery.isRefetching}
+              tintColor="#FF9F3F"
+            />
+          }
           showsVerticalScrollIndicator={false}>
           <View className="gap-8">
             <View className="gap-4">

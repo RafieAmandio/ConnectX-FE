@@ -87,13 +87,20 @@ function SkeletonPills() {
   );
 }
 
-export function ProfileSkeleton({ shouldStackPanels }: { shouldStackPanels: boolean }) {
+export function ProfileSkeleton({
+  refreshControl,
+  shouldStackPanels,
+}: {
+  refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
+  shouldStackPanels: boolean;
+}) {
   return (
     <ScrollView
       accessibilityLabel="Loading profile"
       className="flex-1"
       contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
       contentInsetAdjustmentBehavior="automatic"
+      refreshControl={refreshControl}
     >
       <AppCard
         className="gap-4 rounded-[28px] px-4 py-4"
