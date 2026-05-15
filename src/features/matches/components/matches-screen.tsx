@@ -529,7 +529,7 @@ export function MatchesScreen() {
             <View className="gap-4">
               <View className="flex-row items-center justify-between">
                 <AppText className="text-[24px] text-[#F1F1F1]" variant="title">
-                  Your Matches
+                  Your Connects
                 </AppText>
                 <AppText className="text-[15px] text-[#9F9C99]">{matchCountLabel}</AppText>
               </View>
