@@ -213,7 +213,7 @@ export function MatchesScreen() {
   const freeUnlockedLike = likesYouLocked && !isConnectXProActive ? likesYou[0] : null;
   const likesYouCount = responseData?.likesYou?.totalNew ?? likesYou.length;
   const likesYouPreviewItems = Array.from({ length: 3 }, (_, index) => likesYou[index] ?? null);
-  const matchCountLabel = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`;
+  const matchCountLabel = `${matches.length} ${matches.length === 1 ? 'connect' : 'connections'}`;
   const likesYouCountLabel = formatLikesYouCount(likesYouCount);
   const spotlightEndsAtLabel = formatSpotlightTimestamp(spotlightEndsAt);
 
@@ -553,10 +553,10 @@ export function MatchesScreen() {
                 className="rounded-[20px] border-[#414141] bg-[#2E2C2B] p-4"
                 style={{ shadowColor: 'transparent' }}>
                 <AppText className="text-[#F1F1F1]" variant="subtitle">
-                  Loading matches...
+                  Loading connects...
                 </AppText>
                 <AppText className="mt-1 text-[#9F9C99]">
-                  Pulling your latest mutual matches now.
+                  Pulling your latest mutual connects now.
                 </AppText>
               </AppCard>
             ) : null}
@@ -566,12 +566,12 @@ export function MatchesScreen() {
                 className="rounded-[20px] border-[#6D3A32] bg-[#332320] p-4"
                 style={{ shadowColor: 'transparent' }}>
                 <AppText className="text-[#F7DDD8]" variant="subtitle">
-                  Could not load matches
+                  Could not load connects
                 </AppText>
                 <AppText className="mt-1 text-[#D9A49C]">
                   {matchesQuery.error instanceof Error
                     ? matchesQuery.error.message
-                    : 'The matches request failed.'}
+                    : 'The connects request failed.'}
                 </AppText>
               </AppCard>
             ) : null}
@@ -581,10 +581,10 @@ export function MatchesScreen() {
                 className="rounded-[24px] border-[#414141] bg-[#2E2C2B] p-5"
                 style={{ shadowColor: 'transparent' }}>
                 <AppText className="text-[#F1F1F1]" variant="title">
-                  No matches yet
+                  No connects yet
                 </AppText>
                 <AppText className="mt-1 text-[#9F9C99]">
-                  New mutual matches will show up here once they’re available.
+                  New mutual connects will show up here once they’re available.
                 </AppText>
               </AppCard>
             ) : null}
