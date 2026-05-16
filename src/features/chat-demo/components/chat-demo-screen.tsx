@@ -303,17 +303,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] px-5 py-4'
         }>
         {message.type === 'image' && hasMediaUrl ? (
-          <Pressable
-            className="active:opacity-90"
-            onPress={() => {
-              void Linking.openURL(message.media?.url ?? '');
-            }}>
+          <View>
             <Image
               contentFit="cover"
               source={{ uri: message.media?.url ?? undefined }}
               style={{ borderRadius: 18, height: 220, width: 240 }}
             />
-          </Pressable>
+          </View>
         ) : null}
 
         {message.type === 'image' && !hasMediaUrl ? (
