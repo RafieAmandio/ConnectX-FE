@@ -167,6 +167,47 @@ function mergeDiscoveryCardsWithMocks(
   };
 }
 
+function summarizeDiscoveryCardsResponse(response: DiscoveryCardsResponse) {
+  return {
+    hasMore: response.data.hasMore,
+    itemCount: response.data.items.length,
+    message: response.message,
+    nextCursor: response.data.nextCursor,
+    success: response.success,
+  };
+}
+
+function summarizeDiscoveryCardsError(error: unknown) {
+  if (error instanceof ApiError) {
+    const payload =
+      error.payload && typeof error.payload === 'object' ? error.payload : null;
+    const errorPayload =
+      payload && 'error' in payload && payload.error && typeof payload.error === 'object'
+        ? payload.error
+        : null;
+
+    return {
+      message: error.message,
+      payloadMessage:
+        payload && 'message' in payload && typeof payload.message === 'string'
+          ? payload.message
+          : null,
+      status: error.status,
+      success:
+        payload && 'success' in payload && typeof payload.success === 'boolean'
+          ? payload.success
+          : false,
+      error: errorPayload,
+    };
+  }
+
+  return {
+    message: error instanceof Error ? error.message : 'Unknown discovery cards error.',
+    status: null,
+    success: false,
+  };
+}
+
 export function getMockDiscoveryFilterOptionsResponse(mode: DiscoveryMode) {
   const response = mockDiscoveryFilterOptionsResponsesByMode[mode];
 
@@ -193,21 +234,56 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
       '[Discovery] fetch cards using mock; backend API was not called',
       JSON.stringify(requestLog, null, 2)
     );
-    return getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
+    const mockResponse = getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
+
+    console.log(
+      '[Discovery] generate candidate result',
+      JSON.stringify(
+        {
+          request: payload,
+          response: summarizeDiscoveryCardsResponse(mockResponse),
+          source: 'mock',
+        },
+        null,
+        2
+      )
+    );
+
+    return mockResponse;
   }
 
   console.log('[Discovery] fetch cards using api', JSON.stringify(requestLog, null, 2));
-  const response = await apiFetch<DiscoveryCardsResponse>(DISCOVERY_API.CARDS, {
-    body: payload as unknown as BodyInit,
-    method: 'POST',
-  });
+  let response: DiscoveryCardsResponse;
+
+  try {
+    response = await apiFetch<DiscoveryCardsResponse>(DISCOVERY_API.CARDS, {
+      body: payload as unknown as BodyInit,
+      method: 'POST',
+    });
+  } catch (error) {
+    console.log(
+      '[Discovery] generate candidate result',
+      JSON.stringify(
+        {
+          error: summarizeDiscoveryCardsError(error),
+          request: payload,
+          source: 'api',
+        },
+        null,
+        2
+      )
+    );
+
+    throw error;
+  }
 
   console.log(
-    '[Discovery] fetch cards api response',
+    '[Discovery] generate candidate result',
     JSON.stringify(
       {
         request: payload,
-        response,
+        response: summarizeDiscoveryCardsResponse(response),
+        source: 'api',
       },
       null,
       2
@@ -217,11 +293,12 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
   if (shouldMergeMockDiscoveryCards()) {
     const mergedResponse = mergeDiscoveryCardsWithMocks(response, input);
     console.log(
-      '[Discovery] fetch cards merged response',
+      '[Discovery] generate candidate merged result',
       JSON.stringify(
         {
           request: payload,
-          response: mergedResponse,
+          response: summarizeDiscoveryCardsResponse(mergedResponse),
+          source: 'api+mock',
         },
         null,
         2
