@@ -64,7 +64,7 @@ export const dataDiriStep = {
   can_go_back: true,
   cta: continueCta,
   id: 'step_data_diri',
-  overall_progress: { current: 2, total: 9 },
+  overall_progress: { current: 1, total: 5 },
   questions: [
     question({
       id: 'q_first_name',
@@ -114,7 +114,7 @@ export const dataDiriStep = {
     }),
   ],
   section: copy("Let's build your general profile", 'Mari bangun profil umum kamu'),
-  section_progress: '1/3',
+  section_progress: '1/5',
   subtitle: copy(
     'The basics we need to personalize your matches.',
     'Data dasar yang kami butuhkan untuk mempersonalisasi match kamu.'
@@ -126,7 +126,7 @@ export const useConnectxStep = {
   can_go_back: true,
   cta: continueCta,
   id: 'step_use_connectx',
-  overall_progress: { current: 3, total: 9 },
+  overall_progress: { current: 2, total: 5 },
   questions: [
     question({
       id: 'q_use_connectx',
@@ -142,7 +142,7 @@ export const useConnectxStep = {
     }),
   ],
   section: copy("Let's build your general profile", 'Mari bangun profil umum kamu'),
-  section_progress: '2/3',
+  section_progress: '2/5',
   subtitle: copy(
     'This shapes your entire experience',
     'Ini akan membentuk seluruh pengalamanmu'
@@ -154,28 +154,43 @@ export const builderIdentityDetailsStep = {
   can_go_back: true,
   cta: continueCta,
   id: 'step_identity_details',
-  overall_progress: { current: 4, total: 9 },
+  overall_progress: { current: 3, total: 5 },
   questions: [
     question({
       id: 'q_builder_type',
-      label: copy('', ''),
-      meta: {
-        auto_advance: true,
-        layout: 'list',
-      },
+      label: copy('What best describes you?', 'Apa yang paling menggambarkanmu?'),
+      meta: { layout: 'list' },
       options: builderTypeOptions,
       required: true,
       type: 'single_select_card',
       validation: { min_length: 1 },
     }),
+    question({
+      id: 'q_primary_role',
+      label: copy('Select your primary role', 'Pilih peran utama kamu'),
+      meta: { searchable: true },
+      options: primaryRoleOptions,
+      placeholder: copy('Search your primary role', 'Cari peran utama kamu'),
+      required: true,
+      type: 'searchable_dropdown',
+      validation: { min_length: 1 },
+    }),
+    question({
+      id: 'q_years_experience',
+      label: copy('Years of experience', 'Jumlah tahun pengalaman'),
+      placeholder: copy('3', '3'),
+      required: true,
+      type: 'number',
+      validation: { max: 40, min: 0 },
+    }),
   ],
-  section: copy("Let's build your general profile", 'Mari bangun profil umum kamu'),
-  section_progress: '3/3',
+  section: copy("Let's build your professional profile", 'Mari bangun profil profesional kamu'),
+  section_progress: '3/5',
   subtitle: copy(
-    "This determines what you'll see in your feed",
-    'Ini menentukan apa yang akan muncul di feed-mu'
+    'Tell us how you build, what role you play, and your experience level.',
+    'Beri tahu bagaimana kamu membangun, peranmu, dan level pengalamanmu.'
   ),
-  title: copy('What best describes you?', 'Apa yang paling menggambarkanmu?'),
+  title: copy('Professional Profile', 'Profil Profesional'),
 } satisfies LocalizedOnboardingStepTemplate;
 
 export const founderGoalStep = {
@@ -938,7 +953,7 @@ export const experienceStep = {
   can_go_back: true,
   cta: continueCta,
   id: 'step_experience',
-  overall_progress: { current: 6, total: 13 },
+  overall_progress: { current: 4, total: 5 },
   questions: [
     question({
       id: 'q_startup_experience',
@@ -951,7 +966,7 @@ export const experienceStep = {
     }),
   ],
   section: copy("Let's build your talent profile", 'Mari bangun profil talentamu'),
-  section_progress: '3/3',
+  section_progress: '4/5',
   subtitle: copy(
     'This helps us match you with the right stage of companies.',
     'Ini membantu kami mencocokkanmu dengan perusahaan di tahap yang tepat.'
@@ -966,11 +981,11 @@ export const industriesInterestStep = {
   can_go_back: true,
   cta: continueCta,
   id: 'step_industries_interest',
-  overall_progress: { current: 7, total: 9 },
+  overall_progress: { current: 5, total: 5 },
   questions: [
     question({
       id: 'q_industries_interest',
-      label: copy('', ''),
+      label: copy('Industry interest', 'Minat industri'),
       meta: { searchable: true },
       options: industryOptions,
       placeholder: copy('Search industries', 'Cari industri'),
@@ -978,14 +993,24 @@ export const industriesInterestStep = {
       type: 'searchable_multi_select',
       validation: { max_selections: 5, min_selections: 1 },
     }),
+    question({
+      id: 'q_skills',
+      label: copy('Skills', 'Skill'),
+      meta: { searchable: true },
+      options: skillOptions,
+      placeholder: copy('Search skills', 'Cari skill'),
+      required: true,
+      type: 'searchable_multi_select',
+      validation: { max_selections: 10, min_selections: 1 },
+    }),
   ],
-  section: copy('How and where you work', 'Bagaimana dan di mana kamu bekerja'),
-  section_progress: '3/4',
+  section: copy('Interests and skills', 'Minat dan skill'),
+  section_progress: '5/5',
   subtitle: copy(
-    'Pick up to 5 industries to shape your feed.',
-    'Pilih hingga 5 industri untuk membentuk feed kamu.'
+    'Pick the spaces you care about and the skills you bring.',
+    'Pilih bidang yang kamu minati dan skill yang kamu bawa.'
   ),
-  title: copy('What industries interest you?', 'Industri apa yang menarik minatmu?'),
+  title: copy('Interests & Skills', 'Minat & Skill'),
 } satisfies LocalizedOnboardingStepTemplate;
 
 export const availabilityStep = {

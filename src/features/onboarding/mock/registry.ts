@@ -1,3 +1,16 @@
+import type {
+  LocalizedOnboardingOption,
+  LocalizedOnboardingQuestion,
+  LocalizedOnboardingStepTemplate,
+  LocalizedText,
+  OnboardingAnswerValue,
+  OnboardingAnswers,
+  OnboardingFlowKey,
+  OnboardingLocale,
+  OnboardingQuestion,
+  OnboardingStep,
+  OnboardingStepId,
+} from '../types/onboarding.types';
 import {
   availabilityStep,
   builderIdentityDetailsStep,
@@ -26,22 +39,8 @@ import {
   welcomeStep,
   willingToRelocateStep,
 } from './common-steps';
-import type {
-  LocalizedOnboardingOption,
-  LocalizedOnboardingQuestion,
-  LocalizedOnboardingStepTemplate,
-  LocalizedText,
-  OnboardingAnswerValue,
-  OnboardingAnswers,
-  OnboardingFlowKey,
-  OnboardingLocale,
-  OnboardingQuestion,
-  OnboardingStep,
-  OnboardingStepId,
-} from '../types/onboarding.types';
 
 export const ONBOARDING_STEP_ORDER: OnboardingStepId[] = [
-  'step_welcome',
   'step_data_diri',
   'step_use_connectx',
   'step_identity_details',
@@ -52,20 +51,15 @@ export const ONBOARDING_STEP_ORDER: OnboardingStepId[] = [
   'step_online_presence',
   'step_founder_setup',
   'step_team_presence',
-  'step_primary_role',
   'step_experience',
   'step_founder_goal',
   'step_industries_interest',
-  'step_own_cofounder_type',
-  'step_skills',
-  'step_cofounder_type',
-  'step_roles_needed',
-  'step_skills_needed',
   'step_availability',
-  'step_cash_equity',
   'step_open_to_remote',
   'step_willing_to_relocate',
   'step_credibility',
+  'step_cofounder_type',
+  'step_skills_needed',
 ];
 
 export function getEffectiveStepOrder(answers: OnboardingAnswers): OnboardingStepId[] {
@@ -74,17 +68,13 @@ export function getEffectiveStepOrder(answers: OnboardingAnswers): OnboardingSte
   const isFounderPath = isBuilderPath && answers.q_builder_type === 'founder';
   const founderGoal = answers.q_founder_goal;
   const wantsCofounder = founderGoal === 'cofounder' || founderGoal === 'both';
-  const wantsTeamMembers =
-    founderGoal === 'team_members' || founderGoal === 'both';
-  const needsCofounderType =
-    (isFounderPath && wantsCofounder) || (isStartupPath && wantsCofounder);
-  const needsTeamRoles = isFounderPath && wantsTeamMembers;
-  const isJoiningCofounderPath =
-    isBuilderPath && answers.q_builder_type === 'cofounder';
-  const isJoiningTeamPath =
-    isBuilderPath && answers.q_builder_type === 'team_member';
+  const needsCofounderType = isStartupPath && wantsCofounder;
+  const hasSelectedPath = isBuilderPath || isStartupPath;
 
   return ONBOARDING_STEP_ORDER.filter((stepId) => {
+    if (stepId === 'step_identity_details') {
+      return hasSelectedPath;
+    }
     if (stepId === 'step_problem_solution') {
       return isStartupPath;
     }
@@ -115,20 +105,8 @@ export function getEffectiveStepOrder(answers: OnboardingAnswers): OnboardingSte
     if (stepId === 'step_cofounder_type') {
       return needsCofounderType;
     }
-    if (stepId === 'step_roles_needed') {
-      return needsTeamRoles;
-    }
-    if (stepId === 'step_own_cofounder_type') {
-      return isJoiningCofounderPath;
-    }
-    if (stepId === 'step_skills') {
-      return isJoiningTeamPath;
-    }
-    if (stepId === 'step_cash_equity') {
-      return isJoiningCofounderPath || isJoiningTeamPath;
-    }
     if (stepId === 'step_industries_interest') {
-      return !isStartupPath;
+      return isBuilderPath;
     }
     if (stepId === 'step_availability') {
       return isBuilderPath;
@@ -142,7 +120,7 @@ export function getEffectiveStepOrder(answers: OnboardingAnswers): OnboardingSte
     if (stepId === 'step_credibility') {
       return isBuilderPath;
     }
-    if (stepId === 'step_primary_role' || stepId === 'step_experience') {
+    if (stepId === 'step_experience') {
       return isBuilderPath;
     }
     return true;
@@ -390,4 +368,3 @@ export function getVisibleQuestions(step: OnboardingStep, answers: OnboardingAns
     );
   });
 }
-

@@ -806,6 +806,7 @@ export function OnboardingScreen() {
                     onChange={(value) => {
                       void handleAnswerChange(question, value);
                     }}
+                    preferLocalOptionSearch={mode === 'preview'}
                     question={question}
                     variant={
                       currentStep &&

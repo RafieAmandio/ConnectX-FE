@@ -1,14 +1,23 @@
 import { apiFetch } from '@shared/services/api';
 
+import {
+  businessModelOptions,
+  cityOptions,
+  industryOptions,
+  primaryRoleOptions,
+  skillOptions,
+} from '../mock/catalogs';
 import { getVisibleQuestions } from '../mock/registry';
 import type {
   CurrencyAmountValue,
+  LocalizedOnboardingOption,
   OnboardingAnswerPayload,
   OnboardingAnswerValue,
   OnboardingAnswers,
   OnboardingBackResponse,
   OnboardingLocale,
   OnboardingNextStepResponse,
+  OnboardingOption,
   OnboardingOptionsSearchResponse,
   OnboardingQuestion,
   OnboardingSessionResponse,
@@ -25,6 +34,69 @@ const ONBOARDING_API = {
   SESSIONS: '/api/v1/onboarding/sessions',
   SUBMIT_ANSWER: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/answer`,
 } as const;
+
+const FALLBACK_SEARCH_OPTIONS_BY_QUESTION_ID: Record<string, LocalizedOnboardingOption[]> = {
+  q_business_model: businessModelOptions,
+  q_city: cityOptions,
+  q_industries_interest: industryOptions,
+  q_primary_role: primaryRoleOptions,
+  q_roles_needed: primaryRoleOptions,
+  q_skills: skillOptions,
+  q_skills_needed: skillOptions,
+};
+
+function localizeFallbackOption(
+  option: LocalizedOnboardingOption,
+  locale: OnboardingLocale
+): OnboardingOption {
+  return {
+    group: option.group?.[locale] ?? null,
+    icon: option.icon ?? null,
+    id: option.id,
+    label: option.label[locale],
+    sub_label: option.sub_label?.[locale] ?? null,
+    value: option.value,
+  };
+}
+
+function searchFallbackOptions({
+  locale,
+  query,
+  questionId,
+}: {
+  locale: OnboardingLocale;
+  query: string;
+  questionId: string;
+}) {
+  const fallbackOptions = FALLBACK_SEARCH_OPTIONS_BY_QUESTION_ID[questionId];
+
+  if (!fallbackOptions) {
+    return null;
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const localizedOptions = fallbackOptions.map((option) =>
+    localizeFallbackOption(option, locale)
+  );
+
+  if (!normalizedQuery) {
+    return localizedOptions;
+  }
+
+  return localizedOptions.filter((option) => {
+    const haystack = [
+      option.group,
+      option.label,
+      option.sub_label,
+      option.value,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return haystack.includes(normalizedQuery);
+  });
+}
 
 function localeHeaders(locale: OnboardingLocale) {
   return {
@@ -489,6 +561,12 @@ export async function searchOnboardingOptions({
   questionId: string;
   signal?: AbortSignal;
 }): Promise<OnboardingOptionsSearchResponse> {
+  const fallbackOptions = searchFallbackOptions({ locale, query, questionId });
+
+  if (fallbackOptions) {
+    return { options: fallbackOptions };
+  }
+
   const params = new URLSearchParams({
     q: query,
     question_id: questionId,

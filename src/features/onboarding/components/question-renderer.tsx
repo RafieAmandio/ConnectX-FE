@@ -49,6 +49,7 @@ type QuestionRendererProps = {
   hideSearchableDropdownResultsUntilQuery?: boolean;
   locale?: OnboardingLocale;
   onChange: (value: OnboardingAnswerValue) => void;
+  preferLocalOptionSearch?: boolean;
   question: OnboardingQuestion;
   value: OnboardingAnswerValue | undefined;
   variant?: 'default' | 'dropdown_multi_select' | 'inline_searchable_checkbox_multi_select';
@@ -1868,6 +1869,7 @@ function SearchableDropdownQuestion({
   error,
   locale = 'en',
   onChange,
+  preferLocalOptionSearch = false,
   question,
   value,
 }: QuestionRendererProps) {
@@ -1927,6 +1929,20 @@ function SearchableDropdownQuestion({
     setSearchError(null);
     setSearchOptions([]);
 
+    if (preferLocalOptionSearch) {
+      const normalizedLocalQuery = normalizedQuery.toLowerCase();
+      const nextOptions = (question.options ?? []).filter((option) => {
+        const haystack = `${option.label} ${option.group ?? ''} ${option.sub_label ?? ''}`.toLowerCase();
+
+        return haystack.includes(normalizedLocalQuery);
+      });
+
+      setSearchOptions(nextOptions);
+      setKnownOptions((currentOptions) => mergeOptionsByValue(currentOptions, nextOptions));
+      setIsSearching(false);
+      return;
+    }
+
     const debounceTimer = setTimeout(() => {
       searchOnboardingOptions({
         locale,
@@ -1969,7 +1985,7 @@ function SearchableDropdownQuestion({
       clearTimeout(debounceTimer);
       abortController.abort();
     };
-  }, [isOpen, locale, normalizedQuery, question.id, retryCount]);
+  }, [isOpen, locale, normalizedQuery, preferLocalOptionSearch, question.id, question.options, retryCount]);
 
   React.useEffect(() => {
     if (!isOpen) {

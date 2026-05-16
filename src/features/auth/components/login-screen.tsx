@@ -206,6 +206,10 @@ export function LoginScreen() {
     return <Redirect href={getRouteForAuthPhase(authPhase)} />;
   }
 
+  const handlePreviewNewOnboarding = () => {
+    router.push('/onboarding-new?mode=preview' as never);
+  };
+
   const handleLogin = async () => {
     const nextEmailError = getEmailError(email);
     const nextPasswordError = getPasswordError(password);
@@ -460,6 +464,20 @@ export function LoginScreen() {
                 {isSubmitting ? 'Signing in...' : 'Log In'}
               </AppText>
               <AntDesign color="#1A1208" name="arrow-right" size={18} />
+            </Pressable>
+
+            <Pressable
+              onPress={handlePreviewNewOnboarding}
+              className="h-12 flex-row items-center justify-center gap-2 rounded-[16px] border"
+              style={{
+                backgroundColor: FIELD_BG,
+                borderColor: FIELD_BORDER,
+                borderCurve: 'continuous',
+              }}>
+              <AntDesign color={ACCENT} name="eye" size={17} />
+              <AppText variant="bodyStrong" className="text-[14px] text-white">
+                Preview new onboarding
+              </AppText>
             </Pressable>
 
             <View className="flex-row items-center justify-center gap-2">

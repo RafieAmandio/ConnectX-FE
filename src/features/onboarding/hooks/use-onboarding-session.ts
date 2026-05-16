@@ -3,7 +3,12 @@ import React from 'react';
 import { saveOnboardingDiscoveryPreference } from '@features/home/services/onboarding-discovery-preference';
 import { ApiError } from '@shared/services/api';
 
-import { getVisibleQuestions } from '../mock/registry';
+import {
+  getNextStepId,
+  getPreviousStepId,
+  getVisibleQuestions,
+  materializeStep,
+} from '../mock/registry';
 import {
   goBackOnboardingSession,
   normalizeStepAnswers,
@@ -17,6 +22,7 @@ import type {
   OnboardingAnswers,
   OnboardingLocale,
   OnboardingMode,
+  OnboardingNextStepResponse,
   OnboardingQuestion,
   OnboardingSessionState,
   OnboardingStep,
@@ -113,6 +119,14 @@ export function useOnboardingSession({
     setStatusMessage(null);
 
     try {
+      if (mode === 'preview') {
+        const previewStep = materializeStep('step_welcome', {}, locale);
+
+        setSessionId(`preview-${actorKey}`);
+        hydrateFromStep(previewStep, {}, false);
+        return;
+      }
+
       const startResponse = await startOnboardingSession({
         actorKey,
         locale,
@@ -205,14 +219,36 @@ export function useOnboardingSession({
 
       try {
         const submittedAnswers = normalizeStepAnswers(currentStep, answersOverride ?? draftAnswers);
-        const response = await submitOnboardingAnswers(sessionId, {
-          answers: submittedAnswers,
-          step_id: currentStep.id,
-        }, locale);
         const nextAnswers = {
           ...allAnswers,
           ...submittedAnswers,
         };
+
+        if (mode === 'preview') {
+          const nextStepId = getNextStepId(currentStep.id, nextAnswers);
+          const nextStep = nextStepId ? materializeStep(nextStepId, nextAnswers, locale) : null;
+          const response: OnboardingNextStepResponse = {
+            can_go_back: Boolean(nextStep?.can_go_back),
+            completed: !nextStep,
+            next_step: nextStep,
+            progress: nextStep?.overall_progress ?? currentStep.overall_progress,
+            redirect_to: '/login',
+          };
+
+          saveOnboardingDiscoveryPreference(nextAnswers);
+          hydrateFromStep(
+            response.completed ? null : response.next_step,
+            nextAnswers,
+            response.can_go_back ?? response.next_step?.can_go_back ?? false
+          );
+
+          return response;
+        }
+
+        const response = await submitOnboardingAnswers(sessionId, {
+          answers: submittedAnswers,
+          step_id: currentStep.id,
+        }, locale);
         saveOnboardingDiscoveryPreference(nextAnswers);
 
         hydrateFromStep(
@@ -244,7 +280,7 @@ export function useOnboardingSession({
         setIsSubmitting(false);
       }
     },
-    [allAnswers, currentStep, draftAnswers, hydrateFromStep, isSubmitting, locale, sessionId]
+    [allAnswers, currentStep, draftAnswers, hydrateFromStep, isSubmitting, locale, mode, sessionId]
   );
 
   const goBack = React.useCallback(async () => {
@@ -256,6 +292,22 @@ export function useOnboardingSession({
     setStatusMessage(null);
 
     try {
+      if (mode === 'preview') {
+        const previousStepId = getPreviousStepId(currentStep.id, allAnswers);
+
+        if (!previousStepId) {
+          return;
+        }
+
+        const previousStep = materializeStep(previousStepId, allAnswers, locale);
+
+        setCurrentStep(previousStep);
+        setCanGoBack(previousStep.overall_progress.current > 1);
+        setDraftAnswers(pickStepAnswers(previousStep, allAnswers));
+        setFieldErrors({});
+        return;
+      }
+
       const backResponse = await goBackOnboardingSession(sessionId, locale);
 
       console.log(
@@ -297,7 +349,7 @@ export function useOnboardingSession({
     } finally {
       setIsGoingBack(false);
     }
-  }, [allAnswers, currentStep, isGoingBack, locale, sessionId]);
+  }, [allAnswers, currentStep, isGoingBack, locale, mode, sessionId]);
 
   return {
     allAnswers,

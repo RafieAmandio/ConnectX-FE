@@ -1,0 +1,350 @@
+{
+  "_description": "Streamlined builder onboarding step payloads. Runtime step IDs, question IDs, request keys, and response keys stay the same as the current onboarding contract; only this sample filename uses the streamlined_ prefix.",
+  "_request_shape": {
+    "step_id": "step_identity_details",
+    "answers": {
+      "q_builder_type": "founder",
+      "q_primary_role": "software_engineer",
+      "q_years_experience": 3
+    }
+  },
+  "steps": [
+    {
+      "id": "step_welcome",
+      "flow_key": "common_data_diri",
+      "section": "Let's get started",
+      "section_progress": "1/11",
+      "overall_progress": { "current": 1, "total": 11 },
+      "title": "Find the right people to build with",
+      "subtitle": "ConnectX matches you with co-founders, teammates, and startups based on skills, goals, and compatibility.",
+      "questions": [],
+      "cta": { "label": "Get Started", "enabled_when": "always" },
+      "can_go_back": false
+    },
+    {
+      "id": "step_data_diri",
+      "flow_key": "common_data_diri",
+      "section": "Let's build your general profile",
+      "section_progress": "2/11",
+      "overall_progress": { "current": 2, "total": 11 },
+      "title": "Tell us about yourself",
+      "subtitle": "The basics we need to personalize your matches.",
+      "questions": [
+        {
+          "id": "q_first_name",
+          "type": "text",
+          "label": "First name",
+          "placeholder": "Your first name",
+          "required": true,
+          "validation": { "min_length": 1, "max_length": 50 }
+        },
+        {
+          "id": "q_last_name",
+          "type": "text",
+          "label": "Last name",
+          "placeholder": "Your last name",
+          "helper_text": "Optional, only shared after a connection.",
+          "required": false,
+          "validation": { "max_length": 50 }
+        },
+        {
+          "id": "q_date_of_birth",
+          "type": "date",
+          "label": "Date of birth",
+          "placeholder": "YYYY-MM-DD",
+          "required": true,
+          "validation": { "min_length": 10 }
+        },
+        {
+          "id": "q_city",
+          "type": "searchable_dropdown",
+          "label": "Where are you based?",
+          "placeholder": "Search a city",
+          "required": true,
+          "meta": { "searchable": true },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_city_jakarta", "value": "jakarta", "label": "Jakarta, Indonesia", "group": "Indonesia", "sub_label": null, "icon": null },
+            { "id": "opt_city_bandung", "value": "bandung", "label": "Bandung, Indonesia", "group": "Indonesia", "sub_label": null, "icon": null },
+            { "id": "opt_city_yogyakarta", "value": "yogyakarta", "label": "Yogyakarta, Indonesia", "group": "Indonesia", "sub_label": null, "icon": null },
+            { "id": "opt_city_singapore", "value": "singapore", "label": "Singapore, Singapore", "group": "Singapore", "sub_label": null, "icon": null },
+            { "id": "opt_city_bangalore", "value": "bangalore", "label": "Bangalore, India", "group": "India", "sub_label": null, "icon": null },
+            { "id": "opt_city_hcmc", "value": "hcmc", "label": "Ho Chi Minh City, Vietnam", "group": "Vietnam", "sub_label": null, "icon": null },
+            { "id": "opt_city_dubai", "value": "dubai", "label": "Dubai, United Arab Emirates", "group": "United Arab Emirates", "sub_label": null, "icon": null }
+          ]
+        },
+        {
+          "id": "q_gender",
+          "type": "single_select_chip",
+          "label": "Gender",
+          "required": true,
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_gender_female", "value": "female", "label": "Female", "icon": "female", "sub_label": null, "group": null },
+            { "id": "opt_gender_male", "value": "male", "label": "Male", "icon": "male", "sub_label": null, "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_use_connectx",
+      "flow_key": "common_data_diri",
+      "section": "Let's build your general profile",
+      "section_progress": "3/11",
+      "overall_progress": { "current": 3, "total": 11 },
+      "title": "How do you want to use ConnectX?",
+      "subtitle": "This shapes your entire experience",
+      "questions": [
+        {
+          "id": "q_use_connectx",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "meta": { "auto_advance": true, "layout": "list" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_builder", "value": "builder", "label": "I'm a Builder", "sub_label": "Founder, co-founder, or team member", "icon": "team", "group": null },
+            { "id": "opt_startup", "value": "startup", "label": "I represent a Startup", "sub_label": "Building a team or hiring co-founders", "icon": "rocket", "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_identity_details",
+      "_variant": "builder",
+      "flow_key": "common_data_diri",
+      "section": "Let's build your professional profile",
+      "section_progress": "4/11",
+      "overall_progress": { "current": 4, "total": 11 },
+      "title": "Professional Profile",
+      "subtitle": "Tell us how you build, what role you play, and your experience level.",
+      "questions": [
+        {
+          "id": "q_builder_type",
+          "type": "single_select_card",
+          "label": "What best describes you?",
+          "required": true,
+          "meta": { "layout": "list" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_builder_founder", "value": "founder", "label": "Founder", "sub_label": "I'm building something and looking for people", "icon": "founder_rocket", "group": null },
+            { "id": "opt_builder_cofounder", "value": "cofounder", "label": "Co-Founder", "sub_label": "I want to join a startup as a co-founder", "icon": "cofounder_handshake", "group": null },
+            { "id": "opt_builder_team_member", "value": "team_member", "label": "Team Member", "sub_label": "I want to join a startup team", "icon": "team_member_group", "group": null }
+          ]
+        },
+        {
+          "id": "q_primary_role",
+          "type": "searchable_dropdown",
+          "label": "Select your primary role",
+          "placeholder": "Search your primary role",
+          "required": true,
+          "meta": { "searchable": true },
+          "validation": { "min_length": 1 },
+          "_options_source": "catalogs/primary-role-options.json",
+          "options": []
+        },
+        {
+          "id": "q_years_experience",
+          "type": "number",
+          "label": "Years of experience",
+          "placeholder": "3",
+          "required": true,
+          "validation": { "min": 0, "max": 40 }
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_experience",
+      "flow_key": "builder_founder_both",
+      "section": "Let's build your talent profile",
+      "section_progress": "5/11",
+      "overall_progress": { "current": 5, "total": 11 },
+      "title": "How much startup experience do you have?",
+      "subtitle": "This helps us match you with the right stage of companies.",
+      "questions": [
+        {
+          "id": "q_startup_experience",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "meta": { "auto_advance": true, "layout": "list" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_exp_founded", "value": "founded", "label": "Founded a startup", "sub_label": "I started a company from scratch", "icon": "exp_founded", "group": null },
+            { "id": "opt_exp_built", "value": "built", "label": "Built products at a startup", "sub_label": "I shipped real products inside a startup", "icon": "exp_built", "group": null },
+            { "id": "opt_exp_worked", "value": "worked", "label": "Worked in a startup team", "sub_label": "I contributed to a startup team before", "icon": "exp_worked", "group": null },
+            { "id": "opt_exp_none", "value": "none", "label": "New to startups", "sub_label": "No direct startup experience yet", "icon": "exp_none", "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_founder_goal",
+      "_shown_when": "q_builder_type === 'founder'",
+      "flow_key": "builder_founder_both",
+      "section": "Let's build your general profile",
+      "section_progress": "6/11",
+      "overall_progress": { "current": 6, "total": 11 },
+      "title": "What are you looking for?",
+      "subtitle": "Pick the most urgent hiring need for your startup",
+      "questions": [
+        {
+          "id": "q_founder_goal",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "meta": { "auto_advance": true, "layout": "list" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_goal_cofounder", "value": "cofounder", "label": "Co-Founder", "sub_label": "Find someone to build with from day one", "icon": "goal_cofounder", "group": null },
+            { "id": "opt_goal_team_members", "value": "team_members", "label": "Team Members", "sub_label": "Recruit early members for your startup", "icon": "goal_team_members", "group": null },
+            { "id": "opt_goal_both", "value": "both", "label": "Both", "sub_label": "I'm open to co-founders and team members", "icon": "goal_both", "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_industries_interest",
+      "flow_key": "builder_founder_both",
+      "section": "Interests and skills",
+      "section_progress": "7/11",
+      "overall_progress": { "current": 7, "total": 11 },
+      "title": "Interests & Skills",
+      "subtitle": "Pick the spaces you care about and the skills you bring.",
+      "questions": [
+        {
+          "id": "q_industries_interest",
+          "type": "searchable_multi_select",
+          "label": "Industry interest",
+          "placeholder": "Search industries",
+          "required": true,
+          "meta": { "searchable": true },
+          "validation": { "min_selections": 1, "max_selections": 5 },
+          "_options_source": "catalogs/industry-options.json",
+          "options": []
+        },
+        {
+          "id": "q_skills",
+          "type": "searchable_multi_select",
+          "label": "Skills",
+          "placeholder": "Search skills",
+          "required": true,
+          "meta": { "searchable": true },
+          "validation": { "min_selections": 1, "max_selections": 10 },
+          "_options_source": "catalogs/skill-options.json",
+          "options": []
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_availability",
+      "flow_key": "builder_founder_both",
+      "section": "Work preferences",
+      "section_progress": "8/11",
+      "overall_progress": { "current": 8, "total": 11 },
+      "title": "What availability do you expect?",
+      "subtitle": "What commitment level should candidates have?",
+      "questions": [
+        {
+          "id": "q_availability",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "meta": { "auto_advance": true, "layout": "list" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_availability_full_time", "value": "full_time", "label": "Full-time", "sub_label": "Candidates must be fully committed", "icon": "availability_full_time", "group": null },
+            { "id": "opt_availability_part_time", "value": "part_time", "label": "Part-time", "sub_label": "Open to candidates with other commitments", "icon": "availability_part_time", "group": null },
+            { "id": "opt_availability_flexible", "value": "flexible", "label": "Flexible / Hybrid", "sub_label": "Open to discuss arrangement", "icon": "availability_flexible", "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_open_to_remote",
+      "flow_key": "builder_founder_both",
+      "section": "Work preferences",
+      "section_progress": "9/11",
+      "overall_progress": { "current": 9, "total": 11 },
+      "title": "Are you open to working remotely?",
+      "subtitle": "Remote-friendly teams welcome collaborators from anywhere.",
+      "questions": [
+        {
+          "id": "q_open_to_remote",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "meta": { "auto_advance": true, "layout": "list" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_yes", "value": "yes", "label": "Yes", "icon": "yes", "sub_label": null, "group": null },
+            { "id": "opt_no", "value": "no", "label": "No", "icon": "no", "sub_label": null, "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_willing_to_relocate",
+      "flow_key": "builder_founder_both",
+      "section": "Work preferences",
+      "section_progress": "10/11",
+      "overall_progress": { "current": 10, "total": 11 },
+      "title": "Are you willing to relocate?",
+      "subtitle": "Some opportunities require moving. Let us know if you are open to it.",
+      "questions": [
+        {
+          "id": "q_willing_to_relocate",
+          "type": "single_select_card",
+          "label": "",
+          "required": true,
+          "meta": { "auto_advance": true, "layout": "list" },
+          "validation": { "min_length": 1 },
+          "options": [
+            { "id": "opt_yes", "value": "yes", "label": "Yes", "icon": "yes", "sub_label": null, "group": null },
+            { "id": "opt_no", "value": "no", "label": "No", "icon": "no", "sub_label": null, "group": null }
+          ]
+        }
+      ],
+      "cta": { "label": "Continue", "enabled_when": "valid" },
+      "can_go_back": true
+    },
+    {
+      "id": "step_credibility",
+      "flow_key": "builder_founder_both",
+      "section": "Finish up",
+      "section_progress": "11/11",
+      "overall_progress": { "current": 11, "total": 11 },
+      "title": "Last step. Share your LinkedIn",
+      "subtitle": "Drop your LinkedIn so we can fill in the rest of your profile automatically.",
+      "questions": [
+        {
+          "id": "q_linkedin_url",
+          "type": "url",
+          "label": "LinkedIn URL",
+          "placeholder": "https://linkedin.com/in/your-name",
+          "helper_text": "We'll automatically fetch your experience, skills, and photo from LinkedIn so you can edit them next.",
+          "required": true,
+          "validation": { "min_length": 10, "max_length": 200 }
+        }
+      ],
+      "cta": { "label": "Finish", "enabled_when": "valid" },
+      "can_go_back": true
+    }
+  ]
+}
