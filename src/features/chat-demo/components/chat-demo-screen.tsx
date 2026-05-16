@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
@@ -194,7 +195,10 @@ function EmptyState({
 export function ChatDemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const conversationsQuery = useChatDemoConversations({ refetchInterval: 10_000 });
+  const isFocused = useIsFocused();
+  const conversationsQuery = useChatDemoConversations({
+    refetchInterval: isFocused ? 10_000 : false,
+  });
   const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const markConversationReadMutation = useMarkChatDemoConversationRead();
   const refetchConversations = conversationsQuery.refetch;
