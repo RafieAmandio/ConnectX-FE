@@ -49,7 +49,6 @@ const GOAL_MODE_MAP: Record<DiscoveryGoalId, DiscoveryMode> = {
   goal_explore_startups: 'explore_startups',
   goal_joining_startups: 'joining_startups',
 };
-const IS_GOAL_SWITCHING_DISABLED = true;
 
 function isPremiumDiscoverySection(section?: DiscoveryFilterSection) {
   return Boolean(section?.access?.requiresEntitlement);
@@ -886,7 +885,7 @@ export function DiscoveryFilterSheet({
   const handleGoalPress = React.useCallback((goalId: string) => {
     const nextMode = GOAL_MODE_MAP[goalId as DiscoveryGoalId];
 
-    if (IS_GOAL_SWITCHING_DISABLED || !nextMode || nextMode === currentMode) {
+    if (!nextMode || nextMode === currentMode) {
       return;
     }
 
@@ -1360,7 +1359,6 @@ export function DiscoveryFilterSheet({
                     <GoalCard
                       active={GOAL_MODE_MAP[goal.id as DiscoveryGoalId] === currentMode}
                       description={goal.description}
-                      disabled={GOAL_MODE_MAP[goal.id as DiscoveryGoalId] !== currentMode}
                       goalId={goal.id}
                       label={goal.label}
                       onPress={() => handleGoalPress(goal.id)}
