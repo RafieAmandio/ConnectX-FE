@@ -98,12 +98,11 @@ These steps are shown to every builder subtype: founder, cofounder, and team mem
 
 | Order | Step ID | Questions |
 | --- | --- | --- |
-| 1 | `step_welcome` | none |
-| 2 | `step_data_diri` | `q_first_name`, `q_last_name`, `q_date_of_birth`, `q_city`, `q_gender` |
-| 3 | `step_use_connectx` | `q_use_connectx` |
-| 4 | `step_identity_details` | `q_builder_type`, `q_primary_role`, `q_years_experience` |
-| 5 | `step_experience` | `q_startup_experience` |
-| 6 or 7 | `step_industries_interest` | `q_industries_interest`, `q_skills` |
+| 1 | `step_data_diri` | `q_first_name`, `q_last_name`, `q_date_of_birth`, `q_city`, `q_gender` |
+| 2 | `step_use_connectx` | `q_use_connectx` |
+| 3 | `step_identity_details` | `q_builder_type`, `q_primary_role`, `q_years_experience` |
+| 4 | `step_experience` | `q_startup_experience` |
+| 5 or 6 | `step_industries_interest` | `q_industries_interest`, `q_skills` |
 | next | `step_availability` | `q_availability` |
 | next | `step_open_to_remote` | `q_open_to_remote` |
 | next | `step_willing_to_relocate` | `q_willing_to_relocate` |
@@ -123,18 +122,11 @@ q_use_connectx === "builder" AND q_builder_type === "founder"
 
 This means:
 
-- Founder builder flow total: 11 steps.
-- Cofounder builder flow total: 10 steps.
-- Team member builder flow total: 10 steps.
+- Founder builder flow total: 10 steps.
+- Cofounder builder flow total: 9 steps.
+- Team member builder flow total: 9 steps.
 
 ## Step Details BE Must Match
-
-### `step_welcome`
-
-- No questions.
-- CTA enabled always.
-- `can_go_back: false`.
-- Next step is `step_data_diri`.
 
 ### `step_data_diri`
 
@@ -325,17 +317,6 @@ Do not expect old builder-only keys that no longer appear in the streamlined bui
 
 These examples show the exact request shape FE sends when the user taps Continue.
 
-### `step_welcome`
-
-Welcome has no questions. Continue sends an empty `answers` object.
-
-```json
-{
-  "step_id": "step_welcome",
-  "answers": {}
-}
-```
-
 ### `step_data_diri`
 
 ```json
@@ -469,9 +450,9 @@ BE remains authoritative for progress and back navigation.
 
 Expected progress totals:
 
-- Founder builder: total 11.
-- Cofounder builder: total 10.
-- Team member builder: total 10.
+- Founder builder: total 10.
+- Cofounder builder: total 9.
+- Team member builder: total 9.
 - Startup: unchanged from existing contract.
 
 `POST /sessions/:session_id/back` should move to the previous effective step in the branch-specific sequence.
@@ -491,8 +472,8 @@ Expected final response shape remains:
   "next_step": null,
   "profile_id": "profile_123",
   "progress": {
-    "current": 11,
-    "total": 11
+    "current": 10,
+    "total": 10
   },
   "redirect_to": "/home"
 }

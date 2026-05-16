@@ -120,7 +120,7 @@ export function useOnboardingSession({
 
     try {
       if (mode === 'preview') {
-        const previewStep = materializeStep('step_welcome', {}, locale);
+        const previewStep = materializeStep('step_data_diri', {}, locale);
 
         setSessionId(`preview-${actorKey}`);
         hydrateFromStep(previewStep, {}, false);

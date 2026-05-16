@@ -194,19 +194,23 @@ function DropdownOverlay({
   anchorRef,
   children,
   header,
+  inlineOnAndroid = true,
   maxHeight,
   minWidth,
   onClose,
   renderContent,
+  verticalOffset = 0,
   visible,
 }: {
   anchorRef: React.RefObject<View | null>;
   children?: React.ReactNode;
   header?: React.ReactNode;
+  inlineOnAndroid?: boolean;
   maxHeight: number;
   minWidth?: number;
   onClose: () => void;
   renderContent?: (params: DropdownContentRenderParams) => React.ReactNode;
+  verticalOffset?: number;
   visible: boolean;
 }) {
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
@@ -226,9 +230,9 @@ function DropdownOverlay({
   }, [anchorRef, visible]);
 
   const horizontalPadding = 16;
-  const verticalGap = Platform.OS === 'android' ? 20 : 8;
+  const verticalGap = (Platform.OS === 'android' ? 20 : 8) + verticalOffset;
 
-  if (Platform.OS === 'android') {
+  if (Platform.OS === 'android' && inlineOnAndroid) {
     const inlineScrollMaxHeight = Math.max(88, maxHeight - (header ? 72 : 0));
     return visible ? (
       <AppCard
@@ -2753,9 +2757,11 @@ function DateDropdown({
 
       <DropdownOverlay
         anchorRef={triggerRef}
+        inlineOnAndroid={false}
         maxHeight={320}
         minWidth={minDropdownWidth}
         onClose={onToggle}
+        verticalOffset={Platform.OS === 'android' ? 18 : 0}
         visible={isOpen}>
         {options.map((option) => {
           const isSelected = option.value === selectedValue;
