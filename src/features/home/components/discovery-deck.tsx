@@ -40,6 +40,7 @@ import {
   useRewindAction,
   useSwipeAction,
 } from '../hooks/use-discovery';
+import { useDiscoveryOnboardingRequiredHandler } from '../hooks/use-discovery-onboarding-required-handler';
 import {
   mockDiscoveryCardsResponse,
   mockDiscoveryCardsResponsesByMode,
@@ -47,6 +48,7 @@ import {
 import {
   isRewindNotAvailableError,
   isRewindPremiumRequiredError,
+  isDiscoveryOnboardingRequiredError,
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
 import { isDiscoveryCardsMockEnabled } from '../services/discovery-service';
@@ -1494,6 +1496,7 @@ export function DiscoveryDeck() {
     DISCOVERY_PAGE_LIMIT,
     hasResolvedAuthSessionSetup
   );
+  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
 
@@ -1610,6 +1613,7 @@ export function DiscoveryDeck() {
   );
   const usingFallback =
     !usingMockCards &&
+    !isDiscoveryOnboardingRequiredError(discoveryQuery.error) &&
     !hasUsableCards(effectiveLiveCards) &&
     (discoveryQuery.isError || discoveryQuery.isSuccess);
   const usingLocalMockCards = usingMockCards || usingFallback;
@@ -1703,6 +1707,10 @@ export function DiscoveryDeck() {
   ]);
 
   React.useEffect(() => {
+    if (discoveryQuery.isError && handleOnboardingRequired(discoveryQuery.error)) {
+      return;
+    }
+
     if (!discoveryQuery.isError || !isPremiumRequiredError(discoveryQuery.error)) {
       return;
     }
@@ -1710,7 +1718,7 @@ export function DiscoveryDeck() {
     setFilterError(
       getErrorMessage(discoveryQuery.error, 'Premium subscription required to use advanced discovery filters.')
     );
-  }, [discoveryQuery.error, discoveryQuery.isError]);
+  }, [discoveryQuery.error, discoveryQuery.isError, handleOnboardingRequired]);
 
   React.useEffect(() => {
     setMockCards(getFallbackCards(appliedMode));

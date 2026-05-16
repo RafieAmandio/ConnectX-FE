@@ -33,6 +33,7 @@ import {
 } from '@features/chat/hooks/use-chat-demo';
 import type { ChatDemoUploadedMedia } from '@features/chat/services/chat-demo-api-service';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
+import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 
 type PendingChatDemoMedia = {
@@ -194,6 +195,7 @@ export function ChatDemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const conversationsQuery = useChatDemoConversations({ refetchInterval: 10_000 });
+  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const markConversationReadMutation = useMarkChatDemoConversationRead();
   const refetchConversations = conversationsQuery.refetch;
   const conversations = conversationsQuery.data ?? [];
@@ -204,6 +206,12 @@ export function ChatDemoListScreen() {
       void refetchConversations();
     }, [refetchConversations])
   );
+
+  React.useEffect(() => {
+    if (conversationsQuery.isError) {
+      handleOnboardingRequired(conversationsQuery.error);
+    }
+  }, [conversationsQuery.error, conversationsQuery.isError, handleOnboardingRequired]);
 
   const renderConversation = React.useCallback(
     ({ item }: ListRenderItemInfo<ChatConversation>) => (
@@ -365,6 +373,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const insets = useSafeAreaInsets();
   const conversationsQuery = useChatDemoConversations();
   const messagesQuery = useChatDemoMessages(conversationId);
+  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const sendMessageMutation = useSendChatDemoMessage(conversationId);
   const sendImageMessageMutation = useSendChatDemoImageMessage(conversationId);
   const uploadMediaMutation = useUploadChatDemoMedia();
@@ -389,6 +398,18 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     Platform.OS === 'ios' || androidKeyboardOverlap === 0 ? Math.max(insets.bottom + 8, 20) : 12;
 
   useChatDemoRoomRealtime(conversationId);
+
+  React.useEffect(() => {
+    if (conversationsQuery.isError) {
+      handleOnboardingRequired(conversationsQuery.error);
+    }
+  }, [conversationsQuery.error, conversationsQuery.isError, handleOnboardingRequired]);
+
+  React.useEffect(() => {
+    if (messagesQuery.isError) {
+      handleOnboardingRequired(messagesQuery.error);
+    }
+  }, [handleOnboardingRequired, messagesQuery.error, messagesQuery.isError]);
 
   const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
     if (Platform.OS !== 'android') {

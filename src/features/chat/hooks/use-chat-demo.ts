@@ -2,6 +2,8 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteD
 import React from 'react';
 
 import { useAuth } from '@features/auth';
+import { useViewerContext } from '@features/home/hooks/use-viewer-context';
+import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
 import { supabaseData } from '@shared/services/supabase/client';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
@@ -20,8 +22,12 @@ import {
 import type { ChatConversation, ChatMessage } from '../types/chat.types';
 
 export const chatDemoQueryKeys = {
-  conversations: ['chat-demo', 'api', 'conversations'] as const,
-  messages: (conversationId: string) => ['chat-demo', 'api', 'messages', conversationId] as const,
+  conversationsRoot: ['chat-demo', 'api', 'conversations'] as const,
+  conversations: (viewerContext: ViewerContext) =>
+    ['chat-demo', 'api', 'conversations', viewerContext] as const,
+  messagesRoot: ['chat-demo', 'api', 'messages'] as const,
+  messages: (conversationId: string, viewerContext: ViewerContext) =>
+    ['chat-demo', 'api', 'messages', conversationId, viewerContext] as const,
 };
 
 function getMessagePreview(message: ChatMessage) {
@@ -245,9 +251,11 @@ type ChatDemoMessagesOptions = {
 };
 
 export function useChatDemoConversations(options: ChatDemoConversationsOptions = {}) {
+  const viewerContext = useViewerContext();
+
   return useQuery({
-    queryKey: chatDemoQueryKeys.conversations,
-    queryFn: fetchChatDemoConversations,
+    queryKey: chatDemoQueryKeys.conversations(viewerContext),
+    queryFn: () => fetchChatDemoConversations(viewerContext),
     refetchInterval: options.refetchInterval ?? false,
     staleTime: 30_000,
   });
@@ -258,18 +266,20 @@ export function useChatDemoMessages(
   options: ChatDemoMessagesOptions = {}
 ) {
   const currentUserId = useCurrentUserId();
+  const viewerContext = useViewerContext();
 
   return useInfiniteQuery({
     enabled: Boolean(conversationId),
     initialPageParam: null as string | null,
     queryKey: conversationId
-      ? chatDemoQueryKeys.messages(conversationId)
+      ? chatDemoQueryKeys.messages(conversationId, viewerContext)
       : ['chat-demo', 'api', 'messages', 'idle'],
     queryFn: ({ pageParam }) =>
       fetchChatDemoMessages({
         before: pageParam,
         conversationId: conversationId ?? '',
         currentUserId,
+        viewerContext,
       }),
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
     refetchInterval: options.refetchInterval ?? false,
@@ -288,6 +298,7 @@ type SendChatDemoImageInput = {
 
 export function useSendChatDemoMessage(conversationId: string | null) {
   const currentUserId = useCurrentUserId();
+  const viewerContext = useViewerContext();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -321,16 +332,17 @@ export function useSendChatDemoMessage(conversationId: string | null) {
       };
 
       await Promise.all([
-        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
-        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations }),
+        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId, viewerContext) }),
+        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) }),
       ]);
 
       queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
-        chatDemoQueryKeys.messages(conversationId),
+        chatDemoQueryKeys.messages(conversationId, viewerContext),
         (current) => upsertMessageInCache(current, tempMessage)
       );
-      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
-        updateConversationCacheFromMessage(current, conversationId, tempMessage)
+      queryClient.setQueryData<ChatConversation[]>(
+        chatDemoQueryKeys.conversations(viewerContext),
+        (current) => updateConversationCacheFromMessage(current, conversationId, tempMessage)
       );
 
       return {
@@ -343,7 +355,7 @@ export function useSendChatDemoMessage(conversationId: string | null) {
       }
 
       queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
-        chatDemoQueryKeys.messages(conversationId),
+        chatDemoQueryKeys.messages(conversationId, viewerContext),
         (current) =>
           updateMessageInCache(current, context.tempMessageId, (message) => ({
             ...message,
@@ -357,7 +369,7 @@ export function useSendChatDemoMessage(conversationId: string | null) {
       }
 
       queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
-        chatDemoQueryKeys.messages(conversationId),
+        chatDemoQueryKeys.messages(conversationId, viewerContext),
         (current) =>
           upsertMessageInCache(
             context?.tempMessageId
@@ -366,19 +378,20 @@ export function useSendChatDemoMessage(conversationId: string | null) {
             message
           )
       );
-      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
-        updateConversationCacheFromMessage(current, conversationId, message)
+      queryClient.setQueryData<ChatConversation[]>(
+        chatDemoQueryKeys.conversations(viewerContext),
+        (current) => updateConversationCacheFromMessage(current, conversationId, message)
       );
     },
     onSettled: async () => {
       if (!conversationId) {
-        await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations });
+        await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) });
         return;
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations }),
-        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId, viewerContext) }),
       ]);
     },
   });
@@ -392,6 +405,7 @@ export function useUploadChatDemoMedia() {
 
 export function useSendChatDemoImageMessage(conversationId: string | null) {
   const currentUserId = useCurrentUserId();
+  const viewerContext = useViewerContext();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -429,16 +443,17 @@ export function useSendChatDemoImageMessage(conversationId: string | null) {
       };
 
       await Promise.all([
-        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
-        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations }),
+        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId, viewerContext) }),
+        queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) }),
       ]);
 
       queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
-        chatDemoQueryKeys.messages(conversationId),
+        chatDemoQueryKeys.messages(conversationId, viewerContext),
         (current) => upsertMessageInCache(current, tempMessage)
       );
-      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
-        updateConversationCacheFromMessage(current, conversationId, tempMessage)
+      queryClient.setQueryData<ChatConversation[]>(
+        chatDemoQueryKeys.conversations(viewerContext),
+        (current) => updateConversationCacheFromMessage(current, conversationId, tempMessage)
       );
 
       return {
@@ -451,7 +466,7 @@ export function useSendChatDemoImageMessage(conversationId: string | null) {
       }
 
       queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
-        chatDemoQueryKeys.messages(conversationId),
+        chatDemoQueryKeys.messages(conversationId, viewerContext),
         (current) =>
           updateMessageInCache(current, context.tempMessageId, (message) => ({
             ...message,
@@ -465,7 +480,7 @@ export function useSendChatDemoImageMessage(conversationId: string | null) {
       }
 
       queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
-        chatDemoQueryKeys.messages(conversationId),
+        chatDemoQueryKeys.messages(conversationId, viewerContext),
         (current) =>
           upsertMessageInCache(
             context?.tempMessageId
@@ -474,25 +489,27 @@ export function useSendChatDemoImageMessage(conversationId: string | null) {
             message
           )
       );
-      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
-        updateConversationCacheFromMessage(current, conversationId, message)
+      queryClient.setQueryData<ChatConversation[]>(
+        chatDemoQueryKeys.conversations(viewerContext),
+        (current) => updateConversationCacheFromMessage(current, conversationId, message)
       );
     },
     onSettled: async () => {
       if (!conversationId) {
-        await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations });
+        await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) });
         return;
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations }),
-        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId, viewerContext) }),
       ]);
     },
   });
 }
 
 export function useMarkChatDemoConversationRead() {
+  const viewerContext = useViewerContext();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -506,20 +523,22 @@ export function useMarkChatDemoConversationRead() {
       await markChatDemoConversationRead({ conversationId, lastReadMessageId });
     },
     onMutate: async ({ conversationId }) => {
-      await queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations });
-      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
-        markConversationReadInCache(current, conversationId)
+      await queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) });
+      queryClient.setQueryData<ChatConversation[]>(
+        chatDemoQueryKeys.conversations(viewerContext),
+        (current) => markConversationReadInCache(current, conversationId)
       );
 
       return { conversationId };
     },
     onSuccess: (_data, { conversationId }) => {
-      queryClient.setQueryData<ChatConversation[]>(chatDemoQueryKeys.conversations, (current) =>
-        markConversationReadInCache(current, conversationId)
+      queryClient.setQueryData<ChatConversation[]>(
+        chatDemoQueryKeys.conversations(viewerContext),
+        (current) => markConversationReadInCache(current, conversationId)
       );
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations });
+      await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) });
     },
   });
 }
@@ -527,6 +546,7 @@ export function useMarkChatDemoConversationRead() {
 export function useChatDemoRoomRealtime(conversationId: string | null) {
   const { isChatEnabled, session } = useAuth();
   const currentUserId = session?.user?.id ?? null;
+  const viewerContext = useViewerContext();
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
@@ -541,8 +561,8 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
       }
 
       return Promise.all([
-        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
-        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.messages(conversationId, viewerContext) }),
+        queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) }),
       ]);
     };
 
@@ -626,8 +646,8 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
           }
 
           void Promise.all([
-            queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId) }),
-            queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations }),
+            queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.messages(conversationId, viewerContext) }),
+            queryClient.cancelQueries({ queryKey: chatDemoQueryKeys.conversations(viewerContext) }),
           ]).then(() => {
             if (!isActive) {
               return;
@@ -641,11 +661,11 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
             });
 
             queryClient.setQueryData<InfiniteData<ChatDemoMessagesPage>>(
-              chatDemoQueryKeys.messages(conversationId),
+              chatDemoQueryKeys.messages(conversationId, viewerContext),
               (current) => upsertMessageInCache(current, message)
             );
             queryClient.setQueryData<ChatConversation[]>(
-              chatDemoQueryKeys.conversations,
+              chatDemoQueryKeys.conversations(viewerContext),
               (current) => updateConversationCacheFromMessage(current, conversationId, message)
             );
           });
@@ -679,5 +699,5 @@ export function useChatDemoRoomRealtime(conversationId: string | null) {
       }
       void supabaseData.removeChannel(channel);
     };
-  }, [conversationId, currentUserId, isChatEnabled, queryClient]);
+  }, [conversationId, currentUserId, isChatEnabled, queryClient, viewerContext]);
 }

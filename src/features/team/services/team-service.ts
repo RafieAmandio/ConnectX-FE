@@ -1,4 +1,6 @@
 import { ApiError, apiFetch } from '@shared/services/api';
+import { isDiscoveryOnboardingRequiredError } from '@features/home/services/discovery-contract';
+import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
 import { isExpoDevModeEnabled, parseBooleanEnv } from '@shared/utils/env';
 
 import {
@@ -338,11 +340,21 @@ function getApiErrorCode(error: unknown) {
     return null;
   }
 
-  if (!('code' in error.payload)) {
-    return null;
+  if ('code' in error.payload && typeof error.payload.code === 'string') {
+    return error.payload.code;
   }
 
-  return typeof error.payload.code === 'string' ? error.payload.code : null;
+  if (
+    'error' in error.payload &&
+    error.payload.error &&
+    typeof error.payload.error === 'object' &&
+    'code' in error.payload.error &&
+    typeof error.payload.error.code === 'string'
+  ) {
+    return error.payload.error.code;
+  }
+
+  return null;
 }
 
 export function isNoActiveStartupError(error: unknown) {
@@ -376,7 +388,15 @@ function shouldMockNoActiveStartup() {
   );
 }
 
-export async function fetchTeamOverview() {
+function appendViewerContext(path: string, viewerContext: ViewerContext) {
+  const params = new URLSearchParams();
+
+  params.set('viewer_context', viewerContext);
+
+  return `${path}?${params.toString()}`;
+}
+
+export async function fetchTeamOverview(viewerContext: ViewerContext) {
   if (shouldMockNoActiveStartup()) {
     const acceptedStartupId = getMockAcceptedStartupId();
 
@@ -388,7 +408,9 @@ export async function fetchTeamOverview() {
   }
 
   try {
-    const response = await apiFetch<TeamOverviewResponse>(TEAM_API.OVERVIEW);
+    const response = await apiFetch<TeamOverviewResponse>(
+      appendViewerContext(TEAM_API.OVERVIEW, viewerContext)
+    );
     const normalizedResponse = normalizeTeamOverviewResponse(response);
 
     if (!normalizedResponse) {
@@ -397,6 +419,10 @@ export async function fetchTeamOverview() {
 
     return normalizedResponse;
   } catch (error) {
+    if (isDiscoveryOnboardingRequiredError(error)) {
+      throw error;
+    }
+
     if (isNoActiveStartupError(error)) {
       const acceptedStartupId = getMockAcceptedStartupId();
 
@@ -500,7 +526,9 @@ export async function revokeStartupInvitation(invitationId: string) {
 
 export async function fetchStartupInvitationOptions() {
   try {
-    const response = await apiFetch<StartupInvitationOptionsResponse>(TEAM_API.INVITATION_OPTIONS);
+    const response = await apiFetch<StartupInvitationOptionsResponse>(
+      appendViewerContext(TEAM_API.INVITATION_OPTIONS, 'startup')
+    );
 
     if (!hasUsableStartupInvitationOptionsResponse(response)) {
       return getMockStartupInvitationOptionsResponse();
@@ -508,6 +536,10 @@ export async function fetchStartupInvitationOptions() {
 
     return response;
   } catch (error) {
+    if (isDiscoveryOnboardingRequiredError(error)) {
+      throw error;
+    }
+
     if (!shouldUseMockInvitationOptionsFallback(error)) {
       throw error;
     }
@@ -518,7 +550,9 @@ export async function fetchStartupInvitationOptions() {
 
 export async function fetchStartupInvitations() {
   try {
-    const response = await apiFetch<FetchStartupInvitationsResponse>(TEAM_API.STARTUP_INVITATIONS);
+    const response = await apiFetch<FetchStartupInvitationsResponse>(
+      appendViewerContext(TEAM_API.STARTUP_INVITATIONS, 'talent')
+    );
 
     if (!hasUsableStartupInvitationsResponse(response)) {
       return getMockStartupInvitationsResponse();
@@ -526,6 +560,10 @@ export async function fetchStartupInvitations() {
 
     return response;
   } catch (error) {
+    if (isDiscoveryOnboardingRequiredError(error)) {
+      throw error;
+    }
+
     if (!shouldUseMockInvitationFallback(error)) {
       throw error;
     }

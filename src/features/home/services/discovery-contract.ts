@@ -10,6 +10,7 @@ import type {
 } from '../types/discovery.types';
 
 export const DISCOVERY_ERROR_STATUS = {
+  onboardingRequired: 409,
   rewindNotAvailable: 409,
   rewindPremiumRequired: 403,
   superLikeRequiresBoost: 409,
@@ -17,18 +18,66 @@ export const DISCOVERY_ERROR_STATUS = {
   spotlightRequiresCredit: 409,
 } as const;
 
+type DiscoveryOnboardingRequiredPayload = {
+  success: false;
+  message?: string;
+  error: {
+    code: 'DISCOVERY_ONBOARDING_REQUIRED';
+    details?: {
+      next_action?: 'START_ONBOARDING' | string;
+      reason?: 'MISSING_STARTUP_PROFILE' | 'MISSING_TALENT_PROFILE' | string;
+      requested_mode?: string;
+      requested_viewer_context?: string;
+      required_profile_type?: 'startup' | 'talent' | string;
+    };
+  };
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function getApiPayloadErrorCode(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.error) || typeof payload.error.code !== 'string') {
+    return null;
+  }
+
+  return payload.error.code;
+}
+
+export function isDiscoveryOnboardingRequiredResponse(
+  payload: unknown
+): payload is DiscoveryOnboardingRequiredPayload {
+  return getApiPayloadErrorCode(payload) === 'DISCOVERY_ONBOARDING_REQUIRED';
+}
+
+export function isDiscoveryOnboardingRequiredError(error: unknown): error is ApiError & {
+  payload: DiscoveryOnboardingRequiredPayload;
+} {
+  return (
+    error instanceof ApiError &&
+    error.status === DISCOVERY_ERROR_STATUS.onboardingRequired &&
+    isDiscoveryOnboardingRequiredResponse(error.payload)
+  );
+}
+
+export function getDiscoveryOnboardingRequiredMessage(
+  error: unknown,
+  fallback = 'Complete onboarding before using this mode.'
+) {
+  if (isDiscoveryOnboardingRequiredError(error)) {
+    return error.payload.message?.trim() || error.message || fallback;
+  }
+
+  return fallback;
+}
+
 export function isSwipeActionDeniedResponse(payload: unknown): payload is SwipeActionDeniedResponse {
   if (!payload || typeof payload !== 'object' || !('error' in payload)) {
     return false;
   }
 
-  const error = payload.error;
-
-  if (!error || typeof error !== 'object' || !('code' in error)) {
-    return false;
-  }
-
-  return error.code === 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST';
+  return getApiPayloadErrorCode(payload) === 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST';
 }
 
 export function isSuperLikeRequiresBoostError(error: unknown): error is ApiError {
@@ -46,15 +95,11 @@ export function isSpotlightActivationDeniedResponse(
     return false;
   }
 
-  const error = payload.error;
-
-  if (!error || typeof error !== 'object' || !('code' in error)) {
-    return false;
-  }
+  const errorCode = getApiPayloadErrorCode(payload);
 
   return (
-    error.code === 'DISCOVERY_SPOTLIGHT_REQUIRES_CREDIT' ||
-    error.code === 'DISCOVERY_SPOTLIGHT_ALREADY_ACTIVE'
+    errorCode === 'DISCOVERY_SPOTLIGHT_REQUIRES_CREDIT' ||
+    errorCode === 'DISCOVERY_SPOTLIGHT_ALREADY_ACTIVE'
   );
 }
 
@@ -63,15 +108,11 @@ export function isRewindActionDeniedResponse(payload: unknown): payload is Rewin
     return false;
   }
 
-  const error = payload.error;
-
-  if (!error || typeof error !== 'object' || !('code' in error)) {
-    return false;
-  }
+  const errorCode = getApiPayloadErrorCode(payload);
 
   return (
-    error.code === 'DISCOVERY_REWIND_PREMIUM_REQUIRED' ||
-    error.code === 'DISCOVERY_REWIND_NOT_AVAILABLE'
+    errorCode === 'DISCOVERY_REWIND_PREMIUM_REQUIRED' ||
+    errorCode === 'DISCOVERY_REWIND_NOT_AVAILABLE'
   );
 }
 

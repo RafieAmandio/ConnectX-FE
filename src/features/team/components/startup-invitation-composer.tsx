@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { AppInput, AppText } from '@shared/components';
 
 import { useCreateStartupInvitation, useStartupInvitationOptions } from '../hooks/use-team';
@@ -223,6 +224,7 @@ export function StartupInvitationComposer({
   const insets = useSafeAreaInsets();
   const createInvitationMutation = useCreateStartupInvitation();
   const invitationOptionsQuery = useStartupInvitationOptions(visible);
+  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const invitationOptions = invitationOptionsQuery.data?.data;
   const roleOptions = invitationOptions?.roleOptions ?? [];
   const commitmentOptions = invitationOptions?.commitmentOptions ?? [];
@@ -263,6 +265,17 @@ export function StartupInvitationComposer({
       )
     );
   }, [invitationOptions, visible]);
+
+  React.useEffect(() => {
+    if (visible && invitationOptionsQuery.isError) {
+      handleOnboardingRequired(invitationOptionsQuery.error);
+    }
+  }, [
+    handleOnboardingRequired,
+    invitationOptionsQuery.error,
+    invitationOptionsQuery.isError,
+    visible,
+  ]);
 
   const closeAndReset = React.useCallback(() => {
     setEmail(initialEmail);

@@ -1,3 +1,5 @@
+import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
+
 export type MatchStatus = 'active' | 'expired';
 
 export type MatchesListStatusFilter = MatchStatus | 'all';
@@ -107,6 +109,7 @@ export type MatchesListQueryParams = {
   limit?: number;
   page?: number;
   status?: MatchesListStatusFilter;
+  viewerContext?: ViewerContext;
 };
 
 export type SpotlightActivationSuccessResponse = {

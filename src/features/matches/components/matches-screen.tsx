@@ -5,6 +5,7 @@ import React from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 
@@ -200,6 +201,7 @@ export function MatchesScreen() {
     supported,
   } = useRevenueCat();
   const matchesQuery = useMatchesList({ limit: 10, page: 1, status: 'active' });
+  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const usingMockMatches = isMatchesListMockEnabled();
   const spotlightActivation = useActivateSpotlight();
   const [spotlightBanner, setSpotlightBanner] = React.useState<SpotlightBannerState | null>(null);
@@ -216,6 +218,12 @@ export function MatchesScreen() {
   const matchCountLabel = `${matches.length} ${matches.length === 1 ? 'connect' : 'connections'}`;
   const likesYouCountLabel = formatLikesYouCount(likesYouCount);
   const spotlightEndsAtLabel = formatSpotlightTimestamp(spotlightEndsAt);
+
+  React.useEffect(() => {
+    if (matchesQuery.isError) {
+      handleOnboardingRequired(matchesQuery.error);
+    }
+  }, [handleOnboardingRequired, matchesQuery.error, matchesQuery.isError]);
 
   const maybePresentLikesYouPaywall = React.useCallback(async () => {
     if (!supported) {

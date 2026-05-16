@@ -1,4 +1,5 @@
 import { ApiError, apiFetch } from '@shared/services/api';
+import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import {
@@ -66,14 +67,35 @@ function normalizeLimit(limit?: number) {
   return Math.max(1, Math.min(MAX_LIMIT, Math.trunc(limit)));
 }
 
-function buildMatchesListPath({ limit, page, status = 'active' }: MatchesListQueryParams = {}) {
+function buildMatchesListPath({
+  limit,
+  page,
+  status = 'active',
+  viewerContext,
+}: MatchesListQueryParams = {}) {
   const params = new URLSearchParams();
 
   params.set('limit', String(normalizeLimit(limit)));
   params.set('page', String(page && page > 0 ? page : 1));
   params.set('status', status);
 
+  if (viewerContext) {
+    params.set('viewer_context', viewerContext);
+  }
+
   return `${MATCHES_API.LIST}?${params.toString()}`;
+}
+
+function buildMatchAnalysisPath(matchId: string, viewerContext?: ViewerContext) {
+  if (!viewerContext) {
+    return MATCHES_API.ANALYSIS(matchId);
+  }
+
+  const params = new URLSearchParams();
+
+  params.set('viewer_context', viewerContext);
+
+  return `${MATCHES_API.ANALYSIS(matchId)}?${params.toString()}`;
 }
 
 function getDemoMatchDedupeKey(match: MatchListItem) {
@@ -123,6 +145,7 @@ export async function fetchMatchesList(
 
 export async function fetchMatchAnalysis(
   matchId: string,
+  viewerContext?: ViewerContext,
   seedVariant: MockMatchesSeedVariant = 'individual'
 ) {
   if (isMatchesListMockEnabled()) {
@@ -135,7 +158,7 @@ export async function fetchMatchAnalysis(
     return getFallbackMatchAnalysis(matchId, seedVariant);
   }
 
-  return apiFetch<MatchAnalysisResponse>(MATCHES_API.ANALYSIS(matchId));
+  return apiFetch<MatchAnalysisResponse>(buildMatchAnalysisPath(matchId, viewerContext));
 }
 
 export async function activateSpotlight() {

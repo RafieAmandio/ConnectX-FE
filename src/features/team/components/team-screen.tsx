@@ -17,6 +17,7 @@ import {
   getAppliedDiscoveryModeSnapshot,
   subscribeAppliedDiscoveryMode,
 } from '@features/home/services/applied-discovery-mode-store';
+import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
 import { Shadows } from '@shared/theme';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
@@ -822,6 +823,7 @@ export function TeamScreen() {
     getAppliedDiscoveryModeSnapshot
   );
   const teamOverviewQuery = useTeamOverview();
+  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const isNoStartupState = teamOverviewQuery.isError && isNoActiveStartupError(teamOverviewQuery.error);
   const respondToStartupInvitationMutation = useRespondToStartupInvitation();
   const createStartupInvitationMutation = useCreateStartupInvitation();
@@ -869,6 +871,18 @@ export function TeamScreen() {
     ...inviteEquityOptions,
     step: Math.min(inviteEquityOptions.step, 0.5),
   };
+
+  React.useEffect(() => {
+    if (teamOverviewQuery.isError) {
+      handleOnboardingRequired(teamOverviewQuery.error);
+    }
+  }, [handleOnboardingRequired, teamOverviewQuery.error, teamOverviewQuery.isError]);
+
+  React.useEffect(() => {
+    if (invitationOptionsQuery.isError) {
+      handleOnboardingRequired(invitationOptionsQuery.error);
+    }
+  }, [handleOnboardingRequired, invitationOptionsQuery.error, invitationOptionsQuery.isError]);
 
   React.useEffect(() => {
     if (!inviteComposerVisible || !invitationOptions) {

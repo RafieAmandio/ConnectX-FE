@@ -5,6 +5,8 @@ import { Pressable, ScrollView, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
+import { isDiscoveryOnboardingRequiredError } from '@features/home/services/discovery-contract';
 import { AppCard, AppPill, AppText } from '@shared/components';
 
 import { useMatchAnalysis } from '../hooks/use-matches';
@@ -186,10 +188,30 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const analysisQuery = useMatchAnalysis(matchId);
-  const usingFallback = analysisQuery.isError || !analysisQuery.data?.data;
+  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
+  const isOnboardingRequired = isDiscoveryOnboardingRequiredError(analysisQuery.error);
+  const usingFallback = !isOnboardingRequired && (analysisQuery.isError || !analysisQuery.data?.data);
   const response = analysisQuery.data?.data
     ? analysisQuery.data
-    : getFallbackMatchAnalysis(matchId);
+    : isOnboardingRequired
+      ? null
+      : getFallbackMatchAnalysis(matchId);
+
+  React.useEffect(() => {
+    if (analysisQuery.isError) {
+      handleOnboardingRequired(analysisQuery.error);
+    }
+  }, [analysisQuery.error, analysisQuery.isError, handleOnboardingRequired]);
+
+  if (!response) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND }} />
+      </>
+    );
+  }
+
   const analysis = response.data.analysis;
   const user = response.data.user;
   const palette = getAnalysisPalette(analysis.compatibilityScore, analysis.label);

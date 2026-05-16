@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/services/api';
+import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
 
 import type { ChatConversation, ChatMessage } from '../types/chat.types';
 
@@ -204,13 +205,34 @@ function mapChatDemoConversation(conversation: ChatDemoConversationResponse): Ch
   };
 }
 
-function buildMessagesPath(conversationId: string, before?: string | null, limit = DEFAULT_MESSAGE_LIMIT) {
+function buildConversationsPath(viewerContext?: ViewerContext) {
+  if (!viewerContext) {
+    return CHAT_DEMO_API.CONVERSATIONS;
+  }
+
+  const params = new URLSearchParams();
+
+  params.set('viewer_context', viewerContext);
+
+  return `${CHAT_DEMO_API.CONVERSATIONS}?${params.toString()}`;
+}
+
+function buildMessagesPath(
+  conversationId: string,
+  before?: string | null,
+  limit = DEFAULT_MESSAGE_LIMIT,
+  viewerContext?: ViewerContext
+) {
   const params = new URLSearchParams();
 
   params.set('limit', String(limit));
 
   if (before) {
     params.set('before', before);
+  }
+
+  if (viewerContext) {
+    params.set('viewer_context', viewerContext);
   }
 
   return `${CHAT_DEMO_API.MESSAGES(conversationId)}?${params.toString()}`;
@@ -237,8 +259,10 @@ function getMessageFromSendResponse(response: SendChatDemoMessageResponse) {
       : (response as ChatDemoMessageResponse);
 }
 
-export async function fetchChatDemoConversations() {
-  const response = await apiFetch<ChatDemoConversationsResponse>(CHAT_DEMO_API.CONVERSATIONS);
+export async function fetchChatDemoConversations(viewerContext?: ViewerContext) {
+  const response = await apiFetch<ChatDemoConversationsResponse>(
+    buildConversationsPath(viewerContext)
+  );
 
   return (response.conversations ?? [])
     .map(mapChatDemoConversation)
@@ -250,14 +274,16 @@ export async function fetchChatDemoMessages({
   conversationId,
   currentUserId,
   limit = DEFAULT_MESSAGE_LIMIT,
+  viewerContext,
 }: {
   before?: string | null;
   conversationId: string;
   currentUserId?: string | null;
   limit?: number;
+  viewerContext?: ViewerContext;
 }): Promise<ChatDemoMessagesPage> {
   const response = await apiFetch<ChatDemoMessagesResponse>(
-    buildMessagesPath(conversationId, before, limit)
+    buildMessagesPath(conversationId, before, limit, viewerContext)
   );
   const newestFirstMessages = response.messages ?? [];
   const items = [...newestFirstMessages]
