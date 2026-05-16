@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { useAuth } from '@features/auth';
 import { useRevenueCat } from '@features/revenuecat';
@@ -48,9 +48,6 @@ export function AppTopBar({ rightAccessory }: AppTopBarProps) {
         </AppText>
       </View>
       <View className="flex-1" />
-      <Pressable onPress={() => console.log('Current Session:', session)}>
-        <AppText style={{ color: 'white' }}>Debug Session</AppText>
-      </Pressable>
       {rightAccessory}
     </View>
   );

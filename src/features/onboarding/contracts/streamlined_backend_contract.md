@@ -102,7 +102,7 @@ These steps are shown to every builder subtype: founder, cofounder, and team mem
 | 2 | `step_use_connectx` | `q_use_connectx` |
 | 3 | `step_identity_details` | `q_builder_type`, `q_primary_role`, `q_years_experience` |
 | 4 | `step_experience` | `q_startup_experience` |
-| 5 or 6 | `step_industries_interest` | `q_industries_interest`, `q_skills` |
+| 5, 6, 7, or 8 | `step_industries_interest` | `q_industries_interest`, `q_skills` |
 | next | `step_availability` | `q_availability` |
 | next | `step_open_to_remote` | `q_open_to_remote` |
 | next | `step_willing_to_relocate` | `q_willing_to_relocate` |
@@ -120,9 +120,23 @@ q_use_connectx === "builder" AND q_builder_type === "founder"
 | --- | --- |
 | `step_founder_goal` | `q_founder_goal` |
 
+If `q_founder_goal` is `cofounder` or `both`, insert:
+
+| Step ID | Questions |
+| --- | --- |
+| `step_cofounder_type` | `q_cofounder_type` |
+
+If `q_founder_goal` is `team_members` or `both`, insert:
+
+| Step ID | Questions |
+| --- | --- |
+| `step_roles_needed` | `q_roles_needed` |
+
 This means:
 
-- Founder builder flow total: 10 steps.
+- Founder builder flow total: 11 steps when `q_founder_goal === "team_members"`.
+- Founder builder flow total: 11 steps when `q_founder_goal === "cofounder"`.
+- Founder builder flow total: 12 steps when `q_founder_goal === "both"`.
 - Cofounder builder flow total: 9 steps.
 - Team member builder flow total: 9 steps.
 
@@ -137,6 +151,86 @@ Keep all personal info fields on this one step:
 - `q_date_of_birth`
 - `q_city`
 - `q_gender`
+
+Initial session response should return this as `current_step`.
+
+The exact `overall_progress.total` is BE-owned. It may be provisional before `q_use_connectx`, `q_builder_type`, and `q_founder_goal` are known; FE only renders the value returned by BE.
+
+```json
+{
+  "session_id": "session_123",
+  "status": "in_progress",
+  "can_go_back": false,
+  "current_step": {
+    "id": "step_data_diri",
+    "flow_key": "common_data_diri",
+    "section": "Let's build your general profile",
+    "section_progress": "1/10",
+    "overall_progress": {
+      "current": 1,
+      "total": 10
+    },
+    "title": "Tell us about yourself",
+    "subtitle": "The basics we need to personalize your matches.",
+    "questions": [
+      {
+        "id": "q_first_name",
+        "type": "text",
+        "label": "First name",
+        "placeholder": "Your first name",
+        "required": true,
+        "validation": {
+          "min_length": 1,
+          "max_length": 50
+        }
+      },
+      {
+        "id": "q_last_name",
+        "type": "text",
+        "label": "Last name",
+        "placeholder": "Your last name",
+        "required": false,
+        "validation": {
+          "max_length": 50
+        }
+      },
+      {
+        "id": "q_date_of_birth",
+        "type": "date",
+        "label": "Date of birth",
+        "required": true
+      },
+      {
+        "id": "q_city",
+        "type": "searchable_dropdown",
+        "label": "Where are you based?",
+        "placeholder": "Search city",
+        "required": true,
+        "meta": {
+          "searchable": true
+        },
+        "options": []
+      },
+      {
+        "id": "q_gender",
+        "type": "single_select_chip",
+        "label": "Gender",
+        "required": true,
+        "options": [
+          { "id": "opt_gender_male", "value": "male", "label": "Male", "icon": "gender_male", "group": null },
+          { "id": "opt_gender_female", "value": "female", "label": "Female", "icon": "gender_female", "group": null },
+          { "id": "opt_gender_other", "value": "other", "label": "Other", "icon": "gender_other", "group": null }
+        ]
+      }
+    ],
+    "cta": {
+      "label": "Continue",
+      "enabled_when": "valid"
+    },
+    "can_go_back": false
+  }
+}
+```
 
 ### `step_use_connectx`
 
@@ -186,6 +280,30 @@ Keep existing answer values:
 - `team_members`
 - `both`
 
+### `step_cofounder_type`
+
+Show this step for builder founders when:
+
+```txt
+q_builder_type === "founder" AND q_founder_goal IN ["cofounder", "both"]
+```
+
+Keep existing `q_cofounder_type` options and answer values.
+
+Startup path may also continue using this step when its existing startup condition matches.
+
+### `step_roles_needed`
+
+Show this step for builder founders when:
+
+```txt
+q_builder_type === "founder" AND q_founder_goal IN ["team_members", "both"]
+```
+
+Keep existing `q_roles_needed` options and answer values.
+
+This question should remain `searchable_multi_select` and can use the same role catalog as `q_primary_role`.
+
 ### `step_industries_interest` for Builder
 
 This is now the combined interests and skills step. It must include:
@@ -226,7 +344,6 @@ Do not return these standalone steps in the streamlined builder path:
 - `step_primary_role`
 - `step_own_cofounder_type`
 - `step_skills`
-- `step_roles_needed`
 - `step_cash_equity`
 
 Notes:
@@ -234,7 +351,6 @@ Notes:
 - Their answer keys may still be used inside combined steps.
 - Example: `q_primary_role` and `q_years_experience` now live in `step_identity_details`.
 - Example: `q_skills` now lives in `step_industries_interest`.
-- `step_cofounder_type` is not part of builder anymore; keep it only for the existing startup path if startup still needs it.
 
 ## Flow Keys
 
@@ -300,6 +416,8 @@ The streamlined builder flow submits these existing keys:
 | Professional profile | `q_builder_type`, `q_primary_role`, `q_years_experience` |
 | Startup experience | `q_startup_experience` |
 | Founder goal | `q_founder_goal` |
+| Founder cofounder need | `q_cofounder_type` |
+| Founder team need | `q_roles_needed` |
 | Interests and skills | `q_industries_interest`, `q_skills` |
 | Work preferences | `q_availability`, `q_open_to_remote`, `q_willing_to_relocate` |
 | Credibility | `q_linkedin_url` |
@@ -307,7 +425,6 @@ The streamlined builder flow submits these existing keys:
 Do not expect old builder-only keys that no longer appear in the streamlined builder path:
 
 - `q_own_cofounder_type`
-- `q_roles_needed`
 - `q_cash_equity_expectation`
 - `q_has_salary_minimum`
 - `q_salary_period`
@@ -328,6 +445,52 @@ These examples show the exact request shape FE sends when the user taps Continue
     "q_date_of_birth": "1998-05-12",
     "q_city": "jakarta",
     "q_gender": "male"
+  }
+}
+```
+
+Expected response after this Continue is the same existing next-step envelope. `next_step` should be `step_use_connectx`.
+
+```json
+{
+  "can_go_back": true,
+  "completed": false,
+  "next_step": {
+    "id": "step_use_connectx",
+    "flow_key": "common_data_diri",
+    "section": "Let's build your general profile",
+    "section_progress": "2/10",
+    "overall_progress": {
+      "current": 2,
+      "total": 10
+    },
+    "title": "How do you want to use ConnectX?",
+    "subtitle": "This shapes your entire experience",
+    "questions": [
+      {
+        "id": "q_use_connectx",
+        "type": "single_select_card",
+        "label": "",
+        "required": true,
+        "meta": {
+          "auto_advance": true,
+          "layout": "list"
+        },
+        "options": [
+          { "id": "opt_use_builder", "value": "builder", "label": "Builder", "icon": "use_builder", "group": null },
+          { "id": "opt_use_startup", "value": "startup", "label": "Startup", "icon": "use_startup", "group": null }
+        ]
+      }
+    ],
+    "cta": {
+      "label": "Continue",
+      "enabled_when": "valid"
+    },
+    "can_go_back": true
+  },
+  "progress": {
+    "current": 2,
+    "total": 10
   }
 }
 ```
@@ -382,6 +545,32 @@ Only sent for founder builders.
   "step_id": "step_founder_goal",
   "answers": {
     "q_founder_goal": "both"
+  }
+}
+```
+
+### `step_cofounder_type`
+
+Only sent for founder builders when `q_founder_goal` is `cofounder` or `both`.
+
+```json
+{
+  "step_id": "step_cofounder_type",
+  "answers": {
+    "q_cofounder_type": ["technical", "product"]
+  }
+}
+```
+
+### `step_roles_needed`
+
+Only sent for founder builders when `q_founder_goal` is `team_members` or `both`.
+
+```json
+{
+  "step_id": "step_roles_needed",
+  "answers": {
+    "q_roles_needed": ["software_engineer", "product_manager"]
   }
 }
 ```
@@ -450,7 +639,9 @@ BE remains authoritative for progress and back navigation.
 
 Expected progress totals:
 
-- Founder builder: total 10.
+- Founder builder with `q_founder_goal === "team_members"`: total 11.
+- Founder builder with `q_founder_goal === "cofounder"`: total 11.
+- Founder builder with `q_founder_goal === "both"`: total 12.
 - Cofounder builder: total 9.
 - Team member builder: total 9.
 - Startup: unchanged from existing contract.
@@ -472,14 +663,14 @@ Expected final response shape remains:
   "next_step": null,
   "profile_id": "profile_123",
   "progress": {
-    "current": 10,
-    "total": 10
+    "current": 12,
+    "total": 12
   },
   "redirect_to": "/home"
 }
 ```
 
-`progress.total` should match the actual branch total.
+`progress.total` should match the actual branch total. The example above is for a founder builder with `q_founder_goal === "both"`.
 
 ## Reference Files
 

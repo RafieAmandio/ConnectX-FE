@@ -53,12 +53,13 @@ export const ONBOARDING_STEP_ORDER: OnboardingStepId[] = [
   'step_team_presence',
   'step_experience',
   'step_founder_goal',
+  'step_cofounder_type',
+  'step_roles_needed',
   'step_industries_interest',
   'step_availability',
   'step_open_to_remote',
   'step_willing_to_relocate',
   'step_credibility',
-  'step_cofounder_type',
   'step_skills_needed',
 ];
 
@@ -68,7 +69,9 @@ export function getEffectiveStepOrder(answers: OnboardingAnswers): OnboardingSte
   const isFounderPath = isBuilderPath && answers.q_builder_type === 'founder';
   const founderGoal = answers.q_founder_goal;
   const wantsCofounder = founderGoal === 'cofounder' || founderGoal === 'both';
-  const needsCofounderType = isStartupPath && wantsCofounder;
+  const wantsTeamMembers = founderGoal === 'team_members' || founderGoal === 'both';
+  const needsCofounderType = (isFounderPath || isStartupPath) && wantsCofounder;
+  const needsRolesNeeded = isFounderPath && wantsTeamMembers;
   const hasSelectedPath = isBuilderPath || isStartupPath;
 
   return ONBOARDING_STEP_ORDER.filter((stepId) => {
@@ -104,6 +107,9 @@ export function getEffectiveStepOrder(answers: OnboardingAnswers): OnboardingSte
     }
     if (stepId === 'step_cofounder_type') {
       return needsCofounderType;
+    }
+    if (stepId === 'step_roles_needed') {
+      return needsRolesNeeded;
     }
     if (stepId === 'step_industries_interest') {
       return isBuilderPath;

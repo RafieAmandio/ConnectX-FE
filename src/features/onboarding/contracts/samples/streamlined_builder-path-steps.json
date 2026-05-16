@@ -13,10 +13,10 @@
       "id": "step_data_diri",
       "flow_key": "common_data_diri",
       "section": "Let's build your general profile",
-      "section_progress": "1/10",
+      "section_progress": "1/12",
       "overall_progress": {
         "current": 1,
-        "total": 10
+        "total": 12
       },
       "title": "Tell us about yourself",
       "subtitle": "The basics we need to personalize your matches.",
@@ -162,10 +162,10 @@
       "id": "step_use_connectx",
       "flow_key": "common_data_diri",
       "section": "Let's build your general profile",
-      "section_progress": "2/10",
+      "section_progress": "2/12",
       "overall_progress": {
         "current": 2,
-        "total": 10
+        "total": 12
       },
       "title": "How do you want to use ConnectX?",
       "subtitle": "This shapes your entire experience",
@@ -213,10 +213,10 @@
       "_variant": "builder",
       "flow_key": "common_data_diri",
       "section": "Let's build your professional profile",
-      "section_progress": "3/10",
+      "section_progress": "3/12",
       "overall_progress": {
         "current": 3,
-        "total": 10
+        "total": 12
       },
       "title": "Professional Profile",
       "subtitle": "Tell us how you build, what role you play, and your experience level.",
@@ -296,10 +296,10 @@
       "id": "step_experience",
       "flow_key": "builder_founder_both",
       "section": "Let's build your talent profile",
-      "section_progress": "4/10",
+      "section_progress": "4/12",
       "overall_progress": {
         "current": 4,
-        "total": 10
+        "total": 12
       },
       "title": "How much startup experience do you have?",
       "subtitle": "This helps us match you with the right stage of companies.",
@@ -363,10 +363,10 @@
       "_shown_when": "q_builder_type === 'founder'",
       "flow_key": "builder_founder_both",
       "section": "Let's build your general profile",
-      "section_progress": "5/10",
+      "section_progress": "5/12",
       "overall_progress": {
         "current": 5,
-        "total": 10
+        "total": 12
       },
       "title": "What are you looking for?",
       "subtitle": "Pick the most urgent hiring need for your startup",
@@ -418,13 +418,143 @@
       "can_go_back": true
     },
     {
+      "id": "step_cofounder_type",
+      "_shown_when": "q_builder_type === 'founder' AND q_founder_goal IN ['cofounder', 'both']",
+      "flow_key": "builder_founder_both",
+      "section": "Let's build your general profile",
+      "section_progress": "6/12",
+      "overall_progress": {
+        "current": 6,
+        "total": 12
+      },
+      "title": "What kind of co-founder do you need?",
+      "subtitle": "Select all that apply",
+      "questions": [
+        {
+          "id": "q_cofounder_type",
+          "type": "multi_select_card",
+          "label": "",
+          "required": true,
+          "validation": {
+            "min_selections": 1
+          },
+          "options": [
+            {
+              "id": "opt_cofounder_technical",
+              "value": "technical",
+              "label": "Technical Co-Founder",
+              "sub_label": "Engineering & architecture",
+              "icon": "cofounder_technical",
+              "group": null
+            },
+            {
+              "id": "opt_cofounder_business",
+              "value": "business",
+              "label": "Business Co-Founder",
+              "sub_label": "Strategy & operations",
+              "icon": "cofounder_business",
+              "group": null
+            },
+            {
+              "id": "opt_cofounder_product",
+              "value": "product",
+              "label": "Product Co-Founder",
+              "sub_label": "Product vision & design",
+              "icon": "cofounder_product",
+              "group": null
+            },
+            {
+              "id": "opt_cofounder_growth",
+              "value": "growth",
+              "label": "Growth Co-Founder",
+              "sub_label": "Marketing & distribution",
+              "icon": "cofounder_growth",
+              "group": null
+            },
+            {
+              "id": "opt_cofounder_ai",
+              "value": "ai",
+              "label": "AI / Data Co-Founder",
+              "sub_label": "AI systems & data intelligence",
+              "icon": "cofounder_ai",
+              "group": null
+            },
+            {
+              "id": "opt_cofounder_operations",
+              "value": "operations",
+              "label": "Operations Co-Founder",
+              "sub_label": "Execution & scaling operations",
+              "icon": "cofounder_operations",
+              "group": null
+            },
+            {
+              "id": "opt_cofounder_finance",
+              "value": "finance",
+              "label": "Finance Co-Founder",
+              "sub_label": "Fundraising & financial strategy",
+              "icon": "cofounder_finance",
+              "group": null
+            },
+            {
+              "id": "opt_cofounder_partnerships",
+              "value": "partnerships",
+              "label": "Partnerships Co-Founder",
+              "sub_label": "Strategic partnerships & business growth",
+              "icon": "cofounder_partnerships",
+              "group": null
+            }
+          ]
+        }
+      ],
+      "cta": {
+        "label": "Continue",
+        "enabled_when": "valid"
+      },
+      "can_go_back": true
+    },
+    {
+      "id": "step_roles_needed",
+      "_shown_when": "q_builder_type === 'founder' AND q_founder_goal IN ['team_members', 'both']",
+      "flow_key": "builder_founder_both",
+      "section": "Who you are hiring",
+      "section_progress": "7/12",
+      "overall_progress": {
+        "current": 7,
+        "total": 12
+      },
+      "title": "What roles do you need?",
+      "subtitle": "Pick the roles you want to add to your team.",
+      "questions": [
+        {
+          "id": "q_roles_needed",
+          "type": "searchable_multi_select",
+          "label": "",
+          "placeholder": "Search roles",
+          "required": true,
+          "meta": {
+            "searchable": true
+          },
+          "validation": {
+            "min_selections": 1
+          },
+          "_options_source": "catalogs/primary-role-options.json",
+          "options": []
+        }
+      ],
+      "cta": {
+        "label": "Continue",
+        "enabled_when": "valid"
+      },
+      "can_go_back": true
+    },
+    {
       "id": "step_industries_interest",
       "flow_key": "builder_founder_both",
       "section": "Interests and skills",
-      "section_progress": "6/10",
+      "section_progress": "8/12",
       "overall_progress": {
-        "current": 6,
-        "total": 10
+        "current": 8,
+        "total": 12
       },
       "title": "Interests & Skills",
       "subtitle": "Pick the spaces you care about and the skills you bring.",
@@ -472,10 +602,10 @@
       "id": "step_availability",
       "flow_key": "builder_founder_both",
       "section": "Work preferences",
-      "section_progress": "7/10",
+      "section_progress": "9/12",
       "overall_progress": {
-        "current": 7,
-        "total": 10
+        "current": 9,
+        "total": 12
       },
       "title": "What availability do you expect?",
       "subtitle": "What commitment level should candidates have?",
@@ -530,10 +660,10 @@
       "id": "step_open_to_remote",
       "flow_key": "builder_founder_both",
       "section": "Work preferences",
-      "section_progress": "8/10",
+      "section_progress": "10/12",
       "overall_progress": {
-        "current": 8,
-        "total": 10
+        "current": 10,
+        "total": 12
       },
       "title": "Are you open to working remotely?",
       "subtitle": "Remote-friendly teams welcome collaborators from anywhere.",
@@ -580,10 +710,10 @@
       "id": "step_willing_to_relocate",
       "flow_key": "builder_founder_both",
       "section": "Work preferences",
-      "section_progress": "9/10",
+      "section_progress": "11/12",
       "overall_progress": {
-        "current": 9,
-        "total": 10
+        "current": 11,
+        "total": 12
       },
       "title": "Are you willing to relocate?",
       "subtitle": "Some opportunities require moving. Let us know if you are open to it.",
@@ -630,10 +760,10 @@
       "id": "step_credibility",
       "flow_key": "builder_founder_both",
       "section": "Finish up",
-      "section_progress": "10/10",
+      "section_progress": "12/12",
       "overall_progress": {
-        "current": 10,
-        "total": 10
+        "current": 12,
+        "total": 12
       },
       "title": "Last step. Share your LinkedIn",
       "subtitle": "Drop your LinkedIn so we can fill in the rest of your profile automatically.",
