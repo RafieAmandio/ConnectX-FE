@@ -802,6 +802,7 @@ export function OnboardingScreen() {
                       SEARCHABLE_DROPDOWN_REQUIRES_QUERY_STEP_IDS.has(currentStep.id) &&
                       question.type === 'searchable_dropdown'
                     }
+                    locale={locale}
                     onChange={(value) => {
                       void handleAnswerChange(question, value);
                     }}

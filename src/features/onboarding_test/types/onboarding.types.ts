@@ -220,6 +220,10 @@ export type OnboardingBackResponse = {
   };
 };
 
+export type OnboardingOptionsSearchResponse = {
+  options: OnboardingOption[];
+};
+
 export type LocalizedOnboardingOption = Omit<OnboardingOption, 'group' | 'label' | 'sub_label'> & {
   group?: LocalizedText | null;
   label: LocalizedText;

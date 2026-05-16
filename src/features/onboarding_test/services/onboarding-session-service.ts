@@ -9,6 +9,7 @@ import type {
   OnboardingBackResponse,
   OnboardingLocale,
   OnboardingNextStepResponse,
+  OnboardingOptionsSearchResponse,
   OnboardingQuestion,
   OnboardingSessionResponse,
   OnboardingStartParams,
@@ -19,6 +20,7 @@ import type {
 const ONBOARDING_API = {
   BACK: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/back`,
   CURRENT: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/current`,
+  OPTIONS_SEARCH: '/api/v1/onboarding/options/search',
   SESSION: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}`,
   SESSIONS: '/api/v1/onboarding/sessions',
   SUBMIT_ANSWER: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/answer`,
@@ -474,4 +476,29 @@ export async function goBackOnboardingSession(
     headers: localeHeaders(locale),
     method: 'POST',
   });
+}
+
+export async function searchOnboardingOptions({
+  locale,
+  query,
+  questionId,
+  signal,
+}: {
+  locale: OnboardingLocale;
+  query: string;
+  questionId: string;
+  signal?: AbortSignal;
+}): Promise<OnboardingOptionsSearchResponse> {
+  const params = new URLSearchParams({
+    q: query,
+    question_id: questionId,
+  });
+
+  return apiFetch<OnboardingOptionsSearchResponse>(
+    `${ONBOARDING_API.OPTIONS_SEARCH}?${params.toString()}`,
+    {
+      headers: localeHeaders(locale),
+      signal,
+    }
+  );
 }

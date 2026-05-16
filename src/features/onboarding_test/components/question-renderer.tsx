@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Platform,
@@ -21,16 +22,19 @@ import Animated, {
 import { AppCard, AppInput, AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
 
+import { searchOnboardingOptions } from '../services/onboarding-session-service';
 import type {
   CurrencyAmountValue,
   OnboardingAnswerValue,
+  OnboardingLocale,
   OnboardingOption,
   OnboardingQuestion,
 } from '../types/onboarding.types';
 
 const HOME_BACKGROUND = '#262626';
+const SEARCHABLE_DROPDOWN_DEBOUNCE_MS = 400;
 const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
-const SEARCHABLE_DROPDOWN_QUERY_GATED_QUESTION_IDS = new Set(['q_location']);
+const SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH = 2;
 const SINGLE_LINE_TEXT_INPUT_STYLE = {
   height: 40,
   lineHeight: 20,
@@ -43,6 +47,7 @@ const SINGLE_LINE_TEXT_INPUT_STYLE = {
 type QuestionRendererProps = {
   error?: string;
   hideSearchableDropdownResultsUntilQuery?: boolean;
+  locale?: OnboardingLocale;
   onChange: (value: OnboardingAnswerValue) => void;
   question: OnboardingQuestion;
   value: OnboardingAnswerValue | undefined;
@@ -103,6 +108,23 @@ function getTextLikePlaceholder(question: OnboardingQuestion) {
 
 function getSelectedLabel(options: OnboardingOption[] | undefined, value: string) {
   return options?.find((option) => option.value === value)?.label ?? value;
+}
+
+function mergeOptionsByValue(
+  previousOptions: OnboardingOption[],
+  nextOptions: OnboardingOption[]
+) {
+  const optionsByValue = new Map<string, OnboardingOption>();
+
+  for (const option of previousOptions) {
+    optionsByValue.set(option.value, option);
+  }
+
+  for (const option of nextOptions) {
+    optionsByValue.set(option.value, option);
+  }
+
+  return Array.from(optionsByValue.values());
 }
 
 function groupOptions(options: OnboardingOption[] | undefined) {
@@ -1793,6 +1815,47 @@ function SearchableDropdownEmptyState({ query }: { query: string }) {
   );
 }
 
+function SearchableDropdownPromptState() {
+  return (
+    <View className="px-3 py-4">
+      <AppText tone="muted">
+        Type at least {SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH} characters to search.
+      </AppText>
+    </View>
+  );
+}
+
+function SearchableDropdownLoadingState() {
+  return (
+    <View className="flex-row items-center gap-2 px-3 py-4">
+      <ActivityIndicator color="#FF9A3E" size="small" />
+      <AppText tone="muted">Searching...</AppText>
+    </View>
+  );
+}
+
+function SearchableDropdownErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <View className="gap-3 px-3 py-4">
+      <AppText tone="danger">{message}</AppText>
+      <Pressable
+        className="self-start rounded-full px-3 py-2"
+        style={{ backgroundColor: '#FF9A3E' }}
+        onPress={onRetry}>
+        <AppText variant="label" className="text-[#1A1208]">
+          Try again
+        </AppText>
+      </Pressable>
+    </View>
+  );
+}
+
 function SearchableDropdownMoreResults() {
   return (
     <View className="px-3 py-3">
@@ -1803,7 +1866,7 @@ function SearchableDropdownMoreResults() {
 
 function SearchableDropdownQuestion({
   error,
-  hideSearchableDropdownResultsUntilQuery,
+  locale = 'en',
   onChange,
   question,
   value,
@@ -1811,43 +1874,102 @@ function SearchableDropdownQuestion({
   const [isOpen, setIsOpen] = React.useState(false);
   const triggerRef = React.useRef<View | null>(null);
   const [query, setQuery] = React.useState('');
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [knownOptions, setKnownOptions] = React.useState<OnboardingOption[]>(
+    () => question.options ?? []
+  );
+  const [retryCount, setRetryCount] = React.useState(0);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
+  const [searchOptions, setSearchOptions] = React.useState<OnboardingOption[]>([]);
   const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
+  const searchRequestIdRef = React.useRef(0);
   const currentValue = getStringValue(value);
+  const normalizedQuery = query.trim();
   const currentLabel = currentValue
-    ? getSelectedLabel(question.options, currentValue)
+    ? getSelectedLabel(knownOptions, currentValue)
     : '';
-  const hasQuery = query.trim().length > 0;
-  const shouldRequireQuery =
-    hideSearchableDropdownResultsUntilQuery ||
-    SEARCHABLE_DROPDOWN_QUERY_GATED_QUESTION_IDS.has(question.id);
-  const shouldRenderResults =
-    isOpen && (!shouldRequireQuery || hasQuery);
-
-  const filteredOptions = React.useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    if (!normalizedQuery) {
-      return question.options ?? [];
-    }
-
-    return (question.options ?? []).filter((option) => {
-      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
-      return haystack.includes(normalizedQuery);
-    });
-  }, [query, question.options]);
+  const hasMinimumQuery = normalizedQuery.length >= SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH;
+  const shouldRenderResults = isOpen && hasMinimumQuery;
   const visibleOptions = React.useMemo(() => {
     if (!shouldRenderResults) {
       return [];
     }
 
-    return filteredOptions.slice(0, SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS);
-  }, [filteredOptions, shouldRenderResults]);
+    return searchOptions.slice(0, SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS);
+  }, [searchOptions, shouldRenderResults]);
   const groupedOptionItems = React.useMemo(
     () => flattenGroupedOptions(visibleOptions),
     [visibleOptions]
   );
   const hasMoreResults =
-    shouldRenderResults && filteredOptions.length > visibleOptions.length;
+    shouldRenderResults && searchOptions.length > visibleOptions.length;
+
+  React.useEffect(() => {
+    setKnownOptions(question.options ?? []);
+    setSearchOptions([]);
+    setSearchError(null);
+    setRetryCount(0);
+  }, [question.id, question.options]);
+
+  React.useEffect(() => {
+    searchRequestIdRef.current += 1;
+    const requestId = searchRequestIdRef.current;
+
+    if (!isOpen || normalizedQuery.length < SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH) {
+      setIsSearching(false);
+      setSearchError(null);
+      setSearchOptions([]);
+      return;
+    }
+
+    const abortController = new AbortController();
+    setIsSearching(true);
+    setSearchError(null);
+    setSearchOptions([]);
+
+    const debounceTimer = setTimeout(() => {
+      searchOnboardingOptions({
+        locale,
+        query: normalizedQuery,
+        questionId: question.id,
+        signal: abortController.signal,
+      })
+        .then((response) => {
+          if (searchRequestIdRef.current !== requestId) {
+            return;
+          }
+
+          const nextOptions = response.options ?? [];
+          setSearchOptions(nextOptions);
+          setKnownOptions((currentOptions) => mergeOptionsByValue(currentOptions, nextOptions));
+        })
+        .catch((searchErrorValue: unknown) => {
+          if (
+            searchRequestIdRef.current !== requestId ||
+            abortController.signal.aborted
+          ) {
+            return;
+          }
+
+          setSearchOptions([]);
+          setSearchError(
+            searchErrorValue instanceof Error
+              ? searchErrorValue.message
+              : 'Unable to search options right now.'
+          );
+        })
+        .finally(() => {
+          if (searchRequestIdRef.current === requestId) {
+            setIsSearching(false);
+          }
+        });
+    }, SEARCHABLE_DROPDOWN_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(debounceTimer);
+      abortController.abort();
+    };
+  }, [isOpen, locale, normalizedQuery, question.id, retryCount]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -1870,6 +1992,94 @@ function SearchableDropdownQuestion({
     setIsOpen(false);
     setQuery('');
     inputRef.current?.blur();
+  };
+
+  const retrySearch = () => {
+    setRetryCount((currentRetryCount) => currentRetryCount + 1);
+  };
+
+  const selectOption = (option: OnboardingOption) => {
+    setKnownOptions((currentOptions) => mergeOptionsByValue(currentOptions, [option]));
+    onChange(option.value);
+    closeDropdown();
+  };
+
+  const renderStatusState = () => {
+    if (!hasMinimumQuery) {
+      return <SearchableDropdownPromptState />;
+    }
+
+    if (isSearching) {
+      return <SearchableDropdownLoadingState />;
+    }
+
+    if (searchError) {
+      return (
+        <SearchableDropdownErrorState
+          message={searchError}
+          onRetry={retrySearch}
+        />
+      );
+    }
+
+    return <SearchableDropdownEmptyState query={query} />;
+  };
+
+  const shouldShowStatusState = !shouldRenderResults || isSearching || Boolean(searchError);
+
+  const renderVirtualizedResults = (listMaxHeight: number) => {
+    if (shouldShowStatusState) {
+      return renderStatusState();
+    }
+
+    return (
+      <FlatList
+        data={groupedOptionItems}
+        extraData={currentValue}
+        initialNumToRender={18}
+        keyboardShouldPersistTaps="handled"
+        keyExtractor={(item) => item.id}
+        maxToRenderPerBatch={18}
+        nestedScrollEnabled
+        removeClippedSubviews={Platform.OS === 'android'}
+        showsVerticalScrollIndicator
+        style={{ maxHeight: listMaxHeight }}
+        updateCellsBatchingPeriod={24}
+        windowSize={7}
+        ListEmptyComponent={renderStatusState()}
+        ListFooterComponent={hasMoreResults ? <SearchableDropdownMoreResults /> : null}
+        renderItem={({ item }) => {
+          if (item.type === 'group') {
+            return (
+              <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
+                {item.label}
+              </AppText>
+            );
+          }
+
+          const option = item.option;
+          const isSelected = currentValue === option.value;
+
+          return (
+            <Pressable
+              key={option.id}
+              className={cn(
+                'rounded-[12px] px-3 py-3',
+                isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+              )}
+              onPress={() => {
+                selectOption(option);
+              }}>
+              <AppText
+                variant="bodyStrong"
+                className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        }}
+      />
+    );
   };
 
   return (
@@ -1940,61 +2150,12 @@ function SearchableDropdownQuestion({
           renderContent={
             Platform.OS === 'android'
               ? undefined
-              : ({ maxHeight: listMaxHeight }) =>
-                shouldRenderResults ? (
-              <FlatList
-                data={groupedOptionItems}
-                extraData={currentValue}
-                initialNumToRender={18}
-                keyboardShouldPersistTaps="handled"
-                keyExtractor={(item) => item.id}
-                maxToRenderPerBatch={18}
-                nestedScrollEnabled
-                removeClippedSubviews={Platform.OS === 'android'}
-                showsVerticalScrollIndicator
-                style={{ maxHeight: listMaxHeight }}
-                updateCellsBatchingPeriod={24}
-                windowSize={7}
-                ListEmptyComponent={<SearchableDropdownEmptyState query={query} />}
-                ListFooterComponent={
-                  hasMoreResults ? <SearchableDropdownMoreResults /> : null
-                }
-                renderItem={({ item }) => {
-                  if (item.type === 'group') {
-                    return (
-                      <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
-                        {item.label}
-                      </AppText>
-                    );
-                  }
-
-                  const option = item.option;
-                  const isSelected = currentValue === option.value;
-
-                  return (
-                    <Pressable
-                      key={option.id}
-                      className={cn(
-                        'rounded-[12px] px-3 py-3',
-                        isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
-                      )}
-                      onPress={() => {
-                        onChange(option.value);
-                        closeDropdown();
-                      }}>
-                      <AppText
-                        variant="bodyStrong"
-                        className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
-                        {option.label}
-                      </AppText>
-                    </Pressable>
-                  );
-                }}
-              />
-                ) : null
+              : ({ maxHeight: listMaxHeight }) => renderVirtualizedResults(listMaxHeight)
           }
         >
-          {shouldRenderResults ? (
+          {shouldShowStatusState ? (
+            renderStatusState()
+          ) : (
             <>
               {groupOptions(visibleOptions).map(([groupName, options]) => (
                 <View key={groupName} className="gap-1 pb-2">
@@ -2012,8 +2173,7 @@ function SearchableDropdownQuestion({
                           isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
                         )}
                         onPress={() => {
-                          onChange(option.value);
-                          closeDropdown();
+                          selectOption(option);
                         }}>
                         <AppText
                           variant="bodyStrong"
@@ -2028,7 +2188,7 @@ function SearchableDropdownQuestion({
               {visibleOptions.length === 0 ? <SearchableDropdownEmptyState query={query} /> : null}
               {hasMoreResults ? <SearchableDropdownMoreResults /> : null}
             </>
-          ) : null}
+          )}
         </DropdownOverlay>
       </View>
     </View>
@@ -2867,6 +3027,7 @@ function CurrencyAmountQuestion({
 export function QuestionRenderer({
   error,
   hideSearchableDropdownResultsUntilQuery,
+  locale,
   onChange,
   question,
   variant = 'default',
@@ -3063,6 +3224,7 @@ export function QuestionRenderer({
           hideSearchableDropdownResultsUntilQuery={
             hideSearchableDropdownResultsUntilQuery
           }
+          locale={locale}
           onChange={onChange}
           question={question}
           value={value}
