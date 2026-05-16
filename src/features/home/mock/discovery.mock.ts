@@ -1,5 +1,8 @@
 import type {
   DiscoveryCard,
+  DiscoveryCardBadge,
+  DiscoveryCardCertification,
+  DiscoveryCardSection,
   DiscoveryCardsResponse,
   DiscoveryMode,
 } from '../types/discovery.types';
@@ -17,11 +20,8 @@ type MockDiscoveryProfileCardBlueprint = {
   distanceKm: number;
   score: number;
   matchLabel: string;
-  badge: {
-    id: string;
-    label: string;
-    icon: string;
-  };
+  badge: DiscoveryCardBadge;
+  badges?: DiscoveryCardBadge[];
   bio: string;
   startupIdea: string;
   interests: {
@@ -44,6 +44,8 @@ type MockDiscoveryProfileCardBlueprint = {
     degree: string;
     school: string;
   }[];
+  highlights?: string[];
+  certifications?: DiscoveryCardCertification[];
   languages?: string[];
 };
 
@@ -86,7 +88,12 @@ const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
     distanceKm: 3,
     score: 99,
     matchLabel: 'Top Match',
-    badge: { id: 'badge_mvp', label: 'MVP', icon: 'rocket' },
+    badge: { id: 'badge_mvp', label: 'MVP', icon: 'rocket', color: '#FF9A3E' },
+    badges: [
+      { id: 'badge_mvp', label: 'MVP', icon: 'rocket', color: '#FF9A3E' },
+      { id: 'badge_linkedin_verified', label: 'LinkedIn Verified', icon: 'shield-checkmark', color: '#2D9CDB' },
+      { id: 'badge_connectx_pro', label: 'ConnectX Pro', icon: 'sparkles', color: '#31D47A' },
+    ],
     bio:
       'Building a payments infrastructure for underbanked communities in Southeast Asia. Looking for a business-minded co-founder.',
     startupIdea: 'Neo-bank for micro-merchants',
@@ -122,6 +129,27 @@ const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
         school: 'Universitas Indonesia',
       },
     ],
+    highlights: [
+      'Strong technical match for fintech infrastructure.',
+      'Full-time availability lines up with your co-founder search.',
+      'Previous CTO experience matches your early-stage needs.',
+    ],
+    certifications: [
+      {
+        id: 'cert_ardi_aws',
+        name: 'AWS Certified Solutions Architect',
+        issuer: 'Amazon Web Services',
+        logoUrl: 'https://logo.clearbit.com/aws.amazon.com',
+        date: 'Issued 2023',
+        link: 'https://aws.amazon.com/certification/',
+      },
+      {
+        id: 'cert_ardi_scrum',
+        name: 'Professional Scrum Master I',
+        issuer: 'Scrum.org',
+        date: 'Issued 2022',
+      },
+    ],
     languages: ['English', 'Bahasa Indonesia'],
   },
   {
@@ -136,7 +164,7 @@ const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
     distanceKm: 5,
     score: 96,
     matchLabel: 'Top Match',
-    badge: { id: 'badge_builder', label: 'Builder', icon: 'sparkles' },
+    badge: { id: 'badge_builder', label: 'Builder', icon: 'sparkles', color: '#FFCD38' },
     bio:
       'Obsessed with founder-product fit, early retention loops, and crisp execution. Excited about products that reduce operational chaos for growing teams.',
     startupIdea: 'Ops command center for cross-border commerce teams',
@@ -165,6 +193,20 @@ const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
         school: 'National University of Singapore',
       },
     ],
+    highlights: [
+      'Product strategy depth fits your go-to-market gaps.',
+      'Marketplace experience overlaps with your preferred industries.',
+    ],
+    certifications: [
+      {
+        id: 'cert_maya_reforge',
+        name: 'Growth Series',
+        issuer: 'Reforge',
+        logoUrl: 'https://logo.clearbit.com/reforge.com',
+        date: 'Issued 2021',
+        link: 'https://www.reforge.com/',
+      },
+    ],
     languages: ['English', 'Mandarin'],
   },
   {
@@ -179,7 +221,7 @@ const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
     distanceKm: 22,
     score: 94,
     matchLabel: 'Strong Fit',
-    badge: { id: 'badge_operator', label: 'Operator', icon: 'briefcase' },
+    badge: { id: 'badge_operator', label: 'Operator', icon: 'briefcase', color: '#F79009' },
     bio:
       'I build systems that keep messy early-stage execution moving. Strong on finance ops, supply chain workflows, and team operating rhythms.',
     startupIdea: 'Fulfillment backbone for emerging D2C brands',
@@ -206,6 +248,20 @@ const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
         id: 'edu_3',
         degree: 'B.B.A.',
         school: 'Institut Teknologi Bandung',
+      },
+    ],
+    highlights: [
+      'Operations background complements your technical profile.',
+      'Supply chain experience maps to your target market.',
+    ],
+    certifications: [
+      {
+        id: 'cert_rafi_pmp',
+        name: 'Project Management Professional',
+        issuer: 'PMI',
+        logoUrl: 'https://logo.clearbit.com/pmi.org',
+        date: 'Active through 2026',
+        link: 'https://www.pmi.org/certifications/project-management-pmp',
       },
     ],
     languages: ['English', 'Bahasa Indonesia'],
@@ -558,34 +614,62 @@ const startupCardBlueprints: MockDiscoveryStartupCardBlueprint[] = [
 ];
 
 function createProfileCards(): DiscoveryCard[] {
-  return profileCardBlueprints.map((card) => ({
-    entityType: 'profile',
-    id: card.id,
-    profileId: card.profileId,
-    photoUrl: card.photoUrl,
-    name: card.name,
-    age: card.age,
-    headline: card.headline,
-    linkedinUrl: card.linkedinUrl,
-    location: {
-      city: card.city,
-      country: card.country,
-      display: `${card.city}, ${card.country}`,
-      distanceKm: card.distanceKm,
-    },
-    match: {
-      score: card.score,
-      label: card.matchLabel,
-    },
-    badges: [card.badge],
-    bio: card.bio,
-    startupIdea: card.startupIdea,
-    interests: [...card.interests],
-    skills: [...card.skills],
-    experience: card.experience ? [...card.experience] : undefined,
-    education: card.education ? [...card.education] : undefined,
-    languages: card.languages ? [...card.languages] : undefined,
-  }));
+  return profileCardBlueprints.map((card) => {
+    const languageItems = card.languages ? [...card.languages] : [];
+    const sections: {
+      highlights?: DiscoveryCardSection<string>;
+      languages?: DiscoveryCardSection<string>;
+    } = {};
+
+    if (card.highlights?.length) {
+      sections.highlights = {
+        title: 'Why you match',
+        items: [...card.highlights],
+      };
+    }
+
+    if (languageItems.length) {
+      sections.languages = {
+        title: 'Languages',
+        items: languageItems,
+      };
+    }
+
+    return {
+      entityType: 'profile',
+      id: card.id,
+      profileId: card.profileId,
+      photoUrl: card.photoUrl,
+      name: card.name,
+      age: card.age,
+      headline: card.headline,
+      linkedinUrl: card.linkedinUrl,
+      location: {
+        city: card.city,
+        country: card.country,
+        display: `${card.city}, ${card.country}`,
+        distanceKm: card.distanceKm,
+      },
+      match: {
+        score: card.score,
+        label: card.matchLabel,
+      },
+      badges: card.badges ? [...card.badges] : [card.badge],
+      bio: card.bio,
+      startupIdea: card.startupIdea,
+      interests: [...card.interests],
+      skills: [...card.skills],
+      experience: card.experience ? [...card.experience] : undefined,
+      education: card.education ? [...card.education] : undefined,
+      certifications: card.certifications?.length
+        ? {
+            items: [...card.certifications],
+          }
+        : undefined,
+      sections: Object.keys(sections).length ? sections : undefined,
+      languages: card.id === 'card_010' && languageItems.length ? languageItems : undefined,
+    };
+  });
 }
 
 function createStartupCards(): DiscoveryCard[] {

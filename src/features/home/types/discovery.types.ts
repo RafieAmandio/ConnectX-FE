@@ -16,12 +16,18 @@ export type DiscoveryCardBadge = {
   id?: string;
   label: string;
   icon?: string;
+  color?: string;
 };
 
 export type DiscoveryCardTag = {
   id: string;
   name: string;
   type?: string;
+};
+
+export type DiscoveryCardSection<T> = {
+  title?: string;
+  items: T[];
 };
 
 export type DiscoveryCardExperience = {
@@ -44,6 +50,15 @@ export type DiscoveryCardEducation = {
   period?: string | null;
   schoolLogo?: string | null;
   description?: string | null;
+};
+
+export type DiscoveryCardCertification = {
+  id?: string;
+  name: string;
+  issuer?: string;
+  logoUrl?: string | null;
+  date?: string;
+  link?: string | null;
 };
 
 export type DiscoveryStageJourneyState = 'completed' | 'current' | 'upcoming';
@@ -85,6 +100,13 @@ export type DiscoveryProfileCard = DiscoveryBaseCard & {
   skills: DiscoveryCardTag[];
   experience?: DiscoveryCardExperience[];
   education?: DiscoveryCardEducation[];
+  certifications?: {
+    items: DiscoveryCardCertification[];
+  };
+  sections?: {
+    highlights?: DiscoveryCardSection<string>;
+    languages?: DiscoveryCardSection<string>;
+  };
   languages?: string[];
 };
 

@@ -57,6 +57,8 @@ import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discov
 import type {
   DiscoveryAppliedFilters,
   DiscoveryCard,
+  DiscoveryCardBadge,
+  DiscoveryCardCertification,
   DiscoveryCardEducation,
   DiscoveryCardExperience,
   DiscoveryCardsRequest,
@@ -160,6 +162,14 @@ function getBadgeIcon(icon?: string): keyof typeof Ionicons.glyphMap {
       return 'analytics-outline';
     case 'shield-checkmark':
       return 'shield-checkmark-outline';
+    case 'linkedin':
+      return 'logo-linkedin';
+    case 'verified':
+    case 'badge-check':
+      return 'checkmark-circle-outline';
+    case 'pro':
+    case 'diamond':
+      return 'diamond-outline';
     default:
       return 'star-outline';
   }
@@ -540,6 +550,30 @@ function withAlpha(hexColor: string, alpha: number) {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
+function getSafeAccentColor(color?: string) {
+  const normalized = color?.trim();
+
+  if (normalized && /^#[\da-f]{6}$/i.test(normalized)) {
+    return normalized;
+  }
+
+  return '#FF9A3E';
+}
+
+function normalizeStringList(items?: string[]) {
+  return items
+    ?.map((item) => item.trim())
+    .filter((item): item is string => item.length > 0) ?? [];
+}
+
+function getBadgeKey(badge: DiscoveryCardBadge, index: number) {
+  return badge.id ?? `${badge.label}-${index}`;
+}
+
+function getCertificationKey(item: DiscoveryCardCertification, index: number) {
+  return item.id ?? `${item.name}-${item.issuer ?? 'issuer'}-${item.date ?? index}`;
+}
+
 function SkeletonBlock({
   className,
   style,
@@ -802,6 +836,109 @@ function StartupJourney({ card }: { card: DiscoveryStartupCard }) {
   );
 }
 
+function ProfileBadgePill({ badge }: { badge: DiscoveryCardBadge }) {
+  const accentColor = getSafeAccentColor(badge.color);
+
+  return (
+    <View
+      className="flex-row items-center gap-1.5 rounded-full border px-3 py-1.5"
+      style={{
+        backgroundColor: withAlpha(accentColor, 0.14),
+        borderColor: withAlpha(accentColor, 0.34),
+      }}>
+      <Ionicons color={accentColor} name={getBadgeIcon(badge.icon)} size={13} />
+      <AppText className="text-[12px] font-semibold" numberOfLines={1} style={{ color: accentColor }}>
+        {badge.label}
+      </AppText>
+    </View>
+  );
+}
+
+function MatchHighlights({
+  items,
+  title = 'Why you match',
+}: {
+  items: string[];
+  title?: string;
+}) {
+  if (!items.length) {
+    return null;
+  }
+
+  return (
+    <View
+      className="gap-3 rounded-[20px] border px-4 py-4"
+      style={{
+        backgroundColor: '#221F19',
+        borderColor: 'rgba(255, 154, 62, 0.24)',
+      }}>
+      <SectionLabel icon="sparkles-outline" title={title} />
+      <View className="gap-2.5">
+        {items.map((item, index) => (
+          <View key={`${item}-${index}`} className="flex-row gap-2.5">
+            <View
+              className="mt-2 h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: '#FF9A3E' }}
+            />
+            <AppText className="min-w-0 flex-1 text-[14px] leading-5" tone="muted">
+              {item}
+            </AppText>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function CertificationCard({ item, index }: { item: DiscoveryCardCertification; index: number }) {
+  const verificationUrl = item.link?.trim();
+
+  return (
+    <AppCard className="rounded-[16px] border border-white/10 bg-[#2C2C2C] p-4">
+      <View className="flex-row items-center gap-3.5">
+        {item.logoUrl ? (
+          <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+            <Image
+              contentFit="contain"
+              source={{ uri: item.logoUrl }}
+              style={{ height: '100%', width: '100%' }}
+            />
+          </View>
+        ) : (
+          <View
+            className="h-11 w-11 items-center justify-center rounded-[12px] border"
+            style={{
+              backgroundColor: 'rgba(255, 154, 62, 0.12)',
+              borderColor: 'rgba(255, 154, 62, 0.22)',
+            }}>
+            <Ionicons color="#FF9A3E" name="ribbon-outline" size={22} />
+          </View>
+        )}
+        <View className="min-w-0 flex-1 gap-1">
+          <AppText className="text-[16px]" numberOfLines={2} variant="title">
+            {item.name}
+          </AppText>
+          {item.issuer || item.date ? (
+            <AppText className="text-[13px] text-[#FF9A3E]" numberOfLines={2}>
+              {[item.issuer, item.date].filter(Boolean).join(' · ')}
+            </AppText>
+          ) : null}
+        </View>
+        {verificationUrl ? (
+          <Pressable
+            accessibilityLabel={`Open certification verification for ${item.name}`}
+            accessibilityRole="link"
+            className="h-9 w-9 items-center justify-center rounded-full"
+            onPress={() => openExternalUrl(verificationUrl)}
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}>
+            <Ionicons color="#D0D5DD" name="open-outline" size={18} />
+          </Pressable>
+        ) : null}
+      </View>
+    </AppCard>
+  );
+}
+
 function ProfileCardContent({
   card,
   bottomInset = 24,
@@ -816,6 +953,11 @@ function ProfileCardContent({
   const bio = card.bio?.trim() ?? '';
   const bioPreview = truncateText(bio, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
   const linkedinUrl = card.linkedinUrl?.trim();
+  const badgeItems = card.badges ?? [];
+  const highlightItems = normalizeStringList(card.sections?.highlights?.items);
+  const highlightsTitle = card.sections?.highlights?.title?.trim() || undefined;
+  const languageItems = normalizeStringList(card.sections?.languages?.items ?? card.languages);
+  const certificationItems = card.certifications?.items ?? [];
 
   return (
     <ScrollView
@@ -877,19 +1019,20 @@ function ProfileCardContent({
           </View>
         </View>
 
-        {card.badges?.[0] ? (
+        {badgeItems.length ? (
           <View className="border-b border-border px-4 py-4">
-            <View className="flex-row items-center gap-1">
-              <Ionicons color="#FF9A3E" name={getBadgeIcon(card.badges[0].icon)} size={12} />
-              <AppText className="text-[13px]" tone="muted">
-                {card.badges[0].label}
-              </AppText>
+            <View className="flex-row flex-wrap gap-2">
+              {badgeItems.map((badge, index) => (
+                <ProfileBadgePill key={getBadgeKey(badge, index)} badge={badge} />
+              ))}
             </View>
           </View>
         ) : null}
       </View>
 
       <View className="gap-5 px-4 py-4">
+        <MatchHighlights items={highlightItems} title={highlightsTitle} />
+
         {bio ? (
           <AppText className="text-[16px] leading-7" tone="muted">
             {bioPreview}
@@ -975,6 +1118,15 @@ function ProfileCardContent({
           </View>
         ) : null}
 
+        {certificationItems.length ? (
+          <View className="gap-3">
+            <SectionLabel icon="ribbon-outline" title="Certifications" />
+            {certificationItems.map((item, index) => (
+              <CertificationCard key={getCertificationKey(item, index)} item={item} index={index} />
+            ))}
+          </View>
+        ) : null}
+
         {card.education?.length ? (
           <View className="gap-3">
             {card.education.map((item, index) => (
@@ -1008,11 +1160,11 @@ function ProfileCardContent({
           </View>
         ) : null}
 
-        {card.languages?.length ? (
+        {languageItems.length ? (
           <View className="flex-row items-center gap-2 pb-1">
             <Ionicons color="#FF9A3E" name="globe-outline" size={20} />
             <AppText className="text-[14px]" tone="muted">
-              {card.languages.join(' · ')}
+              {languageItems.join(' · ')}
             </AppText>
           </View>
         ) : null}
