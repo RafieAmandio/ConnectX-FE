@@ -41,6 +41,7 @@ import {
 } from './common-steps';
 
 export const ONBOARDING_STEP_ORDER: OnboardingStepId[] = [
+  'step_welcome',
   'step_data_diri',
   'step_use_connectx',
   'step_identity_details',
