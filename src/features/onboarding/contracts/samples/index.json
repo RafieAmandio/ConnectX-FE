@@ -1,0 +1,13 @@
+{
+  "_description": "Literal step payloads for every possible onboarding screen, grouped by path. Each entry in a steps file is one OnboardingStep the BE should return verbatim from start-session/get-current-step/submit-answer. Big catalogs (primary-role, industry, business-model, skill) are in catalogs/ and referenced by _options_source.",
+  "files": [
+    { "path": "common-path-steps.json",  "description": "Steps shown to all users: welcome, data_diri, use_connectx." },
+    { "path": "builder-path-steps.json", "description": "All builder-path steps (founder / cofounder / team_member). Gating rules noted via _shown_when." },
+    { "path": "startup-path-steps.json", "description": "All startup-path steps including dynamic traction questions." },
+    { "path": "catalogs/primary-role-options.json",   "description": "86 roles grouped across 12 categories. Used by q_primary_role, q_roles_needed." },
+    { "path": "catalogs/industry-options.json",      "description": "67 industries grouped across 7 categories. Used by q_industries_interest." },
+    { "path": "catalogs/business-model-options.json","description": "36 business models grouped across 7 categories. Used by q_business_model." },
+    { "path": "catalogs/skill-options.json",         "description": "80 skills grouped across 12 categories. Used by q_skills and q_skills_needed." }
+  ],
+  "see_also": "../BACKEND_CONTRACT.md"
+}

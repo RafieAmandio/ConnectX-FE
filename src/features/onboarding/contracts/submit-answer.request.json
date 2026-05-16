@@ -1,0 +1,12 @@
+{
+  "_endpoint": "POST /api/v1/onboarding/sessions/:session_id/answer",
+  "_description": "Submits answers for the current step. The BE validates, stores responses, and returns the next step the FE should render.",
+  "step_id": "step_data_diri",
+  "answers": {
+    "q_first_name": "Dio",
+    "q_last_name": "Pratama",
+    "q_date_of_birth": "1998-05-12",
+    "q_city": "jakarta",
+    "q_gender": "male"
+  }
+}

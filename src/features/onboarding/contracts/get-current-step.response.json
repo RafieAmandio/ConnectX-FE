@@ -1,0 +1,69 @@
+{
+  "_endpoint": "GET /api/v1/onboarding/sessions/:session_id/current",
+  "_status": 200,
+  "_description": "Returns the step the user is currently on. Used on resume/reload so the client never needs to cache flow state.",
+  "id": "step_data_diri",
+  "flow_key": "common_data_diri",
+  "section": "Let's build your general profile",
+  "section_progress": "1/3",
+  "overall_progress": { "current": 2, "total": 9 },
+  "title": "Tell us about yourself",
+  "subtitle": "The basics we need to personalize your matches.",
+  "questions": [
+    {
+      "id": "q_first_name",
+      "type": "text",
+      "label": "First name",
+      "placeholder": "Your first name",
+      "required": true,
+      "validation": { "min_length": 1, "max_length": 50 }
+    },
+    {
+      "id": "q_last_name",
+      "type": "text",
+      "label": "Last name",
+      "placeholder": "Your last name",
+      "required": false,
+      "helper_text": "Only shared after a connection.",
+      "validation": { "max_length": 50 }
+    },
+    {
+      "id": "q_date_of_birth",
+      "type": "date",
+      "label": "Date of birth",
+      "placeholder": "YYYY-MM-DD",
+      "required": true
+    },
+    {
+      "id": "q_city",
+      "type": "searchable_dropdown",
+      "label": "Where are you based?",
+      "placeholder": "Search a city",
+      "required": true,
+      "meta": { "searchable": true },
+      "options": [
+        { "id": "opt_city_jakarta", "label": "Jakarta", "value": "jakarta", "group": "Indonesia" },
+        { "id": "opt_city_bandung", "label": "Bandung", "value": "bandung", "group": "Indonesia" },
+        { "id": "opt_city_singapore", "label": "Singapore", "value": "singapore", "group": "Singapore" },
+        { "id": "opt_city_bangalore", "label": "Bangalore", "value": "bangalore", "group": "India" },
+        { "id": "opt_city_hcmc", "label": "Ho Chi Minh City", "value": "hcmc", "group": "Vietnam" },
+        { "id": "opt_city_dubai", "label": "Dubai", "value": "dubai", "group": "United Arab Emirates" }
+      ],
+      "validation": { "min_length": 1 }
+    },
+    {
+      "id": "q_gender",
+      "type": "segmented",
+      "label": "Gender",
+      "required": true,
+      "options": [
+        { "id": "opt_gender_female", "label": "Female", "value": "female" },
+        { "id": "opt_gender_male", "label": "Male", "value": "male" },
+        { "id": "opt_gender_other", "label": "Other", "value": "other" }
+      ],
+      "validation": { "min_length": 1 }
+    }
+  ],
+  "cta": { "label": "Continue", "enabled_when": "valid" },
+  "can_go_back": true
+}

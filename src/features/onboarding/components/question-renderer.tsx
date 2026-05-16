@@ -1,0 +1,3271 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+
+import { AppCard, AppInput, AppText } from '@shared/components';
+import { cn } from '@shared/utils/cn';
+
+import { searchOnboardingOptions } from '../services/onboarding-session-service';
+import type {
+  CurrencyAmountValue,
+  OnboardingAnswerValue,
+  OnboardingLocale,
+  OnboardingOption,
+  OnboardingQuestion,
+} from '../types/onboarding.types';
+
+const HOME_BACKGROUND = '#262626';
+const SEARCHABLE_DROPDOWN_DEBOUNCE_MS = 400;
+const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
+const SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH = 2;
+const SINGLE_LINE_TEXT_INPUT_STYLE = {
+  height: 40,
+  lineHeight: 20,
+  paddingBottom: 0,
+  paddingTop: 0,
+  paddingVertical: 0,
+  textAlignVertical: 'center' as const,
+};
+
+type QuestionRendererProps = {
+  error?: string;
+  hideSearchableDropdownResultsUntilQuery?: boolean;
+  locale?: OnboardingLocale;
+  onChange: (value: OnboardingAnswerValue) => void;
+  question: OnboardingQuestion;
+  value: OnboardingAnswerValue | undefined;
+  variant?: 'default' | 'dropdown_multi_select' | 'inline_searchable_checkbox_multi_select';
+};
+
+function getStringValue(value: OnboardingAnswerValue | undefined) {
+  return typeof value === 'string' ? value : '';
+}
+
+function getNumberValue(value: OnboardingAnswerValue | undefined) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return typeof value === 'string' ? value : '';
+}
+
+function getArrayValue(value: OnboardingAnswerValue | undefined) {
+  return Array.isArray(value) ? value : [];
+}
+
+function getCurrencyValue(value: OnboardingAnswerValue | undefined): CurrencyAmountValue {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {
+      amount: '',
+      currency: '',
+    };
+  }
+
+  const candidate = value as Partial<CurrencyAmountValue>;
+
+  return {
+    amount: typeof candidate.amount === 'string' ? candidate.amount : '',
+    currency: typeof candidate.currency === 'string' ? candidate.currency : '',
+  };
+}
+
+function shouldUseHandlePlaceholder(question: OnboardingQuestion) {
+  return question.id === 'q_su_twitter' || question.id === 'q_su_instagram';
+}
+
+function getTextLikePlaceholder(question: OnboardingQuestion) {
+  if (question.placeholder) {
+    return question.placeholder;
+  }
+
+  if (shouldUseHandlePlaceholder(question)) {
+    return '@';
+  }
+
+  if (question.type === 'url') {
+    return 'https://';
+  }
+
+  return undefined;
+}
+
+function getSelectedLabel(options: OnboardingOption[] | undefined, value: string) {
+  return options?.find((option) => option.value === value)?.label ?? value;
+}
+
+function mergeOptionsByValue(
+  previousOptions: OnboardingOption[],
+  nextOptions: OnboardingOption[]
+) {
+  const optionsByValue = new Map<string, OnboardingOption>();
+
+  for (const option of previousOptions) {
+    optionsByValue.set(option.value, option);
+  }
+
+  for (const option of nextOptions) {
+    optionsByValue.set(option.value, option);
+  }
+
+  return Array.from(optionsByValue.values());
+}
+
+function groupOptions(options: OnboardingOption[] | undefined) {
+  const groupedOptions = new Map<string, OnboardingOption[]>();
+
+  for (const option of options ?? []) {
+    const groupName = option.group ?? 'Options';
+    const currentGroup = groupedOptions.get(groupName) ?? [];
+    currentGroup.push(option);
+    groupedOptions.set(groupName, currentGroup);
+  }
+
+  return Array.from(groupedOptions.entries());
+}
+
+type GroupedOptionListItem =
+  | {
+    id: string;
+    label: string;
+    type: 'group';
+  }
+  | {
+    id: string;
+    option: OnboardingOption;
+    type: 'option';
+  };
+
+function flattenGroupedOptions(options: OnboardingOption[]) {
+  const items: GroupedOptionListItem[] = [];
+
+  for (const [groupName, groupedOptions] of groupOptions(options)) {
+    items.push({
+      id: `group:${groupName}`,
+      label: groupName,
+      type: 'group',
+    });
+
+    for (const option of groupedOptions) {
+      items.push({
+        id: `option:${option.id}`,
+        option,
+        type: 'option',
+      });
+    }
+  }
+
+  return items;
+}
+
+type AnchorLayout = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+type DropdownContentRenderParams = {
+  maxHeight: number;
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function DropdownOverlay({
+  anchorRef,
+  children,
+  header,
+  maxHeight,
+  minWidth,
+  onClose,
+  renderContent,
+  visible,
+}: {
+  anchorRef: React.RefObject<View | null>;
+  children?: React.ReactNode;
+  header?: React.ReactNode;
+  maxHeight: number;
+  minWidth?: number;
+  onClose: () => void;
+  renderContent?: (params: DropdownContentRenderParams) => React.ReactNode;
+  visible: boolean;
+}) {
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const [anchorLayout, setAnchorLayout] = React.useState<AnchorLayout | null>(null);
+
+  React.useEffect(() => {
+    if (!visible) {
+      setAnchorLayout(null);
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      anchorRef.current?.measureInWindow((x, y, width, height) => {
+        setAnchorLayout({ height, width, x, y });
+      });
+    });
+  }, [anchorRef, visible]);
+
+  const horizontalPadding = 16;
+  const verticalGap = Platform.OS === 'android' ? 20 : 8;
+
+  if (Platform.OS === 'android') {
+    const inlineScrollMaxHeight = Math.max(88, maxHeight - (header ? 72 : 0));
+    return visible ? (
+      <AppCard
+        className="border-transparent p-1"
+        style={{
+          backgroundColor: HOME_BACKGROUND,
+          borderWidth: 0,
+          boxShadow: 'none',
+          marginTop: 16,
+          maxHeight,
+          minWidth,
+          width: '100%',
+        }}>
+        {header}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+          style={{ maxHeight: inlineScrollMaxHeight }}>
+          {children}
+        </ScrollView>
+      </AppCard>
+    ) : null;
+  }
+
+  const fallbackWidth = windowWidth - horizontalPadding * 2;
+  const anchorWidth = anchorLayout?.width ?? fallbackWidth;
+  const overlayWidth = Math.min(
+    Math.max(anchorWidth, minWidth ?? Math.min(240, fallbackWidth)),
+    fallbackWidth
+  );
+  const overlayLeft = anchorLayout
+    ? clamp(
+      anchorLayout.x,
+      horizontalPadding,
+      Math.max(horizontalPadding, windowWidth - overlayWidth - horizontalPadding)
+    )
+    : horizontalPadding;
+  const anchorBottom = anchorLayout
+    ? anchorLayout.y + anchorLayout.height
+    : windowHeight - 80;
+  const availableBelow = Math.max(
+    0,
+    windowHeight - anchorBottom - verticalGap - horizontalPadding
+  );
+  const availableAbove = Math.max(
+    0,
+    (anchorLayout?.y ?? 0) - verticalGap - horizontalPadding
+  );
+  const shouldOpenAbove = availableBelow < 96 && availableAbove > availableBelow;
+  const preferredOverlayTop = anchorLayout
+    ? shouldOpenAbove
+      ? horizontalPadding
+      : anchorBottom + verticalGap
+    : windowHeight - maxHeight - 32;
+  const availableHeight = shouldOpenAbove
+    ? availableAbove
+    : Math.max(0, windowHeight - preferredOverlayTop - horizontalPadding);
+  const overlayMaxHeight = Math.max(160, Math.min(maxHeight, availableHeight || maxHeight));
+  const overlayTop = anchorLayout
+    ? shouldOpenAbove
+      ? Math.max(
+        horizontalPadding,
+        anchorLayout.y - verticalGap - overlayMaxHeight
+      )
+      : preferredOverlayTop
+    : windowHeight - overlayMaxHeight - 32;
+  const scrollMaxHeight = Math.max(88, overlayMaxHeight - (header ? 72 : 0));
+
+  return (
+    <Modal
+      animationType="fade"
+      onRequestClose={onClose}
+      transparent
+      visible={visible}>
+      <View
+        className="flex-1"
+        style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onClose}
+          style={{
+            bottom: 0,
+            left: 0,
+            position: 'absolute',
+            right: 0,
+            top: 0,
+          }}
+        />
+        <AppCard
+          className="border-transparent p-1"
+          style={{
+            backgroundColor: HOME_BACKGROUND,
+            borderWidth: 0,
+            boxShadow: 'none',
+            left: overlayLeft,
+            maxHeight: overlayMaxHeight,
+            position: 'absolute',
+            top: overlayTop,
+            width: overlayWidth,
+          }}>
+          {header}
+          {renderContent ? (
+            renderContent({ maxHeight: scrollMaxHeight })
+          ) : (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              style={{ maxHeight: scrollMaxHeight }}>
+              {children}
+            </ScrollView>
+          )}
+        </AppCard>
+      </View>
+    </Modal>
+  );
+}
+
+type CardBadgeStyle = {
+  bg: string;
+  border: string;
+  icon: string;
+  iconColor: string;
+  library?: 'ionicons' | 'mci';
+};
+
+const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
+  team: {
+    bg: '#3A2812',
+    border: '#5A3C18',
+    icon: 'people',
+    iconColor: '#FF9A3E',
+  },
+  rocket: {
+    bg: '#2C2712',
+    border: '#4A4218',
+    icon: 'albums',
+    iconColor: '#D4B83A',
+  },
+  founder_rocket: {
+    bg: '#3A2812',
+    border: '#5A3C18',
+    icon: 'rocket',
+    iconColor: '#FF9A3E',
+  },
+  cofounder_handshake: {
+    bg: '#2C2712',
+    border: '#4A4218',
+    icon: 'handshake',
+    iconColor: '#D4B83A',
+    library: 'mci',
+  },
+  team_member_group: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'people-outline',
+    iconColor: '#CBD4E0',
+  },
+  goal_cofounder: {
+    bg: '#3A2812',
+    border: '#5A3C18',
+    icon: 'handshake-outline',
+    iconColor: '#FF9A3E',
+    library: 'mci',
+  },
+  goal_team_members: {
+    bg: '#2C2712',
+    border: '#4A4218',
+    icon: 'people',
+    iconColor: '#D4B83A',
+  },
+  goal_both: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'disc-outline',
+    iconColor: '#E5E7EB',
+  },
+  yes: {
+    bg: '#3A2812',
+    border: '#5A3C18',
+    icon: 'checkmark-circle-outline',
+    iconColor: '#FF9A3E',
+  },
+  no: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'close-circle-outline',
+    iconColor: '#CBD4E0',
+  },
+  maybe: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubble-ellipses-outline',
+    iconColor: '#7DD3FC',
+  },
+  relocate_yes: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'location',
+    iconColor: '#4ADE80',
+  },
+  relocate_maybe: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubble-ellipses-outline',
+    iconColor: '#7DD3FC',
+  },
+  relocate_no: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'close-circle-outline',
+    iconColor: '#CBD4E0',
+  },
+  remote_pref_hybrid: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'briefcase-outline',
+    iconColor: '#FF9A3E',
+  },
+  hybrid: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'briefcase-outline',
+    iconColor: '#FF9A3E',
+  },
+  onsite: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'business-outline',
+    iconColor: '#4ADE80',
+  },
+  remote_preferred: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'laptop-outline',
+    iconColor: '#7DD3FC',
+  },
+  remote_pref_remote_only: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'home-outline',
+    iconColor: '#CBD4E0',
+  },
+  remote_only: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'home-outline',
+    iconColor: '#CBD4E0',
+  },
+  availability_full_time: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'rocket-outline',
+    iconColor: '#CBD4E0',
+  },
+  availability_part_time: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'time-outline',
+    iconColor: '#CBD4E0',
+  },
+  availability_flexible: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'globe-outline',
+    iconColor: '#CBD4E0',
+  },
+  exp_founded: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'flag',
+    iconColor: '#FF9A3E',
+  },
+  exp_built: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'construct',
+    iconColor: '#C48BFF',
+  },
+  exp_worked: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'people',
+    iconColor: '#4ADE80',
+  },
+  exp_sold: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'cash',
+    iconColor: '#FF9A3E',
+  },
+  exp_none: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'leaf-outline',
+    iconColor: '#CBD4E0',
+  },
+  cofounder_technical: {
+    bg: '#1A2332',
+    border: '#2E3E5A',
+    icon: 'code-slash',
+    iconColor: '#6BB4FF',
+  },
+  cofounder_business: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'briefcase',
+    iconColor: '#FF9A3E',
+  },
+  cofounder_product: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'bulb',
+    iconColor: '#C48BFF',
+  },
+  cofounder_growth: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'trending-up',
+    iconColor: '#4ADE80',
+  },
+  cofounder_ai: {
+    bg: '#2B1224',
+    border: '#512244',
+    icon: 'sparkles',
+    iconColor: '#FF6FCF',
+  },
+  cofounder_operations: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'settings',
+    iconColor: '#7DD3FC',
+  },
+  cofounder_finance: {
+    bg: '#2A2312',
+    border: '#564518',
+    icon: 'cash',
+    iconColor: '#FFD166',
+  },
+  cofounder_partnerships: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'git-network',
+    iconColor: '#5EEAD4',
+  },
+  founder_solo: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'person',
+    iconColor: '#FF9A3E',
+  },
+  founder_two: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'people',
+    iconColor: '#C48BFF',
+  },
+  founder_three_plus: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'people-circle',
+    iconColor: '#4ADE80',
+  },
+  team_size_small: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'person-add',
+    iconColor: '#FF9A3E',
+  },
+  team_size_medium: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'people',
+    iconColor: '#C48BFF',
+  },
+  team_size_large: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'people-circle',
+    iconColor: '#4ADE80',
+  },
+  female: {
+    bg: '#2A1626',
+    border: '#56304D',
+    icon: 'gender-female',
+    iconColor: '#F472B6',
+    library: 'mci',
+  },
+  male: {
+    bg: '#142238',
+    border: '#294766',
+    icon: 'gender-male',
+    iconColor: '#60A5FA',
+    library: 'mci',
+  },
+  cash_only: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  balanced: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'pie-chart',
+    iconColor: '#5EEAD4',
+  },
+  equity_heavy: {
+    bg: '#2A2312',
+    border: '#564518',
+    icon: 'trending-up',
+    iconColor: '#FFD166',
+  },
+  partial_equity: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'pie-chart',
+    iconColor: '#5EEAD4',
+  },
+  cash_heavy: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  paid_position_paid: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  paid_position_unpaid: {
+    bg: '#2A1620',
+    border: '#573044',
+    icon: 'close-circle-outline',
+    iconColor: '#FB7185',
+  },
+  paid_position_open: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubbles-outline',
+    iconColor: '#7DD3FC',
+  },
+  strict: {
+    bg: '#2A1C10',
+    border: '#5A3C18',
+    icon: 'lock-closed',
+    iconColor: '#FF9A3E',
+  },
+  flexible: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'options',
+    iconColor: '#CBD4E0',
+  },
+  no_minimum: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'leaf-outline',
+    iconColor: '#7DD3FC',
+  },
+  annual: {
+    bg: '#24162E',
+    border: '#43285A',
+    icon: 'calendar',
+    iconColor: '#C48BFF',
+  },
+  hourly: {
+    bg: '#1F242E',
+    border: '#2E3547',
+    icon: 'time-outline',
+    iconColor: '#CBD4E0',
+  },
+  IDR: {
+    bg: '#132A1E',
+    border: '#265238',
+    icon: 'cash',
+    iconColor: '#4ADE80',
+  },
+  USD: {
+    bg: '#122726',
+    border: '#1E4947',
+    icon: 'logo-usd',
+    iconColor: '#5EEAD4',
+  },
+  SGD: {
+    bg: '#2A2312',
+    border: '#564518',
+    icon: 'wallet',
+    iconColor: '#FFD166',
+  },
+  default: {
+    bg: '#2A2117',
+    border: '#3A2E1E',
+    icon: 'ellipse',
+    iconColor: '#FF9A3E',
+  },
+};
+
+const SELECTED_DEFAULT_CARD_BADGE_STYLE: CardBadgeStyle = {
+  bg: '#FF9A3E',
+  border: '#FFB25F',
+  icon: 'checkmark',
+  iconColor: '#1A1208',
+};
+
+function getCardBadgeStyleKey(option: OnboardingOption) {
+  return option.icon ?? option.value;
+}
+
+function getCardBadgeStyle(option: OnboardingOption, isSelected = false): CardBadgeStyle {
+  const styleKey = getCardBadgeStyleKey(option);
+
+  if (isSelected && !CARD_BADGE_STYLES[styleKey]) {
+    return SELECTED_DEFAULT_CARD_BADGE_STYLE;
+  }
+
+  return CARD_BADGE_STYLES[styleKey] ?? CARD_BADGE_STYLES.default;
+}
+
+function getMappedCardBadgeStyle(option: OnboardingOption) {
+  return CARD_BADGE_STYLES[getCardBadgeStyleKey(option)] ?? null;
+}
+
+function getRenderableDropdownOption(
+  question: OnboardingQuestion,
+  option: OnboardingOption
+): OnboardingOption {
+  if (question.id !== 'q_remote_pref') {
+    return option;
+  }
+
+  if (option.value === 'hybrid') {
+    return { ...option, icon: 'remote_pref_hybrid' };
+  }
+
+  if (option.value === 'remote_only') {
+    return { ...option, icon: 'remote_pref_remote_only' };
+  }
+
+  return option;
+}
+
+function CardBadgeIcon({ badge, size = 26 }: { badge: CardBadgeStyle; size?: number }) {
+  if (badge.library === 'mci') {
+    return (
+      <MaterialCommunityIcons
+        color={badge.iconColor}
+        name={badge.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
+        size={size}
+      />
+    );
+  }
+
+  return (
+    <Ionicons
+      color={badge.iconColor}
+      name={badge.icon as React.ComponentProps<typeof Ionicons>['name']}
+      size={size}
+    />
+  );
+}
+
+function InlineOptionIcon({
+  isSelected,
+  option,
+  size = 18,
+}: {
+  isSelected: boolean;
+  option: OnboardingOption;
+  size?: number;
+}) {
+  const badge = getMappedCardBadgeStyle(option);
+
+  if (!badge) {
+    return null;
+  }
+
+  if (badge.library === 'mci') {
+    return (
+      <MaterialCommunityIcons
+        color={isSelected ? '#FF9A3E' : badge.iconColor}
+        name={badge.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
+        size={size}
+      />
+    );
+  }
+
+  return (
+    <Ionicons
+      color={isSelected ? '#FF9A3E' : badge.iconColor}
+      name={badge.icon as React.ComponentProps<typeof Ionicons>['name']}
+      size={size}
+    />
+  );
+}
+
+function QuestionHeader({
+  error,
+  question,
+}: {
+  error?: string;
+  question: OnboardingQuestion;
+}) {
+  const hasLabel = Boolean(question.label);
+  const hasSubLabel = Boolean(question.sub_label);
+  const hasHelper = Boolean(question.helper_text);
+
+  if (!hasLabel && !hasSubLabel && !hasHelper && !error) {
+    return null;
+  }
+
+  return (
+    <View className="gap-2">
+      {hasLabel || hasSubLabel ? (
+        <View className="gap-1">
+          {hasLabel ? (
+            <AppText variant="subtitle">{question.label}</AppText>
+          ) : null}
+          {hasSubLabel ? (
+            <AppText tone="muted">{question.sub_label}</AppText>
+          ) : null}
+        </View>
+      ) : null}
+      {hasHelper ? (
+        <AppText tone="soft">{question.helper_text}</AppText>
+      ) : null}
+      {error ? (
+        <AppText selectable tone="danger">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+const FIELD_BG = 'bg-[#292929]';
+const FIELD_BORDER = 'border-[#383838]';
+const FIELD_CLASS = `${FIELD_BG} ${FIELD_BORDER}`;
+
+function TextLikeQuestion({
+  error,
+  keyboardType,
+  multiline = false,
+  onChange,
+  question,
+  value,
+}: Omit<QuestionRendererProps, 'value'> & {
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'url';
+  multiline?: boolean;
+  value: string;
+}) {
+  const [isFocused, setIsFocused] = React.useState(false);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <AppInput
+        autoCapitalize={question.type === 'email' || question.type === 'url' ? 'none' : 'sentences'}
+        autoCorrect={question.type === 'email' || question.type === 'url' ? false : true}
+        error={error}
+        keyboardType={keyboardType}
+        multiline={multiline}
+        numberOfLines={multiline ? 5 : 1}
+        onBlur={() => setIsFocused(false)}
+        onChangeText={(nextValue) => onChange(nextValue)}
+        onFocus={() => setIsFocused(true)}
+        placeholder={getTextLikePlaceholder(question)}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        value={value}
+        className={cn(
+          FIELD_BG,
+          isFocused ? 'border-[#FF9A3E]' : FIELD_BORDER,
+          multiline && 'min-h-[140px] py-4'
+        )}
+      />
+    </View>
+  );
+}
+
+function SelectionCard({
+  isSelected,
+  onPress,
+  option,
+}: {
+  isSelected: boolean;
+  onPress: () => void;
+  option: OnboardingOption;
+}) {
+  const badge = getCardBadgeStyle(option, isSelected);
+  const scale = useSharedValue(1);
+  const glow = useSharedValue(0);
+  const wasSelectedRef = React.useRef(isSelected);
+
+  React.useEffect(() => {
+    if (isSelected && !wasSelectedRef.current) {
+      scale.value = withSequence(
+        withTiming(0.96, { duration: 90 }),
+        withSpring(1.03, { damping: 8, stiffness: 180 }),
+        withSpring(1, { damping: 10, stiffness: 200 })
+      );
+      glow.value = withSequence(
+        withTiming(1, { duration: 180 }),
+        withTiming(0.55, { duration: 320 })
+      );
+    }
+    if (!isSelected && wasSelectedRef.current) {
+      glow.value = withTiming(0, { duration: 180 });
+    }
+    wasSelectedRef.current = isSelected;
+  }, [isSelected, scale, glow]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    shadowOpacity: glow.value * 0.6,
+    shadowRadius: 14 + glow.value * 10,
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withTiming(0.975, { duration: 90 });
+  };
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 220 });
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}>
+      <Animated.View
+        className={cn(
+          'flex-row items-center gap-4 rounded-[22px] border px-4 py-4',
+          isSelected
+            ? 'border-[#FF9A3E] bg-[#1F1712]'
+            : 'border-[#383838] bg-[#292929]'
+        )}
+        style={[
+          {
+            borderCurve: 'continuous',
+            borderWidth: isSelected ? 2 : 1,
+            shadowColor: '#FF9A3E',
+            shadowOffset: { width: 0, height: 0 },
+          },
+          animatedStyle,
+        ]}>
+        <View
+          className="h-14 w-14 items-center justify-center rounded-[16px] border"
+          style={{
+            backgroundColor: isSelected && option.icon ? '#2A1C10' : badge.bg,
+            borderColor: isSelected && option.icon ? '#5A3C18' : badge.border,
+            borderCurve: 'continuous',
+          }}>
+          <CardBadgeIcon badge={badge} />
+        </View>
+        <View className="flex-1 gap-1">
+          <AppText variant="subtitle" className="text-[18px] text-white">
+            {option.label}
+          </AppText>
+          {option.sub_label ? (
+            <AppText className="text-[13px] text-text-muted">
+              {option.sub_label}
+            </AppText>
+          ) : null}
+        </View>
+        {isSelected ? (
+          <Ionicons color="#FF9A3E" name="checkmark" size={24} />
+        ) : null}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function SingleSelectCardQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValue = getStringValue(value);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className="gap-3">
+        {question.options?.map((option) => (
+          <SelectionCard
+            key={option.id}
+            isSelected={currentValue === option.value}
+            onPress={() => onChange(option.value)}
+            option={option}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function SingleSelectRadioQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValue = getStringValue(value);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className="gap-2">
+        {question.options?.map((option) => {
+          const isSelected = currentValue === option.value;
+
+          return (
+            <Pressable
+              key={option.id}
+              className={cn(
+                'flex-row items-center gap-3 rounded-[18px] border px-4 py-4',
+                isSelected
+                  ? 'border-[#FF9A3E] bg-[#1F1712]'
+                  : 'border-[#383838] bg-[#292929]'
+              )}
+              style={{ borderWidth: isSelected ? 2 : 1 }}
+              onPress={() => onChange(option.value)}>
+              <View
+                className={cn(
+                  'h-5 w-5 items-center justify-center rounded-full border-2',
+                  isSelected
+                    ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                    : 'border-[#5A6074] bg-transparent'
+                )}>
+                {isSelected ? (
+                  <Ionicons color="#1A1208" name="checkmark" size={12} />
+                ) : null}
+              </View>
+              <View className="flex-1 gap-1">
+                <AppText
+                  variant="bodyStrong"
+                  className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                  {option.label}
+                </AppText>
+                {option.sub_label ? (
+                  <AppText tone="muted">{option.sub_label}</AppText>
+                ) : null}
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function MultiSelectCardQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValues = getArrayValue(value);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className="gap-3">
+        {question.options?.map((option) => {
+          const isSelected = currentValues.includes(option.value);
+          const badge = getCardBadgeStyle(option, isSelected);
+
+          return (
+            <Pressable
+              key={option.id}
+              onPress={() => {
+                if (isSelected) {
+                  onChange(currentValues.filter((item) => item !== option.value));
+                  return;
+                }
+                onChange([...currentValues, option.value]);
+              }}>
+              <View
+                className={cn(
+                  'flex-row items-center gap-3 rounded-[20px] border px-4 py-3.5',
+                  isSelected
+                    ? 'border-[#FF9A3E] bg-[#1F1712]'
+                    : 'border-[#383838] bg-[#292929]'
+                )}
+                style={{ borderCurve: 'continuous', borderWidth: isSelected ? 2 : 1 }}>
+                <View
+                  className="h-9 w-9 items-center justify-center rounded-[10px]"
+                  style={{
+                    backgroundColor: badge.bg,
+                    borderColor: badge.border,
+                    borderCurve: 'continuous',
+                    borderWidth: isSelected && !option.icon ? 1 : 0,
+                  }}>
+                  <CardBadgeIcon badge={badge} size={18} />
+                </View>
+                <View className="flex-1 gap-1">
+                  <AppText variant="subtitle" className="text-[16px] text-white">
+                    {option.label}
+                  </AppText>
+                  {option.sub_label ? (
+                    <AppText className="text-[13px] text-text-muted">
+                      {option.sub_label}
+                    </AppText>
+                  ) : null}
+                </View>
+                <View
+                  className={cn(
+                    'h-6 w-6 items-center justify-center rounded-[8px] border-2',
+                    isSelected
+                      ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                      : 'border-[#5A6074] bg-transparent'
+                  )}>
+                  {isSelected ? (
+                    <Ionicons color="#1A1208" name="checkmark" size={14} />
+                  ) : null}
+                </View>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function MultiSelectChipQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValues = getArrayValue(value);
+  const shouldRenderOptionRows = question.options?.some((option) => option.sub_label);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className={shouldRenderOptionRows ? 'gap-3' : 'flex-row flex-wrap gap-2'}>
+        {question.options?.map((option) => {
+          const isSelected = currentValues.includes(option.value);
+
+          if (shouldRenderOptionRows) {
+            const badge = getCardBadgeStyle(option, isSelected);
+            const displayBadge = {
+              ...badge,
+              iconColor: isSelected ? '#FF9A3E' : '#8F8F8F',
+            };
+
+            return (
+              <Pressable
+                key={option.id}
+                className="flex-row items-center gap-4 rounded-[18px] border px-4 py-4"
+                style={{
+                  backgroundColor: isSelected ? '#1F1712' : '#292929',
+                  borderColor: isSelected ? '#FF9A3E' : '#383838',
+                  borderCurve: 'continuous',
+                  borderWidth: isSelected ? 2 : 1,
+                }}
+                onPress={() => {
+                  if (isSelected) {
+                    onChange(currentValues.filter((item) => item !== option.value));
+                    return;
+                  }
+
+                  onChange([...currentValues, option.value]);
+                }}>
+                <View className="h-10 w-10 items-center justify-center">
+                  <CardBadgeIcon badge={displayBadge} size={22} />
+                </View>
+                <View className="flex-1 gap-1">
+                  <AppText
+                    variant="subtitle"
+                    className={cn(
+                      'text-[17px] leading-[22px]',
+                      isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                    )}>
+                    {option.label}
+                  </AppText>
+                  {option.sub_label ? (
+                    <AppText className="text-[13px] leading-[18px] text-text-muted">
+                      {option.sub_label}
+                    </AppText>
+                  ) : null}
+                </View>
+                {isSelected ? (
+                  <Ionicons color="#FF9A3E" name="checkmark" size={22} />
+                ) : null}
+              </Pressable>
+            );
+          }
+
+          return (
+            <Pressable
+              key={option.id}
+              className="flex-row items-center gap-2 rounded-full px-4 py-2.5"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: isSelected ? '#FF9A3E' : '#383838',
+                borderWidth: isSelected ? 2 : 1,
+              }}
+              onPress={() => {
+                if (isSelected) {
+                  onChange(currentValues.filter((item) => item !== option.value));
+                  return;
+                }
+
+                onChange([...currentValues, option.value]);
+              }}>
+              <AppText
+                variant="bodyStrong"
+                className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function MultiSelectDropdownQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const triggerRef = React.useRef<View | null>(null);
+  const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
+  const currentValues = getArrayValue(value);
+  const maxSelections = question.validation?.max_selections ?? Infinity;
+  const atLimit = currentValues.length >= maxSelections;
+
+  const selectedLabels = React.useMemo(
+    () =>
+      currentValues
+        .map((currentValue) => getSelectedLabel(question.options, currentValue))
+        .filter(Boolean),
+    [currentValues, question.options]
+  );
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  const displayLabel =
+    selectedLabels.length === 0
+      ? question.placeholder ?? 'Select options'
+      : selectedLabels.length === 1
+        ? selectedLabels[0]
+        : `${selectedLabels.length} selected`;
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const focusTimer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 120);
+
+    return () => clearTimeout(focusTimer);
+  }, [isOpen]);
+
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setQuery('');
+    inputRef.current?.blur();
+  };
+
+  const toggle = (optionValue: string) => {
+    if (currentValues.includes(optionValue)) {
+      onChange(currentValues.filter((item) => item !== optionValue));
+      return;
+    }
+
+    if (atLimit) {
+      return;
+    }
+
+    onChange([...currentValues, optionValue]);
+  };
+
+  return (
+    <View
+      className="gap-3"
+      style={{ zIndex: isOpen ? 40 : 1, elevation: isOpen ? 12 : 0 }}>
+      <QuestionHeader error={error} question={question} />
+      <View>
+        <Pressable
+          ref={triggerRef}
+          style={{ height: 56 }}
+          className={cn(
+            'flex-row items-center justify-between rounded-[16px] border px-4',
+            isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
+          )}
+          onPress={() => (isOpen ? closeDropdown() : setIsOpen(true))}>
+          <View className="flex-1">
+            <AppText
+              className={cn(
+                selectedLabels.length > 0 ? 'text-white' : 'text-text-soft',
+                isOpen && 'text-[#FF9A3E]'
+              )}
+              numberOfLines={1}>
+              {displayLabel}
+            </AppText>
+          </View>
+          <View className="ml-3 flex-row items-center gap-2">
+            {selectedLabels.length > 1 ? (
+              <View
+                className="min-w-6 items-center rounded-full px-2 py-0.5"
+                style={{ backgroundColor: '#FF9A3E' }}>
+                <AppText
+                  variant="label"
+                  className="text-[10px]"
+                  style={{ color: '#1A1208', fontVariant: ['tabular-nums'] }}>
+                  {selectedLabels.length}
+                </AppText>
+              </View>
+            ) : null}
+            <AppText
+              variant="label"
+              className="text-[10px]"
+              style={{ color: isOpen ? '#FF9A3E' : '#98A2B3' }}>
+              {isOpen ? '▲' : '▼'}
+            </AppText>
+          </View>
+        </Pressable>
+
+        <DropdownOverlay
+          anchorRef={triggerRef}
+          header={
+            <View
+              className="mb-1 flex-row items-center gap-2 rounded-[14px] border px-3"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: query ? '#FF9A3E' : '#383838',
+                height: 52,
+              }}>
+              <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+              <TextInput
+                ref={inputRef}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={setQuery}
+                placeholder={question.placeholder ?? 'Search'}
+                placeholderTextColor="#667085"
+                value={query}
+                className="flex-1 font-body text-[15px] text-white"
+                style={SINGLE_LINE_TEXT_INPUT_STYLE}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons color="#98A2B3" name="close-circle" size={18} />
+                </Pressable>
+              ) : null}
+            </View>
+          }
+          maxHeight={460}
+          onClose={closeDropdown}
+          visible={isOpen}>
+          {filteredOptions.map((option) => {
+            const isSelected = currentValues.includes(option.value);
+            const isDisabled = !isSelected && atLimit;
+
+            return (
+              <Pressable
+                key={option.id}
+                disabled={isDisabled}
+                className={cn(
+                  'flex-row items-center gap-3 rounded-[12px] px-3 py-3',
+                  isSelected ? 'bg-[#2A2117]' : 'bg-transparent',
+                  isDisabled && 'opacity-40'
+                )}
+                onPress={() => toggle(option.value)}>
+                <View
+                  className={cn(
+                    'h-5 w-5 items-center justify-center rounded-[6px] border-2',
+                    isSelected
+                      ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                      : 'border-[#5A6074] bg-transparent'
+                  )}>
+                  {isSelected ? (
+                    <Ionicons color="#1A1208" name="checkmark" size={12} />
+                  ) : null}
+                </View>
+                <View className="flex-1 gap-1">
+                  <AppText
+                    variant="bodyStrong"
+                    className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                    {option.label}
+                  </AppText>
+                  {option.sub_label ? (
+                    <AppText tone="muted">{option.sub_label}</AppText>
+                  ) : null}
+                </View>
+              </Pressable>
+            );
+          })}
+          {filteredOptions.length === 0 ? (
+            <View className="px-3 py-4">
+              <AppText tone="muted">No results</AppText>
+            </View>
+          ) : null}
+        </DropdownOverlay>
+      </View>
+    </View>
+  );
+}
+
+function SearchableMultiSelectDropdownQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const triggerRef = React.useRef<View | null>(null);
+  const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
+  const currentValues = getArrayValue(value);
+  const maxSelections = question.validation?.max_selections ?? Infinity;
+  const atLimit = currentValues.length >= maxSelections;
+
+  const selectedLabels = React.useMemo(
+    () =>
+      currentValues
+        .map((currentValue) => getSelectedLabel(question.options, currentValue))
+        .filter(Boolean),
+    [currentValues, question.options]
+  );
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  const displayLabel =
+    selectedLabels.length === 0
+      ? question.placeholder ?? 'Select options'
+      : selectedLabels.length === 1
+        ? selectedLabels[0]
+        : `${selectedLabels.length} selected`;
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const focusTimer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 120);
+
+    return () => clearTimeout(focusTimer);
+  }, [isOpen]);
+
+  const openDropdown = () => {
+    setIsOpen(true);
+  };
+
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setQuery('');
+    inputRef.current?.blur();
+  };
+
+  const toggle = (optionValue: string) => {
+    if (currentValues.includes(optionValue)) {
+      onChange(currentValues.filter((item) => item !== optionValue));
+      return;
+    }
+
+    if (atLimit) {
+      return;
+    }
+
+    onChange([...currentValues, optionValue]);
+  };
+
+  return (
+    <View
+      className="gap-3"
+      style={{ zIndex: isOpen ? 40 : 1, elevation: isOpen ? 12 : 0 }}>
+      <QuestionHeader error={error} question={question} />
+      <View>
+        <Pressable
+          ref={triggerRef}
+          style={{ height: 56 }}
+          className={cn(
+            'flex-row items-center justify-between rounded-[16px] border px-4',
+            isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
+          )}
+          onPress={() => (isOpen ? closeDropdown() : openDropdown())}>
+          <View className="flex-1">
+            <AppText
+              className={cn(
+                selectedLabels.length > 0 ? 'text-white' : 'text-text-soft',
+                isOpen && 'text-[#FF9A3E]'
+              )}
+              numberOfLines={1}>
+              {displayLabel}
+            </AppText>
+          </View>
+          <View className="ml-3 flex-row items-center gap-2">
+            {selectedLabels.length > 1 ? (
+              <View
+                className="min-w-6 items-center rounded-full px-2 py-0.5"
+                style={{ backgroundColor: '#FF9A3E' }}>
+                <AppText
+                  variant="label"
+                  className="text-[10px]"
+                  style={{ color: '#1A1208', fontVariant: ['tabular-nums'] }}>
+                  {selectedLabels.length}
+                </AppText>
+              </View>
+            ) : null}
+            <AppText
+              variant="label"
+              className="text-[10px]"
+              style={{ color: isOpen ? '#FF9A3E' : '#98A2B3' }}>
+              {isOpen ? '▲' : '▼'}
+            </AppText>
+          </View>
+        </Pressable>
+
+        <DropdownOverlay
+          anchorRef={triggerRef}
+          header={
+            <View
+              className="mb-1 flex-row items-center gap-2 rounded-[14px] border px-3"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: query ? '#FF9A3E' : '#383838',
+                height: 52,
+              }}>
+              <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+              <TextInput
+                ref={inputRef}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={setQuery}
+                placeholder={question.placeholder ?? 'Search'}
+                placeholderTextColor="#667085"
+                value={query}
+                className="flex-1 font-body text-[15px] text-white"
+                style={SINGLE_LINE_TEXT_INPUT_STYLE}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons color="#98A2B3" name="close-circle" size={18} />
+                </Pressable>
+              ) : null}
+            </View>
+          }
+          maxHeight={460}
+          onClose={closeDropdown}
+          visible={isOpen}>
+          {groupOptions(filteredOptions).map(([groupName, options]) => (
+            <View key={groupName} className="gap-1 pb-2">
+              <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
+                {groupName}
+              </AppText>
+              {options.map((option) => {
+                const isSelected = currentValues.includes(option.value);
+                const isDisabled = !isSelected && atLimit;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    disabled={isDisabled}
+                    className={cn(
+                      'flex-row items-center gap-3 rounded-[12px] px-3 py-3',
+                      isSelected ? 'bg-[#2A2117]' : 'bg-transparent',
+                      isDisabled && 'opacity-40'
+                    )}
+                    onPress={() => toggle(option.value)}>
+                    <View
+                      className={cn(
+                        'h-5 w-5 items-center justify-center rounded-[6px] border-2',
+                        isSelected
+                          ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                          : 'border-[#5A6074] bg-transparent'
+                      )}>
+                      {isSelected ? (
+                        <Ionicons color="#1A1208" name="checkmark" size={12} />
+                      ) : null}
+                    </View>
+                    <View className="flex-1 gap-1">
+                      <AppText
+                        variant="bodyStrong"
+                        className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                        {option.label}
+                      </AppText>
+                      {option.sub_label ? (
+                        <AppText tone="muted">{option.sub_label}</AppText>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+          {filteredOptions.length === 0 ? (
+            <View className="px-3 py-4">
+              <AppText tone="muted">No results</AppText>
+            </View>
+          ) : null}
+        </DropdownOverlay>
+      </View>
+    </View>
+  );
+}
+
+function SingleSelectChipQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValue = getStringValue(value);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className="flex-row flex-wrap gap-2">
+        {question.options?.map((option) => {
+          const isSelected = currentValue === option.value;
+          const iconName = option.icon as
+            | React.ComponentProps<typeof Ionicons>['name']
+            | undefined;
+
+          return (
+            <Pressable
+              key={option.id}
+              onPress={() => onChange(option.value)}
+              className="flex-row items-center gap-2 rounded-full px-4 py-2.5"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: isSelected ? '#FF9A3E' : '#383838',
+                borderWidth: isSelected ? 2 : 1,
+              }}>
+              {iconName ? (
+                <Ionicons
+                  color={isSelected ? '#FF9A3E' : '#98A2B3'}
+                  name={iconName}
+                  size={16}
+                />
+              ) : null}
+              <AppText
+                variant="bodyStrong"
+                className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function DropdownQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const triggerRef = React.useRef<View | null>(null);
+  const currentValue = getStringValue(value);
+  const renderableOptions = React.useMemo(
+    () => question.options?.map((option) => getRenderableDropdownOption(question, option)) ?? [],
+    [question]
+  );
+  const currentOption = currentValue
+    ? renderableOptions.find((option) => option.value === currentValue)
+    : undefined;
+  const currentLabel = currentValue
+    ? getSelectedLabel(question.options, currentValue)
+    : question.placeholder ?? 'Select one';
+
+  return (
+    <View
+      className="gap-3"
+      style={{ zIndex: isOpen ? 40 : 1, elevation: isOpen ? 12 : 0 }}>
+      <QuestionHeader error={error} question={question} />
+      <View>
+        <Pressable
+          ref={triggerRef}
+          style={{ height: 56 }}
+          className={cn(
+            'flex-row items-center justify-between rounded-[16px] border px-4',
+            isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
+          )}
+          onPress={() => setIsOpen((currentState) => !currentState)}>
+          <View className="min-w-0 flex-1 flex-row items-center gap-2">
+            {currentOption ? (
+              <InlineOptionIcon isSelected={isOpen} option={currentOption} />
+            ) : null}
+            <AppText
+              numberOfLines={1}
+              className={cn(
+                currentValue ? 'text-white' : 'text-text-soft',
+                isOpen && 'text-[#FF9A3E]'
+              )}>
+              {currentLabel}
+            </AppText>
+          </View>
+          <AppText
+            variant="label"
+            className="ml-2 text-[10px]"
+            style={{ color: isOpen ? '#FF9A3E' : '#98A2B3' }}>
+            {isOpen ? '▲' : '▼'}
+          </AppText>
+        </Pressable>
+
+        <DropdownOverlay
+          anchorRef={triggerRef}
+          maxHeight={200}
+          onClose={() => setIsOpen(false)}
+          visible={isOpen}>
+          {renderableOptions.map((option) => {
+            const isSelected = currentValue === option.value;
+
+            return (
+              <Pressable
+                key={option.id}
+                className={cn(
+                  'flex-row items-center gap-3 rounded-[12px] px-3 py-3',
+                  isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+                )}
+                onPress={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}>
+                <InlineOptionIcon isSelected={isSelected} option={option} />
+                <View className="flex-1 gap-1">
+                  <AppText
+                    variant="bodyStrong"
+                    className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                    {option.label}
+                  </AppText>
+                  {option.sub_label ? (
+                    <AppText tone="muted">{option.sub_label}</AppText>
+                  ) : null}
+                </View>
+              </Pressable>
+            );
+          })}
+        </DropdownOverlay>
+      </View>
+    </View>
+  );
+}
+
+function SearchableDropdownEmptyState({ query }: { query: string }) {
+  return (
+    <View className="px-3 py-4">
+      <AppText tone="muted">{query ? 'No results' : 'No options available'}</AppText>
+    </View>
+  );
+}
+
+function SearchableDropdownPromptState() {
+  return (
+    <View className="px-3 py-4">
+      <AppText tone="muted">
+        Type at least {SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH} characters to search.
+      </AppText>
+    </View>
+  );
+}
+
+function SearchableDropdownLoadingState() {
+  return (
+    <View className="flex-row items-center gap-2 px-3 py-4">
+      <ActivityIndicator color="#FF9A3E" size="small" />
+      <AppText tone="muted">Searching...</AppText>
+    </View>
+  );
+}
+
+function SearchableDropdownErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <View className="gap-3 px-3 py-4">
+      <AppText tone="danger">{message}</AppText>
+      <Pressable
+        className="self-start rounded-full px-3 py-2"
+        style={{ backgroundColor: '#FF9A3E' }}
+        onPress={onRetry}>
+        <AppText variant="label" className="text-[#1A1208]">
+          Try again
+        </AppText>
+      </Pressable>
+    </View>
+  );
+}
+
+function SearchableDropdownMoreResults() {
+  return (
+    <View className="px-3 py-3">
+      <AppText tone="muted">More results available</AppText>
+    </View>
+  );
+}
+
+function SearchableDropdownQuestion({
+  error,
+  locale = 'en',
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const triggerRef = React.useRef<View | null>(null);
+  const [query, setQuery] = React.useState('');
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [knownOptions, setKnownOptions] = React.useState<OnboardingOption[]>(
+    () => question.options ?? []
+  );
+  const [retryCount, setRetryCount] = React.useState(0);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
+  const [searchOptions, setSearchOptions] = React.useState<OnboardingOption[]>([]);
+  const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
+  const searchRequestIdRef = React.useRef(0);
+  const currentValue = getStringValue(value);
+  const normalizedQuery = query.trim();
+  const currentLabel = currentValue
+    ? getSelectedLabel(knownOptions, currentValue)
+    : '';
+  const hasMinimumQuery = normalizedQuery.length >= SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH;
+  const shouldRenderResults = isOpen && hasMinimumQuery;
+  const visibleOptions = React.useMemo(() => {
+    if (!shouldRenderResults) {
+      return [];
+    }
+
+    return searchOptions.slice(0, SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS);
+  }, [searchOptions, shouldRenderResults]);
+  const groupedOptionItems = React.useMemo(
+    () => flattenGroupedOptions(visibleOptions),
+    [visibleOptions]
+  );
+  const hasMoreResults =
+    shouldRenderResults && searchOptions.length > visibleOptions.length;
+
+  React.useEffect(() => {
+    setKnownOptions(question.options ?? []);
+    setSearchOptions([]);
+    setSearchError(null);
+    setRetryCount(0);
+  }, [question.id, question.options]);
+
+  React.useEffect(() => {
+    searchRequestIdRef.current += 1;
+    const requestId = searchRequestIdRef.current;
+
+    if (!isOpen || normalizedQuery.length < SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH) {
+      setIsSearching(false);
+      setSearchError(null);
+      setSearchOptions([]);
+      return;
+    }
+
+    const abortController = new AbortController();
+    setIsSearching(true);
+    setSearchError(null);
+    setSearchOptions([]);
+
+    const debounceTimer = setTimeout(() => {
+      searchOnboardingOptions({
+        locale,
+        query: normalizedQuery,
+        questionId: question.id,
+        signal: abortController.signal,
+      })
+        .then((response) => {
+          if (searchRequestIdRef.current !== requestId) {
+            return;
+          }
+
+          const nextOptions = response.options ?? [];
+          setSearchOptions(nextOptions);
+          setKnownOptions((currentOptions) => mergeOptionsByValue(currentOptions, nextOptions));
+        })
+        .catch((searchErrorValue: unknown) => {
+          if (
+            searchRequestIdRef.current !== requestId ||
+            abortController.signal.aborted
+          ) {
+            return;
+          }
+
+          setSearchOptions([]);
+          setSearchError(
+            searchErrorValue instanceof Error
+              ? searchErrorValue.message
+              : 'Unable to search options right now.'
+          );
+        })
+        .finally(() => {
+          if (searchRequestIdRef.current === requestId) {
+            setIsSearching(false);
+          }
+        });
+    }, SEARCHABLE_DROPDOWN_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(debounceTimer);
+      abortController.abort();
+    };
+  }, [isOpen, locale, normalizedQuery, question.id, retryCount]);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const focusTimer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 120);
+
+    return () => clearTimeout(focusTimer);
+  }, [isOpen]);
+
+  const openDropdown = () => {
+    setIsOpen(true);
+    setQuery('');
+  };
+
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setQuery('');
+    inputRef.current?.blur();
+  };
+
+  const retrySearch = () => {
+    setRetryCount((currentRetryCount) => currentRetryCount + 1);
+  };
+
+  const selectOption = (option: OnboardingOption) => {
+    setKnownOptions((currentOptions) => mergeOptionsByValue(currentOptions, [option]));
+    onChange(option.value);
+    closeDropdown();
+  };
+
+  const renderStatusState = () => {
+    if (!hasMinimumQuery) {
+      return <SearchableDropdownPromptState />;
+    }
+
+    if (isSearching) {
+      return <SearchableDropdownLoadingState />;
+    }
+
+    if (searchError) {
+      return (
+        <SearchableDropdownErrorState
+          message={searchError}
+          onRetry={retrySearch}
+        />
+      );
+    }
+
+    return <SearchableDropdownEmptyState query={query} />;
+  };
+
+  const shouldShowStatusState = !shouldRenderResults || isSearching || Boolean(searchError);
+
+  const renderVirtualizedResults = (listMaxHeight: number) => {
+    if (shouldShowStatusState) {
+      return renderStatusState();
+    }
+
+    return (
+      <FlatList
+        data={groupedOptionItems}
+        extraData={currentValue}
+        initialNumToRender={18}
+        keyboardShouldPersistTaps="handled"
+        keyExtractor={(item) => item.id}
+        maxToRenderPerBatch={18}
+        nestedScrollEnabled
+        removeClippedSubviews={Platform.OS === 'android'}
+        showsVerticalScrollIndicator
+        style={{ maxHeight: listMaxHeight }}
+        updateCellsBatchingPeriod={24}
+        windowSize={7}
+        ListEmptyComponent={renderStatusState()}
+        ListFooterComponent={hasMoreResults ? <SearchableDropdownMoreResults /> : null}
+        renderItem={({ item }) => {
+          if (item.type === 'group') {
+            return (
+              <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
+                {item.label}
+              </AppText>
+            );
+          }
+
+          const option = item.option;
+          const isSelected = currentValue === option.value;
+
+          return (
+            <Pressable
+              key={option.id}
+              className={cn(
+                'rounded-[12px] px-3 py-3',
+                isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+              )}
+              onPress={() => {
+                selectOption(option);
+              }}>
+              <AppText
+                variant="bodyStrong"
+                className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        }}
+      />
+    );
+  };
+
+  return (
+    <View
+      className="gap-3"
+      style={{ zIndex: isOpen ? 40 : 1, elevation: isOpen ? 12 : 0 }}>
+      <QuestionHeader error={error} question={question} />
+      <View>
+        <Pressable
+          ref={triggerRef}
+          onPress={() => (isOpen ? closeDropdown() : openDropdown())}
+          style={{ height: 56 }}
+          className={cn(
+            'flex-row items-center justify-between rounded-[16px] border px-4',
+            isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
+          )}>
+          <View className="flex-1">
+            <AppText
+              className={cn(
+                currentLabel ? 'text-white' : 'text-text-soft',
+                isOpen && 'text-[#FF9A3E]'
+              )}
+              numberOfLines={1}>
+              {currentLabel || question.placeholder || 'Select one'}
+            </AppText>
+          </View>
+          <AppText
+            variant="label"
+            className="ml-2 text-[10px]"
+            style={{ color: isOpen ? '#FF9A3E' : '#98A2B3' }}>
+            {isOpen ? '▲' : '▼'}
+          </AppText>
+        </Pressable>
+
+        <DropdownOverlay
+          anchorRef={triggerRef}
+          header={
+            <View
+              className="mb-1 flex-row items-center gap-2 rounded-[14px] border px-3"
+              style={{
+                backgroundColor: '#292929',
+                borderColor: query ? '#FF9A3E' : '#383838',
+                height: 52,
+              }}>
+              <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+              <TextInput
+                ref={inputRef}
+                autoFocus
+                autoCapitalize="words"
+                autoCorrect={false}
+                onChangeText={setQuery}
+                placeholder={question.placeholder ?? 'Search'}
+                placeholderTextColor="#667085"
+                value={query}
+                className="flex-1 font-body text-[15px] text-white"
+                style={SINGLE_LINE_TEXT_INPUT_STYLE}
+              />
+              {query ? (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons color="#98A2B3" name="close-circle" size={18} />
+                </Pressable>
+              ) : null}
+            </View>
+          }
+          maxHeight={460}
+          onClose={closeDropdown}
+          visible={isOpen}
+          renderContent={
+            Platform.OS === 'android'
+              ? undefined
+              : ({ maxHeight: listMaxHeight }) => renderVirtualizedResults(listMaxHeight)
+          }
+        >
+          {shouldShowStatusState ? (
+            renderStatusState()
+          ) : (
+            <>
+              {groupOptions(visibleOptions).map(([groupName, options]) => (
+                <View key={groupName} className="gap-1 pb-2">
+                  <AppText tone="muted" variant="label" className="px-3 pt-2 pb-1">
+                    {groupName}
+                  </AppText>
+                  {options.map((option) => {
+                    const isSelected = currentValue === option.value;
+
+                    return (
+                      <Pressable
+                        key={option.id}
+                        className={cn(
+                          'rounded-[12px] px-3 py-3',
+                          isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+                        )}
+                        onPress={() => {
+                          selectOption(option);
+                        }}>
+                        <AppText
+                          variant="bodyStrong"
+                          className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}>
+                          {option.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+              {visibleOptions.length === 0 ? <SearchableDropdownEmptyState query={query} /> : null}
+              {hasMoreResults ? <SearchableDropdownMoreResults /> : null}
+            </>
+          )}
+        </DropdownOverlay>
+      </View>
+    </View>
+  );
+}
+
+function SearchableMultiSelectQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValues = getArrayValue(value);
+  const [query, setQuery] = React.useState('');
+  const maxSelections = question.validation?.max_selections ?? Infinity;
+  const atLimit = currentValues.length >= maxSelections;
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  const toggle = (optionValue: string) => {
+    if (currentValues.includes(optionValue)) {
+      onChange(currentValues.filter((item) => item !== optionValue));
+      return;
+    }
+
+    if (atLimit) {
+      return;
+    }
+
+    onChange([...currentValues, optionValue]);
+  };
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className="flex-row items-center justify-between">
+        <AppText className="text-[12px] text-text-soft">
+          {currentValues.length} / {Number.isFinite(maxSelections) ? maxSelections : '∞'} selected
+        </AppText>
+        {atLimit ? (
+          <AppText className="text-[12px]" style={{ color: '#FF9A3E' }}>
+            Max reached
+          </AppText>
+        ) : null}
+      </View>
+      <View
+        className={cn(
+          'flex-row items-center gap-2 rounded-[16px] border px-4',
+          query ? 'border-[#FF9A3E] bg-[#292929]' : FIELD_CLASS
+        )}
+        style={{ height: 56 }}>
+        <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setQuery}
+          placeholder={question.placeholder ?? 'Search'}
+          placeholderTextColor="#667085"
+          value={query}
+          className="flex-1 font-body text-[15px] text-white"
+          style={SINGLE_LINE_TEXT_INPUT_STYLE}
+        />
+        {query ? (
+          <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <Ionicons color="#98A2B3" name="close-circle" size={18} />
+          </Pressable>
+        ) : null}
+      </View>
+      <View
+        className="rounded-[18px] border"
+        style={{
+          backgroundColor: '#212121',
+          borderColor: '#383838',
+          borderCurve: 'continuous',
+          maxHeight: 380,
+          overflow: 'hidden',
+        }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator>
+          {groupOptions(filteredOptions).map(([groupName, options]) => (
+            <View key={groupName} className="pb-1">
+              <AppText
+                className="px-4 pt-3 pb-1 text-[11px] uppercase text-text-soft"
+                style={{ letterSpacing: 1.2 }}>
+                {groupName}
+              </AppText>
+              {options.map((option) => {
+                const isSelected = currentValues.includes(option.value);
+                const isDisabled = !isSelected && atLimit;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    disabled={isDisabled}
+                    onPress={() => toggle(option.value)}
+                    className={cn(
+                      'flex-row items-center gap-3 px-4 py-3',
+                      isDisabled && 'opacity-40'
+                    )}>
+                    <View
+                      className={cn(
+                        'h-5 w-5 items-center justify-center rounded-[6px] border-2',
+                        isSelected
+                          ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                          : 'border-[#5A6074] bg-transparent'
+                      )}>
+                      {isSelected ? (
+                        <Ionicons color="#1A1208" name="checkmark" size={12} />
+                      ) : null}
+                    </View>
+                    <AppText
+                      className={cn(
+                        'flex-1 text-[15px]',
+                        isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                      )}>
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+          {filteredOptions.length === 0 ? (
+            <View className="px-4 py-6">
+              <AppText tone="muted" align="center">
+                {`No industries match "${query}"`}
+              </AppText>
+            </View>
+          ) : null}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+function InlineSearchableCheckboxMultiSelectQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValues = getArrayValue(value);
+  const [query, setQuery] = React.useState('');
+  const maxSelections = question.validation?.max_selections ?? Infinity;
+  const atLimit = currentValues.length >= maxSelections;
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  const toggle = (optionValue: string) => {
+    if (currentValues.includes(optionValue)) {
+      onChange(currentValues.filter((item) => item !== optionValue));
+      return;
+    }
+
+    if (atLimit) {
+      return;
+    }
+
+    onChange([...currentValues, optionValue]);
+  };
+
+  return (
+    <View className="gap-5">
+      <QuestionHeader error={error} question={question} />
+      <View
+        className={cn(
+          'flex-row items-center gap-3 rounded-full border px-5',
+          query ? 'border-[#FF9A3E] bg-[#292929]' : FIELD_CLASS
+        )}
+        style={{ height: 64 }}>
+        <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={22} />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setQuery}
+          placeholder={question.placeholder ?? 'Search'}
+          placeholderTextColor="#8A8F99"
+          value={query}
+          className="flex-1 font-body text-[16px] text-white"
+          style={SINGLE_LINE_TEXT_INPUT_STYLE}
+        />
+        {query ? (
+          <Pressable onPress={() => setQuery('')} hitSlop={10}>
+            <Ionicons color="#98A2B3" name="close-circle" size={20} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+        style={{ maxHeight: 520 }}>
+        {groupOptions(filteredOptions).map(([groupName, options]) => (
+          <View key={groupName} className="pb-5">
+            <AppText className="pb-5 text-[15px] leading-[20px] text-text-muted">
+              {groupName}
+            </AppText>
+            <View className="gap-1">
+              {options.map((option) => {
+                const isSelected = currentValues.includes(option.value);
+                const isDisabled = !isSelected && atLimit;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    disabled={isDisabled}
+                    onPress={() => toggle(option.value)}
+                    className={cn(
+                      'min-h-[58px] flex-row items-center gap-4 py-2',
+                      isDisabled && 'opacity-40'
+                    )}>
+                    <View className="flex-1 gap-1">
+                      <AppText
+                        className={cn(
+                          'text-[16px] leading-[22px]',
+                          isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                        )}>
+                        {option.label}
+                      </AppText>
+                      {option.sub_label ? (
+                        <AppText className="text-[13px] leading-[18px] text-text-muted">
+                          {option.sub_label}
+                        </AppText>
+                      ) : null}
+                    </View>
+                    <View
+                      className={cn(
+                        'h-7 w-7 items-center justify-center rounded-[7px] border-2',
+                        isSelected
+                          ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                          : 'border-[#5A6074] bg-transparent'
+                      )}>
+                      {isSelected ? (
+                        <Ionicons color="#1A1208" name="checkmark" size={17} />
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+        {filteredOptions.length === 0 ? (
+          <View className="px-4 py-8">
+            <AppText tone="muted" align="center">
+              {query ? `No results for "${query}"` : 'No options available'}
+            </AppText>
+          </View>
+        ) : null}
+      </ScrollView>
+    </View>
+  );
+}
+
+function SearchableSingleSelectQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValue = getStringValue(value);
+  const [query, setQuery] = React.useState('');
+
+  const filteredOptions = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return question.options ?? [];
+    }
+
+    return (question.options ?? []).filter((option) => {
+      const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, question.options]);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View
+        className={cn(
+          'flex-row items-center gap-2 rounded-[16px] border px-4',
+          query ? 'border-[#FF9A3E] bg-[#292929]' : FIELD_CLASS
+        )}
+        style={{ height: 56 }}>
+        <Ionicons color={query ? '#FF9A3E' : '#98A2B3'} name="search" size={18} />
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setQuery}
+          placeholder={question.placeholder ?? 'Search'}
+          placeholderTextColor="#667085"
+          value={query}
+          className="flex-1 font-body text-[15px] text-white"
+          style={SINGLE_LINE_TEXT_INPUT_STYLE}
+        />
+        {query ? (
+          <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <Ionicons color="#98A2B3" name="close-circle" size={18} />
+          </Pressable>
+        ) : null}
+      </View>
+      <View
+        className="rounded-[18px] border"
+        style={{
+          backgroundColor: '#212121',
+          borderColor: '#383838',
+          borderCurve: 'continuous',
+          maxHeight: 420,
+          overflow: 'hidden',
+        }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator>
+          {groupOptions(filteredOptions).map(([groupName, options]) => (
+            <View key={groupName} className="pb-1">
+              <AppText
+                className="px-4 pt-3 pb-1 text-[11px] uppercase text-text-soft"
+                style={{ letterSpacing: 1.2 }}>
+                {groupName}
+              </AppText>
+              {options.map((option) => {
+                const isSelected = currentValue === option.value;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => onChange(option.value)}
+                    className="flex-row items-center gap-3 px-4 py-3">
+                    <View
+                      className={cn(
+                        'h-5 w-5 items-center justify-center rounded-full border-2',
+                        isSelected
+                          ? 'border-[#FF9A3E] bg-[#FF9A3E]'
+                          : 'border-[#5A6074] bg-transparent'
+                      )}>
+                      {isSelected ? (
+                        <Ionicons color="#1A1208" name="checkmark" size={12} />
+                      ) : null}
+                    </View>
+                    <AppText
+                      className={cn(
+                        'flex-1 text-[15px]',
+                        isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                      )}>
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+          {filteredOptions.length === 0 ? (
+            <View className="px-4 py-6">
+              <AppText tone="muted" align="center">
+                {`No results for "${query}"`}
+              </AppText>
+            </View>
+          ) : null}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+function GroupedListQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValue = getStringValue(value);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className="gap-5">
+        {groupOptions(question.options).map(([groupName, options]) => (
+          <View key={groupName} className="gap-2.5">
+            <AppText
+              className="text-[11px] uppercase text-text-soft"
+              style={{ letterSpacing: 1.2 }}>
+              {groupName}
+            </AppText>
+            <View className="flex-row flex-wrap gap-2.5">
+              {options.map((option) => {
+                const isSelected = currentValue === option.value;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => onChange(option.value)}
+                    className={cn(
+                      'flex-row items-center gap-2 rounded-full border px-4 py-3',
+                      isSelected
+                        ? 'border-[#FF9A3E] bg-[#1F1712]'
+                        : 'border-[#383838] bg-[#292929]'
+                    )}>
+                    <Ionicons
+                      color={isSelected ? '#FF9A3E' : '#98A2B3'}
+                      name={isSelected ? 'location' : 'location-outline'}
+                      size={15}
+                    />
+                    <AppText
+                      variant="bodyStrong"
+                      className={cn(
+                        'text-[14px]',
+                        isSelected ? 'text-[#FF9A3E]' : 'text-white'
+                      )}>
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const MONTH_LABELS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+function padTwo(value: number) {
+  return value.toString().padStart(2, '0');
+}
+
+function daysInMonth(year: number, month: number) {
+  if (!year || !month) {
+    return 31;
+  }
+
+  return new Date(year, month, 0).getDate();
+}
+
+function parseDateParts(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return { day: '', month: '', year: '' };
+  }
+
+  return { year: match[1], month: match[2], day: match[3] };
+}
+
+function assembleDate(year: string, month: string, day: string) {
+  if (!year || !month || !day) {
+    return '';
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+type DatePart = 'day' | 'month' | 'year';
+
+function DateDropdown({
+  displayValue,
+  isOpen,
+  label,
+  onSelect,
+  onToggle,
+  options,
+  placeholder,
+  selectedValue,
+  minDropdownWidth,
+}: {
+  displayValue: string;
+  isOpen: boolean;
+  label: string;
+  minDropdownWidth?: number;
+  onSelect: (value: string) => void;
+  onToggle: () => void;
+  options: { label: string; value: string }[];
+  placeholder: string;
+  selectedValue: string;
+}) {
+  const triggerRef = React.useRef<View | null>(null);
+
+  return (
+    <View className="flex-1 gap-2" style={{ zIndex: isOpen ? 30 : 1 }}>
+      <AppText tone="muted" variant="label" className="text-[10px]">
+        {label}
+      </AppText>
+      <Pressable
+        ref={triggerRef}
+        onPress={onToggle}
+        style={{ height: 56 }}
+        className={cn(
+          'flex-row items-center justify-between rounded-[16px] border px-4',
+          isOpen ? 'border-[#FF9A3E] bg-[#2A2117]' : FIELD_CLASS
+        )}>
+        <AppText
+          className={cn(
+            displayValue ? 'text-white' : 'text-text-soft',
+            isOpen && 'text-[#FF9A3E]'
+          )}>
+          {displayValue || placeholder}
+        </AppText>
+        <AppText
+          variant="label"
+          className="text-[10px]"
+          style={{ color: isOpen ? '#FF9A3E' : '#98A2B3' }}>
+          {isOpen ? '▲' : '▼'}
+        </AppText>
+      </Pressable>
+
+      <DropdownOverlay
+        anchorRef={triggerRef}
+        maxHeight={320}
+        minWidth={minDropdownWidth}
+        onClose={onToggle}
+        visible={isOpen}>
+        {options.map((option) => {
+          const isSelected = option.value === selectedValue;
+
+          return (
+            <Pressable
+              key={option.value}
+              className={cn(
+                'rounded-[12px] px-3 py-3',
+                isSelected ? 'bg-[#2A2117]' : 'bg-transparent'
+              )}
+              onPress={() => onSelect(option.value)}>
+              <AppText
+                variant="bodyStrong"
+                className={cn(isSelected ? 'text-[#FF9A3E]' : 'text-white')}
+                numberOfLines={1}
+                adjustsFontSizeToFit>
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </DropdownOverlay>
+    </View>
+  );
+}
+
+function DateSelectQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const externalValue = getStringValue(value);
+  const [draftParts, setDraftParts] = React.useState(() =>
+    parseDateParts(externalValue)
+  );
+  const [openPart, setOpenPart] = React.useState<DatePart | null>(null);
+
+  React.useEffect(() => {
+    if (!externalValue) {
+      return;
+    }
+
+    const externalParts = parseDateParts(externalValue);
+
+    setDraftParts((current) => {
+      if (
+        current.day === externalParts.day &&
+        current.month === externalParts.month &&
+        current.year === externalParts.year
+      ) {
+        return current;
+      }
+
+      return externalParts;
+    });
+  }, [externalValue]);
+
+  const parts = draftParts;
+  const currentYear = new Date().getFullYear();
+
+  const yearOptions = React.useMemo(
+    () =>
+      Array.from({ length: 100 }).map((_, index) => {
+        const year = currentYear - index;
+        return { label: String(year), value: String(year) };
+      }),
+    [currentYear]
+  );
+  const monthOptions = React.useMemo(
+    () =>
+      MONTH_LABELS.map((label, index) => ({
+        label,
+        value: padTwo(index + 1),
+      })),
+    []
+  );
+  const dayCount = daysInMonth(Number(parts.year), Number(parts.month));
+  const dayOptions = React.useMemo(
+    () =>
+      Array.from({ length: dayCount }).map((_, index) => ({
+        label: String(index + 1),
+        value: padTwo(index + 1),
+      })),
+    [dayCount]
+  );
+
+  const monthDisplay = React.useMemo(() => {
+    if (!parts.month) return '';
+    const found = monthOptions.find((option) => option.value === parts.month);
+    return found ? found.label.slice(0, 3) : '';
+  }, [parts.month, monthOptions]);
+
+  const updatePart = (part: DatePart, nextValue: string) => {
+    const nextParts = { ...parts, [part]: nextValue };
+
+    if (part === 'month' || part === 'year') {
+      const clampLimit = daysInMonth(
+        Number(part === 'year' ? nextValue : nextParts.year),
+        Number(part === 'month' ? nextValue : nextParts.month)
+      );
+
+      if (nextParts.day && Number(nextParts.day) > clampLimit) {
+        nextParts.day = padTwo(clampLimit);
+      }
+    }
+
+    setDraftParts(nextParts);
+    onChange(assembleDate(nextParts.year, nextParts.month, nextParts.day));
+    setOpenPart(null);
+  };
+
+  const togglePart = (part: DatePart) => {
+    setOpenPart((current) => (current === part ? null : part));
+  };
+
+  return (
+    <View
+      className="gap-3"
+      style={{ zIndex: openPart ? 30 : 1, elevation: openPart ? 12 : 0 }}>
+      <QuestionHeader error={error} question={question} />
+      <View className="flex-row items-start gap-3">
+        <DateDropdown
+          displayValue={parts.day}
+          isOpen={openPart === 'day'}
+          label="Day"
+          onSelect={(nextValue) => updatePart('day', nextValue)}
+          onToggle={() => togglePart('day')}
+          options={dayOptions}
+          placeholder="DD"
+          selectedValue={parts.day}
+        />
+        <DateDropdown
+          displayValue={monthDisplay}
+          isOpen={openPart === 'month'}
+          label="Month"
+          onSelect={(nextValue) => updatePart('month', nextValue)}
+          onToggle={() => togglePart('month')}
+          options={monthOptions}
+          placeholder="MMM"
+          selectedValue={parts.month}
+          minDropdownWidth={148}
+        />
+        <DateDropdown
+          displayValue={parts.year}
+          isOpen={openPart === 'year'}
+          label="Year"
+          onSelect={(nextValue) => updatePart('year', nextValue)}
+          onToggle={() => togglePart('year')}
+          options={yearOptions}
+          placeholder="YYYY"
+          selectedValue={parts.year}
+        />
+      </View>
+    </View>
+  );
+}
+
+function getSegmentedIconName(icon: string | null | undefined) {
+  if (icon === 'clock') {
+    return 'time-outline' as const;
+  }
+  if (icon === 'calendar') {
+    return 'calendar-outline' as const;
+  }
+  return null;
+}
+
+function SegmentedQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValue = getStringValue(value);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View
+        className="flex-row rounded-[20px] p-1"
+        style={{ backgroundColor: '#1F1712', borderWidth: 1, borderColor: '#383838' }}>
+        {question.options?.map((option) => {
+          const isSelected = currentValue === option.value;
+          const iconName = getSegmentedIconName(option.icon);
+
+          return (
+            <Pressable
+              key={option.id}
+              className="flex-1 rounded-[16px] px-3 py-3"
+              style={{
+                backgroundColor: isSelected ? '#FF9A3E' : 'transparent',
+              }}
+              onPress={() => onChange(option.value)}>
+              <View className="flex-row items-center justify-center gap-2">
+                {iconName ? (
+                  <Ionicons
+                    color={isSelected ? '#1A1208' : '#9CA3AF'}
+                    name={iconName}
+                    size={18}
+                  />
+                ) : null}
+                <AppText
+                  align="center"
+                  variant="bodyStrong"
+                  style={{ color: isSelected ? '#1A1208' : '#9CA3AF' }}>
+                  {option.label}
+                </AppText>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function CurrencyAmountQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const currentValue = getCurrencyValue(value);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={error} question={question} />
+      <View className="gap-3">
+        <View className="gap-2">
+          <AppText tone="muted" variant="label">
+            {question.meta?.currency_label ?? 'Currency'}
+          </AppText>
+          <View className="flex-row flex-wrap gap-2">
+            {question.options?.map((option) => {
+              const isSelected = currentValue.currency === option.value;
+
+              return (
+                <Pressable
+                  key={option.id}
+                  className="rounded-full px-4 py-2"
+                  style={{
+                    backgroundColor: isSelected ? '#1F1712' : '#292929',
+                    borderColor: isSelected ? '#FF9A3E' : '#383838',
+                    borderWidth: isSelected ? 2 : 1,
+                  }}
+                  onPress={() =>
+                    onChange({
+                      ...currentValue,
+                      currency: option.value,
+                    })
+                  }>
+                  <AppText
+                    variant="bodyStrong"
+                    style={{ color: isSelected ? '#FF9A3E' : '#FFFFFF' }}>
+                    {option.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+        <View className="gap-2">
+          <AppText tone="muted" variant="label">
+            {question.meta?.amount_label ?? 'Amount'}
+          </AppText>
+          <AppInput
+            keyboardType="numeric"
+            onChangeText={(nextAmount) =>
+              onChange({
+                ...currentValue,
+                amount: nextAmount,
+              })
+            }
+            placeholder={question.meta?.amount_placeholder ?? '5000'}
+            value={currentValue.amount}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+export function QuestionRenderer({
+  error,
+  hideSearchableDropdownResultsUntilQuery,
+  locale,
+  onChange,
+  question,
+  variant = 'default',
+  value,
+}: QuestionRendererProps) {
+  switch (question.type) {
+    case 'textarea':
+      return (
+        <TextLikeQuestion
+          error={error}
+          multiline
+          onChange={onChange}
+          question={question}
+          value={getStringValue(value)}
+        />
+      );
+    case 'number':
+      return (
+        <TextLikeQuestion
+          error={error}
+          keyboardType="numeric"
+          onChange={(nextValue) => {
+            if (!nextValue) {
+              onChange('');
+              return;
+            }
+
+            const parsedValue = Number(nextValue);
+            onChange(Number.isNaN(parsedValue) ? nextValue : parsedValue);
+          }}
+          question={question}
+          value={getNumberValue(value)}
+        />
+      );
+    case 'date':
+      return (
+        <DateSelectQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'email':
+      return (
+        <TextLikeQuestion
+          error={error}
+          keyboardType="email-address"
+          onChange={onChange}
+          question={question}
+          value={getStringValue(value)}
+        />
+      );
+    case 'url':
+      return (
+        <TextLikeQuestion
+          error={error}
+          keyboardType="url"
+          onChange={onChange}
+          question={question}
+          value={getStringValue(value)}
+        />
+      );
+    case 'phone':
+      return (
+        <TextLikeQuestion
+          error={error}
+          keyboardType="phone-pad"
+          onChange={onChange}
+          question={question}
+          value={getStringValue(value)}
+        />
+      );
+    case 'single_select_card':
+      return (
+        <SingleSelectCardQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'single_select_chip':
+      return (
+        <SingleSelectChipQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'single_select_radio':
+      return (
+        <SingleSelectRadioQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'multi_select_card':
+      return (
+        <MultiSelectCardQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'multi_select_chip':
+      if (variant === 'inline_searchable_checkbox_multi_select') {
+        return (
+          <InlineSearchableCheckboxMultiSelectQuestion
+            error={error}
+            onChange={onChange}
+            question={question}
+            value={value}
+          />
+        );
+      }
+
+      if (variant === 'dropdown_multi_select') {
+        return (
+          <MultiSelectDropdownQuestion
+            error={error}
+            onChange={onChange}
+            question={question}
+            value={value}
+          />
+        );
+      }
+
+      return (
+        <MultiSelectChipQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'searchable_multi_select':
+      if (variant === 'inline_searchable_checkbox_multi_select') {
+        return (
+          <InlineSearchableCheckboxMultiSelectQuestion
+            error={error}
+            onChange={onChange}
+            question={question}
+            value={value}
+          />
+        );
+      }
+
+      if (variant === 'dropdown_multi_select') {
+        return (
+          <SearchableMultiSelectDropdownQuestion
+            error={error}
+            onChange={onChange}
+            question={question}
+            value={value}
+          />
+        );
+      }
+
+      return (
+        <SearchableMultiSelectQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'searchable_single_select':
+      return (
+        <SearchableSingleSelectQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'dropdown':
+      return (
+        <DropdownQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'searchable_dropdown':
+      return (
+        <SearchableDropdownQuestion
+          error={error}
+          hideSearchableDropdownResultsUntilQuery={
+            hideSearchableDropdownResultsUntilQuery
+          }
+          locale={locale}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'grouped_list':
+      return (
+        <GroupedListQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'segmented':
+      return (
+        <SegmentedQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'currency_amount':
+      return (
+        <CurrencyAmountQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
+      );
+    case 'text':
+    default:
+      return (
+        <TextLikeQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={getStringValue(value)}
+        />
+      );
+  }
+}

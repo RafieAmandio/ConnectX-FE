@@ -1,0 +1,11 @@
+{
+  "_endpoint": "POST /api/v1/onboarding/sessions/:session_id/answer",
+  "_status": 422,
+  "_description": "Validation failed. Each key in `errors` is a question id with a human-readable, localized message.",
+  "error": "validation_failed",
+  "errors": {
+    "q_first_name": "First name is required.",
+    "q_date_of_birth": "Use the YYYY-MM-DD format.",
+    "q_city": "Pick a city from the list."
+  }
+}
