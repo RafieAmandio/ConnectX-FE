@@ -16,6 +16,10 @@ export class ApiError extends Error {
 
 type ApiClientAuthConfig = {
   getAccessToken?: () => Promise<string | null>;
+  onLinkedInRecoveryRequired?: (payload: {
+    errorReason?: string | null;
+    message?: string | null;
+  }) => Promise<void> | void;
   onUnauthorized?: () => Promise<void> | void;
 };
 
@@ -90,6 +94,28 @@ function normalizeApiErrorMessage(message: string) {
   return normalizedMessage;
 }
 
+function getStringProperty(value: unknown, key: string) {
+  if (!value || typeof value !== 'object' || !(key in value)) {
+    return null;
+  }
+
+  const property = (value as Record<string, unknown>)[key];
+
+  return typeof property === 'string' && property.trim() ? property.trim() : null;
+}
+
+function getLinkedInRecoveryReason(payload: unknown) {
+  if (!payload || typeof payload !== 'object' || !('data' in payload)) {
+    return null;
+  }
+
+  return getStringProperty(payload.data, 'error_reason');
+}
+
+function isLinkedInRecoveryResponse(response: Response, payload: unknown) {
+  return response.status === 403 && getStringProperty(payload, 'next_step') === 'FIX_LINKEDIN';
+}
+
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await apiClientAuthConfig.getAccessToken?.();
   const headers = new Headers(init.headers);
@@ -137,6 +163,13 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
       if (response.status === 401) {
         await apiClientAuthConfig.onUnauthorized?.();
+      }
+
+      if (isLinkedInRecoveryResponse(response, payload)) {
+        await apiClientAuthConfig.onLinkedInRecoveryRequired?.({
+          errorReason: getLinkedInRecoveryReason(payload),
+          message: getStringProperty(payload, 'message'),
+        });
       }
 
       throw new ApiError(message, response.status, payload);

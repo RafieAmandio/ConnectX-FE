@@ -141,6 +141,10 @@ export type UpdateMyProfileRequest = {
   education: ProfileEducationItem[];
 };
 
+export type UpdateMyLinkedInProfileRequest = {
+  linkedin_url: string;
+};
+
 export type UpdateMyProfileResponse = {
   success: boolean;
   message: string;

@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '@features/auth';
+import { LinkedInRecoveryModal } from '@features/profile/components/linkedin-recovery-modal';
 import { RevenueCatProvider } from '@features/revenuecat';
 import { useColorScheme } from '@shared/hooks/use-color-scheme';
 import { createQueryClient } from '@shared/services/api';
@@ -48,6 +49,7 @@ export default function RootLayout() {
                 <Stack.Screen name="notifications" options={{ headerShown: false }} />
                 <Stack.Screen name="profile" options={{ headerShown: false }} />
               </Stack>
+              <LinkedInRecoveryModal />
               <StatusBar style="light" />
             </ThemeProvider>
           </RevenueCatProvider>

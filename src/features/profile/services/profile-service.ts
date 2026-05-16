@@ -6,6 +6,7 @@ import type {
   PauseAccountResponse,
   ProfileOptionsResponse,
   RequestAccountDeletionResponse,
+  UpdateMyLinkedInProfileRequest,
   UpdateMyProfileRequest,
   UpdateMyProfileResponse,
 } from '../types/profile.types';
@@ -33,6 +34,13 @@ export async function fetchProfileOptions() {
 export async function updateMyProfile(payload: UpdateMyProfileRequest) {
   console.log('updateMyProfile payload', payload);
 
+  return apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
+    body: payload as unknown as BodyInit,
+    method: 'PATCH',
+  });
+}
+
+export async function updateMyLinkedInProfile(payload: UpdateMyLinkedInProfileRequest) {
   return apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
     body: payload as unknown as BodyInit,
     method: 'PATCH',

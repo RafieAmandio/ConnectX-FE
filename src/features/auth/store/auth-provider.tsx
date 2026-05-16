@@ -3,6 +3,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { supabaseChatRepository } from '@features/chat/data/supabase/SupabaseChatRepository';
 import { configureApiClient } from '@shared/services/api';
+import { requireLinkedInRecovery } from '@shared/services/linkedin-recovery-store';
 import {
   clearSupabaseSession,
   getStoredSupabaseIdentity,
@@ -418,6 +419,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   React.useEffect(() => {
     configureApiClient({
       getAccessToken: getStoredToken,
+      onLinkedInRecoveryRequired: requireLinkedInRecovery,
       onUnauthorized: async () => {
         await signOut();
       },
