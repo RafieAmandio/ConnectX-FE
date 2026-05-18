@@ -2309,29 +2309,6 @@ export function DiscoveryDeck() {
     </Pressable>
   );
 
-  const onboardingPreferenceDebugButton = (
-    <Pressable
-      accessibilityLabel="Log onboarding discovery preference"
-      className="h-10 w-10 items-center justify-center rounded-full border"
-      onPress={() => {
-        console.log(
-          '[discovery_bootstrap] saved state',
-          {
-            authSession: {
-              authSessionSyncedAt: session?.authSessionSyncedAt ?? null,
-              authSessionSource: session?.authSessionSource ?? null,
-              defaultDiscoveryMode: session?.defaultDiscoveryMode ?? null,
-              premium: session?.premium ?? null,
-            },
-            onboardingPreference: loadOnboardingDiscoveryPreference(),
-          }
-        );
-      }}
-      style={{ borderColor: 'rgba(152, 162, 179, 0.18)' }}>
-      <Ionicons color="#D0D5DD" name="bug-outline" size={18} />
-    </Pressable>
-  );
-
   const notificationButton = (
     <Pressable
       accessibilityLabel="Open notifications"
@@ -2360,7 +2337,6 @@ export function DiscoveryDeck() {
 
   const topBarAccessory = (
     <View className="flex-row items-center gap-2">
-      {/* {onboardingPreferenceDebugButton} */}
       {notificationButton}
       {filterButton}
     </View>

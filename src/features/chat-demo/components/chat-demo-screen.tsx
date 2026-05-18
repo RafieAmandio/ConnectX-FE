@@ -84,6 +84,87 @@ function getInitials(value: string) {
     .join('');
 }
 
+type MessageTextPart =
+  | { text: string; type: 'text' }
+  | { text: string; type: 'link'; url: string };
+
+const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
+const TRAILING_URL_PUNCTUATION_PATTERN = /[),.!?:;]+$/;
+
+function normalizeMessageUrl(value: string) {
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function splitMessageText(value: string): MessageTextPart[] {
+  const parts: MessageTextPart[] = [];
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(URL_PATTERN)) {
+    const matchedText = match[0];
+    const matchIndex = match.index ?? 0;
+
+    if (matchIndex > lastIndex) {
+      parts.push({ text: value.slice(lastIndex, matchIndex), type: 'text' });
+    }
+
+    const linkText = matchedText.replace(TRAILING_URL_PUNCTUATION_PATTERN, '');
+    const trailingText = matchedText.slice(linkText.length);
+
+    if (linkText) {
+      parts.push({ text: linkText, type: 'link', url: normalizeMessageUrl(linkText) });
+    }
+
+    if (trailingText) {
+      parts.push({ text: trailingText, type: 'text' });
+    }
+
+    lastIndex = matchIndex + matchedText.length;
+  }
+
+  if (lastIndex < value.length) {
+    parts.push({ text: value.slice(lastIndex), type: 'text' });
+  }
+
+  return parts;
+}
+
+function MessageText({
+  isLinkable,
+  isOutgoing,
+  text,
+}: {
+  isLinkable: boolean;
+  isOutgoing: boolean;
+  text: string;
+}) {
+  if (!isLinkable) {
+    return <>{text}</>;
+  }
+
+  return (
+    <>
+      {splitMessageText(text).map((part, index) => {
+        if (part.type === 'text') {
+          return <React.Fragment key={`${part.type}-${index}`}>{part.text}</React.Fragment>;
+        }
+
+        return (
+          <AppText
+            className={isOutgoing ? 'text-[#4A3215] underline' : 'text-[#8BCBFF] underline'}
+            key={`${part.url}-${index}`}
+            onPress={() => {
+              void Linking.openURL(part.url).catch(() => {
+                Alert.alert('Unable to open link', 'This link could not be opened.');
+              });
+            }}>
+            {part.text}
+          </AppText>
+        );
+      })}
+    </>
+  );
+}
+
 function ChatDemoAvatar({ conversation, size = 56 }: { conversation: ChatConversation; size?: number }) {
   if (conversation.photoUrl) {
     return (
@@ -360,7 +441,15 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               isOutgoing ? 'text-[#201507]' : 'text-[#F3F0EB]',
               hasMediaUrl || message.type === 'image' ? 'mt-3' : '',
             ].join(' ')}>
-            {showBody ? message.body : 'Message'}
+            {showBody ? (
+              <MessageText
+                isLinkable={message.type !== 'image'}
+                isOutgoing={isOutgoing}
+                text={message.body}
+              />
+            ) : (
+              'Message'
+            )}
           </AppText>
         ) : null}
         <AppText className={isOutgoing ? 'mt-2 text-[#7C5526]' : 'mt-2 text-[#97928B]'} variant="code">
