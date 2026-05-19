@@ -113,15 +113,7 @@ const commonIndustrySection: DiscoveryFilterSection = {
     component: 'chips',
     searchable: true,
     collapsible: false,
-  },
-  options: [
-    { id: 'ind_ai', label: 'AI' },
-    { id: 'ind_fintech', label: 'Fintech' },
-    { id: 'ind_healthtech', label: 'Healthtech' },
-    { id: 'ind_edtech', label: 'EdTech' },
-    { id: 'ind_web3', label: 'Web3' },
-    { id: 'ind_saas', label: 'SaaS' },
-  ],
+  }
 };
 
 const commonStageSection: DiscoveryFilterSection = {
@@ -568,12 +560,6 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
       title: 'Founder Type',
       type: 'multi_select',
       ui: { component: 'checkbox_list', searchable: true, collapsible: false },
-      options: [
-        { id: 'ft_technical_founder', label: 'Technical Founder' },
-        { id: 'ft_business_founder', label: 'Business Founder' },
-        { id: 'ft_product_founder', label: 'Product Founder' },
-        { id: 'ft_operator_founder', label: 'Operator Founder' },
-      ],
     },
     createLocationAvailabilitySection(),
     {

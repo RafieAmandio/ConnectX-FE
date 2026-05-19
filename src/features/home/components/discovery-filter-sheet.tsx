@@ -714,18 +714,11 @@ export function DiscoveryFilterSheet({
   const [searchTerms, setSearchTerms] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
-    console.log(
-      '[DiscoveryFilterSheet] filter-options response',
-      JSON.stringify(
-        {
-          currentMode,
-          responseMode: filterOptionsResponse?.data.mode,
-          response: filterOptionsResponse,
-        },
-        null,
-        2
-      )
-    );
+    console.log('[DiscoveryFilterSheet] filter-options response', {
+      currentMode,
+      responseMode: filterOptionsResponse?.data.mode,
+      response: filterOptionsResponse,
+    });
   }, [currentMode, filterOptionsResponse]);
 
   React.useEffect(() => {
