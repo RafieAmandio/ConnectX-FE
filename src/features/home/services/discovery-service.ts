@@ -277,35 +277,8 @@ export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
     throw error;
   }
 
-  console.log(
-    '[Discovery] generate candidate result',
-    JSON.stringify(
-      {
-        request: payload,
-        response: summarizeDiscoveryCardsResponse(response),
-        source: 'api',
-      },
-      null,
-      2
-    )
+  console.log(response, 'erspones'
   );
-
-  if (shouldMergeMockDiscoveryCards()) {
-    const mergedResponse = mergeDiscoveryCardsWithMocks(response, input);
-    console.log(
-      '[Discovery] generate candidate merged result',
-      JSON.stringify(
-        {
-          request: payload,
-          response: summarizeDiscoveryCardsResponse(mergedResponse),
-          source: 'api+mock',
-        },
-        null,
-        2
-      )
-    );
-    return mergedResponse;
-  }
 
   return response;
 }
