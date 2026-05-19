@@ -607,6 +607,8 @@ function getSearchableCheckboxPlaceholder(sectionId: string) {
       return 'Search industry';
     case 'founderTypeIds':
       return 'Search founder type';
+    case 'skillIds':
+      return 'Search skills';
     case 'skillStrengthIds':
       return 'Search skill strength';
     default:
@@ -624,6 +626,8 @@ function getSearchableCheckboxEmptyMessage(sectionId: string, searchTerm: string
       return 'No industries available';
     case 'founderTypeIds':
       return 'No founder types available';
+    case 'skillIds':
+      return 'No skills available';
     case 'skillStrengthIds':
       return 'No skill strengths available';
     default:
@@ -710,11 +714,18 @@ export function DiscoveryFilterSheet({
   const [searchTerms, setSearchTerms] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
-    console.log('discovery filter-options sheet result', {
-      currentMode,
-      responseMode: filterOptionsResponse?.data.mode,
-      result: filterOptionsResponse,
-    });
+    console.log(
+      '[DiscoveryFilterSheet] filter-options response',
+      JSON.stringify(
+        {
+          currentMode,
+          responseMode: filterOptionsResponse?.data.mode,
+          response: filterOptionsResponse,
+        },
+        null,
+        2
+      )
+    );
   }, [currentMode, filterOptionsResponse]);
 
   React.useEffect(() => {
@@ -1123,6 +1134,7 @@ export function DiscoveryFilterSheet({
 
       if (
         section.id === 'industryIds' ||
+        section.id === 'skillIds' ||
         section.id === 'skillStrengthIds' ||
         section.id === 'roleNeededIds' ||
         section.id === 'founderTypeIds'
