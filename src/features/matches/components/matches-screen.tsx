@@ -376,7 +376,7 @@ export function MatchesScreen() {
                   const isFreeUnlockedLike =
                     Boolean(like) && like?.likeId === freeUnlockedLike?.likeId;
 
-                  return likesYouLocked && !isFreeUnlockedLike ? (
+                  return likesYouLocked && like && !isFreeUnlockedLike ? (
                     <LockedConnectCard
                       key={like ? `locked-${like.likeId}` : `locked-placeholder-${index}`}
                       photoUrl={like?.user.photoUrl ?? null}
@@ -390,10 +390,7 @@ export function MatchesScreen() {
                       }}
                     />
                   ) : (
-                    <View
-                      key={`likes-you-placeholder-${index}`}
-                      className="h-[160px] flex-1 rounded-[24px] border border-[#424242] bg-[#2B2B2D]"
-                    />
+                    null
                   );
                 })}
               </View>
