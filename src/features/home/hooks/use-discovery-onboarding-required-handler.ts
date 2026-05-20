@@ -4,7 +4,9 @@ import { Alert } from 'react-native';
 
 import {
   getDiscoveryOnboardingRequiredMessage,
+  getStartupProfileRequiredMessage,
   isDiscoveryOnboardingRequiredError,
+  isStartupProfileRequiredError,
 } from '../services/discovery-contract';
 
 export function useDiscoveryOnboardingRequiredHandler() {
@@ -13,7 +15,10 @@ export function useDiscoveryOnboardingRequiredHandler() {
 
   return React.useCallback(
     (error: unknown) => {
-      if (!isDiscoveryOnboardingRequiredError(error)) {
+      const isOnboardingRequired = isDiscoveryOnboardingRequiredError(error);
+      const isStartupProfileRequired = isStartupProfileRequiredError(error);
+
+      if (!isOnboardingRequired && !isStartupProfileRequired) {
         return false;
       }
 
@@ -24,7 +29,9 @@ export function useDiscoveryOnboardingRequiredHandler() {
       isPresentingRef.current = true;
       Alert.alert(
         'Onboarding required',
-        getDiscoveryOnboardingRequiredMessage(error),
+        isStartupProfileRequired
+          ? getStartupProfileRequiredMessage(error)
+          : getDiscoveryOnboardingRequiredMessage(error),
         [
           {
             onPress: () => {

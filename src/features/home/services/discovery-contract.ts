@@ -13,6 +13,7 @@ export const DISCOVERY_ERROR_STATUS = {
   onboardingRequired: 409,
   rewindNotAvailable: 409,
   rewindPremiumRequired: 403,
+  startupProfileRequired: 403,
   superLikeRequiresBoost: 409,
   spotlightAlreadyActive: 409,
   spotlightRequiresCredit: 409,
@@ -30,6 +31,14 @@ type DiscoveryOnboardingRequiredPayload = {
       requested_viewer_context?: string;
       required_profile_type?: 'startup' | 'talent' | string;
     };
+  };
+};
+
+type StartupProfileRequiredPayload = {
+  success: false;
+  message?: string;
+  error: {
+    code: 'STARTUP_PROFILE_REQUIRED';
   };
 };
 
@@ -51,6 +60,12 @@ export function isDiscoveryOnboardingRequiredResponse(
   return getApiPayloadErrorCode(payload) === 'DISCOVERY_ONBOARDING_REQUIRED';
 }
 
+export function isStartupProfileRequiredResponse(
+  payload: unknown
+): payload is StartupProfileRequiredPayload {
+  return getApiPayloadErrorCode(payload) === 'STARTUP_PROFILE_REQUIRED';
+}
+
 export function isDiscoveryOnboardingRequiredError(error: unknown): error is ApiError & {
   payload: DiscoveryOnboardingRequiredPayload;
 } {
@@ -61,11 +76,32 @@ export function isDiscoveryOnboardingRequiredError(error: unknown): error is Api
   );
 }
 
+export function isStartupProfileRequiredError(error: unknown): error is ApiError & {
+  payload: StartupProfileRequiredPayload;
+} {
+  return (
+    error instanceof ApiError &&
+    error.status === DISCOVERY_ERROR_STATUS.startupProfileRequired &&
+    isStartupProfileRequiredResponse(error.payload)
+  );
+}
+
 export function getDiscoveryOnboardingRequiredMessage(
   error: unknown,
   fallback = 'Complete onboarding before using this mode.'
 ) {
   if (isDiscoveryOnboardingRequiredError(error)) {
+    return error.payload.message?.trim() || error.message || fallback;
+  }
+
+  return fallback;
+}
+
+export function getStartupProfileRequiredMessage(
+  error: unknown,
+  fallback = 'Create your Startup profile before using this mode.'
+) {
+  if (isStartupProfileRequiredError(error)) {
     return error.payload.message?.trim() || error.message || fallback;
   }
 
