@@ -21,8 +21,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton, AppText, AppTopBar } from '@shared/components';
+import { AppText, AppTopBar } from '@shared/components';
 
+import { ChatEmptyState } from '@features/chat/components/chat-empty-state';
 import {
   useChatDemoConversations,
   useChatDemoMessages,
@@ -233,44 +234,17 @@ function ConversationCard({
 }
 
 function EmptyState({
-  isRefreshing,
   isUnavailable,
-  onRefresh,
+  onExplore,
 }: {
-  isRefreshing: boolean;
   isUnavailable: boolean;
-  onRefresh: () => void;
+  onExplore: () => void;
 }) {
-  return (
-    <View className="flex-1 justify-center py-10">
-      <View
-        className="rounded-[32px] border px-6 py-8"
-        style={{ backgroundColor: '#2C2C2C', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
-        <View className="items-center gap-5">
-          <View className="h-16 w-16 items-center justify-center rounded-full bg-[#3A2B1D]">
-            <Ionicons color="#FFB35E" name="chatbubble-ellipses-outline" size={28} />
-          </View>
-          <View className="gap-2">
-            <AppText align="center" className="text-white" variant="title">
-              {isUnavailable ? 'Chats unavailable' : 'No messages yet'}
-            </AppText>
-            <AppText align="center" className="text-[#B8B2AB]">
-              {isUnavailable
-                ? 'We could not load your conversations right now. Try again in a moment.'
-                : 'Your conversations will appear here once you connect with someone.'}
-            </AppText>
-          </View>
-          <AppButton
-            className="w-full rounded-[20px] bg-[#5B4225]"
-            disabled={isRefreshing}
-            label={isRefreshing ? 'Refreshing...' : 'Refresh inbox'}
-            onPress={onRefresh}
-            variant="ghost"
-          />
-        </View>
-      </View>
-    </View>
-  );
+  const title = isUnavailable ? 'Unable to load messages' : 'No conversations yet';
+  const description =
+    'Messages will appear here when you get connects. Explore more profiles to start a conversation.';
+
+  return <ChatEmptyState description={description} onExplore={onExplore} title={title} />;
 }
 
 export function ChatDemoListScreen() {
@@ -339,10 +313,9 @@ export function ChatDemoListScreen() {
             keyExtractor={(item) => item.id}
             ListEmptyComponent={
               <EmptyState
-                isRefreshing={conversationsQuery.isRefetching}
                 isUnavailable={conversationsQuery.error instanceof Error}
-                onRefresh={() => {
-                  void conversationsQuery.refetch();
+                onExplore={() => {
+                  router.replace('/(tabs)' as never);
                 }}
               />
             }

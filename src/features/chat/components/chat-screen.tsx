@@ -21,6 +21,7 @@ import { useAuth } from '@features/auth';
 import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 import { AppButton, AppText, AppTopBar } from '@shared/components';
 
+import { ChatEmptyState } from './chat-empty-state';
 import type { ChatMessage, ChatRoom } from '../domain/models';
 import {
   useChatRooms,
@@ -342,55 +343,17 @@ const ConversationCard = React.memo(function ConversationCard({
 });
 
 function ChatListEmptyState({
-  isRefreshing,
   isUnavailable = false,
-  onRefresh,
+  onExplore,
 }: {
-  isRefreshing: boolean;
   isUnavailable?: boolean;
-  onRefresh: () => void;
+  onExplore: () => void;
 }) {
-  const title = isUnavailable ? 'Messages are taking a break' : 'No messages yet';
-  const description = isUnavailable
-    ? 'We could not load your conversations right now. Try again in a moment.'
-    : 'When someone reaches out, your conversations will show up here. For now, you are all caught up.';
+  const title = isUnavailable ? 'Unable to load messages' : 'No conversations yet';
+  const description =
+    'Messages will appear here when you get connects. Explore more profiles to start a conversation.';
 
-  return (
-    <View className="flex-1 justify-center px-1 py-10">
-      <View
-        className="rounded-[32px] border px-6 py-8"
-        style={{ backgroundColor: '#2C2C2C', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
-        <View className="items-center gap-6">
-          <View className="relative items-center justify-center">
-            <View className="h-24 w-24 rounded-full bg-[#332519]" />
-            <View className="absolute h-16 w-16 items-center justify-center rounded-full bg-[#FF9A3E]">
-              <Ionicons color="#23160A" name="chatbubble-ellipses-outline" size={30} />
-            </View>
-            <View className="absolute -right-1 top-1 h-8 w-8 items-center justify-center rounded-full bg-[#232323]">
-              <Ionicons color="#FFD08A" name="sparkles-outline" size={16} />
-            </View>
-          </View>
-
-          <View className="gap-2">
-            <AppText align="center" className="text-white" variant="title">
-              {title}
-            </AppText>
-            <AppText align="center" className="text-[#B8B2AB]">
-              {description}
-            </AppText>
-          </View>
-
-          <AppButton
-            className="w-full rounded-[20px] bg-[#5B4225]"
-            disabled={isRefreshing}
-            label={isRefreshing ? 'Refreshing...' : 'Refresh inbox'}
-            onPress={onRefresh}
-            variant="ghost"
-          />
-        </View>
-      </View>
-    </View>
-  );
+  return <ChatEmptyState description={description} onExplore={onExplore} title={title} />;
 }
 
 function ConversationPanel({
@@ -956,10 +919,9 @@ export function ChatListScreen() {
             keyExtractor={(item) => item.id}
             ListEmptyComponent={
               <ChatListEmptyState
-                isRefreshing={conversationsQuery.isRefetching}
                 isUnavailable={conversationsQuery.error instanceof Error}
-                onRefresh={() => {
-                  void conversationsQuery.refetch();
+                onExplore={() => {
+                  router.replace('/(tabs)' as never);
                 }}
               />
             }
