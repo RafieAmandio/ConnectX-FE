@@ -13,6 +13,9 @@ export type RevenueCatPackageId = keyof typeof REVENUECAT_PACKAGE_IDS;
 
 export const REVENUECAT_OFFERING_IDS = {
   discoveryBoosts: process.env.EXPO_PUBLIC_REVENUECAT_DISCOVERY_BOOSTS_OFFERING_ID?.trim() || 'discovery_boosts',
+  discoverySpotlights:
+    process.env.EXPO_PUBLIC_REVENUECAT_DISCOVERY_SPOTLIGHT_OFFERING_ID?.trim() ||
+    'discovery_spotlights',
 } as const;
 
 const TEST_REVENUECAT_API_KEY = 'test_qygzknVEBmKBRnPRWUFvfgCvaCZ';

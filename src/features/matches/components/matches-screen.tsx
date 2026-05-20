@@ -255,7 +255,7 @@ export function MatchesScreen() {
     }
 
     try {
-      await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.discoveryBoosts);
+      await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.discoverySpotlights);
     } catch (error) {
       setSpotlightBanner({
         detail: error instanceof Error ? error.message : 'Unable to open the spotlight paywall.',
