@@ -2,18 +2,8 @@ import { ApiError, apiFetch } from '@shared/services/api';
 import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
-import {
-  getFallbackMatchAnalysis,
-  getMockMatchesListResponse,
-  type MockMatchesSeedVariant,
-} from '../mock/matches.mock';
-import {
-  loadGeneratedMockMatchAnalysis,
-  loadGeneratedMockMatches,
-} from './generated-matches-storage';
 import type {
   MatchAnalysisResponse,
-  MatchListItem,
   MatchesListQueryParams,
   MatchesListResponse,
   SpotlightActivationSuccessResponse,
@@ -28,22 +18,7 @@ export const MATCHES_API = {
   SPOTLIGHT_ACTIVATE: '/api/v1/discovery/spotlight/activate',
 } as const;
 
-type MockMatchesListMode = 'success';
 type MockSpotlightActivationMode = 'success' | 'no_credit' | 'already_active';
-
-export function getMockMatchesListMode(): MockMatchesListMode | null {
-  const normalized = process.env.EXPO_PUBLIC_MOCK_MATCHES_LIST_RESPONSE?.trim().toLowerCase();
-
-  if (normalized === 'success') {
-    return normalized;
-  }
-
-  return null;
-}
-
-export function isMatchesListMockEnabled() {
-  return isExpoDevModeEnabled() && getMockMatchesListMode() === 'success';
-}
 
 function getMockSpotlightActivationMode(): MockSpotlightActivationMode | null {
   const normalized = process.env.EXPO_PUBLIC_MOCK_SPOTLIGHT_ACTIVATION_RESPONSE?.trim().toLowerCase();
@@ -98,66 +73,11 @@ function buildMatchAnalysisPath(matchId: string, viewerContext?: ViewerContext) 
   return `${MATCHES_API.ANALYSIS(matchId)}?${params.toString()}`;
 }
 
-function getDemoMatchDedupeKey(match: MatchListItem) {
-  const normalizedName = match.user.name.trim().toLowerCase();
-
-  return normalizedName || match.matchId;
-}
-
-export async function fetchMatchesList(
-  params: MatchesListQueryParams = {},
-  seedVariant: MockMatchesSeedVariant = 'individual'
-) {
-  if (isMatchesListMockEnabled()) {
-    const normalizedLimit = normalizeLimit(params.limit);
-    const page = params.page && params.page > 0 ? params.page : 1;
-    const generatedMatches = loadGeneratedMockMatches();
-    const mockMatchesListResponse = getMockMatchesListResponse(seedVariant);
-    const matchesByName = new Map<string, MatchListItem>();
-
-    for (const match of [...mockMatchesListResponse.data.items, ...generatedMatches]) {
-      const dedupeKey = getDemoMatchDedupeKey(match);
-      const existingMatch = matchesByName.get(dedupeKey);
-
-      if (!existingMatch || match.matchedAt >= existingMatch.matchedAt) {
-        matchesByName.set(dedupeKey, match);
-      }
-    }
-
-    const mergedMatches = Array.from(matchesByName.values()).sort((left, right) =>
-      right.matchedAt.localeCompare(left.matchedAt)
-    );
-
-    return {
-      ...mockMatchesListResponse,
-      data: {
-        ...mockMatchesListResponse.data,
-        items: mergedMatches,
-        total: mergedMatches.length,
-        limit: normalizedLimit,
-        page,
-      },
-    } satisfies MatchesListResponse;
-  }
-
+export async function fetchMatchesList(params: MatchesListQueryParams = {}) {
   return apiFetch<MatchesListResponse>(buildMatchesListPath(params));
 }
 
-export async function fetchMatchAnalysis(
-  matchId: string,
-  viewerContext?: ViewerContext,
-  seedVariant: MockMatchesSeedVariant = 'individual'
-) {
-  if (isMatchesListMockEnabled()) {
-    const generatedAnalysis = loadGeneratedMockMatchAnalysis(matchId);
-
-    if (generatedAnalysis) {
-      return generatedAnalysis;
-    }
-
-    return getFallbackMatchAnalysis(matchId, seedVariant);
-  }
-
+export async function fetchMatchAnalysis(matchId: string, viewerContext?: ViewerContext) {
   return apiFetch<MatchAnalysisResponse>(buildMatchAnalysisPath(matchId, viewerContext));
 }
 

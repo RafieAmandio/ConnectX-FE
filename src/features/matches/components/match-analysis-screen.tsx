@@ -10,7 +10,6 @@ import { isDiscoveryOnboardingRequiredError } from '@features/home/services/disc
 import { AppCard, AppPill, AppText } from '@shared/components';
 
 import { useMatchAnalysis } from '../hooks/use-matches';
-import { getFallbackMatchAnalysis } from '../mock/matches.mock';
 
 const APP_BACKGROUND = '#262626';
 const PANEL_BACKGROUND = '#2E2C2B';
@@ -190,12 +189,7 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
   const analysisQuery = useMatchAnalysis(matchId);
   const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const isOnboardingRequired = isDiscoveryOnboardingRequiredError(analysisQuery.error);
-  const usingFallback = !isOnboardingRequired && (analysisQuery.isError || !analysisQuery.data?.data);
-  const response = analysisQuery.data?.data
-    ? analysisQuery.data
-    : isOnboardingRequired
-      ? null
-      : getFallbackMatchAnalysis(matchId);
+  const response = analysisQuery.data?.data ? analysisQuery.data : null;
 
   React.useEffect(() => {
     if (analysisQuery.isError) {
@@ -207,7 +201,67 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
-        <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND }} />
+        <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND }}>
+          <View
+            className="border-b px-4 pb-3 pt-14"
+            style={{ backgroundColor: APP_BACKGROUND, borderColor: PANEL_BORDER }}>
+            <View className="flex-row items-center gap-3">
+              <Pressable
+                className="h-9 w-9 items-center justify-center rounded-full border"
+                style={{ backgroundColor: PANEL_BACKGROUND, borderColor: PANEL_BORDER }}
+                onPress={() => router.back()}>
+                <Ionicons color={TEXT_PRIMARY} name="arrow-back" size={18} />
+              </Pressable>
+              <AppText className="flex-1 text-[17px] text-[#F1F1F1]" variant="title">
+                Startup Team Fit Analysis
+              </AppText>
+            </View>
+          </View>
+
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{
+              gap: 12,
+              paddingBottom: Math.max(insets.bottom + 24, 24),
+              paddingHorizontal: 14,
+              paddingTop: 14,
+            }}
+            showsVerticalScrollIndicator={false}>
+            {analysisQuery.isLoading ? (
+              <AppCard
+                className="gap-2 rounded-[18px] border p-3"
+                style={{
+                  backgroundColor: PANEL_BACKGROUND,
+                  borderColor: PANEL_BORDER,
+                  shadowColor: 'transparent',
+                }}>
+                <AppText className="text-[#F1F1F1]" variant="subtitle">Loading analysis...</AppText>
+                <AppText className="text-[#A7A29E]">
+                  Preparing the fit breakdown for this match.
+                </AppText>
+              </AppCard>
+            ) : null}
+
+            {analysisQuery.isError && !isOnboardingRequired ? (
+              <AppCard
+                className="gap-2 rounded-[18px] border p-3"
+                style={{
+                  backgroundColor: '#332320',
+                  borderColor: '#6D3A32',
+                  shadowColor: 'transparent',
+                }}>
+                <AppText className="text-[#F7DDD8]" variant="subtitle">
+                  Could not load analysis
+                </AppText>
+                <AppText className="text-[#D9A49C]">
+                  {analysisQuery.error instanceof Error
+                    ? analysisQuery.error.message
+                    : 'The analysis request failed.'}
+                </AppText>
+              </AppCard>
+            ) : null}
+          </ScrollView>
+        </View>
       </>
     );
   }
@@ -249,31 +303,20 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
             paddingTop: 14,
           }}
           showsVerticalScrollIndicator={false}>
-          {usingFallback ? (
+          {analysisQuery.isError && !isOnboardingRequired ? (
             <AppCard
               className="gap-2 rounded-[18px] border p-3"
               style={{
-                backgroundColor: palette.accentSoft,
-                borderColor: palette.border,
+                backgroundColor: '#332320',
+                borderColor: '#6D3A32',
                 shadowColor: 'transparent',
               }}>
-              <AppText className="text-[#F1F1F1]" variant="subtitle">Using fallback analysis</AppText>
-              <AppText className="text-[#D8C6A5]">
-                The live analysis endpoint failed, so this detail screen is rendering the fallback contract response.
+              <AppText className="text-[#F7DDD8]" variant="subtitle">Could not load analysis</AppText>
+              <AppText className="text-[#D9A49C]">
+                {analysisQuery.error instanceof Error
+                  ? analysisQuery.error.message
+                  : 'The analysis request failed.'}
               </AppText>
-            </AppCard>
-          ) : null}
-
-          {analysisQuery.isLoading && !usingFallback ? (
-            <AppCard
-              className="gap-2 rounded-[18px] border p-3"
-              style={{
-                backgroundColor: PANEL_BACKGROUND,
-                borderColor: PANEL_BORDER,
-                shadowColor: 'transparent',
-              }}>
-              <AppText className="text-[#F1F1F1]" variant="subtitle">Loading analysis...</AppText>
-              <AppText className="text-[#A7A29E]">Preparing the fit breakdown for this match.</AppText>
             </AppCard>
           ) : null}
 

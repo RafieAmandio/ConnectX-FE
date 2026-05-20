@@ -10,7 +10,6 @@ import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 
 import { useActivateSpotlight, useMatchesList } from '../hooks/use-matches';
-import { isMatchesListMockEnabled } from '../services/matches-service';
 import {
   isSpotlightAlreadyActiveError,
   isSpotlightRequiresCreditError,
@@ -202,7 +201,6 @@ export function MatchesScreen() {
   } = useRevenueCat();
   const matchesQuery = useMatchesList({ limit: 10, page: 1, status: 'active' });
   const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
-  const usingMockMatches = isMatchesListMockEnabled();
   const spotlightActivation = useActivateSpotlight();
   const [spotlightBanner, setSpotlightBanner] = React.useState<SpotlightBannerState | null>(null);
   const [spotlightEndsAt, setSpotlightEndsAt] = React.useState<string | null>(null);
@@ -542,21 +540,7 @@ export function MatchesScreen() {
                 <AppText className="text-[15px] text-[#9F9C99]">{matchCountLabel}</AppText>
               </View>
             </View>
-            {/* {usingMockMatches ? (
-              <AppCard
-                className="rounded-[20px] border-[#5A4726] bg-[#312A1E] p-4"
-                style={{ shadowColor: 'transparent' }}>
-                <AppText className="text-[#F1F1F1]" variant="subtitle">
-                  Using development mock matches
-                </AppText>
-                <AppText className="mt-1 text-[#BBA98D]">
-                  Backend support is still in progress, so this screen is rendering the typed mock
-                  matches response in development.
-                </AppText>
-              </AppCard>
-            ) : null} */}
-
-            {matchesQuery.isLoading && !usingMockMatches ? (
+            {matchesQuery.isLoading ? (
               <AppCard
                 className="rounded-[20px] border-[#414141] bg-[#2E2C2B] p-4"
                 style={{ shadowColor: 'transparent' }}>
@@ -569,7 +553,7 @@ export function MatchesScreen() {
               </AppCard>
             ) : null}
 
-            {matchesQuery.isError && !usingMockMatches ? (
+            {matchesQuery.isError ? (
               <AppCard
                 className="rounded-[20px] border-[#6D3A32] bg-[#332320] p-4"
                 style={{ shadowColor: 'transparent' }}>

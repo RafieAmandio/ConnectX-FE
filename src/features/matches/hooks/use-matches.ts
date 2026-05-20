@@ -1,11 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 
-import { useAuth } from '@features/auth';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
-import { loadOnboardingDiscoveryPreference } from '@features/home/services/onboarding-discovery-preference';
 import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
 
-import type { MockMatchesSeedVariant } from '../mock/matches.mock';
 import {
   activateSpotlight,
   fetchMatchAnalysis,
@@ -20,54 +17,32 @@ import type {
 
 export const matchesQueryKeys = {
   all: ['matches'] as const,
-  list: (params: MatchesListQueryParams, seedVariant: MockMatchesSeedVariant) =>
-    ['matches', 'list', params, seedVariant] as const,
-  analysis: (matchId: string, viewerContext: ViewerContext, seedVariant: MockMatchesSeedVariant) =>
-    ['matches', 'analysis', matchId, viewerContext, seedVariant] as const,
+  list: (params: MatchesListQueryParams) => ['matches', 'list', params] as const,
+  analysis: (matchId: string, viewerContext: ViewerContext) =>
+    ['matches', 'analysis', matchId, viewerContext] as const,
 };
 
-function resolveMockMatchesSeedVariant(
-  session: ReturnType<typeof useAuth>['session'],
-  viewerContext: ViewerContext
-): MockMatchesSeedVariant {
-  if (viewerContext === 'talent') {
-    return 'startup';
-  }
-
-  const localOnboardingMode = loadOnboardingDiscoveryPreference()?.mode ?? null;
-  const apiDiscoveryMode =
-    session?.authSessionSource === 'api' ? session.defaultDiscoveryMode ?? null : null;
-  const defaultMode =
-    apiDiscoveryMode ?? localOnboardingMode ?? session?.defaultDiscoveryMode ?? null;
-
-  return defaultMode === 'joining_startups' ? 'startup' : 'individual';
-}
-
 export function useMatchesList(params: MatchesListQueryParams = {}) {
-  const { session } = useAuth();
   const viewerContext = useViewerContext();
   const queryParams = {
     ...params,
     viewerContext,
   };
-  const seedVariant = resolveMockMatchesSeedVariant(session, viewerContext);
 
   return useQuery<MatchesListResponse>({
-    queryKey: matchesQueryKeys.list(queryParams, seedVariant),
-    queryFn: () => fetchMatchesList(queryParams, seedVariant),
+    queryKey: matchesQueryKeys.list(queryParams),
+    queryFn: () => fetchMatchesList(queryParams),
     staleTime: 0,
   });
 }
 
 export function useMatchAnalysis(matchId: string, enabled = true) {
-  const { session } = useAuth();
   const viewerContext = useViewerContext();
-  const seedVariant = resolveMockMatchesSeedVariant(session, viewerContext);
 
   return useQuery<MatchAnalysisResponse>({
     enabled: enabled && Boolean(matchId),
-    queryKey: matchesQueryKeys.analysis(matchId, viewerContext, seedVariant),
-    queryFn: () => fetchMatchAnalysis(matchId, viewerContext, seedVariant),
+    queryKey: matchesQueryKeys.analysis(matchId, viewerContext),
+    queryFn: () => fetchMatchAnalysis(matchId, viewerContext),
   });
 }
 
