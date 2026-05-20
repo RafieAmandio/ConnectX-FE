@@ -466,7 +466,7 @@ export function LoginScreen() {
               <AntDesign color="#1A1208" name="arrow-right" size={18} />
             </Pressable>
 
-            <Pressable
+            {/* <Pressable
               onPress={handlePreviewNewOnboarding}
               className="h-12 flex-row items-center justify-center gap-2 rounded-[16px] border"
               style={{
@@ -475,10 +475,10 @@ export function LoginScreen() {
                 borderCurve: 'continuous',
               }}>
               <AntDesign color={ACCENT} name="eye" size={17} />
-              {/* <AppText variant="bodyStrong" className="text-[14px] text-white">
+              <AppText variant="bodyStrong" className="text-[14px] text-white">
                 Preview new onboarding
-              </AppText> */}
-            </Pressable>
+              </AppText>
+            </Pressable> */}
 
             <View className="flex-row items-center justify-center gap-2">
               <AppText className="text-[14px] text-text-muted">
