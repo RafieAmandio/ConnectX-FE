@@ -745,18 +745,6 @@ export function EditProfileScreen() {
   const isStartupOwnerProfile = Boolean(profile.startup);
 
   React.useEffect(() => {
-    if (profileResponse) {
-      console.log('edit profile query response', JSON.stringify(profileResponse, null, 2));
-    }
-  }, [profileResponse]);
-
-  React.useEffect(() => {
-    if (profileOptionsResponse) {
-      console.log('profile options response', JSON.stringify(profileOptionsResponse, null, 2));
-    }
-  }, [profileOptionsResponse]);
-
-  React.useEffect(() => {
     setFormState(buildInitialFormState(profile, locationOptions));
     setFormErrors({});
     setSubmitError(null);

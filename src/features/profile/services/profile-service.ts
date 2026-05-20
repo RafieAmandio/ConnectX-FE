@@ -22,7 +22,7 @@ export const PROFILE_API = {
 
 export async function fetchMyProfile() {
   const response = await apiFetch<MyProfileResponse>(PROFILE_API.ME);
-  console.log('fetch profile response', JSON.stringify(response, null, 2));
+  console.log('fetch profile response', response);
 
   return response;
 }
