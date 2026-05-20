@@ -68,6 +68,14 @@ function getInitials(value: string) {
     .join('');
 }
 
+function getImageUri(value: unknown) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  return value.trim() || null;
+}
+
 function getAboutSectionDescription(kind: ProfileAboutKind) {
   if (kind === 'personalDescription') {
     return 'A quick summary of who this person is and what they are looking for.';
@@ -308,6 +316,7 @@ function ProfileHero({
   profile: MyProfileData;
 }) {
   const initials = getInitials(profile.name);
+  const photoUri = getImageUri(profile.photoUrl);
 
   return (
     <AppCard
@@ -318,10 +327,10 @@ function ProfileHero({
       }}
     >
       <View className="flex-row items-center gap-4">
-        {profile.photoUrl ? (
+        {photoUri ? (
           <Image
             contentFit="cover"
-            source={{ uri: profile.photoUrl }}
+            source={{ uri: photoUri }}
             style={{
               borderColor: 'rgba(245, 158, 11, 0.85)',
               borderRadius: 999,
@@ -510,6 +519,8 @@ function ProfileDetailTabButton({
 }
 
 function ExperienceRow({ item }: { item: ProfileExperienceItem }) {
+  const companyLogoUri = getImageUri(item.companyLogo);
+
   return (
     <View
       className="rounded-[16px] border border-l-[2.5px] p-4"
@@ -520,11 +531,11 @@ function ExperienceRow({ item }: { item: ProfileExperienceItem }) {
       }}
     >
       <View className="flex-row gap-3.5">
-        {item.companyLogo ? (
+        {companyLogoUri ? (
           <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
             <Image
               contentFit="contain"
-              source={{ uri: item.companyLogo }}
+              source={{ uri: companyLogoUri }}
               style={{ height: '100%', width: '100%' }}
             />
           </View>
@@ -561,16 +572,18 @@ function ExperienceRow({ item }: { item: ProfileExperienceItem }) {
 }
 
 function EducationRow({ item }: { item: ProfileEducationItem }) {
+  const schoolLogoUri = getImageUri(item.schoolLogo);
+
   return (
     <View
       className="flex-row items-center gap-3.5 rounded-[16px] border p-4"
       style={{ backgroundColor: SURFACE_MUTED, borderColor: 'rgba(255,255,255,0.1)' }}
     >
-      {item.schoolLogo ? (
+      {schoolLogoUri ? (
         <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
           <Image
             contentFit="contain"
-            source={{ uri: item.schoolLogo }}
+            source={{ uri: schoolLogoUri }}
             style={{ height: '100%', width: '100%' }}
           />
         </View>

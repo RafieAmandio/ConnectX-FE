@@ -493,27 +493,39 @@ function BackgroundEditorHeader({
   );
 }
 
+function sanitizeRequiredText(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function sanitizeOptionalText(value: unknown) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  return value.trim() || null;
+}
+
 function sanitizeExperience(items: ProfileExperienceItem[]) {
   return items.map((item) => ({
     ...item,
-    title: item.title.trim(),
-    organization: item.organization.trim(),
-    period: item.period?.trim() || null,
-    location: item.location?.trim() || null,
-    companyLogo: item.companyLogo?.trim() || null,
-    description: item.description?.trim() || null,
+    title: sanitizeRequiredText(item.title),
+    organization: sanitizeRequiredText(item.organization),
+    period: sanitizeOptionalText(item.period),
+    location: sanitizeOptionalText(item.location),
+    companyLogo: sanitizeOptionalText(item.companyLogo),
+    description: sanitizeOptionalText(item.description),
   }));
 }
 
 function sanitizeEducation(items: ProfileEducationItem[]) {
   return items.map((item) => ({
     ...item,
-    degree: item.degree.trim(),
-    school: item.school.trim(),
-    field: item.field?.trim() || null,
-    period: item.period?.trim() || null,
-    schoolLogo: item.schoolLogo?.trim() || null,
-    description: item.description?.trim() || null,
+    degree: sanitizeRequiredText(item.degree),
+    school: sanitizeRequiredText(item.school),
+    field: sanitizeOptionalText(item.field),
+    period: sanitizeOptionalText(item.period),
+    schoolLogo: sanitizeOptionalText(item.schoolLogo),
+    description: sanitizeOptionalText(item.description),
   }));
 }
 
