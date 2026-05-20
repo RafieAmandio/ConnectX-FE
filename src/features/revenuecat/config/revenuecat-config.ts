@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-export const REVENUECAT_ENTITLEMENT_CONNECTX_PRO = 'getconnectx Pro';
+export const REVENUECAT_ENTITLEMENT_CONNECTX_PRO = 'connectx_pro';
 const REVENUECAT_ENABLED_FLAG = process.env.EXPO_PUBLIC_REVENUECAT_ENABLED?.trim().toLowerCase();
 
 export const REVENUECAT_PACKAGE_IDS = {

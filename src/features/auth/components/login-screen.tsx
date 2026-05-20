@@ -475,9 +475,9 @@ export function LoginScreen() {
                 borderCurve: 'continuous',
               }}>
               <AntDesign color={ACCENT} name="eye" size={17} />
-              <AppText variant="bodyStrong" className="text-[14px] text-white">
+              {/* <AppText variant="bodyStrong" className="text-[14px] text-white">
                 Preview new onboarding
-              </AppText>
+              </AppText> */}
             </Pressable>
 
             <View className="flex-row items-center justify-center gap-2">
