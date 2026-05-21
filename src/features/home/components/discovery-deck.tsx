@@ -1416,33 +1416,45 @@ function EmptyState({
   onStartOver: () => void;
   skippedCount: number;
 }) {
+  const hasActivity = connectedCount > 0 || skippedCount > 0;
+
   return (
-    <View className="items-center gap-3">
+    <View className="items-center px-8">
       <View
-        className="h-14 w-14 items-center justify-center rounded-[14px]"
-        style={{ backgroundColor: '#4A382B' }}>
-        <Ionicons color="#FF9836" name={isLoadingMore ? 'hourglass-outline' : 'checkmark'} size={24} />
+        className="h-16 w-16 items-center justify-center rounded-[18px]"
+        style={{ backgroundColor: '#332F2B', borderColor: '#4A4038', borderWidth: 1 }}>
+        <Ionicons
+          color="#FF9836"
+          name={isLoadingMore ? 'hourglass-outline' : 'search-outline'}
+          size={26}
+        />
       </View>
 
-      <View className="items-center gap-1">
-        <AppText align="center" className="text-[15px] leading-5" variant="bodyStrong">
-          {isLoadingMore ? 'Loading more cards...' : "You've seen everyone!"}
+      <View className="mt-5 items-center">
+        <AppText align="center" className="text-[20px] leading-[26px]" variant="subtitle">
+          {isLoadingMore ? 'Finding more profiles' : 'No profiles match right now'}
         </AppText>
-        <AppText align="center" className="text-[13px] leading-[18px]" tone="muted">
-          {connectedCount} connected · {skippedCount} skipped
+        <AppText align="center" className="mt-2 max-w-[280px] text-[14px] leading-5" tone="muted">
+          {isLoadingMore
+            ? 'We are checking for more relevant recommendations.'
+            : 'Try refreshing or adjusting your discovery filters to broaden the search.'}
         </AppText>
-        <AppText align="center" className="text-[12px] leading-[17px]" tone="muted">
-          Adjust filters for more
-        </AppText>
+
+        {hasActivity ? (
+          <AppText align="center" className="mt-3 text-[12px] leading-[17px]" tone="muted">
+            {connectedCount} connected · {skippedCount} skipped
+          </AppText>
+        ) : null}
       </View>
 
       {!isLoadingMore ? (
         <Pressable
-          className="mt-1 h-[37px] items-center justify-center rounded-[10px] px-5"
+          className="mt-6 h-12 flex-row items-center justify-center gap-2 rounded-[14px] px-5"
           onPress={onStartOver}
           style={{ backgroundColor: '#FF9836' }}>
-          <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
-            Start Over
+          <Ionicons color="#1A120B" name="refresh" size={17} />
+          <AppText className="text-[15px]" style={{ color: '#1A120B' }} variant="bodyStrong">
+            Refresh results
           </AppText>
         </Pressable>
       ) : null}
