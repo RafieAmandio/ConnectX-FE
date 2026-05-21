@@ -40,10 +40,6 @@ function shouldMockSuperLikeRequiresBoost() {
   return false;
 }
 
-function shouldMergeMockDiscoveryCards() {
-  return parseBooleanEnv(process.env.EXPO_PUBLIC_MERGE_MOCK_DISCOVERY_CARDS) ?? false;
-}
-
 type MockRewindMode = 'success' | 'premium_required' | 'not_available';
 
 function getMockRewindMode(): MockRewindMode | null {
@@ -143,28 +139,6 @@ function maskToken(token: string | null) {
   }
 
   return `${token.slice(0, 6)}...${token.slice(-6)}`;
-}
-
-function mergeDiscoveryCardsWithMocks(
-  response: DiscoveryCardsResponse,
-  input: DiscoveryCardFeedInput
-): DiscoveryCardsResponse {
-  const mockResponse = getMockDiscoveryCardsResponse(input.limit, input.cursor, input.request);
-  const apiCardIds = new Set(response.data.items.map((card) => card.id));
-  const mockItems = mockResponse.data.items
-    .filter((card) => !apiCardIds.has(card.id))
-    .map((card) => ({
-      ...card,
-      __source: 'mock' as const,
-    }));
-
-  return {
-    ...response,
-    data: {
-      ...response.data,
-      items: [...response.data.items, ...mockItems],
-    },
-  };
 }
 
 function summarizeDiscoveryCardsResponse(response: DiscoveryCardsResponse) {

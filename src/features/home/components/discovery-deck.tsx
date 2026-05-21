@@ -48,7 +48,6 @@ import {
 import {
   isRewindNotAvailableError,
   isRewindPremiumRequiredError,
-  isDiscoveryOnboardingRequiredError,
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
 import { isDiscoveryCardsMockEnabled } from '../services/discovery-service';
@@ -107,10 +106,6 @@ const GOAL_ID_BY_MODE: Record<DiscoveryMode, DiscoveryGoalId> = {
 
 function isMergedMockCard(card: DiscoveryCard) {
   return card.__source === 'mock';
-}
-
-function hasUsableCards(items: DiscoveryCard[]) {
-  return items.length > 0;
 }
 
 function getFallbackCards(mode: DiscoveryMode | null) {
@@ -1763,12 +1758,7 @@ export function DiscoveryDeck() {
     () => (liveCards.length > 0 ? liveCards : shouldKeepLastSuccessfulCards ? lastSuccessfulCards : []),
     [lastSuccessfulCards, liveCards, shouldKeepLastSuccessfulCards]
   );
-  const usingFallback =
-    !usingMockCards &&
-    !isDiscoveryOnboardingRequiredError(discoveryQuery.error) &&
-    !hasUsableCards(effectiveLiveCards) &&
-    (discoveryQuery.isError || discoveryQuery.isSuccess);
-  const usingLocalMockCards = usingMockCards || usingFallback;
+  const usingLocalMockCards = usingMockCards;
   const baseCards = React.useMemo(
     () =>
       (usingLocalMockCards ? mockCards : effectiveLiveCards).filter(
