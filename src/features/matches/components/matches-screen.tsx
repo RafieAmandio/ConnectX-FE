@@ -102,6 +102,34 @@ function LikesYouPreviewCard({
   );
 }
 
+function LockedLikesYouPreviewCard({ item }: { item: LikesYouListItem }) {
+  return (
+    <View className="h-[160px] flex-1 overflow-hidden rounded-[24px] border border-[#424242] bg-[#2B2B2D]">
+      {item.user.photoUrl ? (
+        <Image
+          blurRadius={26}
+          contentFit="cover"
+          source={{ uri: item.user.photoUrl }}
+          style={{ height: '100%', opacity: 0.82, width: '100%' }}
+        />
+      ) : (
+        <View className="h-full w-full bg-[#34343A]" />
+      )}
+
+      <View
+        className="absolute inset-0"
+        style={{ backgroundColor: 'rgba(24, 24, 27, 0.48)' }}
+      />
+
+      <View className="absolute inset-0 items-center justify-center">
+        <View className="h-12 w-12 items-center justify-center rounded-full bg-[#242424]/80">
+          <Ionicons color="#D8D1CB" name="lock-closed-outline" size={26} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function formatLikesYouCount(totalNew: number) {
   if (totalNew <= 0) {
     return '0 new';
@@ -180,6 +208,7 @@ export function MatchesScreen() {
   const responseData = matchesQuery.data?.data;
   const matches = responseData?.items ?? [];
   const likesYou = responseData?.likesYou?.items ?? [];
+  const likesYouLocked = Boolean(responseData?.likesYou?.locked);
   const likesYouCount = responseData?.likesYou?.totalNew ?? likesYou.length;
   const likesYouPreviewItems = Array.from({ length: 3 }, (_, index) => likesYou[index] ?? null);
   const matchCountLabel = `${matches.length} ${matches.length === 1 ? 'connect' : 'connections'}`;
@@ -302,17 +331,21 @@ export function MatchesScreen() {
               </View>
 
               <View className="flex-row gap-4">
-                {likesYouPreviewItems.map((like) =>
-                  like ? (
+                {likesYouPreviewItems.map((like, index) => {
+                  if (!like) {
+                    return null;
+                  }
+
+                  return likesYouLocked && index > 0 ? (
+                    <LockedLikesYouPreviewCard key={`locked-likes-you-${like.likeId}`} item={like} />
+                  ) : (
                     <LikesYouPreviewCard
                       key={`likes-you-${like.likeId}`}
                       item={like}
                       onPress={handleViewConnects}
                     />
-                  ) : (
-                    null
-                  )
-                )}
+                  );
+                })}
               </View>
 
               <Pressable
