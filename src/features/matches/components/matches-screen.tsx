@@ -130,6 +130,18 @@ function LockedLikesYouPreviewCard({ item }: { item: LikesYouListItem }) {
   );
 }
 
+function MysteryLikesYouPreviewCard() {
+  return (
+    <View className="h-[160px] flex-1 items-center justify-center overflow-hidden rounded-[24px] border border-[#3F3D3A] bg-[#2A2927]">
+      <View className="h-14 w-14 items-center justify-center rounded-full border border-[#5A554E] bg-[#33302E]">
+        <AppText className="text-[30px] leading-[36px] text-[#9F9C99]" variant="title">
+          ?
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 function formatLikesYouCount(totalNew: number) {
   if (totalNew <= 0) {
     return '0 new';
@@ -333,7 +345,9 @@ export function MatchesScreen() {
               <View className="flex-row gap-4">
                 {likesYouPreviewItems.map((like, index) => {
                   if (!like) {
-                    return null;
+                    return likesYou.length > 0 ? (
+                      <MysteryLikesYouPreviewCard key={`mystery-likes-you-${index}`} />
+                    ) : null;
                   }
 
                   return likesYouLocked && index > 0 ? (
