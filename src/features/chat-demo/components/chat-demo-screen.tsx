@@ -36,6 +36,7 @@ import {
 import type { ChatDemoUploadedMedia } from '@features/chat/services/chat-demo-api-service';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
+import { useViewerContext } from '@features/home/hooks/use-viewer-context';
 import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 
 type PendingChatDemoMedia = {
@@ -437,6 +438,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 export function ChatDemoConversationScreen({ conversationId }: { conversationId: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const viewerContext = useViewerContext();
   const conversationsQuery = useChatDemoConversations();
   const messagesQuery = useChatDemoMessages(conversationId);
   const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
@@ -460,6 +462,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const visibleMessages = React.useMemo(() => [...messages].reverse(), [messages]);
   const isSending = sendMessageMutation.isPending || sendImageMessageMutation.isPending;
   const isUploadingMedia = uploadMediaMutation.isPending;
+  const canInviteToTeam = viewerContext === 'startup';
   const inputBottomPadding =
     Platform.OS === 'ios' || androidKeyboardOverlap === 0 ? Math.max(insets.bottom + 8, 20) : 12;
 
@@ -616,14 +619,14 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   }, [isSending, isUploadingMedia, uploadMediaMutation]);
 
   const handleAddToTeam = React.useCallback(() => {
-    if (!conversation?.participantEmail || invitationSent) {
+    if (!canInviteToTeam || !conversation?.participantEmail || invitationSent) {
       return;
     }
 
     setInvitationMessage(null);
     setInvitationError(null);
     setInviteComposerVisible(true);
-  }, [conversation?.participantEmail, invitationSent]);
+  }, [canInviteToTeam, conversation?.participantEmail, invitationSent]);
 
   if (conversationsQuery.isLoading && !conversation) {
     return (
@@ -697,20 +700,22 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
             ) : null}
           </View>
 
-          <Pressable
-            className="min-h-11 flex-row items-center justify-center gap-2 rounded-full bg-[#FF9D3D] px-4 active:opacity-80"
-            disabled={invitationSent || !conversation.participantEmail}
-            onPress={handleAddToTeam}
-            style={{ opacity: invitationSent || !conversation.participantEmail ? 0.6 : 1 }}>
-            <Ionicons
-              color="#1F160C"
-              name={invitationSent ? 'checkmark-outline' : 'person-add-outline'}
-              size={18}
-            />
-            <AppText className="text-[#1F160C]" variant="bodyStrong">
-              {invitationSent ? 'Invited' : 'Add to Team'}
-            </AppText>
-          </Pressable>
+          {canInviteToTeam ? (
+            <Pressable
+              className="min-h-11 flex-row items-center justify-center gap-2 rounded-full bg-[#FF9D3D] px-4 active:opacity-80"
+              disabled={invitationSent || !conversation.participantEmail}
+              onPress={handleAddToTeam}
+              style={{ opacity: invitationSent || !conversation.participantEmail ? 0.6 : 1 }}>
+              <Ionicons
+                color="#1F160C"
+                name={invitationSent ? 'checkmark-outline' : 'person-add-outline'}
+                size={18}
+              />
+              <AppText className="text-[#1F160C]" variant="bodyStrong">
+                {invitationSent ? 'Invited' : 'Add to Team'}
+              </AppText>
+            </Pressable>
+          ) : null}
         </View>
 
         <View className="mx-4 h-px bg-[#3A3938]" />
@@ -856,18 +861,20 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           </View>
         </View>
       </KeyboardAvoidingView>
-      <StartupInvitationComposer
-        initialEmail={conversation.participantEmail ?? ''}
-        onClose={() => {
-          setInviteComposerVisible(false);
-        }}
-        onSuccess={(message) => {
-          setInvitationSent(true);
-          setInvitationMessage(message);
-        }}
-        recipientName={conversation.name}
-        visible={inviteComposerVisible}
-      />
+      {canInviteToTeam ? (
+        <StartupInvitationComposer
+          initialEmail={conversation.participantEmail ?? ''}
+          onClose={() => {
+            setInviteComposerVisible(false);
+          }}
+          onSuccess={(message) => {
+            setInvitationSent(true);
+            setInvitationMessage(message);
+          }}
+          recipientName={conversation.name}
+          visible={inviteComposerVisible}
+        />
+      ) : null}
     </>
   );
 }

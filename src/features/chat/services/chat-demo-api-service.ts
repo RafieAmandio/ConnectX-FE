@@ -14,6 +14,7 @@ export const CHAT_DEMO_API = {
 
 type ChatDemoOtherUserResponse = {
   avatar_url?: string | null;
+  email?: string | null;
   headline?: string | null;
   is_online?: boolean | null;
   name?: string | null;
@@ -185,6 +186,7 @@ export function mapChatDemoMessage(
 
 function mapChatDemoConversation(conversation: ChatDemoConversationResponse): ChatConversation {
   const otherUser = conversation.other_user;
+  const participantEmail = otherUser?.email?.trim() || null;
   const lastMessageAt = conversation.last_message
     ? getMessageSentAt(conversation.last_message)
     : conversation.created_at ?? new Date().toISOString();
@@ -197,7 +199,7 @@ function mapChatDemoConversation(conversation: ChatDemoConversationResponse): Ch
     lastMessageId: conversation.last_message?.id ?? null,
     messagesStored: 0,
     name: otherUser?.name?.trim() || 'ConnectX Member',
-    participantEmail: null,
+    participantEmail,
     participantUserId: otherUser?.user_id ?? null,
     photoUrl: otherUser?.avatar_url ?? null,
     preview: getConversationPreview(conversation.last_message),
