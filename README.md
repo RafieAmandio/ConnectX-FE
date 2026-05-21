@@ -151,6 +151,7 @@ EXPO_PUBLIC_MOCK_SPOTLIGHT_ACTIVATION_RESPONSE=off
 EXPO_PUBLIC_REVENUECAT_ENABLED=false
 EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=goog_...
 EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=appl_...
+EXPO_PUBLIC_REVENUECAT_CONNECTX_PRO_OFFERING_ID=pro
 EXPO_PUBLIC_REVENUECAT_DISCOVERY_BOOSTS_OFFERING_ID=discovery_boosts
 EXPO_PUBLIC_REVENUECAT_DISCOVERY_SPOTLIGHT_OFFERING_ID=discovery_spotlight
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
@@ -160,6 +161,9 @@ EXPO_PUBLIC_SUPABASE_URL=...
 Set `EXPO_PUBLIC_MOCK_SUPERLIKE_NO_BOOST=true` in development to force `super_like` to throw the
 same `409 DISCOVERY_SUPER_LIKE_REQUIRES_BOOST` payload as the backend denial flow and open the
 RevenueCat paywall.
+
+Set `EXPO_PUBLIC_REVENUECAT_CONNECTX_PRO_OFFERING_ID` if your subscription paywall offering uses a
+different identifier than `connectx_pro`.
 
 Set `EXPO_PUBLIC_REVENUECAT_DISCOVERY_BOOSTS_OFFERING_ID` if your boost paywall offering uses a
 different identifier than `discovery_boosts`.

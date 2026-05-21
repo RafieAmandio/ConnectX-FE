@@ -12,6 +12,9 @@ export const REVENUECAT_PACKAGE_IDS = {
 export type RevenueCatPackageId = keyof typeof REVENUECAT_PACKAGE_IDS;
 
 export const REVENUECAT_OFFERING_IDS = {
+  connectXPro:
+    process.env.EXPO_PUBLIC_REVENUECAT_CONNECTX_PRO_OFFERING_ID?.trim() ||
+    'pro',
   discoveryBoosts: process.env.EXPO_PUBLIC_REVENUECAT_DISCOVERY_BOOSTS_OFFERING_ID?.trim() || 'discovery_boosts',
   discoverySpotlights:
     process.env.EXPO_PUBLIC_REVENUECAT_DISCOVERY_SPOTLIGHT_OFFERING_ID?.trim() ||

@@ -7,7 +7,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSwipeAction } from '@features/home/hooks/use-discovery';
-import { useRevenueCat } from '@features/revenuecat';
+import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 
@@ -124,7 +124,7 @@ export function WhoLikedMeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { presentPaywallIfNeeded, supported } = useRevenueCat();
+  const { presentPaywallForOffering, supported } = useRevenueCat();
   const [page, setPage] = React.useState(1);
   const [items, setItems] = React.useState<LikesYouListItem[]>([]);
   const [banner, setBanner] = React.useState<BannerState | null>(null);
@@ -176,7 +176,7 @@ export function WhoLikedMeScreen() {
       return;
     }
 
-    void presentPaywallIfNeeded().catch((error) => {
+    void presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro).catch((error) => {
       setBanner({
         detail: error instanceof Error ? error.message : 'Unable to open the premium paywall.',
         title: 'Could not open premium paywall',
@@ -184,7 +184,7 @@ export function WhoLikedMeScreen() {
       });
     });
   }, [
-    presentPaywallIfNeeded,
+    presentPaywallForOffering,
     presentedPremiumError,
     supported,
     whoLikedMeQuery.error,
