@@ -163,7 +163,7 @@ same `409 DISCOVERY_SUPER_LIKE_REQUIRES_BOOST` payload as the backend denial flo
 RevenueCat paywall.
 
 Set `EXPO_PUBLIC_REVENUECAT_CONNECTX_PRO_OFFERING_ID` if your subscription paywall offering uses a
-different identifier than `connectx_pro`.
+different identifier than `pro`.
 
 Set `EXPO_PUBLIC_REVENUECAT_DISCOVERY_BOOSTS_OFFERING_ID` if your boost paywall offering uses a
 different identifier than `discovery_boosts`.

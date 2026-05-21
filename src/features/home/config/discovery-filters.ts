@@ -15,7 +15,7 @@ const mockDiscoveryFilterOptionsResponsesByMode = require('../mock/discovery-fil
 
 function createPremiumSectionAccess(enabled = false) {
   return {
-    requiresEntitlement: 'connectx_pro' as const,
+    requiresEntitlement: 'pro' as const,
     enabled,
     errorCode: 'PREMIUM_REQUIRED' as const,
   };

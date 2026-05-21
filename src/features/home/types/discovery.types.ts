@@ -263,7 +263,7 @@ export type DiscoveryFilterOptionsResponse = {
   };
 };
 
-export type DiscoveryEntitlement = 'connectx_pro';
+export type DiscoveryEntitlement = 'pro';
 
 export type DiscoveryFilterAccess = {
   requiresEntitlement?: DiscoveryEntitlement;
@@ -396,7 +396,7 @@ export type RewindActionDeniedResponse = {
     details: {
       id?: string | null;
       profileId?: string | null;
-      requiredEntitlement?: 'connectx_pro';
+      requiredEntitlement?: 'pro';
       rewoundAction?: SwipeActionRequest['action'] | null;
       reason?: 'EMPTY_HISTORY' | 'ALREADY_REWOUND' | 'WINDOW_EXPIRED';
     };

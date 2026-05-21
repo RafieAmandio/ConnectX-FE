@@ -362,7 +362,7 @@ export async function postRewindAction(
         error: {
           code: 'DISCOVERY_REWIND_PREMIUM_REQUIRED',
           details: {
-            requiredEntitlement: 'connectx_pro',
+            requiredEntitlement: 'pro',
           },
         },
       });

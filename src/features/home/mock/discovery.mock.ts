@@ -92,7 +92,7 @@ const profileCardBlueprints: MockDiscoveryProfileCardBlueprint[] = [
     badges: [
       { id: 'badge_mvp', label: 'MVP', icon: 'rocket', color: '#FF9A3E' },
       { id: 'badge_linkedin_verified', label: 'LinkedIn Verified', icon: 'shield-checkmark', color: '#2D9CDB' },
-      { id: 'badge_connectx_pro', label: 'ConnectX Pro', icon: 'sparkles', color: '#31D47A' },
+      { id: 'badge_pro', label: 'ConnectX Pro', icon: 'sparkles', color: '#31D47A' },
     ],
     bio:
       'Building a payments infrastructure for underbanked communities in Southeast Asia. Looking for a business-minded co-founder.',
