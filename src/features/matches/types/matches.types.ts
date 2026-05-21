@@ -18,6 +18,24 @@ export type LikesYouListItem = {
   user: MatchUserSummary;
 };
 
+export type WhoLikedMeQueryParams = {
+  limit?: number;
+  page?: number;
+};
+
+export type WhoLikedMeResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    locked: boolean;
+    items: LikesYouListItem[];
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  };
+};
+
 export type MatchListItem = {
   matchId: string;
   status: MatchStatus;

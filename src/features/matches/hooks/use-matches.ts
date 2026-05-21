@@ -7,12 +7,15 @@ import {
   activateSpotlight,
   fetchMatchAnalysis,
   fetchMatchesList,
+  fetchWhoLikedMe,
 } from '../services/matches-service';
 import type {
   MatchAnalysisResponse,
   MatchesListQueryParams,
   MatchesListResponse,
   SpotlightActivationSuccessResponse,
+  WhoLikedMeQueryParams,
+  WhoLikedMeResponse,
 } from '../types/matches.types';
 
 export const matchesQueryKeys = {
@@ -20,6 +23,7 @@ export const matchesQueryKeys = {
   list: (params: MatchesListQueryParams) => ['matches', 'list', params] as const,
   analysis: (matchId: string, viewerContext: ViewerContext) =>
     ['matches', 'analysis', matchId, viewerContext] as const,
+  whoLikedMe: (params: WhoLikedMeQueryParams) => ['matches', 'who-liked-me', params] as const,
 };
 
 export function useMatchesList(params: MatchesListQueryParams = {}) {
@@ -43,6 +47,14 @@ export function useMatchAnalysis(matchId: string, enabled = true) {
     enabled: enabled && Boolean(matchId),
     queryKey: matchesQueryKeys.analysis(matchId, viewerContext),
     queryFn: () => fetchMatchAnalysis(matchId, viewerContext),
+  });
+}
+
+export function useWhoLikedMeList(params: WhoLikedMeQueryParams = {}) {
+  return useQuery<WhoLikedMeResponse>({
+    queryKey: matchesQueryKeys.whoLikedMe(params),
+    queryFn: () => fetchWhoLikedMe(params),
+    staleTime: 0,
   });
 }
 

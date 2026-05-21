@@ -7,6 +7,8 @@ import type {
   MatchesListQueryParams,
   MatchesListResponse,
   SpotlightActivationSuccessResponse,
+  WhoLikedMeQueryParams,
+  WhoLikedMeResponse,
 } from '../types/matches.types';
 
 const DEFAULT_LIMIT = 10;
@@ -16,6 +18,7 @@ export const MATCHES_API = {
   LIST: '/api/v1/matches',
   ANALYSIS: (matchId: string) => `/api/v1/matches/${matchId}/analysis`,
   SPOTLIGHT_ACTIVATE: '/api/v1/discovery/spotlight/activate',
+  WHO_LIKED_ME: '/api/v1/discovery/who-liked-me',
 } as const;
 
 type MockSpotlightActivationMode = 'success' | 'no_credit' | 'already_active';
@@ -73,12 +76,25 @@ function buildMatchAnalysisPath(matchId: string, viewerContext?: ViewerContext) 
   return `${MATCHES_API.ANALYSIS(matchId)}?${params.toString()}`;
 }
 
+function buildWhoLikedMePath({ limit, page }: WhoLikedMeQueryParams = {}) {
+  const params = new URLSearchParams();
+
+  params.set('limit', String(normalizeLimit(limit)));
+  params.set('page', String(page && page > 0 ? page : 1));
+
+  return `${MATCHES_API.WHO_LIKED_ME}?${params.toString()}`;
+}
+
 export async function fetchMatchesList(params: MatchesListQueryParams = {}) {
   return apiFetch<MatchesListResponse>(buildMatchesListPath(params));
 }
 
 export async function fetchMatchAnalysis(matchId: string, viewerContext?: ViewerContext) {
   return apiFetch<MatchAnalysisResponse>(buildMatchAnalysisPath(matchId, viewerContext));
+}
+
+export async function fetchWhoLikedMe(params: WhoLikedMeQueryParams = {}) {
+  return apiFetch<WhoLikedMeResponse>(buildWhoLikedMePath(params));
 }
 
 export async function activateSpotlight() {
