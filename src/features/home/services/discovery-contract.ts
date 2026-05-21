@@ -14,7 +14,7 @@ export const DISCOVERY_ERROR_STATUS = {
   rewindNotAvailable: 409,
   rewindPremiumRequired: 403,
   startupProfileRequired: 403,
-  superLikeRequiresBoost: 409,
+  superLikeRequiresBoost: 403,
   spotlightAlreadyActive: 409,
   spotlightRequiresCredit: 409,
 } as const;
@@ -112,8 +112,9 @@ export function isSwipeActionDeniedResponse(payload: unknown): payload is SwipeA
   if (!payload || typeof payload !== 'object' || !('error' in payload)) {
     return false;
   }
+  console.log(payload, 'payload')
 
-  return getApiPayloadErrorCode(payload) === 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST';
+  return getApiPayloadErrorCode(payload) === 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST' || getApiPayloadErrorCode(payload) === 'PREMIUM_REQUIRED';
 }
 
 export function isSuperLikeRequiresBoostError(error: unknown): error is ApiError {
@@ -177,20 +178,20 @@ export function isRewindNotAvailableError(error: unknown): error is ApiError {
 export function isSwipeActionSuccessResponse(payload: unknown): payload is SwipeActionSuccessResponse {
   return Boolean(
     payload &&
-      typeof payload === 'object' &&
-      'success' in payload &&
-      payload.success === true &&
-      'data' in payload
+    typeof payload === 'object' &&
+    'success' in payload &&
+    payload.success === true &&
+    'data' in payload
   );
 }
 
 export function isRewindActionSuccessResponse(payload: unknown): payload is RewindActionSuccessResponse {
   return Boolean(
     payload &&
-      typeof payload === 'object' &&
-      'success' in payload &&
-      payload.success === true &&
-      'data' in payload
+    typeof payload === 'object' &&
+    'success' in payload &&
+    payload.success === true &&
+    'data' in payload
   );
 }
 
@@ -199,9 +200,9 @@ export function isSpotlightActivationSuccessResponse(
 ): payload is SpotlightActivationSuccessResponse {
   return Boolean(
     payload &&
-      typeof payload === 'object' &&
-      'success' in payload &&
-      payload.success === true &&
-      'data' in payload
+    typeof payload === 'object' &&
+    'success' in payload &&
+    payload.success === true &&
+    'data' in payload
   );
 }

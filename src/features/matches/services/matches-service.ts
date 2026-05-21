@@ -108,7 +108,7 @@ export async function activateSpotlight() {
     if (mockMode === 'success') {
       return {
         success: true,
-        message: 'Spotlight activated.',
+        message: 'Boost activated.',
         data: {
           active: true,
           startedAt: startedAtIso,
@@ -119,9 +119,9 @@ export async function activateSpotlight() {
     }
 
     if (mockMode === 'already_active') {
-      throw new ApiError('Spotlight is already active.', 409, {
+      throw new ApiError('Boost is already active.', 409, {
         success: false,
-        message: 'Spotlight is already active.',
+        message: 'Boost is already active.',
         error: {
           code: 'DISCOVERY_SPOTLIGHT_ALREADY_ACTIVE',
           details: {
@@ -134,9 +134,9 @@ export async function activateSpotlight() {
       });
     }
 
-    throw new ApiError('No spotlights remaining.', 409, {
+    throw new ApiError('No boosts remaining.', 409, {
       success: false,
-      message: 'No spotlights remaining.',
+      message: 'No boosts remaining.',
       error: {
         code: 'DISCOVERY_SPOTLIGHT_REQUIRES_CREDIT',
         details: {

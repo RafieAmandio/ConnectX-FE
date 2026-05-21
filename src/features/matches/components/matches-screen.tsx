@@ -236,19 +236,19 @@ export function MatchesScreen() {
   const maybePresentSpotlightPaywall = React.useCallback(async () => {
     if (!supported) {
       setSpotlightBanner({
-        detail: 'Spotlight purchases are available in the native iOS and Android builds.',
-        title: 'Spotlight credits unavailable here',
+        detail: 'Boost purchases are available in the native iOS and Android builds.',
+        title: 'Boost credits unavailable here',
         tone: 'warning',
       });
       return;
     }
 
     try {
-      await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.discoverySpotlights);
+      await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.discoveryBoosts);
     } catch (error) {
       setSpotlightBanner({
-        detail: error instanceof Error ? error.message : 'Unable to open the spotlight paywall.',
-        title: 'Could not open spotlight paywall',
+        detail: error instanceof Error ? error.message : 'Unable to open the boost paywall.',
+        title: 'Could not open boost paywall',
         tone: 'warning',
       });
     }
@@ -264,16 +264,16 @@ export function MatchesScreen() {
       setSpotlightEndsAt(response.data.endsAt);
       setSpotlightBanner({
         detail: endsAtLabel
-          ? `You are featured until ${endsAtLabel}. ${response.data.remainingSpotlights} spotlights left.`
-          : `${response.data.remainingSpotlights} spotlights left after this activation.`,
-        title: 'Spotlight is live',
+          ? `Your profile is boosted until ${endsAtLabel}. ${response.data.remainingSpotlights} boosts left.`
+          : `${response.data.remainingSpotlights} boosts left after this activation.`,
+        title: 'Boost is live',
         tone: 'success',
       });
     } catch (error) {
       if (isSpotlightRequiresCreditError(error)) {
         setSpotlightBanner({
-          detail: 'Buy a spotlight credit to activate your profile now.',
-          title: 'No spotlight credits remaining',
+          detail: 'Buy a boost credit to activate your profile now.',
+          title: 'No boost credits remaining',
           tone: 'warning',
         });
         await maybePresentSpotlightPaywall();
@@ -288,17 +288,17 @@ export function MatchesScreen() {
         setSpotlightEndsAt(details.endsAt);
         setSpotlightBanner({
           detail: nextEligibleLabel
-            ? `Your spotlight is already active until ${nextEligibleLabel}.`
-            : 'Your spotlight is already active right now.',
-          title: 'Spotlight already active',
+            ? `Your boost is already active until ${nextEligibleLabel}.`
+            : 'Your boost is already active right now.',
+          title: 'Boost already active',
           tone: 'default',
         });
         return;
       }
 
       setSpotlightBanner({
-        detail: error instanceof Error ? error.message : 'Unable to activate spotlight right now.',
-        title: 'Spotlight activation failed',
+        detail: error instanceof Error ? error.message : 'Unable to activate boost right now.',
+        title: 'Boost activation failed',
         tone: 'warning',
       });
     }
@@ -390,12 +390,12 @@ export function MatchesScreen() {
                   </View>
                   <View className="gap-0.5">
                     <AppText className="text-[17px] text-[#F4E3C3]" variant="bodyStrong">
-                      {spotlightActivation.isPending ? 'Activating...' : 'Activate Spotlight'}
+                      {spotlightActivation.isPending ? 'Activating...' : 'Activate Boost'}
                     </AppText>
                     <AppText className="text-[13px] text-[#D2B98D]">
                       {spotlightEndsAtLabel
                         ? `Active until ${spotlightEndsAtLabel}`
-                        : 'Feature your profile for 1 hour'}
+                        : 'Boost your profile for 1 hour'}
                     </AppText>
                   </View>
                 </View>

@@ -47,13 +47,13 @@ import {
   mockDiscoveryCardsResponse,
   mockDiscoveryCardsResponsesByMode,
 } from '../mock/discovery.mock';
+import { setAppliedDiscoveryMode } from '../services/applied-discovery-mode-store';
 import {
   isRewindNotAvailableError,
   isRewindPremiumRequiredError,
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
 import { isDiscoveryCardsMockEnabled } from '../services/discovery-service';
-import { setAppliedDiscoveryMode } from '../services/applied-discovery-mode-store';
 import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discovery-preference';
 import type {
   DiscoveryAppliedFilters,
@@ -1961,7 +1961,7 @@ export function DiscoveryDeck() {
     }
 
     try {
-      const result = await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.discoveryBoosts);
+      const result = await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.discoverySpotlights);
 
       if (
         result !== PAYWALL_RESULT.PURCHASED &&
