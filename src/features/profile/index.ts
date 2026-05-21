@@ -9,6 +9,7 @@ export {
   useProfileOptions,
   useRequestMyAccountDeletion,
   useUpdateMyProfile,
+  useUpdateProfileLocation,
 } from './hooks/use-profile';
 export {
   activateMyAccount,
@@ -18,6 +19,7 @@ export {
   PROFILE_API,
   requestMyAccountDeletion,
   updateMyProfile,
+  updateProfileLocation,
 } from './services/profile-service';
 export type {
   ActivateAccountResponse,
@@ -39,4 +41,6 @@ export type {
   RequestAccountDeletionResponse,
   UpdateMyProfileRequest,
   UpdateMyProfileResponse,
+  UpdateProfileLocationRequest,
+  UpdateProfileLocationResponse,
 } from './types/profile.types';

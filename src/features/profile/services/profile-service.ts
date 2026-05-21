@@ -9,12 +9,15 @@ import type {
   UpdateMyLinkedInProfileRequest,
   UpdateMyProfileRequest,
   UpdateMyProfileResponse,
+  UpdateProfileLocationRequest,
+  UpdateProfileLocationResponse,
 } from '../types/profile.types';
 
 export const PROFILE_API = {
   ACCOUNT_ACTIVATE: '/api/v1/me/account/activate',
   ACCOUNT_DELETION_REQUESTS: '/api/v1/me/account/deletion-requests',
   ACCOUNT_PAUSE: '/api/v1/me/account/pause',
+  LOCATION: '/api/v1/profile/location',
   ME: '/api/v1/me/profile',
   OPTIONS: '/api/v1/profile-options',
   PUBLIC_DETAIL: (profileId: string) => `/api/v1/profiles/${profileId}`,
@@ -44,6 +47,13 @@ export async function updateMyLinkedInProfile(payload: UpdateMyLinkedInProfileRe
   return apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
     body: payload as unknown as BodyInit,
     method: 'PATCH',
+  });
+}
+
+export async function updateProfileLocation(payload: UpdateProfileLocationRequest) {
+  return apiFetch<UpdateProfileLocationResponse>(PROFILE_API.LOCATION, {
+    body: payload as unknown as BodyInit,
+    method: 'PUT',
   });
 }
 

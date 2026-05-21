@@ -27,10 +27,12 @@ import { upsertDiscoveryMatchConversation } from '@features/chat/services/chat-s
 import { matchesQueryKeys } from '@features/matches/hooks/use-matches';
 import { upsertGeneratedMockMatch } from '@features/matches/services/generated-matches-storage';
 import { useNotifications } from '@features/notifications';
+import { useUpdateProfileLocation } from '@features/profile';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 import { Shadows } from '@shared/theme';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import { getDiscoveryFilterSections } from '../config/discovery-filters';
 import {
@@ -292,6 +294,10 @@ function getErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function getCoordinatesKey(coordinates: DeviceCoordinates) {
+  return `${coordinates.latitude},${coordinates.longitude}`;
 }
 
 function isPremiumRequiredError(error: unknown) {
@@ -1470,6 +1476,7 @@ export function DiscoveryDeck() {
   const { isHydrated: isAuthHydrated, session } = useAuth();
   const usingMockCards = isDiscoveryCardsMockEnabled();
   const notificationsQuery = useNotifications();
+  const { mutateAsync: updateProfileLocationAsync } = useUpdateProfileLocation();
   const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
     useRevenueCat();
   const [mockCards, setMockCards] = React.useState<DiscoveryCard[]>(getFallbackCards(null));
@@ -1501,6 +1508,7 @@ export function DiscoveryDeck() {
   const usingFallbackRef = React.useRef(false);
   const hasShownGuaranteedMockMatchRef = React.useRef(false);
   const hasRequestedDeviceCoordinatesRef = React.useRef(false);
+  const lastSyncedProfileLocationKeyRef = React.useRef<string | null>(null);
 
   const hasSyncedAuthSession =
     !session ||
@@ -1653,7 +1661,7 @@ export function DiscoveryDeck() {
   const discoveryQuery = useDiscoveryCards(
     discoveryRequest,
     DISCOVERY_PAGE_LIMIT,
-    hasResolvedAuthSessionSetup
+    hasResolvedAuthSessionSetup && hasResolvedInitialLocation
   );
   const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const rewindAction = useRewindAction();
@@ -1716,7 +1724,49 @@ export function DiscoveryDeck() {
     }
   }, []);
 
+  const syncProfileLocationCoordinates = React.useCallback(
+    async (coordinates: DeviceCoordinates | null) => {
+      if (
+        !coordinates ||
+        session?.authPhase !== 'authenticated' ||
+        session.isDevelopmentBypass
+      ) {
+        return;
+      }
+
+      const userKey = session.user?.id ?? session.email;
+      const coordinatesKey = `${userKey}:${getCoordinatesKey(coordinates)}`;
+
+      if (lastSyncedProfileLocationKeyRef.current === coordinatesKey) {
+        return;
+      }
+
+      try {
+        await updateProfileLocationAsync({
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+        });
+        lastSyncedProfileLocationKeyRef.current = coordinatesKey;
+      } catch (error) {
+        if (isExpoDevModeEnabled()) {
+          console.warn('[DiscoveryDeck] failed to update profile location coordinates', error);
+        }
+      }
+    },
+    [
+      session?.authPhase,
+      session?.email,
+      session?.isDevelopmentBypass,
+      session?.user?.id,
+      updateProfileLocationAsync,
+    ]
+  );
+
   React.useEffect(() => {
+    if (!canResolveDiscoveryAuthSetup) {
+      return;
+    }
+
     if (hasRequestedDeviceCoordinatesRef.current) {
       return;
     }
@@ -1725,12 +1775,13 @@ export function DiscoveryDeck() {
     void (async () => {
       try {
         console.log('[DiscoveryDeck] resolving initial location');
-        await Promise.race([
+        const coordinates = await Promise.race([
           loadDeviceCoordinates(true),
           new Promise<null>((resolve) => {
             setTimeout(() => resolve(null), DISCOVERY_LOCATION_TIMEOUT_MS);
           }),
         ]);
+        void syncProfileLocationCoordinates(coordinates);
       } finally {
         setHasResolvedInitialLocation(true);
         console.log('[DiscoveryDeck] initial location resolved', {
@@ -1738,11 +1789,11 @@ export function DiscoveryDeck() {
         });
       }
     })();
-  }, [loadDeviceCoordinates]);
+  }, [canResolveDiscoveryAuthSetup, loadDeviceCoordinates, syncProfileLocationCoordinates]);
 
   React.useEffect(() => {
     console.log('[DiscoveryDeck] query input on enter/update', {
-      enabled: hasResolvedAuthSessionSetup,
+      enabled: hasResolvedAuthSessionSetup && hasResolvedInitialLocation,
       hasResolvedAuthSessionSetup,
       hasResolvedInitialLocation,
       request: discoveryRequest,
@@ -1783,6 +1834,9 @@ export function DiscoveryDeck() {
     return [...restoredCards.filter((card) => !baseIds.has(card.id)), ...baseCards];
   }, [baseCards, restoredCards]);
   const handleRefreshDiscovery = React.useCallback(async () => {
+    const nextDeviceCoordinates = await loadDeviceCoordinates(true);
+    await syncProfileLocationCoordinates(nextDeviceCoordinates ?? deviceCoordinates);
+
     if (usingLocalMockCards) {
       setMockCards(getFallbackCards(appliedMode));
       hasShownGuaranteedMockMatchRef.current = false;
@@ -1792,7 +1846,14 @@ export function DiscoveryDeck() {
 
     setDismissedMergedMockCardIds(new Set());
     await discoveryQuery.refetch();
-  }, [appliedMode, discoveryQuery, usingLocalMockCards]);
+  }, [
+    appliedMode,
+    deviceCoordinates,
+    discoveryQuery,
+    loadDeviceCoordinates,
+    syncProfileLocationCoordinates,
+    usingLocalMockCards,
+  ]);
   const handleStartOver = React.useCallback(async () => {
     setHistory([]);
     setRestoredCards([]);

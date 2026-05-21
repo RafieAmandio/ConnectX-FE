@@ -145,6 +145,20 @@ export type UpdateMyLinkedInProfileRequest = {
   linkedin_url: string;
 };
 
+export type UpdateProfileLocationRequest = {
+  latitude: number;
+  longitude: number;
+};
+
+export type UpdateProfileLocationResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    latitude: number;
+    longitude: number;
+  };
+};
+
 export type UpdateMyProfileResponse = {
   success: boolean;
   message: string;

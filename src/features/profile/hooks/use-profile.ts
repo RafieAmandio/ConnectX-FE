@@ -11,6 +11,7 @@ import {
   PROFILE_API,
   requestMyAccountDeletion,
   updateMyProfile,
+  updateProfileLocation,
 } from '../services/profile-service';
 import type {
   MyProfileResponse,
@@ -77,6 +78,17 @@ export function useUpdateMyProfile() {
         return mergeProfileResponse(baseResponse, response);
       });
 
+      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+    },
+  });
+}
+
+export function useUpdateProfileLocation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateProfileLocation,
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
     },
   });
