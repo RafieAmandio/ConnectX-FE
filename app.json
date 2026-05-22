@@ -26,6 +26,8 @@
     },
     "android": {
       "package": "com.connectx.app",
+      "version": "1",
+      "versionCode": 2,
       "googleServicesFile": "./android/google-services.json",
       "permissions": [
         "POST_NOTIFICATIONS",

@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
-import { useRevenueCat } from '@features/revenuecat';
+import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
 
 import {
@@ -175,7 +175,7 @@ export function SettingsScreen() {
     isLoading: isRevenueCatLoading,
     managementUrl,
     presentCustomerCenter,
-    presentPaywall,
+    presentPaywallForOffering,
     supported: isRevenueCatSupported,
   } = useRevenueCat();
   const pauseAccountMutation = usePauseMyAccount();
@@ -220,7 +220,7 @@ export function SettingsScreen() {
         return;
       }
 
-      await presentPaywall();
+      await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to open subscription settings.';
