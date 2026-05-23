@@ -14,7 +14,6 @@ import {
 import { useAuthContext } from '@features/auth/store/auth-provider';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 
-import { ProfileSkeleton } from './profile-skeleton';
 import { useMyProfile } from '../hooks/use-profile';
 import {
   mockIndividualProfileResponse,
@@ -29,6 +28,7 @@ import type {
   ProfileExperienceItem,
   ProfileNamedItem,
 } from '../types/profile.types';
+import { ProfileSkeleton } from './profile-skeleton';
 
 const BADGE_ICON_BY_ID: Record<string, keyof typeof Ionicons.glyphMap> = {
   'startup-founder': 'rocket-outline',
@@ -408,7 +408,7 @@ function StatsOverview({
   const entries = [
     { label: 'Connections', value: stats.connections },
     { label: 'Teams Joined', value: stats.teamsJoined },
-    { label: 'Matches', value: stats.matches },
+    { label: 'Connects', value: stats.matches },
   ];
 
   return (

@@ -1477,8 +1477,8 @@ export function DiscoveryDeck() {
   const usingMockCards = isDiscoveryCardsMockEnabled();
   const notificationsQuery = useNotifications();
   const { mutateAsync: updateProfileLocationAsync } = useUpdateProfileLocation();
-  const { isConnectXProActive, presentPaywallForOffering, presentPaywallIfNeeded, supported } =
-    useRevenueCat();
+  const { presentPaywallForOffering, supported } = useRevenueCat();
+  const hasAdvancedDiscoveryFilters = session?.premium?.isPremium === true;
   const [mockCards, setMockCards] = React.useState<DiscoveryCard[]>(getFallbackCards(null));
   const [restoredCards, setRestoredCards] = React.useState<DiscoveryCard[]>([]);
   const [dismissedMergedMockCardIds, setDismissedMergedMockCardIds] = React.useState<Set<string>>(
@@ -2128,9 +2128,8 @@ export function DiscoveryDeck() {
           }
 
           try {
-            const result = await presentPaywallIfNeeded();
+            const result = await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro);
             const unlockedPro =
-              isConnectXProActive ||
               result === PAYWALL_RESULT.PURCHASED ||
               result === PAYWALL_RESULT.RESTORED;
 
@@ -2158,9 +2157,8 @@ export function DiscoveryDeck() {
       });
   }, [
     history,
-    isConnectXProActive,
     isSubmitting,
-    presentPaywallIfNeeded,
+    presentPaywallForOffering,
     rewindAction,
     supported,
   ]);
@@ -2329,7 +2327,7 @@ export function DiscoveryDeck() {
       errorMessage={filterError}
       filterOptionsResponse={matchingFilterOptionsResponse}
       goalOptions={goalOptions}
-      hasConnectXPro={isConnectXProActive}
+      hasConnectXPro={hasAdvancedDiscoveryFilters}
       initialAppliedMode={appliedMode}
       initialFilters={appliedFilters}
       isApplying={isApplyingFilters}

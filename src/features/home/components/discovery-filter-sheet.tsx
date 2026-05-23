@@ -768,6 +768,31 @@ export function DiscoveryFilterSheet({
     });
   }, [currentMode, hasConnectXPro, initialAppliedMode, initialFilters, sections, visible]);
 
+  React.useEffect(() => {
+    if (!visible || hasConnectXPro) {
+      return;
+    }
+
+    setDraftByMode((current) => {
+      const currentDraftForMode = current[currentMode];
+
+      if (!currentDraftForMode) {
+        return current;
+      }
+
+      const nextDraftForMode = stripDisabledDiscoveryFilters(currentDraftForMode, sections, hasConnectXPro);
+
+      if (Object.keys(nextDraftForMode).length === Object.keys(currentDraftForMode).length) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [currentMode]: nextDraftForMode,
+      };
+    });
+  }, [currentMode, hasConnectXPro, sections, visible]);
+
   const currentDraft = React.useMemo(
     () => draftByMode[currentMode] ?? buildInitialDraft(sections, {}, hasConnectXPro),
     [currentMode, draftByMode, hasConnectXPro, sections]

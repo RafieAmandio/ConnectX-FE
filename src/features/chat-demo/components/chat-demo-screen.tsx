@@ -260,6 +260,7 @@ export function ChatDemoListScreen() {
   const refetchConversations = conversationsQuery.refetch;
   const conversations = conversationsQuery.data ?? [];
   const hasConversations = conversations.length > 0;
+  const [isPullRefreshing, setIsPullRefreshing] = React.useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -291,6 +292,16 @@ export function ChatDemoListScreen() {
     ),
     [markConversationReadMutation, router]
   );
+
+  const handlePullRefresh = React.useCallback(async () => {
+    setIsPullRefreshing(true);
+
+    try {
+      await refetchConversations();
+    } finally {
+      setIsPullRefreshing(false);
+    }
+  }, [refetchConversations]);
 
   return (
     <>
@@ -342,8 +353,8 @@ export function ChatDemoListScreen() {
             }
             refreshControl={
               <RefreshControl
-                onRefresh={conversationsQuery.refetch}
-                refreshing={conversationsQuery.isRefetching}
+                onRefresh={handlePullRefresh}
+                refreshing={isPullRefreshing}
                 tintColor="#F59E0B"
               />
             }

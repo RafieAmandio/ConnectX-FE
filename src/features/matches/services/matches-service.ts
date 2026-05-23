@@ -1,5 +1,5 @@
-import { ApiError, apiFetch } from '@shared/services/api';
 import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
+import { ApiError, apiFetch } from '@shared/services/api';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import type {
