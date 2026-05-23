@@ -17,7 +17,7 @@ const MAX_LIMIT = 20;
 export const MATCHES_API = {
   LIST: '/api/v1/matches',
   ANALYSIS: (matchId: string) => `/api/v1/matches/${matchId}/analysis`,
-  SPOTLIGHT_ACTIVATE: '/api/v1/discovery/spotlight/activate',
+  SPOTLIGHT_ACTIVATE: '/api/v1/discovery/boost/activate',
   WHO_LIKED_ME: '/api/v1/discovery/who-liked-me',
 } as const;
 
