@@ -341,6 +341,10 @@ export type SwipeActionSuccessResponse = {
     action: SwipeActionRequest['action'];
     isMatch: boolean;
     matchId: string | null;
+    conversationId?: string | null;
+    conversation_id?: string | null;
+    roomId?: string | null;
+    room_id?: string | null;
     consumables?: Pick<DiscoveryConsumablesSnapshot, 'boosts'>;
   };
 };

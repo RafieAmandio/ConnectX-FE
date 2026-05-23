@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { useAuth } from '@features/auth';
+import { chatDemoQueryKeys } from '@features/chat/hooks/use-chat-demo';
 import { chatQueryKeys } from '@features/chat/hooks/use-mock-chat';
 import { upsertDiscoveryMatchConversation } from '@features/chat/services/chat-sqlite-service';
 import { matchesQueryKeys } from '@features/matches/hooks/use-matches';
@@ -71,6 +72,7 @@ import type {
   DiscoveryStartupCard,
   DiscoverySwipeHistoryEntry,
   SwipeActionRequest,
+  SwipeActionSuccessResponse,
 } from '../types/discovery.types';
 import { isDiscoveryProfileCard } from '../types/discovery.types';
 import { DiscoveryFilterSheet } from './discovery-filter-sheet';
@@ -537,6 +539,20 @@ function getDiscoveryMatchConversationInput(card: DiscoveryCard) {
   };
 }
 
+function getSwipeMatchConversationId(response: SwipeActionSuccessResponse | null) {
+  if (!response?.data) {
+    return null;
+  }
+
+  return (
+    response.data.conversationId ??
+    response.data.conversation_id ??
+    response.data.roomId ??
+    response.data.room_id ??
+    null
+  );
+}
+
 function withAlpha(hexColor: string, alpha: number) {
   const normalized = hexColor.replace('#', '');
 
@@ -983,24 +999,29 @@ function ProfileCardContent({
           <View
             className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
             style={{ backgroundColor: 'rgba(17, 19, 26, 0.52)' }}>
-            {linkedinUrl ? (
-              <Pressable
-                accessibilityLabel={`Open ${card.name}'s LinkedIn profile`}
-                accessibilityRole="link"
-                className="mb-2 h-9 w-9 items-center justify-center rounded-full"
-                onPress={() => openExternalUrl(linkedinUrl)}
-                style={{ backgroundColor: 'rgba(10, 102, 194, 0.92)' }}>
-                <Ionicons color="#FFFFFF" name="logo-linkedin" size={20} />
-              </Pressable>
-            ) : null}
             <View className="flex-row items-end justify-between gap-3">
               <View className="min-w-0 flex-1 gap-1">
                 <AppText className="text-[28px] leading-[34px]" numberOfLines={1} variant="hero">
                   {card.age ? `${card.name}, ${card.age}` : card.name}
                 </AppText>
-                <AppText className="text-[15px] leading-tight" numberOfLines={2} style={{ color: '#E4E7EC' }}>
-                  {card.headline}
-                </AppText>
+                <View className="flex-row items-center gap-2">
+                  <AppText
+                    className="min-w-0 flex-shrink text-[15px] leading-tight"
+                    numberOfLines={2}
+                    style={{ color: '#E4E7EC' }}>
+                    {card.headline}
+                  </AppText>
+                  {linkedinUrl ? (
+                    <Pressable
+                      accessibilityLabel={`Open ${card.name}'s LinkedIn profile`}
+                      accessibilityRole="link"
+                      className="h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
+                      onPress={() => openExternalUrl(linkedinUrl)}
+                      style={{ backgroundColor: 'rgba(10, 102, 194, 0.92)' }}>
+                      <Ionicons color="#FFFFFF" name="logo-linkedin" size={15} />
+                    </Pressable>
+                  ) : null}
+                </View>
                 {card.location ? (
                   <View className="flex-row items-center gap-1.5">
                     <Ionicons color="#98A2B3" name="location-outline" size={16} />
@@ -1988,6 +2009,7 @@ export function DiscoveryDeck() {
 
       try {
         let matched = false;
+        let swipeResponse: SwipeActionSuccessResponse | null = null;
 
         const shouldHandleLocally = usingFallbackRef.current || isMergedMockCard(activeCard);
 
@@ -2005,13 +2027,13 @@ export function DiscoveryDeck() {
             hasShownGuaranteedMockMatchRef.current = true;
           }
         } else {
-          const response = await swipeAction.mutateAsync({
+          swipeResponse = await swipeAction.mutateAsync({
             cardId: activeCard.id,
             payload: { action },
             targetId: getCardActionTargetId(activeCard),
           });
 
-          matched = Boolean(response.data.isMatch);
+          matched = Boolean(swipeResponse.data.isMatch);
         }
 
         didAdvanceCard = true;
@@ -2034,16 +2056,30 @@ export function DiscoveryDeck() {
           let conversationId: string | null = null;
           let matchId: string | null = null;
 
-          try {
-            conversationId = await upsertDiscoveryMatchConversation(
-              getDiscoveryMatchConversationInput(activeCard)
-            );
-            const generatedMatch = upsertGeneratedMockMatch(activeCard, conversationId);
-            matchId = generatedMatch.item.matchId;
-            await queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversationsRoot });
+          if (shouldHandleLocally) {
+            try {
+              conversationId = await upsertDiscoveryMatchConversation(
+                getDiscoveryMatchConversationInput(activeCard)
+              );
+              const generatedMatch = upsertGeneratedMockMatch(activeCard, conversationId);
+              matchId = generatedMatch.item.matchId;
+              await queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversationsRoot });
+              await queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
+            } catch (error) {
+              console.warn('Unable to create local mock match records for discovery match.', error);
+            }
+          } else {
+            conversationId = getSwipeMatchConversationId(swipeResponse);
+            matchId = swipeResponse?.data.matchId ?? null;
+            await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversationsRoot });
             await queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
-          } catch (error) {
-            console.warn('Unable to create local mock match records for discovery match.', error);
+
+            if (!conversationId) {
+              console.warn('Discovery match response did not include a chat conversation id.', {
+                matchId,
+                response: swipeResponse,
+              });
+            }
           }
 
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
