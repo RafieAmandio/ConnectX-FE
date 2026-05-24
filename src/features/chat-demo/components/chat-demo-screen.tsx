@@ -92,6 +92,7 @@ type MessageTextPart =
 
 const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
 const TRAILING_URL_PUNCTUATION_PATTERN = /[),.!?:;]+$/;
+const COMPOSER_INPUT_MAX_HEIGHT = 92;
 
 function normalizeMessageUrl(value: string) {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
@@ -843,15 +844,23 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               )}
             </Pressable>
 
-            <View className="min-h-11 flex-1 rounded-full border border-[#444240] bg-[#2E2C2B] px-4 py-2">
+            <View
+              className="min-h-11 flex-1 justify-center rounded-[24px] border border-[#444240] bg-[#2E2C2B] px-4 py-2"
+              style={{ maxHeight: COMPOSER_INPUT_MAX_HEIGHT + 16 }}>
               <TextInput
                 className="font-body text-[15px] text-white"
                 multiline
                 onChangeText={setDraftMessage}
                 placeholder="Type a message..."
                 placeholderTextColor="#7D7974"
+                scrollEnabled
                 showSoftInputOnFocus
-                style={{ maxHeight: 96, padding: 0 }}
+                style={{
+                  maxHeight: COMPOSER_INPUT_MAX_HEIGHT,
+                  minHeight: 24,
+                  padding: 0,
+                  textAlignVertical: 'top',
+                }}
                 value={draftMessage}
               />
             </View>
