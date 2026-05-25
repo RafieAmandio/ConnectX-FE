@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { supabaseChatRepository } from '@features/chat/data/supabase/SupabaseChatRepository';
 import { setAppliedDiscoveryMode } from '@features/home/services/applied-discovery-mode-store';
@@ -110,13 +111,15 @@ function isExternalOAuthMethod(method?: AuthSession['method'] | null) {
   return method === 'google' || method === 'linkedin';
 }
 
-function resetDiscoveryContextForAuthBoundary() {
+function resetDiscoveryContextForAuthBoundary(clearQueryCache?: () => void) {
   setAppliedDiscoveryMode(null);
   clearOnboardingDiscoveryPreference();
+  clearQueryCache?.();
 }
 
 export function AuthProvider({ children }: React.PropsWithChildren) {
   const [isHydrated, setIsHydrated] = React.useState(false);
+  const queryClient = useQueryClient();
   const [isChatEnabled, setIsChatEnabled] = React.useState(false);
   const [shouldShowWelcomeLaunchSplash, setShouldShowWelcomeLaunchSplash] =
     React.useState(false);
@@ -199,7 +202,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const signOut = React.useCallback(async () => {
     const shouldSignOutGoogle = session?.method === 'google';
 
-    resetDiscoveryContextForAuthBoundary();
+    resetDiscoveryContextForAuthBoundary(() => queryClient.clear());
     await clearPersistedAuth();
 
     const cleanupResults = await Promise.allSettled([
@@ -221,7 +224,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     setShouldShowWelcomeLaunchSplash(false);
     setAuthPhase('signed_out');
     setSession(null);
-  }, [session?.method]);
+  }, [queryClient, session?.method]);
 
   const dismissWelcomeLaunchSplash = React.useCallback(() => {
     setShouldShowWelcomeLaunchSplash(false);
@@ -513,12 +516,12 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const login = React.useCallback(
     async (payload: LoginPayload) => {
       const result = await loginWithApi(payload);
-      resetDiscoveryContextForAuthBoundary();
+      resetDiscoveryContextForAuthBoundary(() => queryClient.clear());
       setSession(result.session);
       setAuthPhase(result.session.authPhase);
       return result;
     },
-    []
+    [queryClient]
   );
 
   const signInWithGoogle = React.useCallback(async (payload?: { fcmToken?: string | null }) => {
@@ -534,23 +537,23 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     });
     console.log('[auth:google] API login result', result);
 
-    resetDiscoveryContextForAuthBoundary();
+    resetDiscoveryContextForAuthBoundary(() => queryClient.clear());
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
 
     return result;
-  }, []);
+  }, [queryClient]);
 
   const bootstrapLinkedInCallback = React.useCallback(
     async (payload: Parameters<typeof bootstrapLinkedInAuthSession>[0]) => {
       const result = await bootstrapLinkedInAuthSession(payload);
-      resetDiscoveryContextForAuthBoundary();
+      resetDiscoveryContextForAuthBoundary(() => queryClient.clear());
       setSession(result.session);
       setAuthPhase(result.session.authPhase);
 
       return result;
     },
-    []
+    [queryClient]
   );
 
   const signInWithLinkedIn = React.useCallback(async (payload?: { fcmToken?: string | null }) => {
@@ -562,12 +565,12 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const register = React.useCallback(
     async (payload: RegisterPayload) => {
       const result = await registerWithApi(payload);
-      resetDiscoveryContextForAuthBoundary();
+      resetDiscoveryContextForAuthBoundary(() => queryClient.clear());
       setSession(result.session);
       setAuthPhase(result.session.authPhase);
       return result;
     },
-    []
+    [queryClient]
   );
 
   const sendEmailOtp = React.useCallback(async () => {
@@ -622,10 +625,11 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const verifyLoginOtp = React.useCallback(async (payload: LoginOtpVerifyPayload) => {
     const result = await verifyLoginOtpRequest(payload);
     setAppliedDiscoveryMode(null);
+    queryClient.clear();
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
     return result;
-  }, []);
+  }, [queryClient]);
 
   const verifyWhatsappOtp = React.useCallback(async (payload: VerifyWhatsappPayload) => {
     const result = await verifyWhatsappOtpRequest(payload);
@@ -636,10 +640,10 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
   const enterWithDevBypass = React.useCallback(async () => {
     const nextSession = await enterWithDevBypassSession();
-    resetDiscoveryContextForAuthBoundary();
+    resetDiscoveryContextForAuthBoundary(() => queryClient.clear());
     setSession(nextSession);
     setAuthPhase(nextSession.authPhase);
-  }, []);
+  }, [queryClient]);
 
   const value = React.useMemo<AuthContextValue>(
     () => ({
