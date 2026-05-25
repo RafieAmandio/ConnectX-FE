@@ -174,6 +174,24 @@ function getBadgeIcon(icon?: string): keyof typeof Ionicons.glyphMap {
   }
 }
 
+function formatDistanceKm(distanceKm: number) {
+  const roundedDistance = Math.max(0, distanceKm);
+
+  if (roundedDistance >= 10000) {
+    return `${Number((roundedDistance / 1000).toFixed(1))}k km`;
+  }
+
+  if (roundedDistance >= 1000) {
+    return `${Math.round(roundedDistance).toLocaleString('en-US')} km`;
+  }
+
+  if (roundedDistance >= 100) {
+    return `${Math.round(roundedDistance)} km`;
+  }
+
+  return `${Number(roundedDistance.toFixed(1))} km`;
+}
+
 function getStartupIndustryLabels(industry?: DiscoveryStartupCard['industry']) {
   if (!industry) {
     return [];
@@ -797,12 +815,17 @@ function MatchScoreBadge({ label, score }: { label?: string; score: number }) {
 function StartupRoleChip({ title }: { title: string }) {
   return (
     <View
-      className="rounded-full border px-3 py-1.5"
+      className="max-w-full rounded-full border px-3 py-1.5"
       style={{
         backgroundColor: '#2A2117',
         borderColor: 'rgba(255, 154, 62, 0.35)',
       }}>
-      <AppText className="text-[12px]" style={{ color: '#FF9A3E' }} variant="bodyStrong">
+      <AppText
+        className="text-[12px]"
+        ellipsizeMode="tail"
+        numberOfLines={1}
+        style={{ color: '#FF9A3E' }}
+        variant="bodyStrong">
         {title}
       </AppText>
     </View>
@@ -1023,14 +1046,21 @@ function ProfileCardContent({
                   ) : null}
                 </View>
                 {card.location ? (
-                  <View className="flex-row items-center gap-1.5">
+                  <View className="min-w-0 flex-row items-center gap-1.5">
                     <Ionicons color="#98A2B3" name="location-outline" size={16} />
-                    <AppText className="text-[14px]" tone="muted">
+                    <AppText
+                      className="min-w-0 flex-1 text-[14px]"
+                      ellipsizeMode="tail"
+                      numberOfLines={1}
+                      tone="muted">
                       {card.location.display}
                     </AppText>
                     {typeof card.location.distanceKm === 'number' ? (
-                      <AppText className="text-[14px]" tone="signal">
-                        • {card.location.distanceKm} km
+                      <AppText
+                        className="shrink-0 text-[14px]"
+                        numberOfLines={1}
+                        tone="signal">
+                        • {formatDistanceKm(card.location.distanceKm)}
                       </AppText>
                     ) : null}
                   </View>
@@ -1283,9 +1313,13 @@ function StartupCardContent({
                 </View>
               ) : null}
             </View>
-            <View className="flex-row items-center gap-1">
+            <View className="min-w-0 flex-row items-center gap-1">
               <Ionicons color="#98A2B3" name="people-outline" size={14} />
-              <AppText className="text-[13px]" tone="muted">
+              <AppText
+                className="min-w-0 flex-1 text-[13px]"
+                ellipsizeMode="tail"
+                numberOfLines={1}
+                tone="muted">
                 {card.team?.display ?? ''}
               </AppText>
             </View>
@@ -1319,7 +1353,7 @@ function StartupCardContent({
               borderColor: 'rgba(255, 190, 61, 0.28)',
             }}>
             <SectionLabel icon="sparkles-outline" title="Looking For" />
-            <AppText className="text-[16px] leading-6">
+            <AppText className="text-[16px] leading-6" numberOfLines={4}>
               {card.lookingFor.join(' & ')}
             </AppText>
           </View>
