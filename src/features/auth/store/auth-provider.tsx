@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { supabaseChatRepository } from '@features/chat/data/supabase/SupabaseChatRepository';
 import { setAppliedDiscoveryMode } from '@features/home/services/applied-discovery-mode-store';
@@ -115,6 +115,17 @@ function resetDiscoveryContextForAuthBoundary(clearQueryCache?: () => void) {
   setAppliedDiscoveryMode(null);
   clearOnboardingDiscoveryPreference();
   clearQueryCache?.();
+}
+
+async function invalidateCapabilityScopedQueries(queryClient: QueryClient) {
+  queryClient.removeQueries({ queryKey: ['discovery'] });
+
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['profile', 'me'] }),
+    queryClient.invalidateQueries({ queryKey: ['team'] }),
+    queryClient.invalidateQueries({ queryKey: ['matches'] }),
+    queryClient.invalidateQueries({ queryKey: ['chat-demo'] }),
+  ]);
 }
 
 export function AuthProvider({ children }: React.PropsWithChildren) {
@@ -274,9 +285,10 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     const resolvedSession = await refreshBackendAuthSession(nextSession);
 
     await replaceStoredSession(resolvedSession);
+    await invalidateCapabilityScopedQueries(queryClient);
     setSession(resolvedSession);
     setAuthPhase(resolvedSession.authPhase);
-  }, [refreshBackendAuthSession, session]);
+  }, [queryClient, refreshBackendAuthSession, session]);
 
   const completeOnboarding = React.useCallback(async () => {
     if (!session) {
@@ -301,9 +313,10 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     const resolvedSession = await refreshBackendAuthSession(nextSession);
 
     await replaceStoredSession(resolvedSession);
+    await invalidateCapabilityScopedQueries(queryClient);
     setSession(resolvedSession);
     setAuthPhase(resolvedSession.authPhase);
-  }, [refreshBackendAuthSession, session]);
+  }, [queryClient, refreshBackendAuthSession, session]);
 
   const refreshSession = React.useCallback(async () => {
     const currentSession = sessionRef.current;

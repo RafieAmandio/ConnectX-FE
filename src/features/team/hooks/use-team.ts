@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
 import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
@@ -23,6 +23,15 @@ export const teamQueryKeys = {
   invitationOptions: ['team', 'invitation-options', 'startup'] as const,
 };
 
+async function invalidateTeamDependentQueries(queryClient: QueryClient) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: teamQueryKeys.overviewRoot }),
+    queryClient.invalidateQueries({ queryKey: teamQueryKeys.invitationsRoot }),
+    queryClient.invalidateQueries({ queryKey: ['discovery'] }),
+    queryClient.invalidateQueries({ queryKey: ['matches'] }),
+  ]);
+}
+
 export function useTeamOverview() {
   const viewerContext = useViewerContext();
 
@@ -38,10 +47,7 @@ export function useCreateStartupInvitation() {
   return useMutation({
     mutationFn: createStartupInvitation,
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: teamQueryKeys.overviewRoot }),
-        queryClient.invalidateQueries({ queryKey: teamQueryKeys.invitationsRoot }),
-      ]);
+      await invalidateTeamDependentQueries(queryClient);
     },
   });
 }
@@ -74,10 +80,7 @@ export function useRespondToStartupInvitation() {
       payload: RespondToStartupInvitationRequest;
     }) => respondToStartupInvitation(invitationId, payload),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: teamQueryKeys.overviewRoot }),
-        queryClient.invalidateQueries({ queryKey: teamQueryKeys.invitationsRoot }),
-      ]);
+      await invalidateTeamDependentQueries(queryClient);
     },
   });
 }
@@ -88,10 +91,7 @@ export function useRevokeStartupInvitation() {
   return useMutation({
     mutationFn: revokeStartupInvitation,
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: teamQueryKeys.overviewRoot }),
-        queryClient.invalidateQueries({ queryKey: teamQueryKeys.invitationsRoot }),
-      ]);
+      await invalidateTeamDependentQueries(queryClient);
     },
   });
 }
@@ -110,7 +110,7 @@ export function useUpdateTeamMember() {
       startupId: string;
     }) => updateTeamMember(startupId, memberId, payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: teamQueryKeys.overviewRoot });
+      await invalidateTeamDependentQueries(queryClient);
     },
   });
 }
@@ -122,7 +122,7 @@ export function useRemoveTeamMember() {
     mutationFn: ({ memberId, startupId }: { memberId: string; startupId: string }) =>
       removeTeamMember(startupId, memberId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: teamQueryKeys.overviewRoot });
+      await invalidateTeamDependentQueries(queryClient);
     },
   });
 }

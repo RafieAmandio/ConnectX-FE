@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { createApiQueryOptions } from '@shared/services/api';
 
@@ -23,6 +23,16 @@ export const profileQueryKeys = {
   me: ['profile', 'me'] as const,
   options: ['profile', 'options'] as const,
 };
+
+async function invalidateAccountStatusQueries(queryClient: QueryClient) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: profileQueryKeys.me }),
+    queryClient.invalidateQueries({ queryKey: ['discovery'] }),
+    queryClient.invalidateQueries({ queryKey: ['matches'] }),
+    queryClient.invalidateQueries({ queryKey: ['team'] }),
+    queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  ]);
+}
 
 function mergeProfileResponse(
   baseResponse: MyProfileResponse,
@@ -100,7 +110,7 @@ export function usePauseMyAccount() {
   return useMutation({
     mutationFn: pauseMyAccount,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+      await invalidateAccountStatusQueries(queryClient);
     },
   });
 }
@@ -111,7 +121,7 @@ export function useActivateMyAccount() {
   return useMutation({
     mutationFn: activateMyAccount,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+      await invalidateAccountStatusQueries(queryClient);
     },
   });
 }
@@ -122,7 +132,7 @@ export function useRequestMyAccountDeletion() {
   return useMutation({
     mutationFn: requestMyAccountDeletion,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+      await invalidateAccountStatusQueries(queryClient);
     },
   });
 }
