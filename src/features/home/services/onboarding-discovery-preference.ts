@@ -110,6 +110,14 @@ export function saveOnboardingDiscoveryPreference(answers: Record<string, unknow
   }
 }
 
+export function clearOnboardingDiscoveryPreference() {
+  try {
+    localStorage.removeItem(ONBOARDING_DISCOVERY_PREFERENCE_KEY);
+  } catch (error) {
+    console.warn('[onboarding_discovery_preference] clear failed', error);
+  }
+}
+
 export function loadOnboardingDiscoveryPreference(): OnboardingDiscoveryPreference | null {
   try {
     const rawPreference = localStorage.getItem(ONBOARDING_DISCOVERY_PREFERENCE_KEY);

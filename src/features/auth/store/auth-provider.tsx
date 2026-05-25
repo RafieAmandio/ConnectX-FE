@@ -2,6 +2,8 @@ import React from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { supabaseChatRepository } from '@features/chat/data/supabase/SupabaseChatRepository';
+import { setAppliedDiscoveryMode } from '@features/home/services/applied-discovery-mode-store';
+import { clearOnboardingDiscoveryPreference } from '@features/home/services/onboarding-discovery-preference';
 import { configureApiClient } from '@shared/services/api';
 import { requireLinkedInRecovery } from '@shared/services/linkedin-recovery-store';
 import {
@@ -108,6 +110,11 @@ function isExternalOAuthMethod(method?: AuthSession['method'] | null) {
   return method === 'google' || method === 'linkedin';
 }
 
+function resetDiscoveryContextForAuthBoundary() {
+  setAppliedDiscoveryMode(null);
+  clearOnboardingDiscoveryPreference();
+}
+
 export function AuthProvider({ children }: React.PropsWithChildren) {
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [isChatEnabled, setIsChatEnabled] = React.useState(false);
@@ -192,6 +199,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const signOut = React.useCallback(async () => {
     const shouldSignOutGoogle = session?.method === 'google';
 
+    resetDiscoveryContextForAuthBoundary();
     await clearPersistedAuth();
 
     const cleanupResults = await Promise.allSettled([
@@ -505,6 +513,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const login = React.useCallback(
     async (payload: LoginPayload) => {
       const result = await loginWithApi(payload);
+      resetDiscoveryContextForAuthBoundary();
       setSession(result.session);
       setAuthPhase(result.session.authPhase);
       return result;
@@ -525,6 +534,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
     });
     console.log('[auth:google] API login result', result);
 
+    resetDiscoveryContextForAuthBoundary();
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
 
@@ -534,6 +544,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const bootstrapLinkedInCallback = React.useCallback(
     async (payload: Parameters<typeof bootstrapLinkedInAuthSession>[0]) => {
       const result = await bootstrapLinkedInAuthSession(payload);
+      resetDiscoveryContextForAuthBoundary();
       setSession(result.session);
       setAuthPhase(result.session.authPhase);
 
@@ -551,6 +562,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const register = React.useCallback(
     async (payload: RegisterPayload) => {
       const result = await registerWithApi(payload);
+      resetDiscoveryContextForAuthBoundary();
       setSession(result.session);
       setAuthPhase(result.session.authPhase);
       return result;
@@ -609,6 +621,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
   const verifyLoginOtp = React.useCallback(async (payload: LoginOtpVerifyPayload) => {
     const result = await verifyLoginOtpRequest(payload);
+    setAppliedDiscoveryMode(null);
     setSession(result.session);
     setAuthPhase(result.session.authPhase);
     return result;
@@ -623,6 +636,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
   const enterWithDevBypass = React.useCallback(async () => {
     const nextSession = await enterWithDevBypassSession();
+    resetDiscoveryContextForAuthBoundary();
     setSession(nextSession);
     setAuthPhase(nextSession.authPhase);
   }, []);
