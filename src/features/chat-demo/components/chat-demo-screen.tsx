@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -12,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Linking,
   ListRenderItemInfo,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -22,6 +25,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, AppTopBar } from '@shared/components';
+import { buildApiUrl } from '@shared/services/api/config';
 
 import { ChatEmptyState } from '@features/chat/components/chat-empty-state';
 import {
@@ -96,6 +100,152 @@ const COMPOSER_INPUT_MAX_HEIGHT = 92;
 
 function normalizeMessageUrl(value: string) {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function normalizeMediaUrl(value: string | null | undefined) {
+  const trimmedValue = value?.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  if (/^(?:https?:|file:|content:|data:|blob:)/i.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  return buildApiUrl(trimmedValue);
+}
+
+function openMediaUrl(value: string | null | undefined) {
+  const mediaUrl = normalizeMediaUrl(value);
+
+  if (!mediaUrl) {
+    Alert.alert('Attachment unavailable', 'This attachment could not be opened.');
+    return;
+  }
+
+  void Linking.openURL(mediaUrl).catch(() => {
+    Alert.alert('Unable to open attachment', 'This attachment could not be opened.');
+  });
+}
+
+function getImageDownloadFileName(imageUrl: string) {
+  const cleanPath = imageUrl.split('?')[0]?.split('#')[0] ?? '';
+  const fileName = cleanPath.split('/').pop()?.trim();
+
+  if (fileName && /\.(?:jpe?g|png|gif|webp|heic|heif)$/i.test(fileName)) {
+    return fileName;
+  }
+
+  return `connectx-image-${Date.now()}.jpg`;
+}
+
+async function getSaveableImageUri(imageUrl: string) {
+  if (/^(?:file|content):/i.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  if (!/^https?:\/\//i.test(imageUrl)) {
+    throw new Error('This image format cannot be saved.');
+  }
+
+  if (!FileSystem.cacheDirectory) {
+    throw new Error('Image cache is unavailable.');
+  }
+
+  const destinationUri = `${FileSystem.cacheDirectory}${getImageDownloadFileName(imageUrl)}`;
+  const downloadedImage = await FileSystem.downloadAsync(imageUrl, destinationUri);
+
+  return downloadedImage.uri;
+}
+
+async function saveImageToLibrary(imageUrl: string | null) {
+  if (!imageUrl) {
+    throw new Error('This image is unavailable.');
+  }
+
+  const permission = await MediaLibrary.requestPermissionsAsync(true, ['photo']);
+
+  if (!permission.granted) {
+    throw new Error('Photo library permission is required to save images.');
+  }
+
+  const localUri = await getSaveableImageUri(imageUrl);
+
+  await MediaLibrary.saveToLibraryAsync(localUri);
+}
+
+function ImagePreviewModal({
+  imageUrl,
+  onClose,
+  visible,
+}: {
+  imageUrl: string | null;
+  onClose: () => void;
+  visible: boolean;
+}) {
+  const insets = useSafeAreaInsets();
+  const [isSaving, setSaving] = React.useState(false);
+  const handleSave = React.useCallback(async () => {
+    if (isSaving) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await saveImageToLibrary(imageUrl);
+      Alert.alert('Image saved', 'The image was saved to your photo library.');
+    } catch (error) {
+      Alert.alert(
+        'Unable to save image',
+        error instanceof Error ? error.message : 'This image could not be saved.'
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [imageUrl, isSaving]);
+
+  return (
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <View className="flex-1 bg-black">
+        <View
+          className="absolute right-4 z-10 flex-row gap-3"
+          style={{ top: Math.max(insets.top + 8, 20) }}>
+          <Pressable
+            accessibilityLabel="Save image"
+            accessibilityRole="button"
+            className="h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/25"
+            disabled={isSaving}
+            onPress={handleSave}>
+            {isSaving ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Ionicons color="#FFFFFF" name="download-outline" size={24} />
+            )}
+          </Pressable>
+
+          <Pressable
+            accessibilityLabel="Close image preview"
+            accessibilityRole="button"
+            className="h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/25"
+            onPress={onClose}>
+            <Ionicons color="#FFFFFF" name="close" size={26} />
+          </Pressable>
+        </View>
+
+        <Pressable className="flex-1 items-center justify-center" onPress={onClose}>
+          {imageUrl ? (
+            <Image
+              contentFit="contain"
+              source={{ uri: imageUrl }}
+              style={{ height: '100%', width: '100%' }}
+            />
+          ) : null}
+        </Pressable>
+      </View>
+    </Modal>
+  );
 }
 
 function splitMessageText(value: string): MessageTextPart[] {
@@ -370,8 +520,11 @@ export function ChatDemoListScreen() {
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isOutgoing = message.direction === 'outgoing';
-  const hasMediaUrl = Boolean(message.media?.url);
+  const mediaUrl = normalizeMediaUrl(message.media?.url);
+  const thumbnailUrl = normalizeMediaUrl(message.media?.thumbnailUrl);
+  const hasMediaUrl = Boolean(mediaUrl);
   const showBody = Boolean(message.body.trim());
+  const [isImagePreviewVisible, setImagePreviewVisible] = React.useState(false);
 
   return (
     <View className={isOutgoing ? 'items-end' : 'items-start'}>
@@ -382,13 +535,17 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] px-5 py-4'
         }>
         {message.type === 'image' && hasMediaUrl ? (
-          <View>
+          <Pressable
+            accessibilityLabel="Open image"
+            accessibilityRole="imagebutton"
+            className="active:opacity-80"
+            onPress={() => setImagePreviewVisible(true)}>
             <Image
               contentFit="cover"
-              source={{ uri: message.media?.url ?? undefined }}
+              source={{ uri: thumbnailUrl ?? mediaUrl ?? undefined }}
               style={{ borderRadius: 18, height: 220, width: 240 }}
             />
-          </View>
+          </Pressable>
         ) : null}
 
         {message.type === 'image' && !hasMediaUrl ? (
@@ -408,9 +565,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         {message.type !== 'image' && hasMediaUrl ? (
           <Pressable
             className="w-56 flex-row items-center gap-3 rounded-[18px] border border-white/10 px-4 py-3 active:opacity-80"
-            onPress={() => {
-              void Linking.openURL(message.media?.url ?? '');
-            }}>
+            onPress={() => openMediaUrl(message.media?.url)}>
             <Ionicons color={isOutgoing ? '#5C3D18' : '#F7B05B'} name="document-outline" size={22} />
             <AppText
               className={isOutgoing ? 'flex-1 text-[#201507]' : 'flex-1 text-[#F3F0EB]'}
@@ -443,6 +598,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           {` · ${formatMessageStatus(message)}`}
         </AppText>
       </View>
+      {message.type === 'image' ? (
+        <ImagePreviewModal
+          imageUrl={mediaUrl}
+          onClose={() => setImagePreviewVisible(false)}
+          visible={isImagePreviewVisible}
+        />
+      ) : null}
     </View>
   );
 }
