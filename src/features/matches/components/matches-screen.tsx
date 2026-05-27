@@ -331,7 +331,7 @@ export function MatchesScreen() {
                 <View className="flex-row items-center gap-3">
                   <Ionicons color="#FF9F3F" name="heart" size={24} />
                   <AppText className="text-[18px] text-[#F1F1F1]" variant="title">
-                    Your Connects
+                    Connection Request
                   </AppText>
                 </View>
 
@@ -395,7 +395,7 @@ export function MatchesScreen() {
                     <AppText className="text-[13px] text-[#D2B98D]">
                       {spotlightEndsAtLabel
                         ? `Active until ${spotlightEndsAtLabel}`
-                        : 'Boost your profile for 1 hour'}
+                        : 'Boost your profile for 12 hours'}
                     </AppText>
                   </View>
                 </View>
