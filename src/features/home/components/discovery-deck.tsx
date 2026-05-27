@@ -999,6 +999,8 @@ function ProfileCardContent({
   const highlightsTitle = card.sections?.highlights?.title?.trim() || undefined;
   const languageItems = normalizeStringList(card.sections?.languages?.items ?? card.languages);
   const certificationItems = card.certifications?.items ?? [];
+  const { width } = useWindowDimensions();
+  const isCompactHeader = width < 390;
 
   return (
     <ScrollView
@@ -1024,15 +1026,21 @@ function ProfileCardContent({
             className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
             style={{ backgroundColor: 'rgba(17, 19, 26, 0.52)' }}>
             <View className="flex-row items-end justify-between gap-3">
-              <View className="min-w-0 flex-1 gap-1">
-                <AppText className="text-[28px] leading-[34px]" numberOfLines={1} variant="hero">
+              <View className="min-w-0 flex-1 gap-1.5" style={{ flexShrink: 1 }}>
+                <AppText
+                  className="text-[28px] leading-[34px]"
+                  ellipsizeMode="tail"
+                  numberOfLines={isCompactHeader ? 2 : 1}
+                  style={{ flexShrink: 1 }}
+                  variant="hero">
                   {card.age ? `${card.name}, ${card.age}` : card.name}
                 </AppText>
-                <View className="flex-row items-center gap-2">
+                <View className="min-w-0 flex-row items-center gap-2">
                   <AppText
                     className="min-w-0 flex-shrink text-[15px] leading-tight"
+                    ellipsizeMode="tail"
                     numberOfLines={2}
-                    style={{ color: '#E4E7EC' }}>
+                    style={{ color: '#E4E7EC', flexShrink: 1 }}>
                     {card.headline}
                   </AppText>
                   {linkedinUrl ? (
@@ -1047,21 +1055,26 @@ function ProfileCardContent({
                   ) : null}
                 </View>
                 {card.location ? (
-                  <View className="min-w-0 flex-row items-center gap-1.5">
-                    <Ionicons color="#98A2B3" name="location-outline" size={16} />
-                    <AppText
-                      className="min-w-0 flex-1 text-[14px]"
-                      ellipsizeMode="tail"
-                      numberOfLines={1}
-                      tone="muted">
-                      {card.location.display}
-                    </AppText>
+                  <View className="min-w-0 flex-row flex-wrap items-center gap-x-2 gap-y-1">
+                    <View className="min-w-0 flex-row items-center gap-1.5" style={{ flexShrink: 1 }}>
+                      <Ionicons color="#98A2B3" name="location-outline" size={16} />
+                      <AppText
+                        className="min-w-0 text-[14px]"
+                        ellipsizeMode="tail"
+                        numberOfLines={1}
+                        style={{ flexShrink: 1, maxWidth: isCompactHeader ? 190 : 250 }}
+                        tone="muted">
+                        {card.location.display}
+                      </AppText>
+                    </View>
                     {typeof card.location.distanceKm === 'number' ? (
                       <AppText
-                        className="shrink-0 text-[14px]"
+                        className="text-[14px]"
+                        ellipsizeMode="tail"
                         numberOfLines={1}
+                        style={{ flexShrink: 0 }}
                         tone="signal">
-                        • {formatDistanceKm(card.location.distanceKm)}
+                        {formatDistanceKm(card.location.distanceKm)}
                       </AppText>
                     ) : null}
                   </View>
