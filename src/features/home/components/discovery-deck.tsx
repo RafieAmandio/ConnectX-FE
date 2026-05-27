@@ -1252,41 +1252,56 @@ function StartupCardContent({
       scrollEnabled={scrollEnabled}
       contentContainerStyle={{ paddingBottom: bottomInset }}>
       <View>
-        <View
-          className="overflow-hidden rounded-t-[24px] px-4 pb-5 pt-4"
-          style={{ backgroundColor: '#5A4226' }}>
-          <View className="items-end">
-            {card.badge ? (
-              <View
-                className="rounded-full border px-3 py-1"
-                style={{
-                  backgroundColor: '#7B5A30',
-                  borderColor: 'rgba(255, 190, 61, 0.35)',
-                }}>
-                <AppText className="text-[11px] uppercase" style={{ color: '#FFD06A' }} variant="label">
-                  {card.badge.label}
-                </AppText>
-              </View>
-            ) : null}
-          </View>
-
-          <View className="mt-3 items-center">
-            <StartupLogo card={card} />
-          </View>
-
-          <View className="mt-5 flex-row items-end justify-between gap-3">
-            <View className="min-w-0 flex-1 gap-1">
-              <AppText className="text-[30px] leading-[34px]" numberOfLines={2} variant="hero">
-                {card.name}
+        <View className="overflow-hidden" style={{ height: 260 }}>
+          {card.logoUrl ? (
+            <Image
+              key={card.id}
+              contentFit="cover"
+              source={{ uri: card.logoUrl }}
+              style={{ height: '100%', width: '100%' }}
+            />
+          ) : (
+            <View className="h-full w-full bg-surface-muted items-center justify-center">
+              <AppText className="text-[48px] font-bold" style={{ color: '#FF9A3E' }}>
+                {card.name
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((part) => part[0]?.toUpperCase() ?? '')
+                  .join('')}
               </AppText>
-              <View className="flex-row items-center gap-1.5">
-                <Ionicons color="#C7CCD4" name="briefcase-outline" size={15} />
-                <AppText className="min-w-0 flex-1 text-[14px]" numberOfLines={2} tone="muted">
-                  {card.founder?.title && card.founder?.name ? `${card.founder.title} by ${card.founder.name}` : card.founder?.name}
-                </AppText>
-              </View>
             </View>
-            {card.match ? <MatchScoreBadge label={card.match.label} score={card.match.score ?? 0} /> : null}
+          )}
+
+          {card.badge ? (
+            <View
+              className="absolute top-4 right-4 rounded-full border px-3 py-1"
+              style={{
+                backgroundColor: 'rgba(42, 33, 23, 0.85)',
+                borderColor: 'rgba(255, 154, 62, 0.4)',
+              }}>
+              <AppText className="text-[11px] uppercase font-bold" style={{ color: '#FF9A3E' }} variant="label">
+                {card.badge.label}
+              </AppText>
+            </View>
+          ) : null}
+
+          <View
+            className="absolute inset-x-0 bottom-0 px-4 pb-4 pt-10"
+            style={{ backgroundColor: 'rgba(17, 19, 26, 0.52)' }}>
+            <View className="flex-row items-end justify-between gap-3">
+              <View className="min-w-0 flex-1 gap-1">
+                <AppText className="text-[28px] leading-[34px]" numberOfLines={2} variant="hero">
+                  {card.name}
+                </AppText>
+                <View className="flex-row items-center gap-1.5">
+                  <Ionicons color="#E4E7EC" name="briefcase-outline" size={15} />
+                  <AppText className="min-w-0 flex-1 text-[14px]" numberOfLines={2} style={{ color: '#E4E7EC' }}>
+                    {card.founder?.title && card.founder?.name ? `${card.founder.title} by ${card.founder.name}` : card.founder?.name}
+                  </AppText>
+                </View>
+              </View>
+              {card.match ? <MatchScoreBadge label={card.match.label} score={card.match.score ?? 0} /> : null}
+            </View>
           </View>
         </View>
 
