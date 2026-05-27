@@ -7,9 +7,15 @@ type ChatEmptyStateProps = {
   description: string;
   onExplore: () => void;
   title: string;
+  exploreButtonLabelClassName?: string;
 };
 
-export function ChatEmptyState({ description, onExplore, title }: ChatEmptyStateProps) {
+export function ChatEmptyState({
+  description,
+  onExplore,
+  title,
+  exploreButtonLabelClassName,
+}: ChatEmptyStateProps) {
   return (
     <View className="flex-1 justify-center px-1 py-10">
       <View
@@ -34,6 +40,7 @@ export function ChatEmptyState({ description, onExplore, title }: ChatEmptyState
           <AppButton
             className="rounded-[18px] border bg-[#3A3128]"
             label="Explore more"
+            labelClassName={exploreButtonLabelClassName}
             onPress={onExplore}
             style={{ borderColor: 'rgba(255, 179, 94, 0.16)' }}
             variant="ghost"

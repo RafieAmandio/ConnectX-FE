@@ -29,6 +29,7 @@ export type AppButtonProps = Omit<PressableProps, 'children'> & {
   label: string;
   size?: keyof typeof sizeStyles;
   variant?: keyof typeof variantStyles;
+  labelClassName?: string;
 };
 
 export function AppButton({
@@ -37,6 +38,7 @@ export function AppButton({
   label,
   size = 'md',
   variant = 'primary',
+  labelClassName,
   ...props
 }: AppButtonProps) {
   return (
@@ -51,7 +53,10 @@ export function AppButton({
       )}
       {...props}>
       <View className="items-center gap-1">
-        <AppText tone={labelTone[variant]} variant="bodyStrong">
+        <AppText
+          className={labelClassName}
+          tone={labelClassName ? undefined : labelTone[variant]}
+          variant="bodyStrong">
           {label}
         </AppText>
         {detail ? (

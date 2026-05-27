@@ -396,7 +396,14 @@ function EmptyState({
   const description =
     'Messages will appear here when you get connects. Explore more profiles to start a conversation.';
 
-  return <ChatEmptyState description={description} onExplore={onExplore} title={title} />;
+  return (
+    <ChatEmptyState
+      description={description}
+      exploreButtonLabelClassName="text-white"
+      onExplore={onExplore}
+      title={title}
+    />
+  );
 }
 
 export function ChatDemoListScreen() {
