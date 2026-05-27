@@ -44,6 +44,7 @@ import {
   useSwipeAction,
 } from '../hooks/use-discovery';
 import { useDiscoveryOnboardingRequiredHandler } from '../hooks/use-discovery-onboarding-required-handler';
+import { useViewerContext } from '../hooks/use-viewer-context';
 import {
   mockDiscoveryCardsResponse,
   mockDiscoveryCardsResponsesByMode,
@@ -1721,6 +1722,7 @@ export function DiscoveryDeck() {
   const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
+  const viewerContext = useViewerContext();
 
   React.useEffect(() => {
     if (!hasDiscoveryQuerySettled(discoveryQuery)) {
@@ -2063,7 +2065,7 @@ export function DiscoveryDeck() {
         } else {
           swipeResponse = await swipeAction.mutateAsync({
             cardId: activeCard.id,
-            payload: { action },
+            payload: { action, viewer_context: viewerContext },
             targetId: getCardActionTargetId(activeCard),
           });
 
@@ -2161,6 +2163,7 @@ export function DiscoveryDeck() {
       queryClient,
       resetCardPosition,
       swipeAction,
+      viewerContext,
     ]
   );
 

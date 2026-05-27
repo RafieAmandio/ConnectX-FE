@@ -1095,9 +1095,12 @@ POST /api/v1/discovery/cards/:targetId/action
 
 ```json
 {
-  "action": "like"
+  "action": "like",
+  "viewer_context": "talent"
 }
 ```
+
+`targetId` is provided by the path; do not send `to_user_id` in the request body.
 
 Allowed values:
 - `like`

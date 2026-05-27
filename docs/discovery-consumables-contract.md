@@ -25,9 +25,12 @@ read from backend responses.
 
 ```json
 {
-  "action": "like"
+  "action": "like",
+  "viewer_context": "talent"
 }
 ```
+
+`targetId` is provided by the path; do not send `to_user_id` in the request body.
 
 Supported values:
 - `like`

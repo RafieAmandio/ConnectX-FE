@@ -7,6 +7,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSwipeAction } from '@features/home/hooks/use-discovery';
+import { useViewerContext } from '@features/home/hooks/use-viewer-context';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
@@ -131,6 +132,7 @@ export function WhoLikedMeScreen() {
   const [presentedPremiumError, setPresentedPremiumError] = React.useState(false);
   const whoLikedMeQuery = useWhoLikedMeList({ limit: PAGE_LIMIT, page });
   const swipeAction = useSwipeAction();
+  const viewerContext = useViewerContext();
 
   const data = whoLikedMeQuery.data?.data;
   const hasMore = Boolean(data?.hasMore);
@@ -205,7 +207,7 @@ export function WhoLikedMeScreen() {
       try {
         await swipeAction.mutateAsync({
           cardId: item.user.userId,
-          payload: { action },
+          payload: { action, viewer_context: viewerContext },
           targetId: item.user.userId,
         });
 
@@ -224,7 +226,7 @@ export function WhoLikedMeScreen() {
         });
       }
     },
-    [queryClient, swipeAction]
+    [queryClient, swipeAction, viewerContext]
   );
 
   const handleLoadMore = React.useCallback(() => {

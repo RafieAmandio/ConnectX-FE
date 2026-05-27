@@ -328,6 +328,7 @@ export type DiscoveryConsumablesSnapshot = {
 
 export type SwipeActionRequest = {
   action: 'like' | 'pass' | 'super_like';
+  viewer_context: 'talent' | 'startup';
 };
 
 export type SwipeActionSuccessResponse = {
