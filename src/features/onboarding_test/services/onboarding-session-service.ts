@@ -24,7 +24,18 @@ const ONBOARDING_API = {
   SESSION: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}`,
   SESSIONS: '/api/v1/onboarding/sessions',
   SUBMIT_ANSWER: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/answer`,
+  UPLOAD: '/api/v1/upload',
 } as const;
+
+export type OnboardingUploadAsset = {
+  fileName?: string | null;
+  mimeType?: string | null;
+  uri: string;
+};
+
+export type OnboardingUploadedFile = {
+  url: string;
+};
 
 function localeHeaders(locale: OnboardingLocale) {
   return {
@@ -115,11 +126,82 @@ function normalizeAnswerValue(
         currency: value.currency.trim(),
       };
     }
+    case 'file_upload':
+      return normalizeStringValue(value);
     case 'url':
       return normalizeUrlValue(question, value);
     default:
       return normalizeStringValue(value);
   }
+}
+
+function extractUploadFileName(asset: OnboardingUploadAsset) {
+  const fileName = asset.fileName?.trim();
+
+  if (fileName) {
+    return fileName;
+  }
+
+  const uriFileName = asset.uri.split('/').pop()?.split('?')[0]?.trim();
+
+  return uriFileName || `onboarding-upload-${Date.now()}.jpg`;
+}
+
+function getRecordProperty(value: unknown, key: string) {
+  if (!value || typeof value !== 'object' || !(key in value)) {
+    return undefined;
+  }
+
+  return (value as Record<string, unknown>)[key];
+}
+
+function getUploadUrl(payload: unknown): string | null {
+  const directUrl = getRecordProperty(payload, 'url');
+
+  if (typeof directUrl === 'string' && directUrl.trim()) {
+    return directUrl.trim();
+  }
+
+  const data = getRecordProperty(payload, 'data');
+  const dataUrl = getRecordProperty(data, 'url');
+
+  if (typeof dataUrl === 'string' && dataUrl.trim()) {
+    return dataUrl.trim();
+  }
+
+  const media = getRecordProperty(payload, 'media');
+  const mediaUrl = getRecordProperty(media, 'url');
+
+  if (typeof mediaUrl === 'string' && mediaUrl.trim()) {
+    return mediaUrl.trim();
+  }
+
+  return null;
+}
+
+export async function uploadOnboardingFile(asset: OnboardingUploadAsset) {
+  const formData = new FormData();
+
+  formData.append(
+    'file',
+    {
+      name: extractUploadFileName(asset),
+      type: asset.mimeType?.trim() || 'image/jpeg',
+      uri: asset.uri,
+    } as any
+  );
+
+  const response = await apiFetch<unknown>(ONBOARDING_API.UPLOAD, {
+    body: formData,
+    method: 'POST',
+  });
+  const url = getUploadUrl(response);
+
+  if (!url) {
+    throw new Error('Upload succeeded but did not return a file URL.');
+  }
+
+  return { url } satisfies OnboardingUploadedFile;
 }
 
 function getQuestionValue(

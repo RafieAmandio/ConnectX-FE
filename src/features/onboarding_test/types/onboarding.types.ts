@@ -53,6 +53,7 @@ export type OnboardingQuestionType =
   | 'number'
   | 'date'
   | 'email'
+  | 'file_upload'
   | 'url'
   | 'phone'
   | 'single_select_card'

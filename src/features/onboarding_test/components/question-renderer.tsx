@@ -1,4 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -22,7 +24,10 @@ import Animated, {
 import { AppCard, AppInput, AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
 
-import { searchOnboardingOptions } from '../services/onboarding-session-service';
+import {
+  searchOnboardingOptions,
+  uploadOnboardingFile,
+} from '../services/onboarding-session-service';
 import type {
   CurrencyAmountValue,
   OnboardingAnswerValue,
@@ -905,6 +910,135 @@ function TextLikeQuestion({
           multiline && 'min-h-[140px] py-4'
         )}
       />
+    </View>
+  );
+}
+
+function FileUploadQuestion({
+  error,
+  onChange,
+  question,
+  value,
+}: QuestionRendererProps) {
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const currentUrl = getStringValue(value).trim();
+  const displayError = uploadError ?? error;
+
+  const handlePickFile = React.useCallback(async () => {
+    if (isUploading) {
+      return;
+    }
+
+    setUploadError(null);
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: false,
+      allowsMultipleSelection: false,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      selectionLimit: 1,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+
+    if (!asset?.uri) {
+      setUploadError('The selected image could not be read.');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const uploadedFile = await uploadOnboardingFile({
+        fileName: asset.fileName ?? null,
+        mimeType: asset.mimeType ?? null,
+        uri: asset.uri,
+      });
+
+      onChange(uploadedFile.url);
+    } catch (uploadError) {
+      setUploadError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : 'Unable to upload this image right now.'
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }, [isUploading, onChange]);
+
+  return (
+    <View className="gap-3">
+      <QuestionHeader error={displayError ?? undefined} question={question} />
+      <Pressable
+        accessibilityRole="button"
+        className={cn(
+          'min-h-[148px] overflow-hidden rounded-2xl border p-4',
+          FIELD_CLASS,
+          displayError ? 'border-red-400' : currentUrl ? 'border-[#FF9A3E]' : FIELD_BORDER
+        )}
+        disabled={isUploading}
+        onPress={handlePickFile}>
+        {currentUrl ? (
+          <View className="gap-3">
+            <View className="h-24 w-24 overflow-hidden rounded-2xl bg-[#1F1F1F]">
+              <Image
+                contentFit="cover"
+                source={{ uri: currentUrl }}
+                style={{ height: '100%', width: '100%' }}
+              />
+            </View>
+            <View className="gap-1">
+              <AppText variant="bodyStrong">Logo selected</AppText>
+              <AppText numberOfLines={1} selectable tone="muted">
+                {currentUrl}
+              </AppText>
+            </View>
+          </View>
+        ) : (
+          <View className="flex-1 items-center justify-center gap-3 py-4">
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-[#1F1712]">
+              <Ionicons color="#FF9A3E" name="image-outline" size={24} />
+            </View>
+            <View className="items-center gap-1">
+              <AppText align="center" variant="bodyStrong">
+                Upload logo
+              </AppText>
+              <AppText align="center" tone="muted">
+                Choose an image from your library
+              </AppText>
+            </View>
+          </View>
+        )}
+
+        <View className="mt-4 flex-row items-center justify-between gap-3">
+          <View className="flex-row items-center gap-2">
+            {isUploading ? <ActivityIndicator color="#FF9A3E" size="small" /> : null}
+            <AppText tone="muted">
+              {isUploading ? 'Uploading...' : currentUrl ? 'Tap to replace' : 'JPG or PNG'}
+            </AppText>
+          </View>
+
+          {currentUrl && !isUploading ? (
+            <Pressable
+              accessibilityRole="button"
+              className="rounded-full border border-[#383838] px-3 py-1"
+              onPress={(event) => {
+                event.stopPropagation();
+                setUploadError(null);
+                onChange('');
+              }}>
+              <AppText tone="muted" variant="label">
+                Remove
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -3079,6 +3213,15 @@ export function QuestionRenderer({
           onChange={onChange}
           question={question}
           value={getStringValue(value)}
+        />
+      );
+    case 'file_upload':
+      return (
+        <FileUploadQuestion
+          error={error}
+          onChange={onChange}
+          question={question}
+          value={value}
         />
       );
     case 'url':
