@@ -368,7 +368,7 @@ export function MatchesScreen() {
                 style={{ backgroundColor: '#5B4720', borderColor: '#AD8528' }}>
                 <Ionicons color="#FFD33D" name="sparkles-outline" size={22} />
                 <AppText className="text-[18px] text-[#FFD33D]" variant="subtitle">
-                  View Connects
+                  View Connection Request
                 </AppText>
               </Pressable>
 

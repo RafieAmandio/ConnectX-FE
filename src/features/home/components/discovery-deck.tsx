@@ -1509,7 +1509,7 @@ function EmptyState({
 
       <View className="mt-5 items-center">
         <AppText align="center" className="text-[20px] leading-[26px]" variant="subtitle">
-          {isLoadingMore ? 'Finding more profiles' : 'No profiles match right now'}
+          {isLoadingMore ? 'Finding more profiles' : 'No more profiles right now.'}
         </AppText>
         <AppText align="center" className="mt-2 max-w-[280px] text-[14px] leading-5" tone="muted">
           {isLoadingMore
