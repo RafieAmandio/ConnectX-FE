@@ -87,6 +87,10 @@ export function isDiscoveryCardsMockEnabled() {
   return parseBooleanEnv(process.env.EXPO_PUBLIC_MOCK_DISCOVERY_CARDS) ?? false;
 }
 
+export function isMergeMockDiscoveryCardsEnabled() {
+  return parseBooleanEnv(process.env.EXPO_PUBLIC_MERGE_MOCK_DISCOVERY_CARDS) ?? false;
+}
+
 export const DISCOVERY_API = {
   CARDS: '/api/v1/discovery/cards',
   FILTER_OPTIONS: '/api/v1/discovery/filter-options',

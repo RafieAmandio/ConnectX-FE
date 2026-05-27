@@ -679,8 +679,15 @@ function createProfileCards(): DiscoveryCard[] {
 
 function createStartupCards(): DiscoveryCard[] {
   return startupCardBlueprints.map((card) => {
-    const industries = card.industries ?? [card.industryPrimary, card.industrySecondary].filter(Boolean);
+    const industries =
+      card.industries ??
+      [card.industryPrimary, card.industrySecondary].filter((industry): industry is string =>
+        Boolean(industry)
+      );
     const industryDisplay = industries.join(' / ');
+    const businessStageValue = card.journeyCurrentStage === 'pre_seed' || card.journeyCurrentStage === 'seed'
+      ? 'scale'
+      : card.journeyCurrentStage;
 
     return {
       entityType: 'startup',
@@ -691,6 +698,24 @@ function createStartupCards(): DiscoveryCard[] {
       badge: {
         label: card.badgeLabel,
       },
+      businessStage: {
+        value: businessStageValue,
+        label: card.badgeLabel,
+      },
+      description: {
+        intro: card.summary,
+        problem: `${card.name} is tackling fragmented workflows for ${industryDisplay.toLowerCase()} teams.`,
+        solution: card.summary,
+        targetUsers: card.lookingFor.join(' and '),
+      },
+      interests: industries.map((industry) => ({
+        id: `${card.startupId}_${industry.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
+        name: industry,
+      })),
+      workArrangement: [
+        { id: 'remote', label: 'Remote' },
+        { id: 'hybrid', label: 'Hybrid' },
+      ],
       founder: {
         name: card.founderName,
         title: card.founderTitle,
@@ -714,6 +739,32 @@ function createStartupCards(): DiscoveryCard[] {
         title,
       })),
       lookingFor: [...card.lookingFor],
+      premium: {
+        locked: true,
+        unlockMessage: 'Upgrade to premium to see all information.',
+        fields: {
+          traction: {
+            locked: true,
+            label: 'Traction',
+            preview: 'User metrics and growth details',
+          },
+          links: {
+            locked: true,
+            label: 'Website & social links',
+            preview: 'Website, LinkedIn, X, Instagram, pitch deck',
+          },
+          teamComposition: {
+            locked: true,
+            label: 'Team composition',
+            preview: 'Founder setup and joined team details',
+          },
+          compensation: {
+            locked: true,
+            label: 'Equity & salary',
+            preview: 'Compensation expectations and offer details',
+          },
+        },
+      },
       teamStage: {
         teamSize: card.memberCount,
         stage: card.badgeLabel,
@@ -726,6 +777,134 @@ function createStartupCards(): DiscoveryCard[] {
       },
     };
   });
+}
+
+function createJoiningStartupPreviewCard(): DiscoveryCard {
+  return {
+    entityType: 'startup',
+    id: 'startup_card_joining_preview_nusantara_ai',
+    startupId: 'startup_nusantara_ai',
+    name: 'Nusantara AI',
+    logoUrl: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=1200&auto=format&fit=crop&q=80',
+    badge: {
+      id: 'stage_mvp',
+      label: 'MVP',
+    },
+    businessStage: {
+      value: 'mvp',
+      label: 'MVP',
+    },
+    description: {
+      intro: 'Building an AI operations copilot for Indonesian SME exporters.',
+      problem:
+        'Small export teams still manage customs documents, buyer updates, and shipment exceptions across spreadsheets, WhatsApp, and disconnected portals.',
+      solution:
+        'Nusantara AI reads trade documents, flags missing requirements, drafts buyer updates, and gives teams a live control room for every shipment.',
+      targetUsers: 'SME exporters, freight coordinators, and founder-led operations teams.',
+    },
+    industry: {
+      primary: 'AI',
+      secondary: 'Logistics',
+      display: 'AI / Logistics / Export Ops',
+    },
+    interests: [
+      { id: 'ind_ai', name: 'AI' },
+      { id: 'ind_logistics', name: 'Logistics' },
+      { id: 'ind_b2b_saas', name: 'B2B SaaS' },
+      { id: 'ind_export_ops', name: 'Export Ops' },
+    ],
+    workArrangement: [
+      { id: 'hybrid', label: 'Hybrid' },
+      { id: 'remote', label: 'Remote' },
+    ],
+    founder: {
+      name: 'Raka Pratama',
+      title: 'Founder',
+    },
+    match: {
+      score: 98,
+      label: 'Top Startup Fit',
+    },
+    team: {
+      memberCount: 3,
+      display: '3 members',
+    },
+    summary: 'Building an AI operations copilot for Indonesian SME exporters.',
+    openRoles: [
+      { id: 'startup_nusantara_ai_founding_engineer', title: 'Founding Engineer' },
+      { id: 'startup_nusantara_ai_growth_operator', title: 'Growth Operator' },
+      { id: 'startup_nusantara_ai_customer_success', title: 'Customer Success Lead' },
+    ],
+    lookingFor: ['Founding teammates', 'Operator', 'Engineer'],
+    premium: {
+      locked: false,
+      unlockMessage: 'Upgrade to premium to see all information.',
+      fields: {
+        traction: {
+          locked: false,
+          label: 'Traction',
+          value: {
+            stage: 'mvp',
+            items: [
+              { id: 'q_user_count', label: 'Users', value: 420 },
+              { id: 'q_mau', label: 'Monthly active users', value: 180 },
+              { id: 'q_mvp_revenue', label: 'Revenue', value: '$1,200 MRR' },
+              { id: 'q_growth_rate', label: 'Growth rate', value: '18% MoM' },
+            ],
+          },
+        },
+        links: {
+          locked: false,
+          label: 'Website & social links',
+          value: [
+            { label: 'Website', url: 'https://nusantara-ai.example.com' },
+            { label: 'LinkedIn', url: 'https://linkedin.com/company/nusantara-ai' },
+            { label: 'X', url: 'https://x.com/nusantara_ai' },
+            { label: 'Pitch deck', url: 'https://pitch.com/nusantara-ai' },
+          ],
+        },
+        teamComposition: {
+          locked: false,
+          label: 'Team composition',
+          value: {
+            founderCount: 'two',
+            founderCountLabel: '2 Founders',
+            coveredRoles: ['Product', 'Operations'],
+            hasTeam: true,
+            teamSize: 'small',
+            teamRoles: ['Engineering', 'Operations', 'Customer Success'],
+            joinedMemberCount: 3,
+          },
+        },
+        compensation: {
+          locked: false,
+          label: 'Equity & salary',
+          value: {
+            equityAvailable: true,
+            equityRange: '1% - 4%',
+            salaryAvailable: true,
+            salaryRange: 'Rp 10M - 18M monthly after seed',
+            notes: 'Flexible for founding teammates; equity-heavy until the next round.',
+          },
+        },
+      },
+    },
+    teamStage: {
+      teamSize: 3,
+      stage: 'MVP',
+      industry: 'AI / Logistics / Export Ops',
+      hiringCount: 3,
+    },
+    journey: {
+      currentStage: 'mvp',
+      stages: [
+        { id: 'idea', label: 'Idea', state: 'completed' },
+        { id: 'mvp', label: 'MVP', state: 'current' },
+        { id: 'pre_seed', label: 'Pre-Seed', state: 'upcoming' },
+        { id: 'seed', label: 'Seed', state: 'upcoming' },
+      ],
+    },
+  };
 }
 
 function createCardsResponse(items: DiscoveryCard[]): DiscoveryCardsResponse {
@@ -744,7 +923,7 @@ export const mockDiscoveryCardsResponsesByMode: Record<DiscoveryMode, DiscoveryC
   finding_cofounder: createCardsResponse(createProfileCards()),
   building_team: createCardsResponse(createProfileCards()),
   explore_startups: createCardsResponse(createStartupCards()),
-  joining_startups: createCardsResponse(createStartupCards()),
+  joining_startups: createCardsResponse([createJoiningStartupPreviewCard(), ...createStartupCards()]),
 };
 
 export const mockDiscoveryCardsResponse = mockDiscoveryCardsResponsesByMode.joining_startups;

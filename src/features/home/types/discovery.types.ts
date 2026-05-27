@@ -69,6 +69,50 @@ export type DiscoveryStartupJourneyStage = {
   state: DiscoveryStageJourneyState;
 };
 
+export type DiscoveryStartupPremiumField<T> =
+  | {
+      locked: true;
+      label: string;
+      preview?: string | null;
+    }
+  | {
+      locked: false;
+      label: string;
+      value: T;
+    };
+
+export type DiscoveryStartupTraction = {
+  stage: string;
+  items: {
+    id: string;
+    label: string;
+    value: string | number | string[] | null;
+  }[];
+};
+
+export type DiscoveryStartupLink = {
+  label: string;
+  url: string;
+};
+
+export type DiscoveryStartupTeamComposition = {
+  founderCount?: 'solo' | 'two' | 'three_plus' | string | null;
+  founderCountLabel?: string | null;
+  coveredRoles?: string[];
+  hasTeam?: boolean | null;
+  teamSize?: string | number | null;
+  teamRoles?: string[];
+  joinedMemberCount?: number;
+};
+
+export type DiscoveryStartupCompensation = {
+  equityAvailable?: boolean | null;
+  equityRange?: string | null;
+  salaryAvailable?: boolean | null;
+  salaryRange?: string | null;
+  notes?: string | null;
+};
+
 export type DiscoveryBaseCard = {
   __source?: 'mock';
   entityType: DiscoveryEntityType;
@@ -115,6 +159,21 @@ export type DiscoveryStartupCard = DiscoveryBaseCard & {
   startupId: string;
   logoUrl: string | null;
   badge?: DiscoveryCardBadge;
+  businessStage?: {
+    value: 'idea' | 'mvp' | 'live' | 'scale' | string;
+    label: string;
+  };
+  description?: {
+    intro?: string | null;
+    problem?: string | null;
+    solution?: string | null;
+    targetUsers?: string | null;
+  };
+  interests?: DiscoveryCardTag[];
+  workArrangement?: {
+    id: 'remote' | 'hybrid' | 'onsite' | string;
+    label: string;
+  }[];
   founder: {
     name: string;
     title?: string;
@@ -134,6 +193,16 @@ export type DiscoveryStartupCard = DiscoveryBaseCard & {
     title: string;
   }[];
   lookingFor: string[];
+  premium?: {
+    locked: boolean;
+    unlockMessage: string;
+    fields: {
+      traction?: DiscoveryStartupPremiumField<DiscoveryStartupTraction>;
+      links?: DiscoveryStartupPremiumField<DiscoveryStartupLink[]>;
+      teamComposition?: DiscoveryStartupPremiumField<DiscoveryStartupTeamComposition>;
+      compensation?: DiscoveryStartupPremiumField<DiscoveryStartupCompensation>;
+    };
+  };
   teamStage: {
     teamSize: number;
     stage: string;

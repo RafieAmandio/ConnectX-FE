@@ -30,7 +30,7 @@ import { upsertGeneratedMockMatch } from '@features/matches/services/generated-m
 import { useNotifications } from '@features/notifications';
 import { useUpdateProfileLocation } from '@features/profile';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
-import { AppCard, AppText, AppTopBar } from '@shared/components';
+import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 import { Shadows } from '@shared/theme';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
@@ -55,7 +55,10 @@ import {
   isRewindPremiumRequiredError,
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
-import { isDiscoveryCardsMockEnabled } from '../services/discovery-service';
+import {
+  isDiscoveryCardsMockEnabled,
+  isMergeMockDiscoveryCardsEnabled,
+} from '../services/discovery-service';
 import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discovery-preference';
 import type {
   DiscoveryAppliedFilters,
@@ -71,6 +74,11 @@ import type {
   DiscoveryMode,
   DiscoveryProfileCard,
   DiscoveryStartupCard,
+  DiscoveryStartupCompensation,
+  DiscoveryStartupLink,
+  DiscoveryStartupPremiumField,
+  DiscoveryStartupTeamComposition,
+  DiscoveryStartupTraction,
   DiscoverySwipeHistoryEntry,
   SwipeActionRequest,
   SwipeActionSuccessResponse,
@@ -833,6 +841,242 @@ function StartupRoleChip({ title }: { title: string }) {
   );
 }
 
+function formatPremiumValue(value: string | number | string[] | boolean | null | undefined) {
+  if (value === null || typeof value === 'undefined') {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length ? value.join(' · ') : null;
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
+
+  return String(value).trim() || null;
+}
+
+function PremiumValueRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | string[] | boolean | null | undefined;
+}) {
+  const formattedValue = formatPremiumValue(value);
+
+  if (!formattedValue) {
+    return null;
+  }
+
+  return (
+    <View className="gap-1 rounded-[14px] border border-white/10 bg-[#242424] px-3 py-2.5">
+      <AppText className="text-[11px]" tone="muted" variant="label">
+        {label}
+      </AppText>
+      <AppText className="text-[14px] leading-5" variant="bodyStrong">
+        {formattedValue}
+      </AppText>
+    </View>
+  );
+}
+
+function LockedPremiumField({
+  field,
+  onUpgradePress,
+}: {
+  field: Extract<DiscoveryStartupPremiumField<unknown>, { locked: true }>;
+  onUpgradePress?: () => void;
+}) {
+  return (
+    <View
+      className="gap-3 rounded-[18px] border px-4 py-4"
+      style={{
+        backgroundColor: '#221F2B',
+        borderColor: 'rgba(255, 190, 61, 0.24)',
+      }}>
+      <View className="gap-1">
+        <View className="flex-row items-center gap-2">
+          <Ionicons color="#FFBE3D" name="lock-closed-outline" size={16} />
+          <AppText className="text-[15px]" variant="title">
+            {field.label}
+          </AppText>
+        </View>
+        {field.preview ? (
+          <AppText className="text-[13px] leading-5" tone="muted">
+            {field.preview}
+          </AppText>
+        ) : null}
+      </View>
+      <AppButton
+        label="Upgrade to ConnectX Pro"
+        size="md"
+        variant="secondary"
+        onPress={onUpgradePress}
+      />
+    </View>
+  );
+}
+
+function TractionPremiumField({
+  field,
+  onUpgradePress,
+}: {
+  field: DiscoveryStartupPremiumField<DiscoveryStartupTraction>;
+  onUpgradePress?: () => void;
+}) {
+  if (field.locked) {
+    return <LockedPremiumField field={field} onUpgradePress={onUpgradePress} />;
+  }
+
+  return (
+    <View className="gap-3">
+      <SectionLabel icon="analytics-outline" title={field.label} />
+      <View className="gap-2">
+        {field.value.items.map((item) => (
+          <PremiumValueRow key={item.id} label={item.label} value={item.value} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function LinksPremiumField({
+  field,
+  onUpgradePress,
+}: {
+  field: DiscoveryStartupPremiumField<DiscoveryStartupLink[]>;
+  onUpgradePress?: () => void;
+}) {
+  if (field.locked) {
+    return <LockedPremiumField field={field} onUpgradePress={onUpgradePress} />;
+  }
+
+  const links = field.value.filter((item) => item.url?.trim());
+
+  if (!links.length) {
+    return null;
+  }
+
+  return (
+    <View className="gap-3">
+      <SectionLabel icon="link-outline" title={field.label} />
+      <View className="flex-row flex-wrap gap-2">
+        {links.map((item) => (
+          <Pressable
+            key={`${item.label}-${item.url}`}
+            accessibilityLabel={`Open ${item.label}`}
+            accessibilityRole="link"
+            className="flex-row items-center gap-1.5 rounded-full border px-3 py-1.5"
+            style={{
+              backgroundColor: '#202A2D',
+              borderColor: 'rgba(72, 187, 120, 0.32)',
+            }}
+            onPress={() => openExternalUrl(item.url)}>
+            <Ionicons color="#48BB78" name="open-outline" size={14} />
+            <AppText className="text-[12px]" style={{ color: '#48BB78' }} variant="bodyStrong">
+              {item.label}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function TeamCompositionPremiumField({
+  field,
+  onUpgradePress,
+}: {
+  field: DiscoveryStartupPremiumField<DiscoveryStartupTeamComposition>;
+  onUpgradePress?: () => void;
+}) {
+  if (field.locked) {
+    return <LockedPremiumField field={field} onUpgradePress={onUpgradePress} />;
+  }
+
+  const team = field.value;
+
+  return (
+    <View className="gap-3">
+      <SectionLabel icon="people-circle-outline" title={field.label} />
+      <View className="gap-2">
+        <PremiumValueRow label="Founder setup" value={team.founderCountLabel ?? team.founderCount} />
+        <PremiumValueRow label="Covered roles" value={team.coveredRoles} />
+        <PremiumValueRow label="Has team beyond founders" value={team.hasTeam} />
+        <PremiumValueRow label="Team size" value={team.teamSize} />
+        <PremiumValueRow label="Team roles" value={team.teamRoles} />
+        <PremiumValueRow label="Joined members" value={team.joinedMemberCount} />
+      </View>
+    </View>
+  );
+}
+
+function CompensationPremiumField({
+  field,
+  onUpgradePress,
+}: {
+  field: DiscoveryStartupPremiumField<DiscoveryStartupCompensation>;
+  onUpgradePress?: () => void;
+}) {
+  if (field.locked) {
+    return <LockedPremiumField field={field} onUpgradePress={onUpgradePress} />;
+  }
+
+  const compensation = field.value;
+
+  return (
+    <View className="gap-3">
+      <SectionLabel icon="cash-outline" title={field.label} />
+      <View className="gap-2">
+        <PremiumValueRow label="Equity available" value={compensation.equityAvailable} />
+        <PremiumValueRow label="Equity range" value={compensation.equityRange} />
+        <PremiumValueRow label="Salary available" value={compensation.salaryAvailable} />
+        <PremiumValueRow label="Salary range" value={compensation.salaryRange} />
+        <PremiumValueRow label="Notes" value={compensation.notes} />
+      </View>
+    </View>
+  );
+}
+
+function StartupPremiumSection({
+  card,
+  onUpgradePress,
+}: {
+  card: DiscoveryStartupCard;
+  onUpgradePress?: () => void;
+}) {
+  const fields = card.premium?.fields;
+
+  if (!fields) {
+    return null;
+  }
+
+  return (
+    <View className="gap-4">
+      {card.premium?.locked ? (
+        <View className="gap-1">
+          <SectionLabel icon="sparkles-outline" title="Premium insights" />
+          <AppText className="text-[13px] leading-5" tone="muted">
+            {card.premium.unlockMessage}
+          </AppText>
+        </View>
+      ) : null}
+      {fields.traction ? (
+        <TractionPremiumField field={fields.traction} onUpgradePress={onUpgradePress} />
+      ) : null}
+      {fields.links ? <LinksPremiumField field={fields.links} onUpgradePress={onUpgradePress} /> : null}
+      {fields.teamComposition ? (
+        <TeamCompositionPremiumField field={fields.teamComposition} onUpgradePress={onUpgradePress} />
+      ) : null}
+      {fields.compensation ? (
+        <CompensationPremiumField field={fields.compensation} onUpgradePress={onUpgradePress} />
+      ) : null}
+    </View>
+  );
+}
+
 function StartupJourney({ card }: { card: DiscoveryStartupCard }) {
   if (!card.journey?.stages?.length) {
     return null;
@@ -1242,11 +1486,13 @@ function ProfileCardContent({
 function StartupCardContent({
   card,
   bottomInset = 24,
+  onPremiumUpgradePress,
   refreshControl,
   scrollEnabled = true,
 }: {
   card: DiscoveryStartupCard;
   bottomInset?: number;
+  onPremiumUpgradePress?: () => void;
   refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
   scrollEnabled?: boolean;
 }) {
@@ -1254,8 +1500,14 @@ function StartupCardContent({
   const industryPreview = getStartupIndustryPreview(card.industry);
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
   const teamStageIndustry = normalizeIndustryDisplay(card.teamStage?.industry);
-  const summary = card.summary?.trim() ?? '';
-  const summaryPreview = truncateText(summary, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
+  const stageLabel = card.businessStage?.label ?? card.badge?.label ?? card.teamStage?.stage;
+  const intro = card.description?.intro?.trim() || card.summary?.trim() || '';
+  const introPreview = truncateText(intro, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
+  const problem = card.description?.problem?.trim();
+  const solution = card.description?.solution?.trim();
+  const targetUsers = card.description?.targetUsers?.trim();
+  const startupInterests = card.interests ?? [];
+  const workArrangement = card.workArrangement ?? [];
 
   return (
     <ScrollView
@@ -1285,7 +1537,7 @@ function StartupCardContent({
             </View>
           )}
 
-          {card.badge ? (
+          {stageLabel ? (
             <View
               className="absolute top-4 right-4 rounded-full border px-3 py-1"
               style={{
@@ -1293,7 +1545,7 @@ function StartupCardContent({
                 borderColor: 'rgba(255, 154, 62, 0.4)',
               }}>
               <AppText className="text-[11px] uppercase font-bold" style={{ color: '#FF9A3E' }} variant="label">
-                {card.badge.label}
+                {stageLabel}
               </AppText>
             </View>
           ) : null}
@@ -1357,10 +1609,61 @@ function StartupCardContent({
       </View>
 
       <View className="gap-4 px-4 pb-4 pt-3">
-        {summary ? (
+        {intro ? (
           <AppText className="text-[16px] leading-7" tone="muted">
-            {summaryPreview}
+            {introPreview}
           </AppText>
+        ) : null}
+
+        {problem || solution || targetUsers ? (
+          <View className="gap-3">
+            {problem ? (
+              <View className="gap-1.5 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-4 py-3.5">
+                <SectionLabel icon="alert-circle-outline" title="Problem" />
+                <AppText className="text-[15px] leading-6" tone="muted">
+                  {problem}
+                </AppText>
+              </View>
+            ) : null}
+            {solution ? (
+              <View className="gap-1.5 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-4 py-3.5">
+                <SectionLabel icon="bulb-outline" title="Solution" />
+                <AppText className="text-[15px] leading-6" tone="muted">
+                  {solution}
+                </AppText>
+              </View>
+            ) : null}
+            {targetUsers ? (
+              <View className="gap-1.5 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-4 py-3.5">
+                <SectionLabel icon="person-circle-outline" title="Target Users" />
+                <AppText className="text-[15px] leading-6" tone="muted">
+                  {targetUsers}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {startupInterests.length ? (
+          <View className="gap-2.5">
+            <SectionLabel title="Industry & Interests" />
+            <View className="flex-row flex-wrap gap-2">
+              {startupInterests.map((item) => (
+                <DiscoveryTag key={item.id} item={item} />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {workArrangement.length ? (
+          <View className="gap-2.5">
+            <SectionLabel icon="location-outline" title="Work Preference" />
+            <View className="flex-row flex-wrap gap-2">
+              {workArrangement.map((item) => (
+                <DiscoveryTag key={item.id} item={{ name: item.label, type: 'availability' }} tone="availability" />
+              ))}
+            </View>
+          </View>
         ) : null}
 
         {card.openRoles?.length ? (
@@ -1431,6 +1734,8 @@ function StartupCardContent({
         ) : null}
 
         <StartupJourney card={card} />
+
+        <StartupPremiumSection card={card} onUpgradePress={onPremiumUpgradePress} />
       </View>
     </ScrollView>
   );
@@ -1439,11 +1744,13 @@ function StartupCardContent({
 function DiscoveryCardContent({
   bottomInset = 24,
   card,
+  onPremiumUpgradePress,
   refreshControl,
   scrollEnabled = true,
 }: {
   bottomInset?: number;
   card: DiscoveryCard;
+  onPremiumUpgradePress?: () => void;
   refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
   scrollEnabled?: boolean;
 }) {
@@ -1458,6 +1765,7 @@ function DiscoveryCardContent({
     <StartupCardContent
       bottomInset={bottomInset}
       card={card}
+      onPremiumUpgradePress={onPremiumUpgradePress}
       refreshControl={refreshControl}
       scrollEnabled={scrollEnabled}
     />
@@ -1559,6 +1867,7 @@ export function DiscoveryDeck() {
   const insets = useSafeAreaInsets();
   const { isHydrated: isAuthHydrated, session } = useAuth();
   const usingMockCards = isDiscoveryCardsMockEnabled();
+  const shouldMergeMockCards = isMergeMockDiscoveryCardsEnabled();
   const notificationsQuery = useNotifications();
   const { mutateAsync: updateProfileLocationAsync } = useUpdateProfileLocation();
   const { presentPaywallForOffering, supported } = useRevenueCat();
@@ -1908,11 +2217,28 @@ export function DiscoveryDeck() {
   );
   const usingLocalMockCards = usingMockCards;
   const baseCards = React.useMemo(
-    () =>
-      (usingLocalMockCards ? mockCards : effectiveLiveCards).filter(
-        (card) => !dismissedMergedMockCardIds.has(card.id)
-      ),
-    [dismissedMergedMockCardIds, effectiveLiveCards, mockCards, usingLocalMockCards]
+    () => {
+      const candidateCards =
+        !usingLocalMockCards && shouldMergeMockCards
+          ? [
+              ...mockCards,
+              ...effectiveLiveCards.filter(
+                (card) => !mockCards.some((mockCard) => mockCard.id === card.id)
+              ),
+            ]
+          : usingLocalMockCards
+            ? mockCards
+            : effectiveLiveCards;
+
+      return candidateCards.filter((card) => !dismissedMergedMockCardIds.has(card.id));
+    },
+    [
+      dismissedMergedMockCardIds,
+      effectiveLiveCards,
+      mockCards,
+      shouldMergeMockCards,
+      usingLocalMockCards,
+    ]
   );
   const cards = React.useMemo(() => {
     const baseIds = new Set(baseCards.map((card) => card.id));
@@ -2057,6 +2383,19 @@ export function DiscoveryDeck() {
       }
     } catch (error) {
       setActionError(getErrorMessage(error, 'Unable to open the boost purchase flow.'));
+    }
+  }, [presentPaywallForOffering, supported]);
+
+  const handlePresentConnectXProPaywall = React.useCallback(async () => {
+    if (!supported) {
+      setActionError('ConnectX Pro is available in the native iOS and Android builds.');
+      return;
+    }
+
+    try {
+      await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro);
+    } catch (error) {
+      setActionError(getErrorMessage(error, 'Unable to open the ConnectX Pro upgrade flow.'));
     }
   }, [presentPaywallForOffering, supported]);
 
@@ -2601,6 +2940,7 @@ export function DiscoveryDeck() {
                 <DiscoveryCardContent
                   bottomInset={floatingActionsContentPadding}
                   card={nextItem}
+                  onPremiumUpgradePress={handlePresentConnectXProPaywall}
                   scrollEnabled={false}
                 />
               </Animated.View>
@@ -2613,6 +2953,7 @@ export function DiscoveryDeck() {
                 <DiscoveryCardContent
                   bottomInset={floatingActionsContentPadding}
                   card={currentItem}
+                  onPremiumUpgradePress={handlePresentConnectXProPaywall}
                   refreshControl={
                     <RefreshControl
                       refreshing={discoveryQuery.isRefetching}
