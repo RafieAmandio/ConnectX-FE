@@ -372,7 +372,7 @@ export function MatchesScreen() {
                 </AppText>
               </Pressable>
 
-              <Pressable
+              {/* <Pressable
                 className="flex-row items-center justify-between rounded-[24px] border px-5 py-4"
                 disabled={spotlightActivation.isPending}
                 onPress={handleActivateSpotlight}
@@ -400,7 +400,7 @@ export function MatchesScreen() {
                   </View>
                 </View>
                 <Ionicons color="#FFD33D" name="chevron-forward" size={20} />
-              </Pressable>
+              </Pressable> */}
 
               {spotlightBanner ? (
                 <View

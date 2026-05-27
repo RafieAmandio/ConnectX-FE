@@ -2221,11 +2221,11 @@ export function DiscoveryDeck() {
       const candidateCards =
         !usingLocalMockCards && shouldMergeMockCards
           ? [
-              ...mockCards,
-              ...effectiveLiveCards.filter(
-                (card) => !mockCards.some((mockCard) => mockCard.id === card.id)
-              ),
-            ]
+            ...mockCards,
+            ...effectiveLiveCards.filter(
+              (card) => !mockCards.some((mockCard) => mockCard.id === card.id)
+            ),
+          ]
           : usingLocalMockCards
             ? mockCards
             : effectiveLiveCards;
@@ -3049,7 +3049,7 @@ export function DiscoveryDeck() {
                 color="#FF9A3E"
                 disabled={isSubmitting}
                 icon="flash"
-                label="Spotlight"
+                label="Super Connect"
                 onPress={handleSuperLike}
                 size="medium"
               />
