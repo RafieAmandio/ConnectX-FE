@@ -93,6 +93,8 @@ export type ChatDemoMediaAsset = {
   uri: string;
 };
 
+export type SendChatDemoMediaMessageType = 'image' | 'file';
+
 export type ChatDemoMessagesPage = {
   hasMore: boolean;
   items: ChatMessage[];
@@ -240,8 +242,34 @@ function buildMessagesPath(
   return `${CHAT_DEMO_API.MESSAGES(conversationId)}?${params.toString()}`;
 }
 
+function getMediaExtension(mimeType: string | null | undefined) {
+  const normalizedMimeType = mimeType?.trim().toLowerCase();
+
+  if (normalizedMimeType === 'application/pdf') {
+    return 'pdf';
+  }
+
+  if (normalizedMimeType === 'audio/mpeg') {
+    return 'mp3';
+  }
+
+  if (normalizedMimeType === 'audio/mp4' || normalizedMimeType === 'audio/x-m4a') {
+    return 'm4a';
+  }
+
+  if (normalizedMimeType === 'audio/wav') {
+    return 'wav';
+  }
+
+  if (normalizedMimeType?.startsWith('audio/')) {
+    return 'audio';
+  }
+
+  return 'jpg';
+}
+
 function extractMediaFileName(media: ChatDemoMediaAsset) {
-  const fallbackName = `chat-media-${Date.now()}.jpg`;
+  const fallbackName = `chat-media-${Date.now()}.${getMediaExtension(media.mimeType)}`;
   const fileName = media.fileName?.trim();
 
   if (fileName) {
@@ -328,7 +356,7 @@ export async function uploadChatDemoMedia(media: ChatDemoMediaAsset) {
     'file',
     {
       name: extractMediaFileName(media),
-      type: media.mimeType?.trim() || 'image/jpeg',
+      type: media.mimeType?.trim() || 'application/octet-stream',
       uri: media.uri,
     } as any
   );
@@ -339,19 +367,21 @@ export async function uploadChatDemoMedia(media: ChatDemoMediaAsset) {
   });
 }
 
-export async function sendChatDemoImageMessage({
+export async function sendChatDemoMediaMessage({
   conversationId,
   currentUserId,
   mediaId,
+  type,
 }: {
   conversationId: string;
   currentUserId?: string | null;
   mediaId: string;
+  type: SendChatDemoMediaMessageType;
 }) {
   const response = await apiFetch<SendChatDemoMessageResponse>(CHAT_DEMO_API.MESSAGES(conversationId), {
     body: {
       media_id: mediaId,
-      type: 'image',
+      type,
     } as any,
     method: 'POST',
   });

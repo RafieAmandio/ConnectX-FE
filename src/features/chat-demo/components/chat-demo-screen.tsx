@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
+import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -33,18 +34,25 @@ import {
   useChatDemoMessages,
   useChatDemoRoomRealtime,
   useMarkChatDemoConversationRead,
-  useSendChatDemoImageMessage,
+  useSendChatDemoMediaMessage,
   useSendChatDemoMessage,
   useUploadChatDemoMedia,
 } from '@features/chat/hooks/use-chat-demo';
-import type { ChatDemoUploadedMedia } from '@features/chat/services/chat-demo-api-service';
+import type {
+  ChatDemoUploadedMedia,
+  SendChatDemoMediaMessageType,
+} from '@features/chat/services/chat-demo-api-service';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
 import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 
 type PendingChatDemoMedia = {
+  fileName: string | null;
+  fileSize: number | null;
   localUri: string;
+  mediaType: SendChatDemoMediaMessageType;
+  mimeType: string | null;
   uploadedMedia: ChatDemoUploadedMedia;
 };
 
@@ -97,6 +105,7 @@ type MessageTextPart =
 const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
 const TRAILING_URL_PUNCTUATION_PATTERN = /[),.!?:;]+$/;
 const COMPOSER_INPUT_MAX_HEIGHT = 92;
+const CHAT_DEMO_DOCUMENT_TYPES = ['application/pdf', 'audio/*'] as const;
 
 function normalizeMessageUrl(value: string) {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
@@ -114,6 +123,68 @@ function normalizeMediaUrl(value: string | null | undefined) {
   }
 
   return buildApiUrl(trimmedValue);
+}
+
+function getMediaMessageType(mimeType: string | null | undefined): SendChatDemoMediaMessageType {
+  return mimeType?.trim().toLowerCase().startsWith('image/') ? 'image' : 'file';
+}
+
+function getAttachmentKind(mimeType: string | null | undefined) {
+  const normalizedMimeType = mimeType?.trim().toLowerCase();
+
+  if (normalizedMimeType === 'application/pdf') {
+    return 'pdf';
+  }
+
+  if (normalizedMimeType?.startsWith('audio/')) {
+    return 'audio';
+  }
+
+  return 'file';
+}
+
+function getAttachmentIconName(mimeType: string | null | undefined) {
+  const kind = getAttachmentKind(mimeType);
+
+  if (kind === 'pdf') {
+    return 'document-text-outline' as const;
+  }
+
+  if (kind === 'audio') {
+    return 'musical-notes-outline' as const;
+  }
+
+  return 'document-outline' as const;
+}
+
+function getAttachmentLabel(mimeType: string | null | undefined) {
+  const kind = getAttachmentKind(mimeType);
+
+  if (kind === 'pdf') {
+    return 'PDF document';
+  }
+
+  if (kind === 'audio') {
+    return 'Audio file';
+  }
+
+  return 'Attachment';
+}
+
+function formatFileSize(value: number | null | undefined) {
+  if (!value || value <= 0) {
+    return null;
+  }
+
+  if (value < 1024) {
+    return `${value} B`;
+  }
+
+  if (value < 1024 * 1024) {
+    return `${Math.round(value / 102.4) / 10} KB`;
+  }
+
+  return `${Math.round(value / (1024 * 102.4)) / 10} MB`;
 }
 
 function openMediaUrl(value: string | null | undefined) {
@@ -532,6 +603,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   const hasMediaUrl = Boolean(mediaUrl);
   const showBody = Boolean(message.body.trim());
   const [isImagePreviewVisible, setImagePreviewVisible] = React.useState(false);
+  const attachmentSize = formatFileSize(message.media?.sizeBytes);
 
   return (
     <View className={isOutgoing ? 'items-end' : 'items-start'}>
@@ -573,13 +645,25 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           <Pressable
             className="w-56 flex-row items-center gap-3 rounded-[18px] border border-white/10 px-4 py-3 active:opacity-80"
             onPress={() => openMediaUrl(message.media?.url)}>
-            <Ionicons color={isOutgoing ? '#5C3D18' : '#F7B05B'} name="document-outline" size={22} />
-            <AppText
-              className={isOutgoing ? 'flex-1 text-[#201507]' : 'flex-1 text-[#F3F0EB]'}
-              numberOfLines={1}
-              variant="bodyStrong">
-              Open attachment
-            </AppText>
+            <Ionicons
+              color={isOutgoing ? '#5C3D18' : '#F7B05B'}
+              name={getAttachmentIconName(message.media?.mimeType)}
+              size={22}
+            />
+            <View className="min-w-0 flex-1">
+              <AppText
+                className={isOutgoing ? 'text-[#201507]' : 'text-[#F3F0EB]'}
+                numberOfLines={1}
+                variant="bodyStrong">
+                {getAttachmentLabel(message.media?.mimeType)}
+              </AppText>
+              <AppText
+                className={isOutgoing ? 'text-[#7C5526]' : 'text-[#AFA9A2]'}
+                numberOfLines={1}
+                variant="code">
+                {attachmentSize ? `${attachmentSize} · Open` : 'Open attachment'}
+              </AppText>
+            </View>
           </Pressable>
         ) : null}
 
@@ -624,7 +708,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const messagesQuery = useChatDemoMessages(conversationId);
   const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const sendMessageMutation = useSendChatDemoMessage(conversationId);
-  const sendImageMessageMutation = useSendChatDemoImageMessage(conversationId);
+  const sendMediaMessageMutation = useSendChatDemoMediaMessage(conversationId);
   const uploadMediaMutation = useUploadChatDemoMedia();
   const [draftMessage, setDraftMessage] = React.useState('');
   const [pendingMedia, setPendingMedia] = React.useState<PendingChatDemoMedia | null>(null);
@@ -641,7 +725,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     [messagesQuery.data]
   );
   const visibleMessages = React.useMemo(() => [...messages].reverse(), [messages]);
-  const isSending = sendMessageMutation.isPending || sendImageMessageMutation.isPending;
+  const isSending = sendMessageMutation.isPending || sendMediaMessageMutation.isPending;
   const isUploadingMedia = uploadMediaMutation.isPending;
   const canInviteToTeam = viewerContext === 'startup';
   const inputBottomPadding =
@@ -728,7 +812,8 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
     if (pendingMedia) {
       try {
-        await sendImageMessageMutation.mutateAsync({
+        await sendMediaMessageMutation.mutateAsync({
+          mediaType: pendingMedia.mediaType,
           previewUri: pendingMedia.localUri,
           uploadedMedia: pendingMedia.uploadedMedia,
         });
@@ -754,7 +839,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     isSending,
     isUploadingMedia,
     pendingMedia,
-    sendImageMessageMutation,
+    sendMediaMessageMutation,
     sendMessageMutation,
   ]);
 
@@ -791,13 +876,72 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
       });
 
       setPendingMedia({
+        fileName: asset.fileName ?? null,
+        fileSize: asset.fileSize ?? null,
         localUri: asset.uri,
+        mediaType: 'image',
+        mimeType: asset.mimeType ?? null,
         uploadedMedia,
       });
     } catch {
       return;
     }
   }, [isSending, isUploadingMedia, uploadMediaMutation]);
+
+  const handlePickDocument = React.useCallback(async () => {
+    if (isSending || isUploadingMedia) {
+      return;
+    }
+
+    const result = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      multiple: false,
+      type: [...CHAT_DEMO_DOCUMENT_TYPES],
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+
+    if (!asset?.uri) {
+      Alert.alert('File unavailable', 'The selected file could not be read.');
+      return;
+    }
+
+    try {
+      const uploadedMedia = await uploadMediaMutation.mutateAsync({
+        fileName: asset.name ?? null,
+        fileSize: asset.size ?? null,
+        mimeType: asset.mimeType ?? null,
+        uri: asset.uri,
+      });
+
+      setPendingMedia({
+        fileName: asset.name ?? null,
+        fileSize: asset.size ?? null,
+        localUri: asset.uri,
+        mediaType: getMediaMessageType(asset.mimeType),
+        mimeType: asset.mimeType ?? null,
+        uploadedMedia,
+      });
+    } catch {
+      return;
+    }
+  }, [isSending, isUploadingMedia, uploadMediaMutation]);
+
+  const handlePickAttachment = React.useCallback(() => {
+    if (isSending || isUploadingMedia) {
+      return;
+    }
+
+    Alert.alert('Add attachment', undefined, [
+      { text: 'Photo', onPress: () => void handlePickImage() },
+      { text: 'PDF or audio', onPress: () => void handlePickDocument() },
+      { style: 'cancel', text: 'Cancel' },
+    ]);
+  }, [handlePickDocument, handlePickImage, isSending, isUploadingMedia]);
 
   const handleAddToTeam = React.useCallback(() => {
     if (!canInviteToTeam || !conversation?.participantEmail || invitationSent) {
@@ -961,9 +1105,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           </View>
         ) : null}
 
-        {!(sendMessageMutation.error instanceof Error) && sendImageMessageMutation.error instanceof Error ? (
+        {!(sendMessageMutation.error instanceof Error) && sendMediaMessageMutation.error instanceof Error ? (
           <View className="px-4 py-2">
-            <AppText tone="danger">Send failed: {sendImageMessageMutation.error.message}</AppText>
+            <AppText tone="danger">Send failed: {sendMediaMessageMutation.error.message}</AppText>
           </View>
         ) : null}
 
@@ -978,17 +1122,29 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           style={{ marginBottom: androidKeyboardOverlap, paddingBottom: inputBottomPadding }}>
           {pendingMedia ? (
             <View className="mb-3 flex-row items-center gap-3 rounded-[18px] border border-[#444240] bg-[#2E2C2B] p-2">
-              <Image
-                contentFit="cover"
-                source={{ uri: pendingMedia.localUri }}
-                style={{ borderRadius: 12, height: 64, width: 64 }}
-              />
+              {pendingMedia.mediaType === 'image' ? (
+                <Image
+                  contentFit="cover"
+                  source={{ uri: pendingMedia.localUri }}
+                  style={{ borderRadius: 12, height: 64, width: 64 }}
+                />
+              ) : (
+                <View className="h-16 w-16 items-center justify-center rounded-[12px] bg-[#3A3938]">
+                  <Ionicons
+                    color="#F7B05B"
+                    name={getAttachmentIconName(pendingMedia.mimeType)}
+                    size={28}
+                  />
+                </View>
+              )}
               <View className="flex-1">
                 <AppText className="text-[#F3F0EB]" numberOfLines={1} variant="bodyStrong">
-                  Image attached
+                  {pendingMedia.mediaType === 'image'
+                    ? 'Image attached'
+                    : pendingMedia.fileName || getAttachmentLabel(pendingMedia.mimeType)}
                 </AppText>
                 <AppText className="text-[#9C9893]" numberOfLines={1} variant="code">
-                  Ready to send
+                  {formatFileSize(pendingMedia.fileSize) ?? 'Ready to send'}
                 </AppText>
               </View>
               <Pressable
@@ -1004,7 +1160,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
             <Pressable
               className="h-11 w-11 items-center justify-center rounded-full bg-transparent active:opacity-70"
               disabled={isSending || isUploadingMedia}
-              onPress={() => void handlePickImage()}
+              onPress={handlePickAttachment}
               style={{ opacity: isSending || isUploadingMedia ? 0.45 : 1 }}>
               {isUploadingMedia ? (
                 <ActivityIndicator color="#9C9893" size="small" />
@@ -1041,7 +1197,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               style={{
                 opacity: (!draftMessage.trim() && !pendingMedia) || isSending || isUploadingMedia ? 0.5 : 1,
               }}>
-              {sendMessageMutation.isPending || sendImageMessageMutation.isPending ? (
+              {sendMessageMutation.isPending || sendMediaMessageMutation.isPending ? (
                 <ActivityIndicator color="#1F160C" size="small" />
               ) : (
                 <Ionicons color="#1F160C" name="paper-plane-outline" size={24} />

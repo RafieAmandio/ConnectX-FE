@@ -12,11 +12,12 @@ import {
   fetchChatDemoMessages,
   mapChatDemoMessage,
   markChatDemoConversationRead,
-  sendChatDemoImageMessage,
+  sendChatDemoMediaMessage,
   sendChatDemoTextMessage,
   uploadChatDemoMedia,
   type ChatDemoMessageResponse,
   type ChatDemoMessagesPage,
+  type SendChatDemoMediaMessageType,
   type ChatDemoUploadedMedia,
 } from '../services/chat-demo-api-service';
 import type { ChatConversation, ChatMessage } from '../types/chat.types';
@@ -291,7 +292,8 @@ type SendChatDemoMessageContext = {
   tempMessageId: string;
 };
 
-type SendChatDemoImageInput = {
+type SendChatDemoMediaInput = {
+  mediaType: SendChatDemoMediaMessageType;
   previewUri: string;
   uploadedMedia: ChatDemoUploadedMedia;
 };
@@ -403,24 +405,25 @@ export function useUploadChatDemoMedia() {
   });
 }
 
-export function useSendChatDemoImageMessage(conversationId: string | null) {
+export function useSendChatDemoMediaMessage(conversationId: string | null) {
   const currentUserId = useCurrentUserId();
   const viewerContext = useViewerContext();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ uploadedMedia }: SendChatDemoImageInput) => {
+    mutationFn: async ({ mediaType, uploadedMedia }: SendChatDemoMediaInput) => {
       if (!conversationId) {
-        throw new Error('Pick a conversation before sending an image.');
+        throw new Error('Pick a conversation before sending an attachment.');
       }
 
-      return sendChatDemoImageMessage({
+      return sendChatDemoMediaMessage({
         conversationId,
         currentUserId,
         mediaId: uploadedMedia.media_id,
+        type: mediaType,
       });
     },
-    onMutate: async ({ previewUri, uploadedMedia }) => {
+    onMutate: async ({ mediaType, previewUri, uploadedMedia }) => {
       if (!conversationId) {
         return undefined;
       }
@@ -430,16 +433,16 @@ export function useSendChatDemoImageMessage(conversationId: string | null) {
         conversationId,
         createdAt: new Date().toISOString(),
         direction: 'outgoing',
-        id: `temp:image:${Date.now()}`,
+        id: `temp:${mediaType}:${Date.now()}`,
         media: {
-          mimeType: uploadedMedia.mime_type ?? 'image/jpeg',
+          mimeType: uploadedMedia.mime_type ?? (mediaType === 'image' ? 'image/jpeg' : null),
           sizeBytes: uploadedMedia.size_bytes ?? null,
           thumbnailUrl: uploadedMedia.thumbnail_url ?? uploadedMedia.url ?? previewUri,
           url: uploadedMedia.url ?? previewUri,
         },
         senderId: currentUserId,
         status: 'sending',
-        type: 'image',
+        type: mediaType,
       };
 
       await Promise.all([
