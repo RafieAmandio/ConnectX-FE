@@ -419,14 +419,14 @@ export type SwipeActionSuccessResponse = {
   };
 };
 
-export type SwipeActionErrorCode = 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST';
+export type SwipeActionErrorCode = 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST' | 'PREMIUM_REQUIRED';
 
 export type SwipeActionDeniedResponse = {
   success: false;
   message: string;
   error: {
     code: SwipeActionErrorCode;
-    details: {
+    details?: {
       id: string;
       profileId?: string | null;
       startupId?: string | null;

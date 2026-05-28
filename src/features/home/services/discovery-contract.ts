@@ -112,17 +112,26 @@ export function isSwipeActionDeniedResponse(payload: unknown): payload is SwipeA
   if (!payload || typeof payload !== 'object' || !('error' in payload)) {
     return false;
   }
-  console.log(payload, 'payload')
 
-  return getApiPayloadErrorCode(payload) === 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST' || getApiPayloadErrorCode(payload) === 'PREMIUM_REQUIRED';
+  const errorCode = getApiPayloadErrorCode(payload);
+
+  return errorCode === 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST' || errorCode === 'PREMIUM_REQUIRED';
 }
 
 export function isSuperLikeRequiresBoostError(error: unknown): error is ApiError {
-  if (!(error instanceof ApiError) || error.status !== DISCOVERY_ERROR_STATUS.superLikeRequiresBoost) {
+  if (!(error instanceof ApiError)) {
     return false;
   }
 
-  return isSwipeActionDeniedResponse(error.payload);
+  return getApiPayloadErrorCode(error.payload) === 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST';
+}
+
+export function isSuperLikePremiumRequiredError(error: unknown): error is ApiError {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  return getApiPayloadErrorCode(error.payload) === 'PREMIUM_REQUIRED';
 }
 
 export function isSpotlightActivationDeniedResponse(

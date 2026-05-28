@@ -53,6 +53,7 @@ import { setAppliedDiscoveryMode } from '../services/applied-discovery-mode-stor
 import {
   isRewindNotAvailableError,
   isRewindPremiumRequiredError,
+  isSuperLikePremiumRequiredError,
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
 import {
@@ -2511,7 +2512,9 @@ export function DiscoveryDeck() {
           targetId: getCardActionTargetId(activeCard),
         });
 
-        if (action === 'super_like' && isSuperLikeRequiresBoostError(error)) {
+        if (action === 'super_like' && isSuperLikePremiumRequiredError(error)) {
+          await handlePresentConnectXProPaywall();
+        } else if (action === 'super_like' && isSuperLikeRequiresBoostError(error)) {
           await maybePresentBoostPaywall();
         } else {
           setActionError(getErrorMessage(error, 'Unable to record this swipe right now.'));
@@ -2526,6 +2529,7 @@ export function DiscoveryDeck() {
       }
     },
     [
+      handlePresentConnectXProPaywall,
       maybePresentBoostPaywall,
       queryClient,
       resetCardPosition,
