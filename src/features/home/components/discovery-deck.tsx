@@ -894,8 +894,8 @@ function LockedPremiumField({
     <View
       className="gap-3 rounded-[18px] border px-4 py-4"
       style={{
-        backgroundColor: '#221F2B',
-        borderColor: 'rgba(255, 190, 61, 0.24)',
+        backgroundColor: '#2B2B2D',
+        borderColor: 'rgba(152, 162, 179, 0.24)',
       }}>
       <View className="gap-1">
         <View className="flex-row items-center gap-2">
@@ -911,7 +911,9 @@ function LockedPremiumField({
         ) : null}
       </View>
       <AppButton
+        className="border-[#3A3F48] bg-[#181A1F]"
         label="Upgrade to ConnectX Pro"
+        labelClassName="text-[#F2F4F7]"
         size="md"
         variant="secondary"
         onPress={onUpgradePress}
