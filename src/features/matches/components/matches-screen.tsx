@@ -89,12 +89,12 @@ function LikesYouPreviewCard({
       )}
 
       <View
-        className="absolute inset-x-0 bottom-0 px-3 pb-3 pt-10"
+        className="absolute inset-x-0 bottom-0 px-3 pb-3 pt-2"
         style={{ backgroundColor: 'rgba(24, 24, 27, 0.58)' }}>
-        <AppText className="text-[15px] text-[#F6F2EB]" variant="bodyStrong">
+        <AppText className="text-[15px] text-[#F6F2EB]" variant="bodyStrong" numberOfLines={1}>
           {item.user.name}
         </AppText>
-        <AppText className="text-[12px] text-[#D8C6A5]">
+        <AppText className="text-[12px] text-[#D8C6A5]" numberOfLines={1}>
           {item.user.headline}
         </AppText>
       </View>
