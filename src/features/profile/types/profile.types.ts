@@ -134,11 +134,22 @@ export type MyProfileResponse = {
 export type UpdateMyProfileRequest = {
   name: string;
   headline: string;
+  photoUrl?: string | null;
   locationId: string;
   about: string;
   personalityAndHobbyIds?: string[];
   experience: ProfileExperienceItem[];
   education: ProfileEducationItem[];
+};
+
+export type ProfileImageUploadAsset = {
+  fileName?: string | null;
+  mimeType?: string | null;
+  uri: string;
+};
+
+export type ProfileImageUploadResponse = {
+  url: string;
 };
 
 export type UpdateMyLinkedInProfileRequest = {

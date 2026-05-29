@@ -1,6 +1,7 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -17,7 +18,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard, AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
 
-import { useMyProfile, useProfileOptions, useUpdateMyProfile } from '../hooks/use-profile';
+import {
+  useMyProfile,
+  useProfileOptions,
+  useUpdateMyProfile,
+  useUploadProfileImage,
+} from '../hooks/use-profile';
 import { mockMyProfileResponse, mockProfileOptionsResponse } from '../mock/profile.mock';
 import type {
   MyProfileData,
@@ -110,6 +116,7 @@ function buildInitialFormState(
   return {
     name: profile.name,
     headline: profile.headline,
+    photoUrl: profile.photoUrl,
     locationId: resolveInitialLocationId(profile, locations),
     about: profile.sections.about?.value ?? '',
     personalityAndHobbyIds:
@@ -737,6 +744,7 @@ export function EditProfileScreen() {
   const myProfileQuery = useMyProfile();
   const optionsQuery = useProfileOptions();
   const updateProfileMutation = useUpdateMyProfile();
+  const uploadProfileImageMutation = useUploadProfileImage();
   const profileResponse = myProfileQuery.data;
   const profile =
     profileResponse && hasUsableProfile(profileResponse)
@@ -806,6 +814,7 @@ export function EditProfileScreen() {
     const payload: UpdateMyProfileRequest = {
       name: formState.name.trim(),
       headline: formState.headline.trim(),
+      photoUrl: formState.photoUrl?.trim() || null,
       locationId: formState.locationId.trim(),
       about: formState.about.trim(),
       ...(isStartupOwnerProfile ? {} : { personalityAndHobbyIds: selectedPersonalityIds }),
@@ -830,7 +839,50 @@ export function EditProfileScreen() {
     }
   }
 
+  async function handlePickProfileImage() {
+    if (uploadProfileImageMutation.isPending || updateProfileMutation.isPending) {
+      return;
+    }
+
+    setSubmitError(null);
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      allowsMultipleSelection: false,
+      aspect: [1, 1],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      selectionLimit: 1,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+
+    if (!asset?.uri) {
+      setSubmitError('The selected image could not be read.');
+      return;
+    }
+
+    try {
+      const uploadedImage = await uploadProfileImageMutation.mutateAsync({
+        fileName: asset.fileName ?? null,
+        mimeType: asset.mimeType ?? null,
+        uri: asset.uri,
+      });
+
+      updateField('photoUrl', uploadedImage.url);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to upload this image right now.');
+    }
+  }
+
   const initials = getInitials(profile.name);
+  const profilePhotoUrl = formState.photoUrl?.trim() || null;
+  const isUploadingProfileImage = uploadProfileImageMutation.isPending;
+  const isSavingProfile = updateProfileMutation.isPending || isUploadingProfileImage;
 
   return (
     <>
@@ -885,10 +937,10 @@ export function EditProfileScreen() {
             className="gap-6"
             style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
             <View className="flex-row items-center gap-4">
-              {profile.photoUrl ? (
+              {profilePhotoUrl ? (
                 <Image
                   contentFit="cover"
-                  source={{ uri: profile.photoUrl }}
+                  source={{ uri: profilePhotoUrl }}
                   style={{
                     borderColor: profilePalette.accent,
                     borderRadius: 999,
@@ -923,6 +975,52 @@ export function EditProfileScreen() {
                 <AppText className="text-[13px] leading-5" tone="muted">
                   Your name, headline, and location appear across matches and chat.
                 </AppText>
+                <View className="mt-2 flex-row flex-wrap gap-2">
+                  <Pressable
+                    accessibilityRole="button"
+                    className="h-9 flex-row items-center justify-center gap-2 rounded-[12px] border px-3"
+                    disabled={isSavingProfile}
+                    onPress={handlePickProfileImage}
+                    style={{
+                      backgroundColor: profilePalette.selected,
+                      borderColor: profilePalette.accent,
+                      opacity: isSavingProfile ? 0.7 : 1,
+                    }}>
+                    {isUploadingProfileImage ? (
+                      <ActivityIndicator color={profilePalette.accent} size="small" />
+                    ) : (
+                      <Ionicons color={profilePalette.accent} name="image-outline" size={16} />
+                    )}
+                    <AppText
+                      className="text-[12px]"
+                      style={{ color: profilePalette.accent }}
+                      variant="bodyStrong">
+                      {isUploadingProfileImage
+                        ? 'Uploading...'
+                        : profilePhotoUrl
+                          ? 'Change Photo'
+                          : 'Upload Photo'}
+                    </AppText>
+                  </Pressable>
+
+                  {profilePhotoUrl ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      className="h-9 flex-row items-center justify-center gap-2 rounded-[12px] border px-3"
+                      disabled={isSavingProfile}
+                      onPress={() => updateField('photoUrl', null)}
+                      style={{
+                        backgroundColor: profilePalette.field,
+                        borderColor: profilePalette.border,
+                        opacity: isSavingProfile ? 0.7 : 1,
+                      }}>
+                      <Ionicons color={profilePalette.textMuted} name="trash-outline" size={15} />
+                      <AppText className="text-[12px]" tone="muted" variant="bodyStrong">
+                        Remove
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             </View>
 
@@ -1107,18 +1205,18 @@ export function EditProfileScreen() {
 
           <View className="mt-5 flex-row gap-3 pt-1">
             <ActionButton
-              disabled={updateProfileMutation.isPending}
+              disabled={isSavingProfile}
               label="Cancel"
               onPress={() => router.back()}
             />
             <Pressable
               className="h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[12px] border"
-              disabled={updateProfileMutation.isPending}
+              disabled={isSavingProfile}
               onPress={handleSave}
               style={{
                 backgroundColor: profilePalette.accent,
                 borderColor: profilePalette.accent,
-                opacity: updateProfileMutation.isPending ? 0.7 : 1,
+                opacity: isSavingProfile ? 0.7 : 1,
               }}>
               {updateProfileMutation.isPending ? (
                 <ActivityIndicator color={profilePalette.buttonText} size="small" />

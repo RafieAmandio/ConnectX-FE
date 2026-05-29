@@ -291,6 +291,7 @@ Update the authenticated user's profile.
 type UpdateMyProfileRequest = {
   name: string;
   headline: string;
+  photoUrl?: string | null;
   locationId: string;
   about: string;
   personalityAndHobbyIds?: string[];
@@ -315,6 +316,7 @@ type UpdateMyProfileRequest = {
 {
   "name": "Maya Santoso",
   "headline": "Product-minded growth operator",
+  "photoUrl": "https://cdn.connectx.app/profiles/maya/photo.jpg",
   "locationId": "bandung",
   "about": "Product-minded operator looking to join an early-stage team and help scale go-to-market systems.",
   "personalityAndHobbyIds": ["ph_2", "ph_13"],
@@ -350,6 +352,7 @@ type UpdateMyProfileRequest = {
 {
   "name": "John Carter",
   "headline": "Startup Founder",
+  "photoUrl": "https://cdn.connectx.app/profiles/john/photo.jpg",
   "locationId": "jakarta",
   "about": "AI-powered supply chain platform that optimizes logistics for SMEs across Southeast Asia.",
   "experience": [],

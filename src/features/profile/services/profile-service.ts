@@ -4,6 +4,8 @@ import type {
   ActivateAccountResponse,
   MyProfileResponse,
   PauseAccountResponse,
+  ProfileImageUploadAsset,
+  ProfileImageUploadResponse,
   ProfileOptionsResponse,
   RequestAccountDeletionResponse,
   UpdateMyLinkedInProfileRequest,
@@ -24,7 +26,52 @@ export const PROFILE_API = {
   ME: '/api/v1/me/profile',
   OPTIONS: '/api/v1/profile-options',
   PUBLIC_DETAIL: (profileId: string) => `/api/v1/profiles/${profileId}`,
+  UPLOAD: '/api/v1/upload',
 } as const;
+
+function getRecordProperty(value: unknown, key: string) {
+  if (!value || typeof value !== 'object' || !(key in value)) {
+    return null;
+  }
+
+  return (value as Record<string, unknown>)[key];
+}
+
+function getUploadUrl(payload: unknown) {
+  const directUrl = getRecordProperty(payload, 'url');
+
+  if (typeof directUrl === 'string' && directUrl.trim()) {
+    return directUrl.trim();
+  }
+
+  const data = getRecordProperty(payload, 'data');
+  const dataUrl = getRecordProperty(data, 'url');
+
+  if (typeof dataUrl === 'string' && dataUrl.trim()) {
+    return dataUrl.trim();
+  }
+
+  const media = getRecordProperty(payload, 'media');
+  const mediaUrl = getRecordProperty(media, 'url');
+
+  if (typeof mediaUrl === 'string' && mediaUrl.trim()) {
+    return mediaUrl.trim();
+  }
+
+  return null;
+}
+
+function extractProfileImageFileName(asset: ProfileImageUploadAsset) {
+  const fileName = asset.fileName?.trim();
+
+  if (fileName) {
+    return fileName;
+  }
+
+  const uriFileName = asset.uri.split('/').pop()?.split('?')[0]?.trim();
+
+  return uriFileName || `profile-photo-${Date.now()}.jpg`;
+}
 
 export async function fetchMyProfile() {
   const response = await apiFetch<MyProfileResponse>(PROFILE_API.ME);
@@ -44,6 +91,31 @@ export async function updateMyProfile(payload: UpdateMyProfileRequest) {
     body: payload as unknown as BodyInit,
     method: 'PATCH',
   });
+}
+
+export async function uploadProfileImage(asset: ProfileImageUploadAsset) {
+  const formData = new FormData();
+
+  formData.append(
+    'file',
+    {
+      name: extractProfileImageFileName(asset),
+      type: asset.mimeType?.trim() || 'image/jpeg',
+      uri: asset.uri,
+    } as any
+  );
+
+  const response = await apiFetch<unknown>(PROFILE_API.UPLOAD, {
+    body: formData,
+    method: 'POST',
+  });
+  const url = getUploadUrl(response);
+
+  if (!url) {
+    throw new Error('Upload succeeded but did not return an image URL.');
+  }
+
+  return { url } satisfies ProfileImageUploadResponse;
 }
 
 export async function updateMyLinkedInProfile(payload: UpdateMyLinkedInProfileRequest) {

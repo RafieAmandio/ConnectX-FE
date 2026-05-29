@@ -13,6 +13,7 @@ import {
   updateMyProfile,
   updateProfileLocation,
   updateStartupProfile,
+  uploadProfileImage,
 } from '../services/profile-service';
 import type {
   MyProfileResponse,
@@ -91,6 +92,12 @@ export function useUpdateMyProfile() {
 
       await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
     },
+  });
+}
+
+export function useUploadProfileImage() {
+  return useMutation({
+    mutationFn: uploadProfileImage,
   });
 }
 

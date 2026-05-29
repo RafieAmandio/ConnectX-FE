@@ -12,6 +12,7 @@ export {
   useUpdateMyProfile,
   useUpdateProfileLocation,
   useUpdateStartupProfile,
+  useUploadProfileImage,
 } from './hooks/use-profile';
 export {
   activateMyAccount,
@@ -23,6 +24,7 @@ export {
   updateMyProfile,
   updateProfileLocation,
   updateStartupProfile,
+  uploadProfileImage,
 } from './services/profile-service';
 export type {
   ActivateAccountResponse,
@@ -37,6 +39,8 @@ export type {
   ProfileTextSection,
   ProfileType,
   PauseAccountResponse,
+  ProfileImageUploadAsset,
+  ProfileImageUploadResponse,
   MyProfileData,
   MyProfileResponse,
   MyProfileSections,
