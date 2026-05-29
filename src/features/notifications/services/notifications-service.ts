@@ -6,6 +6,7 @@ import type { GetNotificationsResponse } from '../types/notifications.types';
 
 export const NOTIFICATIONS_API = {
   LIST: '/api/v1/me/notifications',
+  READ: '/api/v1/me/notifications/read',
 } as const;
 
 export function isNotificationsMockEnabled() {
@@ -18,4 +19,11 @@ export async function fetchNotifications() {
   }
 
   return apiFetch<GetNotificationsResponse>(NOTIFICATIONS_API.LIST);
+}
+
+export async function markNotificationsRead() {
+  return apiFetch<unknown>(NOTIFICATIONS_API.READ, {
+    body: { mark_all: true } as unknown as BodyInit,
+    method: 'POST',
+  });
 }

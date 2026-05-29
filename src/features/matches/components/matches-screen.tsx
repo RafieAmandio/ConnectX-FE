@@ -3,6 +3,13 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
@@ -21,6 +28,143 @@ type SpotlightBannerState = {
   title: string;
   tone: 'default' | 'success' | 'warning';
 };
+
+function withAlpha(hexColor: string, alpha: number) {
+  const normalized = hexColor.replace('#', '');
+
+  if (normalized.length !== 6) {
+    return hexColor;
+  }
+
+  const red = parseInt(normalized.slice(0, 2), 16);
+  const green = parseInt(normalized.slice(2, 4), 16);
+  const blue = parseInt(normalized.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function SkeletonBlock({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.ComponentProps<typeof Animated.View>['style'];
+}) {
+  const progress = useSharedValue(0);
+
+  React.useEffect(() => {
+    progress.value = withRepeat(withTiming(1, { duration: 920 }), -1, true);
+  }, [progress]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0.42, 0.86]),
+  }));
+
+  return (
+    <Animated.View
+      className={className}
+      style={[{ backgroundColor: withAlpha('#FFFFFF', 0.12) }, animatedStyle, style]}
+    />
+  );
+}
+
+function LikesYouSkeletonCard({ highlighted = false }: { highlighted?: boolean }) {
+  return (
+    <View
+      className="h-[160px] flex-1 overflow-hidden rounded-[24px] border p-3"
+      style={{
+        backgroundColor: highlighted ? '#30291F' : '#2B2B2D',
+        borderColor: highlighted ? '#5E5037' : '#3F3D3A',
+      }}>
+      <SkeletonBlock
+        className="flex-1 rounded-[18px]"
+        style={{ backgroundColor: highlighted ? withAlpha('#FF9A3E', 0.2) : withAlpha('#FFFFFF', 0.1) }}
+      />
+      <View className="mt-3 gap-2">
+        <SkeletonBlock className="h-3.5 w-[72%] rounded-full" />
+        <SkeletonBlock className="h-3 w-[90%] rounded-full" />
+      </View>
+    </View>
+  );
+}
+
+function MatchRowSkeleton() {
+  return (
+    <AppCard
+      className="rounded-[20px] border-[#414141] bg-[#2E2C2B] px-4 py-3.5"
+      style={{ shadowColor: 'transparent' }}>
+      <View className="flex-row items-center gap-3">
+        <SkeletonBlock
+          className="h-[56px] w-[56px] rounded-full"
+          style={{ backgroundColor: withAlpha('#FF9A3E', 0.18) }}
+        />
+
+        <View className="flex-1 gap-2">
+          <SkeletonBlock className="h-5 w-[48%] rounded-full" />
+          <SkeletonBlock className="h-3.5 w-[88%] rounded-full" />
+          <SkeletonBlock className="h-3.5 w-24 rounded-full" style={{ backgroundColor: withAlpha('#FFD33D', 0.2) }} />
+        </View>
+
+        <View className="ml-1 flex-row items-center gap-2">
+          <SkeletonBlock className="h-10 w-10 rounded-full" />
+          <SkeletonBlock className="h-10 w-10 rounded-full" />
+        </View>
+      </View>
+    </AppCard>
+  );
+}
+
+function MatchesSkeleton() {
+  return (
+    <View className="gap-8" accessibilityLabel="Loading connects">
+      <View className="gap-4">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-3">
+            <SkeletonBlock
+              className="h-8 w-8 rounded-full"
+              style={{ backgroundColor: withAlpha('#FF9F3F', 0.2) }}
+            />
+            <SkeletonBlock className="h-5 w-44 rounded-full" />
+          </View>
+
+          <SkeletonBlock
+            className="h-9 w-24 rounded-full"
+            style={{ backgroundColor: withAlpha('#FF9A3E', 0.2) }}
+          />
+        </View>
+
+        <View className="flex-row gap-4">
+          <LikesYouSkeletonCard highlighted />
+          <LikesYouSkeletonCard />
+          <LikesYouSkeletonCard />
+        </View>
+
+        <View
+          className="flex-row items-center justify-center gap-3 rounded-[24px] border px-6 py-5"
+          style={{ backgroundColor: '#352D1F', borderColor: '#6F5525' }}>
+          <SkeletonBlock
+            className="h-6 w-6 rounded-full"
+            style={{ backgroundColor: withAlpha('#FFD33D', 0.24) }}
+          />
+          <SkeletonBlock className="h-5 w-52 rounded-full" style={{ backgroundColor: withAlpha('#FFD33D', 0.2) }} />
+        </View>
+      </View>
+
+      <View className="gap-4">
+        <View className="flex-row items-center justify-between">
+          <SkeletonBlock className="h-7 w-40 rounded-full" />
+          <SkeletonBlock className="h-4 w-24 rounded-full" />
+        </View>
+
+        <View className="gap-4">
+          <MatchRowSkeleton />
+          <MatchRowSkeleton />
+          <MatchRowSkeleton />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function formatSpotlightTimestamp(value: string | null) {
   if (!value) {
@@ -325,6 +469,9 @@ export function MatchesScreen() {
             />
           }
           showsVerticalScrollIndicator={false}>
+          {matchesQuery.isLoading ? (
+            <MatchesSkeleton />
+          ) : (
           <View className="gap-8">
             <View className="gap-4">
               <View className="flex-row items-center justify-between">
@@ -452,18 +599,6 @@ export function MatchesScreen() {
                 <AppText className="text-[15px] text-[#9F9C99]">{matchCountLabel}</AppText>
               </View>
             </View>
-            {matchesQuery.isLoading ? (
-              <AppCard
-                className="rounded-[20px] border-[#414141] bg-[#2E2C2B] p-4"
-                style={{ shadowColor: 'transparent' }}>
-                <AppText className="text-[#F1F1F1]" variant="subtitle">
-                  Loading connects...
-                </AppText>
-                <AppText className="mt-1 text-[#9F9C99]">
-                  Pulling your latest mutual connects now.
-                </AppText>
-              </AppCard>
-            ) : null}
 
             {matchesQuery.isError ? (
               <AppCard
@@ -521,6 +656,7 @@ export function MatchesScreen() {
               ))}
             </View>
           </View>
+          )}
         </ScrollView>
       </View>
     </>

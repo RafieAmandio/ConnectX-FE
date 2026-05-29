@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppText } from '@shared/components';
 
-import { useNotifications } from '../hooks/use-notifications';
+import { useMarkNotificationsRead, useNotifications } from '../hooks/use-notifications';
 import type { NotificationType, UserNotification } from '../types/notifications.types';
 
 const HEADER_BG = '#232323';
@@ -147,8 +147,31 @@ export function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const notificationsQuery = useNotifications();
+  const markNotificationsReadMutation = useMarkNotificationsRead();
   const notifications = notificationsQuery.data?.data.notifications ?? [];
   const unreadCount = notificationsQuery.data?.data.unreadCount ?? 0;
+  const lastReadAttemptDataUpdatedAtRef = React.useRef(0);
+
+  React.useEffect(() => {
+    if (
+      notificationsQuery.isLoading ||
+      !notificationsQuery.data ||
+      unreadCount <= 0 ||
+      markNotificationsReadMutation.isPending ||
+      lastReadAttemptDataUpdatedAtRef.current === notificationsQuery.dataUpdatedAt
+    ) {
+      return;
+    }
+
+    lastReadAttemptDataUpdatedAtRef.current = notificationsQuery.dataUpdatedAt;
+    markNotificationsReadMutation.mutate();
+  }, [
+    markNotificationsReadMutation,
+    notificationsQuery.data,
+    notificationsQuery.dataUpdatedAt,
+    notificationsQuery.isLoading,
+    unreadCount,
+  ]);
 
   return (
     <>
