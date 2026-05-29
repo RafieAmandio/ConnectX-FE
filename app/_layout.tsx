@@ -44,6 +44,7 @@ export default function RootLayout() {
                 />
                 <Stack.Screen name="conversation" options={{ headerShown: false }} />
                 <Stack.Screen name="match-analysis" options={{ headerShown: false }} />
+                <Stack.Screen name="profile" options={{ headerShown: false }} />
               </Stack>
               <StatusBar style="light" />
             </ThemeProvider>
