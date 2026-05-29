@@ -389,7 +389,7 @@ export function EditStartupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const myProfileQuery = useMyProfile();
-  const filterOptionsQuery = useDiscoveryFilterOptions('startup');
+  const filterOptionsQuery = useDiscoveryFilterOptions('explore_startups');
   const updateMutation = useUpdateStartupProfile();
 
   const startup = myProfileQuery.data?.data?.startup;
