@@ -210,6 +210,33 @@ export type RequestAccountDeletionResponse = {
   };
 };
 
+export type UpdateStartupProfileRequest = {
+  name?: string;
+  tagline?: string;
+  description?: string;
+  logo_url?: string;
+  stage?: string;
+  industry?: string;
+  secondary_industry?: string;
+  team_size?: number;
+  open_roles?: string[];
+  user_count?: string;
+  mau?: string;
+  revenue?: string;
+  website?: string;
+  prototype_url?: string;
+  linkedin?: string;
+  commitment?: string;
+  equity?: string;
+  paid?: boolean;
+};
+
+export type UpdateStartupProfileResponse = {
+  success: boolean;
+  message: string;
+  data: Record<string, unknown>;
+};
+
 export type ProfileOptionsResponse = {
   success: boolean;
   data: {

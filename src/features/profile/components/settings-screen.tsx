@@ -7,8 +7,10 @@ import {
   Linking,
   Pressable,
   ScrollView,
+  Switch,
   View,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
@@ -20,6 +22,12 @@ import {
   usePauseMyAccount,
   useRequestMyAccountDeletion,
 } from '../hooks/use-profile';
+import {
+  useNotificationSettings,
+  useUpdateNotificationSettings,
+} from '../hooks/use-settings';
+import type { SupportTicketType } from '../types/settings.types';
+import { SupportTicketModal } from './support-ticket-modal';
 
 const SETTINGS_LINKS = {
   privacy: 'https://getconnectx.app/privacy',
@@ -166,6 +174,63 @@ function SettingsRow({
   );
 }
 
+function NotificationToggleRow({
+  description,
+  enabled,
+  icon,
+  isUpdating,
+  onToggle,
+  title,
+}: {
+  description: string;
+  enabled: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  isUpdating: boolean;
+  onToggle: (value: boolean) => void;
+  title: string;
+}) {
+  const toneColors = getToneColors('default');
+
+  return (
+    <View
+      className="min-h-[70px] flex-row items-center gap-3 rounded-[18px] border px-3.5 py-3"
+      style={{
+        backgroundColor: toneColors.backgroundColor,
+        borderColor: toneColors.borderColor,
+      }}
+    >
+      <View
+        className="h-10 w-10 items-center justify-center rounded-full"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.18)' }}
+      >
+        <Ionicons color={toneColors.iconColor} name={icon} size={19} />
+      </View>
+
+      <View className="min-w-0 flex-1 gap-1">
+        <AppText className="text-[15px] leading-5" numberOfLines={1} variant="bodyStrong">
+          {title}
+        </AppText>
+        <AppText className="text-[13px] leading-5" numberOfLines={2} tone="muted">
+          {description}
+        </AppText>
+      </View>
+
+      <View className="min-w-[36px] items-end">
+        {isUpdating ? (
+          <ActivityIndicator color={palette.accent} size="small" />
+        ) : (
+          <Switch
+            onValueChange={onToggle}
+            thumbColor={palette.text}
+            trackColor={{ false: palette.border, true: palette.accent }}
+            value={enabled}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
 export function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -181,6 +246,10 @@ export function SettingsScreen() {
   const pauseAccountMutation = usePauseMyAccount();
   const activateAccountMutation = useActivateMyAccount();
   const deleteAccountMutation = useRequestMyAccountDeletion();
+  const notificationSettingsQuery = useNotificationSettings();
+  const updateNotificationsMutation = useUpdateNotificationSettings();
+  const [supportTicketType, setSupportTicketType] = React.useState<SupportTicketType | null>(null);
+  const notificationData = notificationSettingsQuery.data?.data;
   const sessionPremium = Boolean(session?.premium?.isPremium);
   const isProfileActive = session?.user?.is_active !== false;
   const isPremiumActive = isConnectXProActive || sessionPremium;
@@ -368,6 +437,29 @@ export function SettingsScreen() {
           }}
           contentInsetAdjustmentBehavior="automatic"
         >
+          <Section title="Notifications">
+            <NotificationToggleRow
+              description="Stay updated on new connections."
+              enabled={notificationData?.push_enabled ?? true}
+              icon="notifications-outline"
+              isUpdating={updateNotificationsMutation.isPending}
+              onToggle={(value) => {
+                updateNotificationsMutation.mutate({ push_enabled: value });
+              }}
+              title="Push Notifications"
+            />
+            <NotificationToggleRow
+              description="Receive updates in your inbox."
+              enabled={notificationData?.email_enabled ?? true}
+              icon="mail-outline"
+              isUpdating={updateNotificationsMutation.isPending}
+              onToggle={(value) => {
+                updateNotificationsMutation.mutate({ email_enabled: value });
+              }}
+              title="Email Notifications"
+            />
+          </Section>
+
           <Section title="Legal">
             <SettingsRow
               description="Read how ConnectX handles your data."
@@ -384,6 +476,27 @@ export function SettingsScreen() {
                 void openExternalUrl(SETTINGS_LINKS.terms);
               }}
               title="Terms & Policy"
+            />
+          </Section>
+
+          <Section title="Help Center">
+            <SettingsRow
+              description="Share an idea, feature, or enhancement."
+              icon="bulb-outline"
+              onPress={() => setSupportTicketType('feature_request')}
+              title="Feature Request"
+            />
+            <SettingsRow
+              description="Help us zap those bugs and glitches."
+              icon="bug-outline"
+              onPress={() => setSupportTicketType('bug_report')}
+              title="Bug Report"
+            />
+            <SettingsRow
+              description="Need a hand? Let us know."
+              icon="chatbubble-ellipses-outline"
+              onPress={() => setSupportTicketType('contact_support')}
+              title="Contact Support"
             />
           </Section>
 
@@ -424,8 +537,27 @@ export function SettingsScreen() {
               title="Delete account"
               tone="danger"
             />
+            <SettingsRow
+              description="Sign out of your ConnectX account."
+              icon="log-out-outline"
+              onPress={() => void signOut()}
+              title="Log Out"
+              tone="danger"
+            />
           </Section>
+
+          <AppText align="center" className="text-[12px] pt-2" tone="muted">
+            Version {Constants.expoConfig?.version ?? '0.0.0'}
+          </AppText>
         </ScrollView>
+
+        {supportTicketType ? (
+          <SupportTicketModal
+            onClose={() => setSupportTicketType(null)}
+            ticketType={supportTicketType}
+            visible={Boolean(supportTicketType)}
+          />
+        ) : null}
       </View>
     </>
   );

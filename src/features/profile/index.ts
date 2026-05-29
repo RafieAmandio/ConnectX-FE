@@ -1,5 +1,6 @@
 export { ProfileScreen } from './components/profile-screen';
 export { EditProfileScreen } from './components/edit-profile-modal';
+export { EditStartupScreen } from './components/edit-startup-screen';
 export { SettingsScreen } from './components/settings-screen';
 export {
   profileQueryKeys,
@@ -10,6 +11,7 @@ export {
   useRequestMyAccountDeletion,
   useUpdateMyProfile,
   useUpdateProfileLocation,
+  useUpdateStartupProfile,
 } from './hooks/use-profile';
 export {
   activateMyAccount,
@@ -20,6 +22,7 @@ export {
   requestMyAccountDeletion,
   updateMyProfile,
   updateProfileLocation,
+  updateStartupProfile,
 } from './services/profile-service';
 export type {
   ActivateAccountResponse,
@@ -43,4 +46,6 @@ export type {
   UpdateMyProfileResponse,
   UpdateProfileLocationRequest,
   UpdateProfileLocationResponse,
+  UpdateStartupProfileRequest,
+  UpdateStartupProfileResponse,
 } from './types/profile.types';

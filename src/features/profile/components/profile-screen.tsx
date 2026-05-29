@@ -183,7 +183,13 @@ function NamedItemList({
   );
 }
 
-function StartupProfileCard({ startup }: { startup: NonNullable<MyProfileData['startup']> }) {
+function StartupProfileCard({
+  onEdit,
+  startup,
+}: {
+  onEdit: () => void;
+  startup: NonNullable<MyProfileData['startup']>;
+}) {
   return (
     <SectionCard className="gap-5 rounded-[24px] px-4 py-4">
       <View className="flex-row items-start gap-3">
@@ -259,6 +265,17 @@ function StartupProfileCard({ startup }: { startup: NonNullable<MyProfileData['s
           </View>
         </View>
       ) : null}
+
+      <Pressable
+        className="min-h-10 flex-row items-center justify-center gap-1.5 rounded-full border px-4 active:opacity-80"
+        onPress={onEdit}
+        style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}
+      >
+        <Ionicons color={ACCENT} name="create-outline" size={15} />
+        <AppText className="text-[13px]" variant="bodyStrong">
+          Edit Startup
+        </AppText>
+      </Pressable>
     </SectionCard>
   );
 }
@@ -790,7 +807,12 @@ export function ProfileScreen() {
 
             <StatsOverview stats={effectiveProfile.stats} />
 
-            {startup ? <StartupProfileCard startup={startup} /> : null}
+            {startup ? (
+              <StartupProfileCard
+                onEdit={() => router.push('/profile/edit-startup' as never)}
+                startup={startup}
+              />
+            ) : null}
 
             {aboutSection ? (
               <SectionCard>

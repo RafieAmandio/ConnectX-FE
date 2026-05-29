@@ -11,6 +11,8 @@ import type {
   UpdateMyProfileResponse,
   UpdateProfileLocationRequest,
   UpdateProfileLocationResponse,
+  UpdateStartupProfileRequest,
+  UpdateStartupProfileResponse,
 } from '../types/profile.types';
 
 export const PROFILE_API = {
@@ -18,6 +20,7 @@ export const PROFILE_API = {
   ACCOUNT_DELETION_REQUESTS: '/api/v1/me/account/deletion-requests',
   ACCOUNT_PAUSE: '/api/v1/me/account/pause',
   LOCATION: '/api/v1/profile/location',
+  STARTUP: '/api/v1/me/startup',
   ME: '/api/v1/me/profile',
   OPTIONS: '/api/v1/profile-options',
   PUBLIC_DETAIL: (profileId: string) => `/api/v1/profiles/${profileId}`,
@@ -68,6 +71,13 @@ export async function activateMyAccount() {
   return apiFetch<ActivateAccountResponse>(PROFILE_API.ACCOUNT_ACTIVATE, {
     body: {} as unknown as BodyInit,
     method: 'POST',
+  });
+}
+
+export async function updateStartupProfile(payload: UpdateStartupProfileRequest) {
+  return apiFetch<UpdateStartupProfileResponse>(PROFILE_API.STARTUP, {
+    body: payload as unknown as BodyInit,
+    method: 'PATCH',
   });
 }
 
