@@ -1,10 +1,11 @@
-import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import React from 'react';
 import {
-  ActivityIndicator,
+  Linking,
   Pressable,
+  RefreshControl,
   ScrollView,
   View,
   useWindowDimensions,
@@ -14,15 +15,20 @@ import { useAuthContext } from '@features/auth/store/auth-provider';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 
 import { useMyProfile } from '../hooks/use-profile';
-import { mockMyProfileResponse } from '../mock/profile.mock';
+import {
+  mockIndividualProfileResponse,
+  mockStartupProfileResponse,
+} from '../mock/profile.mock';
 import type {
-  ProfileAboutKind,
   MyProfileData,
   MyProfileResponse,
+  ProfileAboutKind,
   ProfileBadge,
+  ProfileEducationItem,
+  ProfileExperienceItem,
   ProfileNamedItem,
 } from '../types/profile.types';
-import { EditProfileModal } from './edit-profile-modal';
+import { ProfileSkeleton } from './profile-skeleton';
 
 const BADGE_ICON_BY_ID: Record<string, keyof typeof Ionicons.glyphMap> = {
   'startup-founder': 'rocket-outline',
@@ -47,7 +53,9 @@ const ACCENT_SOFT_BG = '#2A2117';
 const DANGER = '#FF5A67';
 const DANGER_BORDER = 'rgba(255, 90, 103, 0.2)';
 
-function hasUsableProfile(response?: MyProfileResponse) {
+type ProfileMockMode = 'startup' | 'individual';
+
+function hasUsableProfile(response?: MyProfileResponse): response is MyProfileResponse {
   return typeof response?.data?.id === 'string' && response.data.id.length > 0;
 }
 
@@ -60,34 +68,12 @@ function getInitials(value: string) {
     .join('');
 }
 
-function getProfileStatusCopy({
-  isError,
-  isFetching,
-}: {
-  isError: boolean;
-  isFetching: boolean;
-}) {
-  if (isError) {
-    return {
-      icon: 'alert-circle-outline' as const,
-      label: 'Using fallback profile',
-      tone: '#F4D03F',
-    };
+function getImageUri(value: unknown) {
+  if (typeof value !== 'string') {
+    return null;
   }
 
-  if (isFetching) {
-    return {
-      icon: 'sync-outline' as const,
-      label: 'Syncing profile',
-      tone: ACCENT,
-    };
-  }
-
-  return {
-    icon: 'person-circle-outline' as const,
-    label: 'My profile',
-    tone: '#98A2B3',
-  };
+  return value.trim() || null;
 }
 
 function getAboutSectionDescription(kind: ProfileAboutKind) {
@@ -168,20 +154,6 @@ function BadgePill({ badge }: { badge: ProfileBadge }) {
   );
 }
 
-function BadgeList({ badges }: { badges: ProfileBadge[] }) {
-  if (!badges.length) {
-    return null;
-  }
-
-  return (
-    <View className="flex-row flex-wrap gap-2">
-      {badges.map((badge) => (
-        <BadgePill key={badge.id} badge={badge} />
-      ))}
-    </View>
-  );
-}
-
 function NamedItemList({
   items,
   tone = 'signal',
@@ -211,27 +183,144 @@ function NamedItemList({
   );
 }
 
-function StatusRow({
-  isError,
-  isFetching,
+function StartupProfileCard({
+  onEdit,
+  startup,
 }: {
-  isError: boolean;
-  isFetching: boolean;
+  onEdit: () => void;
+  startup: NonNullable<MyProfileData['startup']>;
 }) {
-  const status = getProfileStatusCopy({ isError, isFetching });
+  return (
+    <SectionCard className="gap-5 rounded-[24px] px-4 py-4">
+      <View className="flex-row items-start gap-3">
+        <View
+          className="h-10 w-10 items-center justify-center rounded-full border"
+          style={{ backgroundColor: ACCENT_SOFT_BG, borderColor: ACCENT_BORDER }}
+        >
+          <Ionicons color={ACCENT} name="rocket-outline" size={18} />
+        </View>
+
+        <View className="min-w-0 flex-1 gap-1">
+          <View className="flex-row flex-wrap items-center gap-2">
+            <AppText className="text-[11px] tracking-[1.2px]" tone="muted" variant="label">
+              Startup
+            </AppText>
+            <View
+              className="rounded-full border px-2.5 py-1"
+              style={{ backgroundColor: ACCENT_SOFT_BG, borderColor: ACCENT_BORDER }}
+            >
+              <AppText className="text-[11px]" tone="signal" variant="bodyStrong">
+                {startup.stage.label}
+              </AppText>
+            </View>
+          </View>
+          <AppText className="text-[18px] leading-6" variant="subtitle">
+            {startup.name}
+          </AppText>
+          <AppText className="text-[14px] leading-5" tone="muted">
+            {startup.tagline}
+          </AppText>
+        </View>
+      </View>
+
+      {startup.industries.length ? (
+        <View className="gap-2.5">
+          <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
+            Industries
+          </AppText>
+          <NamedItemList items={startup.industries} />
+        </View>
+      ) : null}
+
+      {startup.links.length ? (
+        <View className="gap-2.5">
+          <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
+            Links
+          </AppText>
+          <View className="gap-2">
+            {startup.links.map((link) => (
+              <Pressable
+                key={`${link.label}-${link.url}`}
+                className="min-h-[52px] flex-row items-center gap-3 rounded-[16px] border px-3 active:opacity-80"
+                onPress={() => Linking.openURL(link.url)}
+                style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+              >
+                <View
+                  className="h-8 w-8 items-center justify-center rounded-full"
+                  style={{ backgroundColor: ACCENT_SOFT_BG }}
+                >
+                  <Ionicons color={ACCENT} name="link-outline" size={15} />
+                </View>
+                <View className="min-w-0 flex-1">
+                  <AppText className="text-[13px]" variant="bodyStrong">
+                    {link.label}
+                  </AppText>
+                  <AppText className="text-[12px] leading-4" numberOfLines={1} tone="muted">
+                    {link.url}
+                  </AppText>
+                </View>
+                <Ionicons color="rgba(255,255,255,0.45)" name="open-outline" size={15} />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      <Pressable
+        className="min-h-10 flex-row items-center justify-center gap-1.5 rounded-full border px-4 active:opacity-80"
+        onPress={onEdit}
+        style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}
+      >
+        <Ionicons color={ACCENT} name="create-outline" size={15} />
+        <AppText className="text-[13px]" variant="bodyStrong">
+          Edit Startup
+        </AppText>
+      </Pressable>
+    </SectionCard>
+  );
+}
+
+function MockProfileToggle({
+  mode,
+  onChange,
+}: {
+  mode: ProfileMockMode;
+  onChange: (mode: ProfileMockMode) => void;
+}) {
+  const options: { label: string; value: ProfileMockMode }[] = [
+    { label: 'Startup', value: 'startup' },
+    { label: 'Individual', value: 'individual' },
+  ];
 
   return (
-    <View className="flex-row items-center gap-2 self-start rounded-full px-3 py-1.5">
-      <View
-        className="flex-row items-center gap-2 rounded-full border px-3 py-1.5"
-        style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
-      >
-        {isFetching ? <ActivityIndicator color={status.tone} size="small" /> : null}
-        {!isFetching ? <Ionicons color={status.tone} name={status.icon} size={14} /> : null}
-        <AppText className="text-[11px] tracking-[0.8px]" tone="muted" variant="label">
-          {status.label}
-        </AppText>
-      </View>
+    <View
+      className="flex-row rounded-[18px] border p-1"
+      style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+    >
+      {options.map((option) => {
+        const isActive = mode === option.value;
+
+        return (
+          <Pressable
+            key={option.value}
+            className="min-h-10 flex-1 items-center justify-center rounded-[14px] px-3 active:opacity-80"
+            onPress={() => onChange(option.value)}
+            style={{
+              backgroundColor: isActive ? ACCENT_SOFT_BG : 'transparent',
+              borderColor: isActive ? ACCENT_BORDER : 'transparent',
+              borderWidth: 1,
+            }}
+          >
+            <AppText
+              className="text-[13px]"
+              tone={isActive ? 'signal' : 'muted'}
+              variant="bodyStrong"
+            >
+              {option.label}
+            </AppText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -244,26 +333,27 @@ function ProfileHero({
   profile: MyProfileData;
 }) {
   const initials = getInitials(profile.name);
+  const photoUri = getImageUri(profile.photoUrl);
 
   return (
     <AppCard
-      className="gap-5 rounded-[28px] px-5 py-5"
+      className="gap-4 rounded-[28px] px-4 py-4"
       style={{
         backgroundColor: '#2B2A28',
         borderColor: 'rgba(245, 158, 11, 0.18)',
       }}
     >
-      <View className="flex-row items-start gap-4">
-        {profile.photoUrl ? (
+      <View className="flex-row items-center gap-4">
+        {photoUri ? (
           <Image
             contentFit="cover"
-            source={{ uri: profile.photoUrl }}
+            source={{ uri: photoUri }}
             style={{
               borderColor: 'rgba(245, 158, 11, 0.85)',
               borderRadius: 999,
               borderWidth: 3,
-              height: 92,
-              width: 92,
+              height: 76,
+              width: 76,
             }}
           />
         ) : (
@@ -273,48 +363,55 @@ function ProfileHero({
               backgroundColor: ACCENT,
               borderColor: 'rgba(255, 216, 128, 0.4)',
               borderWidth: 3,
-              height: 92,
-              width: 92,
+              height: 76,
+              width: 76,
             }}
           >
-            <AppText className="text-[28px] leading-[32px]" tone="inverse" variant="title">
+            <AppText className="text-[24px] leading-[28px]" tone="inverse" variant="title">
               {initials}
             </AppText>
           </View>
         )}
 
-        <View className="flex-1 gap-2">
-          <View className="gap-1">
-            <AppText className="text-[30px] leading-[36px]" variant="hero">
-              {profile.name}
-            </AppText>
-            <AppText className="text-[15px] leading-[22px]" tone="muted">
-              {profile.headline}
-            </AppText>
+        <View className="min-w-0 flex-1 gap-3">
+          <View className="flex-row items-start gap-3">
+            <View className="min-w-0 flex-1 gap-1">
+              <AppText className="text-[25px] leading-[30px]" numberOfLines={2} variant="title">
+                {profile.name}
+              </AppText>
+              <AppText className="text-[14px] leading-5" numberOfLines={1} tone="muted">
+                {profile.headline}
+              </AppText>
+            </View>
+
+            <Pressable
+              className="min-h-10 flex-row items-center justify-center gap-1.5 rounded-full border px-3 active:opacity-80"
+              onPress={onEdit}
+              style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}
+            >
+              <Ionicons color={ACCENT} name="create-outline" size={15} />
+              <AppText className="text-[13px]" variant="bodyStrong">
+                Edit
+              </AppText>
+            </Pressable>
           </View>
 
-          <View className="self-start flex-row items-center gap-2 rounded-full border px-3 py-1.5" style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}>
-            <Ionicons color={ACCENT} name="location-outline" size={14} />
-            <AppText className="text-[13px]" tone="default">
-              {profile.location.display}
-            </AppText>
+          <View className="flex-row flex-wrap items-center gap-2">
+            <View
+              className="flex-row items-center gap-1.5 rounded-full border px-3 py-1.5"
+              style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+            >
+              <Ionicons color={ACCENT} name="location-outline" size={13} />
+              <AppText className="max-w-[170px] text-[12px]" numberOfLines={1} tone="default">
+                {profile.location.display}
+              </AppText>
+            </View>
+
+            {profile.badges.map((badge) => (
+              <BadgePill key={badge.id} badge={badge} />
+            ))}
           </View>
         </View>
-      </View>
-
-      <View className="gap-3">
-        <BadgeList badges={profile.badges} />
-
-        <Pressable
-          className="min-h-[48px] flex-row items-center justify-center gap-2 self-start rounded-full border px-4 py-3"
-          onPress={onEdit}
-          style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}
-        >
-          <Ionicons color={ACCENT} name="create-outline" size={16} />
-          <AppText className="text-[14px]" variant="bodyStrong">
-            Edit Profile
-          </AppText>
-        </Pressable>
       </View>
     </AppCard>
   );
@@ -328,7 +425,7 @@ function StatsOverview({
   const entries = [
     { label: 'Connections', value: stats.connections },
     { label: 'Teams Joined', value: stats.teamsJoined },
-    { label: 'Matches', value: stats.matches },
+    { label: 'Connects', value: stats.matches },
   ];
 
   return (
@@ -402,6 +499,210 @@ function HighlightList({ items }: { items: string[] }) {
   );
 }
 
+type ProfileDetailTab = 'experience' | 'education';
+
+function getExperienceKey(item: ProfileExperienceItem, index: number) {
+  return item.id ?? `${item.title}-${item.organization}-${item.period ?? index}`;
+}
+
+function getEducationKey(item: ProfileEducationItem, index: number) {
+  return item.id ?? `${item.degree}-${item.school}-${item.period ?? index}`;
+}
+
+function ProfileDetailTabButton({
+  active,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      className="min-h-10 flex-1 items-center justify-center rounded-[14px] px-3 active:opacity-80"
+      onPress={onPress}
+      style={{
+        backgroundColor: active ? ACCENT_SOFT_BG : 'transparent',
+        borderColor: active ? ACCENT_BORDER : 'transparent',
+        borderWidth: 1,
+      }}
+    >
+      <AppText className="text-[13px]" tone={active ? 'signal' : 'muted'} variant="bodyStrong">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+function ExperienceRow({ item }: { item: ProfileExperienceItem }) {
+  const companyLogoUri = getImageUri(item.companyLogo);
+
+  return (
+    <View
+      className="rounded-[16px] border border-l-[2.5px] p-4"
+      style={{
+        backgroundColor: SURFACE_MUTED,
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderLeftColor: ACCENT,
+      }}
+    >
+      <View className="flex-row gap-3.5">
+        {companyLogoUri ? (
+          <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+            <Image
+              contentFit="contain"
+              source={{ uri: companyLogoUri }}
+              style={{ height: '100%', width: '100%' }}
+            />
+          </View>
+        ) : (
+          <View
+            className="h-11 w-11 items-center justify-center rounded-[12px] border"
+            style={{ backgroundColor: ACCENT_SOFT_BG, borderColor: ACCENT_BORDER }}
+          >
+            <Ionicons color={ACCENT} name="briefcase-outline" size={20} />
+          </View>
+        )}
+
+        <View className="min-w-0 flex-1 gap-1.5">
+          <AppText className="text-[16px]" numberOfLines={2} variant="title">
+            {item.title}
+          </AppText>
+          {item.organization || item.period ? (
+            <AppText className="text-[13px]" numberOfLines={2} style={{ color: ACCENT }}>
+              {[item.organization, item.period].filter(Boolean).join(' · ')}
+            </AppText>
+          ) : null}
+          {item.location ? (
+            <View className="flex-row items-center gap-1">
+              <Ionicons color="#98A2B3" name="location-outline" size={13} />
+              <AppText className="text-[12px]" numberOfLines={1} tone="muted">
+                {item.location}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function EducationRow({ item }: { item: ProfileEducationItem }) {
+  const schoolLogoUri = getImageUri(item.schoolLogo);
+
+  return (
+    <View
+      className="flex-row items-center gap-3.5 rounded-[16px] border p-4"
+      style={{ backgroundColor: SURFACE_MUTED, borderColor: 'rgba(255,255,255,0.1)' }}
+    >
+      {schoolLogoUri ? (
+        <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+          <Image
+            contentFit="contain"
+            source={{ uri: schoolLogoUri }}
+            style={{ height: '100%', width: '100%' }}
+          />
+        </View>
+      ) : (
+        <View
+          className="h-11 w-11 items-center justify-center rounded-[12px] border"
+          style={{ backgroundColor: '#302712', borderColor: 'rgba(245, 208, 84, 0.28)' }}
+        >
+          <Ionicons color="#F4D03F" name="school-outline" size={22} />
+        </View>
+      )}
+
+      <View className="min-w-0 flex-1 gap-0.5">
+        <AppText className="text-[16px]" numberOfLines={2} variant="title">
+          {item.degree}
+        </AppText>
+        <AppText className="text-[13px]" numberOfLines={2} style={{ color: '#F4D03F' }}>
+          {[item.school, item.field].filter(Boolean).join(' · ')}
+        </AppText>
+        {item.period ? (
+          <AppText className="text-[12px]" numberOfLines={1} tone="muted">
+            {item.period}
+          </AppText>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function EmptyDetailTab({ label }: { label: string }) {
+  return (
+    <View
+      className="items-center gap-2 rounded-[16px] border px-4 py-6"
+      style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+    >
+      <Ionicons color="#667085" name="file-tray-outline" size={24} />
+      <AppText align="center" className="text-[13px]" tone="muted">
+        No {label.toLowerCase()} added yet.
+      </AppText>
+    </View>
+  );
+}
+
+function ExperienceEducationTabs({
+  education,
+  experience,
+}: {
+  education: ProfileEducationItem[];
+  experience: ProfileExperienceItem[];
+}) {
+  const [activeTab, setActiveTab] = React.useState<ProfileDetailTab>(
+    experience.length > 0 ? 'experience' : 'education'
+  );
+
+  React.useEffect(() => {
+    if (activeTab === 'experience' && experience.length === 0 && education.length > 0) {
+      setActiveTab('education');
+    }
+  }, [activeTab, education.length, experience.length]);
+
+  return (
+    <SectionCard className="gap-4 rounded-[24px] px-4 py-4">
+      <SectionHeader
+        description="Roles and education that give matches more context."
+        eyebrow="Background"
+        icon="briefcase-outline"
+        title="Experience & Education"
+      />
+
+      <View
+        className="flex-row rounded-[18px] border p-1"
+        style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
+      >
+        <ProfileDetailTabButton
+          active={activeTab === 'experience'}
+          label="Experience"
+          onPress={() => setActiveTab('experience')}
+        />
+        <ProfileDetailTabButton
+          active={activeTab === 'education'}
+          label="Education"
+          onPress={() => setActiveTab('education')}
+        />
+      </View>
+
+      <View className="gap-3">
+        {activeTab === 'experience' ? (
+          experience.length ? (
+            experience.map((item, index) => <ExperienceRow key={getExperienceKey(item, index)} item={item} />)
+          ) : (
+            <EmptyDetailTab label="Experience" />
+          )
+        ) : education.length ? (
+          education.map((item, index) => <EducationRow key={getEducationKey(item, index)} item={item} />)
+        ) : (
+          <EmptyDetailTab label="Education" />
+        )}
+      </View>
+    </SectionCard>
+  );
+}
+
 function BottomSignOut({ onPress }: { onPress: () => void }) {
   return (
     <View className="gap-3 px-1 pt-2">
@@ -423,118 +724,168 @@ function BottomSignOut({ onPress }: { onPress: () => void }) {
 }
 
 export function ProfileScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const { signOut } = useAuthContext();
+  const [mockMode, setMockMode] = React.useState<ProfileMockMode>('startup');
   const myProfileQuery = useMyProfile();
-  const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
   const myProfileResponse = myProfileQuery.data;
+  const shouldUseMockProfile =
+    myProfileQuery.isError ||
+    (myProfileQuery.isSuccess && !hasUsableProfile(myProfileResponse));
+  const mockProfile =
+    mockMode === 'startup'
+      ? mockStartupProfileResponse.data
+      : mockIndividualProfileResponse.data;
 
   const effectiveProfile =
-    myProfileResponse && hasUsableProfile(myProfileResponse)
-      ? myProfileResponse.data
-      : mockMyProfileResponse.data;
+    shouldUseMockProfile || !hasUsableProfile(myProfileResponse)
+      ? mockProfile
+      : myProfileResponse.data;
 
   const aboutSection = effectiveProfile.sections.about;
+  const startup = effectiveProfile.startup;
+  const isStartupOwnerProfile = Boolean(startup);
   const personalitySection = effectiveProfile.sections.personalityAndHobbies;
   const skillsSection = effectiveProfile.sections.skills;
   const interestsSection = effectiveProfile.sections.interests;
+  const experienceItems = effectiveProfile.sections.experience?.items ?? [];
+  const educationItems = effectiveProfile.sections.education?.items ?? [];
   const highlightsSection = effectiveProfile.sections.highlights;
+  const shouldShowBackgroundTabs =
+    !isStartupOwnerProfile && (experienceItems.length > 0 || educationItems.length > 0);
   const shouldStackPanels = width < 390;
+  const topBarAccessory = (
+    <Pressable
+      accessibilityLabel="Open profile settings"
+      className="h-10 w-10 items-center justify-center rounded-full border active:opacity-80"
+      hitSlop={10}
+      onPress={() => router.push('/profile/settings' as never)}
+      style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}
+    >
+      <Ionicons color={ACCENT} name="settings-outline" size={19} />
+    </Pressable>
+  );
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false, title: '' }} />
       <View className="flex-1" style={{ backgroundColor: '#262626' }}>
-        <AppTopBar />
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
-          contentInsetAdjustmentBehavior="automatic"
-        >
-          <StatusRow isError={myProfileQuery.isError} isFetching={myProfileQuery.isFetching} />
-
-          <ProfileHero
-            onEdit={() => setIsEditModalVisible(true)}
-            profile={effectiveProfile}
+        <AppTopBar rightAccessory={topBarAccessory} />
+        {!shouldUseMockProfile && !hasUsableProfile(myProfileResponse) ? (
+          <ProfileSkeleton
+            refreshControl={
+              <RefreshControl
+                onRefresh={myProfileQuery.refetch}
+                refreshing={myProfileQuery.isRefetching}
+                tintColor={ACCENT}
+              />
+            }
+            shouldStackPanels={shouldStackPanels}
           />
-
-          <StatsOverview stats={effectiveProfile.stats} />
-
-          {aboutSection ? (
-            <SectionCard>
-              <SectionHeader
-                description={getAboutSectionDescription(aboutSection.kind)}
-                eyebrow="About"
-                icon="bulb-outline"
-                title={aboutSection.title}
+        ) : (
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
+            contentInsetAdjustmentBehavior="automatic"
+            refreshControl={
+              <RefreshControl
+                onRefresh={myProfileQuery.refetch}
+                refreshing={myProfileQuery.isRefetching}
+                tintColor={ACCENT}
               />
-              <AppText className="text-[15px] leading-7" selectable tone="muted">
-                {aboutSection.value}
-              </AppText>
-            </SectionCard>
-          ) : null}
+            }
+          >
+            <ProfileHero
+              onEdit={() => router.push('/profile/edit' as never)}
+              profile={effectiveProfile}
+            />
 
-          {personalitySection ? (
-            <SectionCard>
-              <SectionHeader
-                description="Traits and hobbies that make the collaboration style easier to read."
-                eyebrow="Personality"
-                icon="flash-outline"
-                title={personalitySection.title}
+            {shouldUseMockProfile ? (
+              <MockProfileToggle mode={mockMode} onChange={setMockMode} />
+            ) : null}
+
+            <StatsOverview stats={effectiveProfile.stats} />
+
+            {startup ? (
+              <StartupProfileCard
+                onEdit={() => router.push('/profile/edit-startup' as never)}
+                startup={startup}
               />
-              <NamedItemList items={personalitySection.items} />
-            </SectionCard>
-          ) : null}
+            ) : null}
 
-          {skillsSection || interestsSection ? (
-            <View className={shouldStackPanels ? 'gap-3' : 'flex-row gap-3'}>
-              {skillsSection ? (
-                <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
-                  <SectionHeader
-                    eyebrow="Expertise"
-                    icon="construct-outline"
-                    title={skillsSection.title}
-                  />
-                  <NamedItemList items={skillsSection.items} tone="warning" />
-                </SectionCard>
-              ) : null}
+            {aboutSection ? (
+              <SectionCard>
+                <SectionHeader
+                  description={getAboutSectionDescription(aboutSection.kind)}
+                  eyebrow="About"
+                  icon="bulb-outline"
+                  title={aboutSection.title}
+                />
+                <AppText className="text-[15px] leading-7" selectable tone="muted">
+                  {aboutSection.value}
+                </AppText>
+              </SectionCard>
+            ) : null}
 
-              {interestsSection ? (
-                <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
-                  <SectionHeader
-                    eyebrow="Focus"
-                    icon="compass-outline"
-                    title={interestsSection.title}
-                  />
-                  <NamedItemList items={interestsSection.items} />
-                </SectionCard>
-              ) : null}
-            </View>
-          ) : null}
+            {!isStartupOwnerProfile && personalitySection ? (
+              <SectionCard>
+                <SectionHeader
+                  description="Traits and hobbies that make the collaboration style easier to read."
+                  eyebrow="Personality"
+                  icon="flash-outline"
+                  title={personalitySection.title}
+                />
+                <NamedItemList items={personalitySection.items} />
+              </SectionCard>
+            ) : null}
 
-          {highlightsSection?.items?.length ? (
-            <SectionCard>
-              <SectionHeader
-                description="Quick facts that help others understand experience and context."
-                eyebrow="Highlights"
-                icon="sparkles-outline"
-                title="Standout details"
-              />
-              <HighlightList items={highlightsSection.items} />
-            </SectionCard>
-          ) : null}
+            {skillsSection || interestsSection ? (
+              <View className={shouldStackPanels ? 'gap-3' : 'flex-row gap-3'}>
+                {skillsSection ? (
+                  <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
+                    <SectionHeader
+                      eyebrow="Expertise"
+                      icon="construct-outline"
+                      title={skillsSection.title}
+                    />
+                    <NamedItemList items={skillsSection.items} tone="warning" />
+                  </SectionCard>
+                ) : null}
 
-          <BottomSignOut onPress={() => signOut()} />
-        </ScrollView>
+                {interestsSection ? (
+                  <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
+                    <SectionHeader
+                      eyebrow="Focus"
+                      icon="compass-outline"
+                      title={interestsSection.title}
+                    />
+                    <NamedItemList items={interestsSection.items} />
+                  </SectionCard>
+                ) : null}
+              </View>
+            ) : null}
+
+            {shouldShowBackgroundTabs ? (
+              <ExperienceEducationTabs education={educationItems} experience={experienceItems} />
+            ) : null}
+
+            {highlightsSection?.items?.length ? (
+              <SectionCard>
+                <SectionHeader
+                  description="Quick facts that help others understand experience and context."
+                  eyebrow="Highlights"
+                  icon="sparkles-outline"
+                  title="Standout details"
+                />
+                <HighlightList items={highlightsSection.items} />
+              </SectionCard>
+            ) : null}
+
+            <BottomSignOut onPress={() => signOut()} />
+          </ScrollView>
+        )}
       </View>
-
-      {isEditModalVisible ? (
-        <EditProfileModal
-          onClose={() => setIsEditModalVisible(false)}
-          profile={effectiveProfile}
-          visible={isEditModalVisible}
-        />
-      ) : null}
     </>
   );
 }
