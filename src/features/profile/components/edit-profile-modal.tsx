@@ -500,6 +500,112 @@ function BackgroundEditorHeader({
   );
 }
 
+function BackgroundLogoUpload({
+  disabled,
+  isUploading,
+  label,
+  logoUrl,
+  onPick,
+  onRemove,
+}: {
+  disabled?: boolean;
+  isUploading?: boolean;
+  label: string;
+  logoUrl?: string | null;
+  onPick: () => void;
+  onRemove: () => void;
+}) {
+  const currentUrl = logoUrl?.trim() || null;
+
+  return (
+    <View className="gap-2">
+      <AppText style={{ color: profilePalette.textMuted }} variant="label">
+        {label}
+      </AppText>
+      <Pressable
+        accessibilityRole="button"
+        className="min-h-[132px] overflow-hidden rounded-[16px] border p-4 active:opacity-80"
+        disabled={disabled}
+        onPress={onPick}
+        style={{
+          backgroundColor: '#2C2C2C',
+          borderColor: currentUrl ? profilePalette.accent : profilePalette.border,
+          opacity: disabled ? 0.7 : 1,
+        }}>
+        {currentUrl ? (
+          <View className="gap-3">
+            <View className="flex-row items-center gap-3">
+              <View
+                className="overflow-hidden rounded-[14px] border"
+                style={{
+                  backgroundColor: profilePalette.field,
+                  borderColor: profilePalette.borderSoft,
+                  height: 64,
+                  width: 64,
+                }}>
+                <Image
+                  contentFit="cover"
+                  source={{ uri: currentUrl }}
+                  style={{ height: '100%', width: '100%' }}
+                />
+              </View>
+              <View className="min-w-0 flex-1 gap-1">
+                <AppText className="text-[14px]" variant="bodyStrong">
+                  Logo selected
+                </AppText>
+                <AppText className="text-[12px]" numberOfLines={1} selectable tone="muted">
+                  {currentUrl}
+                </AppText>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View className="flex-1 items-center justify-center gap-3 py-3">
+            <View
+              className="h-11 w-11 items-center justify-center rounded-full"
+              style={{ backgroundColor: profilePalette.accentSoft }}>
+              <Ionicons color={profilePalette.accent} name="image-outline" size={22} />
+            </View>
+            <View className="items-center gap-1">
+              <AppText align="center" className="text-[14px]" variant="bodyStrong">
+                Upload logo
+              </AppText>
+              <AppText align="center" className="text-[12px]" tone="muted">
+                Choose an image from your library
+              </AppText>
+            </View>
+          </View>
+        )}
+
+        <View className="mt-4 flex-row items-center justify-between gap-3">
+          <View className="min-w-0 flex-1 flex-row items-center gap-2">
+            {isUploading ? <ActivityIndicator color={profilePalette.accent} size="small" /> : null}
+            <AppText className="text-[12px]" numberOfLines={1} tone="muted">
+              {isUploading ? 'Uploading...' : currentUrl ? 'Tap to replace' : 'JPG or PNG'}
+            </AppText>
+          </View>
+
+          {currentUrl && !isUploading ? (
+            <Pressable
+              accessibilityRole="button"
+              className="rounded-full border px-3 py-1"
+              disabled={disabled}
+              onPress={(event) => {
+                event.stopPropagation();
+                onRemove();
+              }}
+              style={{ borderColor: profilePalette.border }}>
+              <AppText className="text-[12px]" tone="muted" variant="label">
+                Remove
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
 function sanitizeRequiredText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -537,13 +643,19 @@ function sanitizeEducation(items: ProfileEducationItem[]) {
 }
 
 function ExperienceEditor({
+  disabled,
   error,
   items,
+  onPickLogo,
   onChange,
+  uploadingLogoKey,
 }: {
+  disabled?: boolean;
   error?: string;
   items: ProfileExperienceItem[];
+  onPickLogo: (index: number) => void;
   onChange: (items: ProfileExperienceItem[]) => void;
+  uploadingLogoKey?: string | null;
 }) {
   function updateItem(index: number, patch: Partial<ProfileExperienceItem>) {
     onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
@@ -607,13 +719,13 @@ function ExperienceEditor({
                 value={item.location ?? ''}
               />
             </View>
-            <ProfileInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              label="Logo URL"
-              onChangeText={(value) => updateItem(index, { companyLogo: value })}
-              placeholder="https://..."
-              value={item.companyLogo ?? ''}
+            <BackgroundLogoUpload
+              disabled={disabled}
+              isUploading={uploadingLogoKey === `experience-${index}`}
+              label="Logo"
+              logoUrl={item.companyLogo}
+              onPick={() => onPickLogo(index)}
+              onRemove={() => updateItem(index, { companyLogo: null })}
             />
           </View>
         ))
@@ -638,13 +750,19 @@ function ExperienceEditor({
 }
 
 function EducationEditor({
+  disabled,
   error,
   items,
+  onPickLogo,
   onChange,
+  uploadingLogoKey,
 }: {
+  disabled?: boolean;
   error?: string;
   items: ProfileEducationItem[];
+  onPickLogo: (index: number) => void;
   onChange: (items: ProfileEducationItem[]) => void;
+  uploadingLogoKey?: string | null;
 }) {
   function updateItem(index: number, patch: Partial<ProfileEducationItem>) {
     onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
@@ -708,13 +826,13 @@ function EducationEditor({
                 value={item.period ?? ''}
               />
             </View>
-            <ProfileInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              label="Logo URL"
-              onChangeText={(value) => updateItem(index, { schoolLogo: value })}
-              placeholder="https://..."
-              value={item.schoolLogo ?? ''}
+            <BackgroundLogoUpload
+              disabled={disabled}
+              isUploading={uploadingLogoKey === `education-${index}`}
+              label="Logo"
+              logoUrl={item.schoolLogo}
+              onPick={() => onPickLogo(index)}
+              onRemove={() => updateItem(index, { schoolLogo: null })}
             />
           </View>
         ))
@@ -745,6 +863,7 @@ export function EditProfileScreen() {
   const optionsQuery = useProfileOptions();
   const updateProfileMutation = useUpdateMyProfile();
   const uploadProfileImageMutation = useUploadProfileImage();
+  const uploadBackgroundLogoMutation = useUploadProfileImage();
   const profileResponse = myProfileQuery.data;
   const profile =
     profileResponse && hasUsableProfile(profileResponse)
@@ -761,6 +880,7 @@ export function EditProfileScreen() {
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [backgroundTab, setBackgroundTab] = React.useState<EditableBackgroundTab>('experience');
+  const [uploadingLogoKey, setUploadingLogoKey] = React.useState<string | null>(null);
   const aboutCopy = getAboutCopy(profile.sections.about);
   const isStartupOwnerProfile = Boolean(profile.startup);
 
@@ -810,6 +930,28 @@ export function EditProfileScreen() {
     updateField('personalityAndHobbyIds', [...selectedPersonalityIds, itemId]);
   }
 
+  function updateExperienceLogo(index: number, logoUrl: string | null) {
+    setFormState((current) => ({
+      ...current,
+      experience: current.experience.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, companyLogo: logoUrl } : item
+      ),
+    }));
+    setFormErrors((current) => ({ ...current, experience: undefined }));
+    setSubmitError(null);
+  }
+
+  function updateEducationLogo(index: number, logoUrl: string | null) {
+    setFormState((current) => ({
+      ...current,
+      education: current.education.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, schoolLogo: logoUrl } : item
+      ),
+    }));
+    setFormErrors((current) => ({ ...current, education: undefined }));
+    setSubmitError(null);
+  }
+
   async function handleSave() {
     const payload: UpdateMyProfileRequest = {
       name: formState.name.trim(),
@@ -840,7 +982,11 @@ export function EditProfileScreen() {
   }
 
   async function handlePickProfileImage() {
-    if (uploadProfileImageMutation.isPending || updateProfileMutation.isPending) {
+    if (
+      uploadProfileImageMutation.isPending ||
+      uploadBackgroundLogoMutation.isPending ||
+      updateProfileMutation.isPending
+    ) {
       return;
     }
 
@@ -879,10 +1025,64 @@ export function EditProfileScreen() {
     }
   }
 
+  async function handlePickBackgroundLogo(type: EditableBackgroundTab, index: number) {
+    if (
+      uploadProfileImageMutation.isPending ||
+      uploadBackgroundLogoMutation.isPending ||
+      updateProfileMutation.isPending
+    ) {
+      return;
+    }
+
+    const nextUploadingLogoKey = `${type}-${index}`;
+    setSubmitError(null);
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      allowsMultipleSelection: false,
+      aspect: [1, 1],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      selectionLimit: 1,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+
+    if (!asset?.uri) {
+      setSubmitError('The selected image could not be read.');
+      return;
+    }
+
+    try {
+      setUploadingLogoKey(nextUploadingLogoKey);
+      const uploadedImage = await uploadBackgroundLogoMutation.mutateAsync({
+        fileName: asset.fileName ?? null,
+        mimeType: asset.mimeType ?? null,
+        uri: asset.uri,
+      });
+
+      if (type === 'experience') {
+        updateExperienceLogo(index, uploadedImage.url);
+      } else {
+        updateEducationLogo(index, uploadedImage.url);
+      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to upload this image right now.');
+    } finally {
+      setUploadingLogoKey(null);
+    }
+  }
+
   const initials = getInitials(profile.name);
   const profilePhotoUrl = formState.photoUrl?.trim() || null;
   const isUploadingProfileImage = uploadProfileImageMutation.isPending;
-  const isSavingProfile = updateProfileMutation.isPending || isUploadingProfileImage;
+  const isUploadingBackgroundLogo = uploadBackgroundLogoMutation.isPending;
+  const isSavingProfile =
+    updateProfileMutation.isPending || isUploadingProfileImage || isUploadingBackgroundLogo;
 
   return (
     <>
@@ -1103,15 +1303,21 @@ export function EditProfileScreen() {
 
             {backgroundTab === 'experience' ? (
               <ExperienceEditor
+                disabled={isSavingProfile}
                 error={formErrors.experience}
                 items={formState.experience}
                 onChange={(items) => updateField('experience', items)}
+                onPickLogo={(index) => handlePickBackgroundLogo('experience', index)}
+                uploadingLogoKey={uploadingLogoKey}
               />
             ) : (
               <EducationEditor
+                disabled={isSavingProfile}
                 error={formErrors.education}
                 items={formState.education}
                 onChange={(items) => updateField('education', items)}
+                onPickLogo={(index) => handlePickBackgroundLogo('education', index)}
+                uploadingLogoKey={uploadingLogoKey}
               />
             )}
           </AppCard>
