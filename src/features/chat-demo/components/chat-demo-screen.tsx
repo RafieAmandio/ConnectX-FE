@@ -21,8 +21,16 @@ import {
   RefreshControl,
   TextInput,
   View,
+  type DimensionValue,
   type LayoutChangeEvent,
 } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, AppTopBar } from '@shared/components';
@@ -106,6 +114,176 @@ const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
 const TRAILING_URL_PUNCTUATION_PATTERN = /[),.!?:;]+$/;
 const COMPOSER_INPUT_MAX_HEIGHT = 92;
 const CHAT_DEMO_DOCUMENT_TYPES = ['application/pdf', 'audio/*'] as const;
+
+function withAlpha(hexColor: string, alpha: number) {
+  const normalized = hexColor.replace('#', '');
+
+  if (normalized.length !== 6) {
+    return hexColor;
+  }
+
+  const red = parseInt(normalized.slice(0, 2), 16);
+  const green = parseInt(normalized.slice(2, 4), 16);
+  const blue = parseInt(normalized.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function SkeletonBlock({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.ComponentProps<typeof Animated.View>['style'];
+}) {
+  const progress = useSharedValue(0);
+
+  React.useEffect(() => {
+    progress.value = withRepeat(withTiming(1, { duration: 920 }), -1, true);
+  }, [progress]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0.42, 0.86]),
+  }));
+
+  return (
+    <Animated.View
+      className={className}
+      style={[{ backgroundColor: withAlpha('#FFFFFF', 0.12) }, animatedStyle, style]}
+    />
+  );
+}
+
+function ConversationRowSkeleton({ unread = false }: { unread?: boolean }) {
+  return (
+    <View className="flex-row items-center gap-3 px-1 py-2.5">
+      <SkeletonBlock
+        className="h-[52px] w-[52px] rounded-full"
+        style={{ backgroundColor: unread ? withAlpha('#F59E0B', 0.22) : withAlpha('#FFFFFF', 0.12) }}
+      />
+
+      <View className="min-w-0 flex-1 border-b border-[#353535] pb-3">
+        <View className="flex-row items-center justify-between gap-3">
+          <SkeletonBlock className="h-[18px] w-[46%] rounded-full" />
+          <SkeletonBlock className="h-3.5 w-12 rounded-full" />
+        </View>
+
+        <View className="mt-3 flex-row items-center gap-3">
+          <SkeletonBlock className="h-3.5 flex-1 rounded-full" />
+          {unread ? (
+            <SkeletonBlock
+              className="h-5 w-5 rounded-full"
+              style={{ backgroundColor: withAlpha('#F59E0B', 0.24) }}
+            />
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ChatListSkeleton() {
+  return (
+    <View className="flex-1 px-4 pt-3" accessibilityLabel="Loading conversations">
+      <View className="pb-5 pt-1">
+        <SkeletonBlock className="h-10 w-40 rounded-[12px]" />
+      </View>
+
+      <View className="gap-1">
+        <ConversationRowSkeleton unread />
+        <ConversationRowSkeleton />
+        <ConversationRowSkeleton unread />
+        <ConversationRowSkeleton />
+        <ConversationRowSkeleton />
+      </View>
+    </View>
+  );
+}
+
+function MessageBubbleSkeleton({
+  outgoing = false,
+  width = '68%',
+}: {
+  outgoing?: boolean;
+  width?: DimensionValue;
+}) {
+  return (
+    <View className={outgoing ? 'items-end' : 'items-start'}>
+      <View
+        className={
+          outgoing
+            ? 'max-w-[82%] rounded-[26px] rounded-br-[10px] px-5 py-4'
+            : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] px-5 py-4'
+        }
+        style={{ backgroundColor: outgoing ? '#4C351D' : '#313131', width }}>
+        <SkeletonBlock
+          className="h-3.5 rounded-full"
+          style={{ backgroundColor: outgoing ? withAlpha('#FFD39A', 0.24) : withAlpha('#FFFFFF', 0.12) }}
+        />
+        <SkeletonBlock
+          className="mt-2 h-3.5 w-[72%] rounded-full"
+          style={{ backgroundColor: outgoing ? withAlpha('#FFD39A', 0.2) : withAlpha('#FFFFFF', 0.1) }}
+        />
+      </View>
+    </View>
+  );
+}
+
+function ChatRoomSkeleton() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+        <View
+          className="flex-row items-center gap-3 px-4 pb-4"
+          style={{ paddingTop: Math.max(insets.top + 8, 16) }}>
+          <SkeletonBlock className="h-11 w-11 rounded-full" />
+          <SkeletonBlock
+            className="h-[52px] w-[52px] rounded-full"
+            style={{ backgroundColor: withAlpha('#F59E0B', 0.2) }}
+          />
+          <View className="flex-1 gap-2">
+            <SkeletonBlock className="h-5 w-[54%] rounded-full" />
+            <SkeletonBlock className="h-3.5 w-[72%] rounded-full" />
+          </View>
+        </View>
+
+        <View className="mx-4 h-px bg-[#3A3938]" />
+
+        <View className="flex-1 justify-end gap-4 px-4 py-5">
+          <MessageBubbleSkeleton width="64%" />
+          <MessageBubbleSkeleton outgoing width="72%" />
+          <MessageBubbleSkeleton width="56%" />
+          <MessageBubbleSkeleton outgoing width="48%" />
+          <MessageBubbleSkeleton width="76%" />
+        </View>
+
+        <View className="border-t border-[#3A3938] px-4 pb-8 pt-3">
+          <View className="flex-row items-end gap-3">
+            <SkeletonBlock className="h-11 w-11 rounded-full" />
+            <SkeletonBlock className="h-11 flex-1 rounded-[24px]" />
+            <SkeletonBlock
+              className="h-11 w-11 rounded-full"
+              style={{ backgroundColor: withAlpha('#F59E0B', 0.22) }}
+            />
+          </View>
+        </View>
+      </View>
+    </>
+  );
+}
+
+function MessagesSkeleton() {
+  return (
+    <View className="gap-4 py-2" accessibilityLabel="Loading messages">
+      <MessageBubbleSkeleton width="64%" />
+      <MessageBubbleSkeleton outgoing width="72%" />
+      <MessageBubbleSkeleton width="56%" />
+    </View>
+  );
+}
 
 function normalizeMessageUrl(value: string) {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
@@ -538,9 +716,7 @@ export function ChatDemoListScreen() {
       <View className="flex-1" style={{ backgroundColor: '#262626' }}>
         <AppTopBar />
         {conversationsQuery.isLoading && !hasConversations ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color="#F59E0B" />
-          </View>
+          <ChatListSkeleton />
         ) : (
           <FlatList
             contentContainerStyle={{
@@ -954,14 +1130,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   }, [canInviteToTeam, conversation?.participantEmail, invitationSent]);
 
   if (conversationsQuery.isLoading && !conversation) {
-    return (
-      <>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#262626' }}>
-          <ActivityIndicator color="#F59E0B" />
-        </View>
-      </>
-    );
+    return <ChatRoomSkeleton />;
   }
 
   if (!conversation) {
@@ -1072,9 +1241,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           }
           ListEmptyComponent={
             messagesQuery.isLoading ? (
-              <View className="items-center py-8">
-                <ActivityIndicator color="#F59E0B" />
-              </View>
+              <MessagesSkeleton />
             ) : (
               <View className="items-center py-8">
                 <AppText className="text-[#9C9893]">No messages in this chat yet.</AppText>

@@ -11,6 +11,13 @@ import {
   ScrollView,
   View,
 } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -39,6 +46,163 @@ import { isNoActiveStartupError } from '../services/team-service';
 import type { TeamApplication, TeamDashboardInvite, TeamInviteCommitment, TeamMember } from '../types/team.types';
 
 const EQUITY_THUMB_SIZE = 24;
+
+function withAlpha(hexColor: string, alpha: number) {
+  const normalized = hexColor.replace('#', '');
+
+  if (normalized.length !== 6) {
+    return hexColor;
+  }
+
+  const red = parseInt(normalized.slice(0, 2), 16);
+  const green = parseInt(normalized.slice(2, 4), 16);
+  const blue = parseInt(normalized.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function SkeletonBlock({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.ComponentProps<typeof Animated.View>['style'];
+}) {
+  const progress = useSharedValue(0);
+
+  React.useEffect(() => {
+    progress.value = withRepeat(withTiming(1, { duration: 920 }), -1, true);
+  }, [progress]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0.42, 0.86]),
+  }));
+
+  return (
+    <Animated.View
+      className={className}
+      style={[{ backgroundColor: withAlpha('#FFFFFF', 0.12) }, animatedStyle, style]}
+    />
+  );
+}
+
+function TeamMemberSkeleton({ highlighted = false }: { highlighted?: boolean }) {
+  return (
+    <View
+      className="gap-4 rounded-[20px] border border-white/10 bg-[#2C2C2C] px-4 py-4"
+      style={Shadows.card}>
+      <View className="flex-row items-center gap-4">
+        <SkeletonBlock
+          className="h-16 w-16 rounded-[16px]"
+          style={{ backgroundColor: highlighted ? withAlpha('#FF9A3E', 0.2) : withAlpha('#FFFFFF', 0.12) }}
+        />
+
+        <View className="flex-1 gap-3">
+          <View className="flex-row items-center gap-2">
+            <SkeletonBlock className="h-5 w-[46%] rounded-full" />
+            {highlighted ? (
+              <SkeletonBlock
+                className="h-5 w-10 rounded-full"
+                style={{ backgroundColor: withAlpha('#FF9A3E', 0.2) }}
+              />
+            ) : null}
+          </View>
+
+          <View className="flex-row flex-wrap gap-2">
+            <SkeletonBlock
+              className="h-8 w-24 rounded-full"
+              style={{ backgroundColor: withAlpha('#FF9A3E', 0.16) }}
+            />
+            <SkeletonBlock className="h-8 w-20 rounded-full" />
+          </View>
+
+          <SkeletonBlock className="h-3.5 w-[68%] rounded-full" />
+        </View>
+      </View>
+
+      <View className="flex-row gap-2">
+        <SkeletonBlock className="h-9 w-20 rounded-lg" />
+        <SkeletonBlock className="h-9 w-24 rounded-lg" />
+      </View>
+    </View>
+  );
+}
+
+function TeamDashboardSkeleton() {
+  return (
+    <View className="gap-6" accessibilityLabel="Loading team">
+      <View className="flex-row items-center gap-3 px-1 pb-1">
+        <SkeletonBlock
+          className="h-9 w-9 rounded-full"
+          style={{ backgroundColor: withAlpha('#FF9A3E', 0.2) }}
+        />
+        <SkeletonBlock className="h-8 w-56 rounded-[10px]" />
+      </View>
+
+      <AppCard className="gap-6 border-white/10 bg-[#2C2C2C]">
+        <View className="gap-4">
+          <View className="gap-3 border-b border-border/30 pb-4">
+            <SkeletonBlock
+              className="h-3 w-24 rounded-full"
+              style={{ backgroundColor: withAlpha('#FF9A3E', 0.18) }}
+            />
+            <SkeletonBlock className="h-7 w-[68%] rounded-[10px]" />
+          </View>
+
+          <View className="gap-3 border-b border-border/30 pb-4">
+            <SkeletonBlock className="h-3 w-24 rounded-full" />
+            <SkeletonBlock className="h-4 w-[94%] rounded-full" />
+            <SkeletonBlock className="h-4 w-[78%] rounded-full" />
+          </View>
+        </View>
+
+        <View className="flex-row gap-8">
+          <View className="flex-1 gap-3">
+            <SkeletonBlock className="h-3 w-20 rounded-full" />
+            <SkeletonBlock
+              className="h-9 w-28 rounded-full"
+              style={{ backgroundColor: withAlpha('#FF9A3E', 0.16) }}
+            />
+          </View>
+
+          <View className="flex-1 gap-3">
+            <SkeletonBlock className="h-3 w-16 rounded-full" />
+            <SkeletonBlock
+              className="h-9 w-24 rounded-full"
+              style={{ backgroundColor: withAlpha('#FF9A3E', 0.16) }}
+            />
+          </View>
+        </View>
+      </AppCard>
+
+      <AppCard className="gap-4 border-white/10 bg-[#2C2C2C]">
+        <View className="flex-row items-center justify-between">
+          <SkeletonBlock className="h-4 w-36 rounded-full" />
+          <SkeletonBlock
+            className="h-5 w-12 rounded-full"
+            style={{ backgroundColor: withAlpha('#FF9A3E', 0.2) }}
+          />
+        </View>
+        <View className="h-2.5 overflow-hidden rounded-full border border-white/10 bg-[#3A3A3C]">
+          <SkeletonBlock className="h-full w-[62%] rounded-full" style={{ backgroundColor: '#FF9A3E' }} />
+        </View>
+      </AppCard>
+
+      <View className="gap-4">
+        <View className="flex-row items-center justify-between px-1">
+          <SkeletonBlock className="h-3 w-28 rounded-full" />
+          <SkeletonBlock className="h-6 w-20 rounded-full" />
+        </View>
+
+        <View className="gap-3">
+          <TeamMemberSkeleton highlighted />
+          <TeamMemberSkeleton />
+          <TeamMemberSkeleton />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function getCommitmentLabel(value: string) {
   switch (value) {
@@ -1174,13 +1338,7 @@ export function TeamScreen() {
                 tintColor="#FF9A3E"
               />
             }>
-
-            <AppCard className="gap-3">
-              <AppText variant="subtitle">Loading team</AppText>
-              <AppText tone="muted">
-                Pulling the latest startup details and team structure.
-              </AppText>
-            </AppCard>
+            <TeamDashboardSkeleton />
           </ScrollView>
         </View>
       </>
