@@ -2692,12 +2692,18 @@ export function DiscoveryDeck() {
         setIsFilterVisible(false);
       } catch (error) {
         setFilterError(getErrorMessage(error, 'Unable to generate candidates with these filters.'));
-      } finally {
-        setIsApplyingFilters(false);
       }
     },
     [deviceCoordinates, loadDeviceCoordinates]
   );
+
+  React.useEffect(() => {
+    if (!isApplyingFilters || discoveryQuery.isFetching) {
+      return;
+    }
+
+    setIsApplyingFilters(false);
+  }, [discoveryQuery.isFetching, isApplyingFilters]);
 
   const handleModeChange = React.useCallback((mode: DiscoveryMode) => {
     setSheetMode(mode);
@@ -2885,6 +2891,7 @@ export function DiscoveryDeck() {
 
   if (
     !hasResolvedAuthSessionSetup ||
+    (!usingLocalMockCards && isApplyingFilters) ||
     (!currentItem &&
       !usingLocalMockCards &&
       (discoveryQuery.isLoading || discoveryQuery.isRefetching))
