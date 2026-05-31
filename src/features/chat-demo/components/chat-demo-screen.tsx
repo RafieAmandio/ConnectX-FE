@@ -103,6 +103,7 @@ type MessageTextPart =
 const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
 const TRAILING_URL_PUNCTUATION_PATTERN = /[),.!?:;]+$/;
 const COMPOSER_INPUT_MAX_HEIGHT = 92;
+const ATTACHMENT_PICKER_DISMISS_DELAY_MS = 300;
 const CHAT_DEMO_DOCUMENT_TYPES = ['application/pdf', 'audio/*'] as const;
 
 function withAlpha(hexColor: string, alpha: number) {
@@ -1051,6 +1052,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
   const listRef = React.useRef<FlatList<ChatMessage>>(null);
   const containerFrameRef = React.useRef({ height: 0, y: 0 });
+  const attachmentPickerTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = React.useMemo(
     () => [...(messagesQuery.data?.pages ?? [])].reverse().flatMap((page) => page.items),
@@ -1134,6 +1136,14 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   React.useEffect(() => {
     setPendingMedia(null);
   }, [conversationId]);
+
+  React.useEffect(() => {
+    return () => {
+      if (attachmentPickerTimeoutRef.current) {
+        clearTimeout(attachmentPickerTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSend = React.useCallback(async () => {
     const body = draftMessage.trim();
@@ -1272,15 +1282,30 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     setAttachmentPickerVisible(true);
   }, [isSending, isUploadingMedia]);
 
-  const handlePickImageFromSheet = React.useCallback(() => {
+  const runAfterAttachmentPickerDismiss = React.useCallback((action: () => void) => {
     setAttachmentPickerVisible(false);
-    void handlePickImage();
-  }, [handlePickImage]);
+
+    if (attachmentPickerTimeoutRef.current) {
+      clearTimeout(attachmentPickerTimeoutRef.current);
+    }
+
+    attachmentPickerTimeoutRef.current = setTimeout(() => {
+      attachmentPickerTimeoutRef.current = null;
+      action();
+    }, ATTACHMENT_PICKER_DISMISS_DELAY_MS);
+  }, []);
+
+  const handlePickImageFromSheet = React.useCallback(() => {
+    runAfterAttachmentPickerDismiss(() => {
+      void handlePickImage();
+    });
+  }, [handlePickImage, runAfterAttachmentPickerDismiss]);
 
   const handlePickDocumentFromSheet = React.useCallback(() => {
-    setAttachmentPickerVisible(false);
-    void handlePickDocument();
-  }, [handlePickDocument]);
+    runAfterAttachmentPickerDismiss(() => {
+      void handlePickDocument();
+    });
+  }, [handlePickDocument, runAfterAttachmentPickerDismiss]);
 
   const handleAddToTeam = React.useCallback(() => {
     if (!canInviteToTeam || !conversation?.participantEmail || invitationSent) {
