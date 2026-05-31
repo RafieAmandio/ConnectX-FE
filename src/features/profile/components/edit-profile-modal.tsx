@@ -38,6 +38,7 @@ import type {
 type FormErrors = Partial<Record<keyof UpdateMyProfileRequest, string>>;
 type EditableBackgroundTab = 'experience' | 'education';
 type ProfileLocationOption = ProfileOptionsResponse['data']['locations'][number];
+type ProfilePersonalityOption = ProfileOptionsResponse['data']['personalityAndHobbies'][number];
 
 const MAX_PERSONALITY_SELECTIONS = 6;
 const profilePalette = {
@@ -435,6 +436,153 @@ function LocationSelector({
       </View>
       {error ? (
         <AppText className="px-1" selectable style={{ color: profilePalette.danger }} variant="code">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function filterPersonalityOptions(options: ProfilePersonalityOption[], searchTerm: string) {
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  if (!normalizedSearch) {
+    return options;
+  }
+
+  return options.filter((option) => option.name.toLowerCase().includes(normalizedSearch));
+}
+
+function PersonalityAndHobbiesSelector({
+  error,
+  onToggle,
+  options,
+  selectedIds,
+}: {
+  error?: string;
+  onToggle: (itemId: string) => void;
+  options: ProfilePersonalityOption[];
+  selectedIds: string[];
+}) {
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [isExpanded, setIsExpanded] = React.useState(true);
+  const visibleOptions = filterPersonalityOptions(options, searchTerm);
+  const selectedOptions = options.filter((option) => selectedIds.includes(option.id));
+  const hasSearchTerm = searchTerm.trim().length > 0;
+  const hasReachedLimit = selectedIds.length >= MAX_PERSONALITY_SELECTIONS;
+
+  return (
+    <View className="gap-3">
+      {selectedOptions.length > 0 ? (
+        <View className="flex-row flex-wrap gap-2">
+          {selectedOptions.map((option) => (
+            <Pressable
+              key={option.id}
+              className="flex-row items-center gap-1.5 rounded-full border px-3 py-2"
+              onPress={() => onToggle(option.id)}
+              style={{
+                backgroundColor: profilePalette.selected,
+                borderColor: profilePalette.accent,
+              }}>
+              <AppText
+                className="text-[13px]"
+                style={{ color: profilePalette.accent }}
+                variant="bodyStrong">
+                {option.name}
+              </AppText>
+              <Ionicons color={profilePalette.accent} name="close-circle" size={17} />
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      <View
+        className="gap-2 rounded-[16px] border p-3"
+        style={{
+          backgroundColor: profilePalette.field,
+          borderColor: error ? profilePalette.danger : profilePalette.border,
+        }}>
+        <View
+          className="flex-row items-center gap-2 rounded-[14px] border px-4"
+          style={{
+            backgroundColor: '#2C2C2C',
+            borderColor: 'rgba(255,255,255,0.1)',
+            minHeight: 46,
+          }}>
+          <Ionicons color={profilePalette.textSoft} name="search-outline" size={16} />
+          <TextInput
+            autoCapitalize="words"
+            autoCorrect={false}
+            className="flex-1 font-body text-[14px]"
+            onChangeText={setSearchTerm}
+            onFocus={() => setIsExpanded(true)}
+            placeholder="Search personality or hobbies"
+            placeholderTextColor={profilePalette.textSoft}
+            style={{ color: profilePalette.text, letterSpacing: 0 }}
+            value={searchTerm}
+          />
+          {hasSearchTerm ? (
+            <Pressable hitSlop={10} onPress={() => setSearchTerm('')}>
+              <Ionicons color={profilePalette.textMuted} name="close-circle" size={18} />
+            </Pressable>
+          ) : (
+            <Pressable hitSlop={10} onPress={() => setIsExpanded((current) => !current)}>
+              <Ionicons
+                color={profilePalette.textMuted}
+                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+              />
+            </Pressable>
+          )}
+        </View>
+
+        {isExpanded ? (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            style={{ maxHeight: 240 }}>
+            <View className="gap-1">
+              {visibleOptions.map((option) => {
+                const isSelected = selectedIds.includes(option.id);
+                const isDisabled = !isSelected && hasReachedLimit;
+
+                return (
+                  <Pressable
+                    key={option.id}
+                    className="flex-row items-center justify-between gap-3 rounded-[14px] px-3 py-3"
+                    disabled={isDisabled}
+                    onPress={() => onToggle(option.id)}
+                    style={{
+                      backgroundColor: isSelected ? profilePalette.accentSoft : '#2C2C2C',
+                      opacity: isDisabled ? 0.45 : 1,
+                    }}>
+                    <AppText
+                      className="flex-1 text-[14px]"
+                      style={{ color: isSelected ? profilePalette.accent : profilePalette.text }}
+                      variant="bodyStrong">
+                      {option.name}
+                    </AppText>
+                    {isSelected ? (
+                      <Ionicons color={profilePalette.accent} name="checkmark" size={18} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+            {hasSearchTerm && visibleOptions.length === 0 ? (
+              <View className="px-4 py-6">
+                <AppText align="center" tone="muted">
+                  {`No results for "${searchTerm}"`}
+                </AppText>
+              </View>
+            ) : null}
+          </ScrollView>
+        ) : null}
+      </View>
+
+      {error ? (
+        <AppText className="text-[12px]" tone="danger" variant="code">
           {error}
         </AppText>
       ) : null}
@@ -1349,53 +1497,12 @@ export function EditProfileScreen() {
                 </View>
               </View>
 
-              <View className="flex-row flex-wrap gap-3">
-                {options.map((item) => {
-                  const isSelected = selectedPersonalityIds.includes(item.id);
-                  const isDisabled = !isSelected && selectedCount >= MAX_PERSONALITY_SELECTIONS;
-
-                  return (
-                    <Pressable
-                      key={item.id}
-                      className="flex-row items-center gap-2.5 rounded-[14px] border px-3.5 py-3"
-                      disabled={isDisabled}
-                      onPress={() => togglePersonalityAndHobby(item.id)}
-                      style={{
-                        backgroundColor: isSelected
-                          ? profilePalette.selected
-                          : profilePalette.field,
-                        borderColor: isSelected ? profilePalette.accent : profilePalette.border,
-                        minWidth: '48%',
-                        opacity: isDisabled ? 0.45 : 1,
-                        width: '48%',
-                      }}>
-                      <View
-                        className="items-center justify-center rounded-full border"
-                        style={{
-                          backgroundColor: isSelected ? profilePalette.accent : 'transparent',
-                          borderColor: isSelected ? profilePalette.accent : profilePalette.textSoft,
-                          height: 20,
-                          width: 20,
-                        }}>
-                        {isSelected ? (
-                          <Ionicons color={profilePalette.buttonText} name="checkmark" size={14} />
-                        ) : null}
-                      </View>
-                      <AppText
-                        className="flex-1 text-[13px] leading-5"
-                        style={{ color: isSelected ? profilePalette.accent : profilePalette.textMuted }}>
-                        {item.name}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {formErrors.personalityAndHobbyIds ? (
-                <AppText className="text-[12px]" tone="danger" variant="code">
-                  {formErrors.personalityAndHobbyIds}
-                </AppText>
-              ) : null}
+              <PersonalityAndHobbiesSelector
+                error={formErrors.personalityAndHobbyIds}
+                onToggle={togglePersonalityAndHobby}
+                options={options}
+                selectedIds={selectedPersonalityIds}
+              />
 
               {submitError ? (
                 <AppText className="text-[12px]" tone="danger" variant="code">
