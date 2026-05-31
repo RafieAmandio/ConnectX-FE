@@ -1,20 +1,29 @@
-import { apiFetch } from '@shared/services/api';
+import { ApiError, apiFetch } from '@shared/services/api';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import type {
   ChangePasswordRequest,
   ChangePasswordResponse,
+  ContactChangeRequestResponse,
   NotificationSettingsResponse,
+  RequestEmailChangeRequest,
+  RequestWhatsappChangeRequest,
   SubmitSupportTicketRequest,
   SubmitSupportTicketResponse,
   UpdateNotificationSettingsRequest,
   UpdateNotificationSettingsResponse,
+  VerifyContactChangeRequest,
+  VerifyContactChangeResponse,
 } from '../types/settings.types';
 
 const SETTINGS_API = {
   CHANGE_PASSWORD: '/api/v1/me/account/password',
+  EMAIL_CHANGE_REQUESTS: '/api/v1/me/account/email/change-requests',
+  EMAIL_CHANGE_VERIFY: '/api/v1/me/account/email/change-requests/verify',
   NOTIFICATIONS: '/api/v1/me/settings/notifications',
   SUPPORT_TICKETS: '/api/v1/support/tickets',
+  WHATSAPP_CHANGE_REQUESTS: '/api/v1/me/account/whatsapp/change-requests',
+  WHATSAPP_CHANGE_VERIFY: '/api/v1/me/account/whatsapp/change-requests/verify',
 } as const;
 
 const MOCK_NOTIFICATION_SETTINGS: NotificationSettingsResponse = {
@@ -24,6 +33,35 @@ const MOCK_NOTIFICATION_SETTINGS: NotificationSettingsResponse = {
 
 function shouldUseMock() {
   return isExpoDevModeEnabled();
+}
+
+function buildMockContactChangeRequestResponse(prefix: string): ContactChangeRequestResponse {
+  return {
+    success: true,
+    message: 'Verification code sent.',
+    data: {
+      verification_id: `${prefix}_${Date.now()}`,
+      resend_available_at: new Date(Date.now() + 60 * 1000).toISOString(),
+    },
+  };
+}
+
+function buildMockContactChangeVerification(
+  payload: VerifyContactChangeRequest,
+  expectedOtp: string
+): VerifyContactChangeResponse {
+  if (payload.otp_code !== expectedOtp) {
+    throw new ApiError('The verification code is invalid or expired.', 422, {
+      success: false,
+      message: 'The verification code is invalid or expired.',
+      errors: { otp_code: ['The verification code is invalid or expired.'] },
+    });
+  }
+
+  return {
+    success: true,
+    message: 'Account contact information updated successfully.',
+  };
 }
 
 export async function fetchNotificationSettings(): Promise<NotificationSettingsResponse> {
@@ -94,6 +132,70 @@ export async function changePassword(
         success: true,
         message: 'Password updated successfully.',
       };
+    }
+    throw error;
+  }
+}
+
+export async function requestEmailChange(
+  payload: RequestEmailChangeRequest
+): Promise<ContactChangeRequestResponse> {
+  try {
+    return await apiFetch<ContactChangeRequestResponse>(SETTINGS_API.EMAIL_CHANGE_REQUESTS, {
+      body: payload as unknown as BodyInit,
+      method: 'POST',
+    });
+  } catch (error) {
+    if (shouldUseMock() && (!(error instanceof ApiError) || error.status === 0 || error.status === 404)) {
+      return buildMockContactChangeRequestResponse('verify_email');
+    }
+    throw error;
+  }
+}
+
+export async function verifyEmailChange(
+  payload: VerifyContactChangeRequest
+): Promise<VerifyContactChangeResponse> {
+  try {
+    return await apiFetch<VerifyContactChangeResponse>(SETTINGS_API.EMAIL_CHANGE_VERIFY, {
+      body: payload as unknown as BodyInit,
+      method: 'POST',
+    });
+  } catch (error) {
+    if (shouldUseMock() && (!(error instanceof ApiError) || error.status === 0 || error.status === 404)) {
+      return buildMockContactChangeVerification(payload, 'ABC123');
+    }
+    throw error;
+  }
+}
+
+export async function requestWhatsappChange(
+  payload: RequestWhatsappChangeRequest
+): Promise<ContactChangeRequestResponse> {
+  try {
+    return await apiFetch<ContactChangeRequestResponse>(SETTINGS_API.WHATSAPP_CHANGE_REQUESTS, {
+      body: payload as unknown as BodyInit,
+      method: 'POST',
+    });
+  } catch (error) {
+    if (shouldUseMock() && (!(error instanceof ApiError) || error.status === 0 || error.status === 404)) {
+      return buildMockContactChangeRequestResponse('verify_whatsapp');
+    }
+    throw error;
+  }
+}
+
+export async function verifyWhatsappChange(
+  payload: VerifyContactChangeRequest
+): Promise<VerifyContactChangeResponse> {
+  try {
+    return await apiFetch<VerifyContactChangeResponse>(SETTINGS_API.WHATSAPP_CHANGE_VERIFY, {
+      body: payload as unknown as BodyInit,
+      method: 'POST',
+    });
+  } catch (error) {
+    if (shouldUseMock() && (!(error instanceof ApiError) || error.status === 0 || error.status === 404)) {
+      return buildMockContactChangeVerification(payload, '123456');
     }
     throw error;
   }

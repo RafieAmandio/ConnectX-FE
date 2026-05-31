@@ -8,53 +8,13 @@ import { ApiError } from '@shared/services/api';
 
 import { useAuth } from '../hooks/use-auth';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
+import { getWhatsappNumberError, normalizeWhatsappNumber } from '../utils/whatsapp-validation';
 
 const CANVAS_BG = '#212121';
 const ACCENT = '#FF9A3E';
 const FIELD_BORDER = '#383838';
 const TEXT_MUTED = '#98A2B3';
 const TEXT_SOFT = '#667085';
-
-function normalizeWhatsappNumber(value: string) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    return '';
-  }
-
-  const hasLeadingPlus = trimmedValue.startsWith('+');
-  const digitsOnly = trimmedValue.replace(/\D/g, '');
-
-  if (!digitsOnly) {
-    return '';
-  }
-
-  if (hasLeadingPlus) {
-    return `+${digitsOnly}`;
-  }
-
-  if (digitsOnly.startsWith('62')) {
-    return `+${digitsOnly}`;
-  }
-
-  if (digitsOnly.startsWith('0')) {
-    return `+62${digitsOnly.slice(1)}`;
-  }
-
-  return `+${digitsOnly}`;
-}
-
-function getWhatsappNumberError(value: string) {
-  if (!value) {
-    return 'WhatsApp number is required.';
-  }
-
-  if (!/^\+\d{10,15}$/.test(value)) {
-    return 'Use a format like +6281234567890.';
-  }
-
-  return null;
-}
 
 export function VerifyWhatsappScreen() {
   const router = useRouter();

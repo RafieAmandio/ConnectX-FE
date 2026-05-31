@@ -166,7 +166,141 @@ Changes the authenticated user's password. This action is shown only for passwor
 
 ---
 
-## 4. Startup Profile Update
+## 4. Change Email
+
+Email changes are available to password-based accounts only. The backend must not commit the replacement email until the verification code sent to the new address is confirmed.
+
+### POST /api/v1/me/account/email/change-requests
+
+**Headers:**
+- `Authorization: Bearer {token}`
+- `Content-Type: application/json`
+
+**Request body:**
+```json
+{
+  "email": "new@example.com"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Verification code sent.",
+  "data": {
+    "verification_id": "verify_email_123",
+    "resend_available_at": "2026-05-31T10:01:00.000Z"
+  }
+}
+```
+
+### POST /api/v1/me/account/email/change-requests/verify
+
+**Request body:**
+```json
+{
+  "verification_id": "verify_email_123",
+  "otp_code": "ABC123"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Email updated successfully."
+}
+```
+
+---
+
+## 5. Change WhatsApp Number
+
+WhatsApp number changes are available to every authenticated account. The backend must not commit the replacement number until the OTP sent to the new number is confirmed.
+
+### POST /api/v1/me/account/whatsapp/change-requests
+
+**Headers:**
+- `Authorization: Bearer {token}`
+- `Content-Type: application/json`
+
+**Request body:**
+```json
+{
+  "whatsapp_number": "+6281234567890"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Verification code sent.",
+  "data": {
+    "verification_id": "verify_whatsapp_123",
+    "resend_available_at": "2026-05-31T10:01:00.000Z"
+  }
+}
+```
+
+### POST /api/v1/me/account/whatsapp/change-requests/verify
+
+**Request body:**
+```json
+{
+  "verification_id": "verify_whatsapp_123",
+  "otp_code": "123456"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "WhatsApp number updated successfully."
+}
+```
+
+### Contact Change Error Responses
+
+Validation errors use the affected request field:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed.",
+  "errors": {
+    "email": ["The email has already been taken."]
+  }
+}
+```
+
+Invalid or expired verification codes use `otp_code`:
+
+```json
+{
+  "success": false,
+  "message": "The verification code is invalid or expired.",
+  "errors": {
+    "otp_code": ["The verification code is invalid or expired."]
+  }
+}
+```
+
+### Contact Change Backend Rules
+
+- Resolve the account from bearer auth. Do not accept a user ID in the request body.
+- Send verification to the replacement email address or WhatsApp number.
+- Rate-limit requests and reject destinations already used by another account.
+- Calling the request endpoint again resends the OTP and replaces the active `verification_id`.
+- Commit the replacement value only after successful OTP verification.
+- Keep the current session active after confirmation.
+- Return the confirmed `data.user.email` or `data.user.whatsapp_number` from `GET /api/v1/auth/session`.
+
+---
+
+## 6. Startup Profile Update
 
 ### PATCH /api/v1/me/startup
 
@@ -254,4 +388,4 @@ These endpoints are already available and used by the Settings screen:
 | POST | `/api/v1/me/account/pause` | Pause user profile |
 | POST | `/api/v1/me/account/activate` | Reactivate user profile |
 | POST | `/api/v1/me/account/deletion-requests` | Request account deletion |
-| PATCH | `/api/v1/me/startup` | Update startup profile (this doc, section 3) |
+| PATCH | `/api/v1/me/startup` | Update startup profile (this doc, section 6) |

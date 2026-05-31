@@ -3,8 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   changePassword,
   fetchNotificationSettings,
+  requestEmailChange,
+  requestWhatsappChange,
   submitSupportTicket,
   updateNotificationSettings,
+  verifyEmailChange,
+  verifyWhatsappChange,
 } from '../services/settings-service';
 import type { NotificationSettingsResponse } from '../types/settings.types';
 
@@ -63,5 +67,29 @@ export function useSubmitSupportTicket() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: changePassword,
+  });
+}
+
+export function useRequestEmailChange() {
+  return useMutation({
+    mutationFn: requestEmailChange,
+  });
+}
+
+export function useVerifyEmailChange() {
+  return useMutation({
+    mutationFn: verifyEmailChange,
+  });
+}
+
+export function useRequestWhatsappChange() {
+  return useMutation({
+    mutationFn: requestWhatsappChange,
+  });
+}
+
+export function useVerifyWhatsappChange() {
+  return useMutation({
+    mutationFn: verifyWhatsappChange,
   });
 }

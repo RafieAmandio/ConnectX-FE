@@ -44,3 +44,30 @@ export type ChangePasswordResponse = {
   success: boolean;
   message: string;
 };
+
+export type RequestEmailChangeRequest = {
+  email: string;
+};
+
+export type RequestWhatsappChangeRequest = {
+  whatsapp_number: string;
+};
+
+export type ContactChangeRequestResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    verification_id: string;
+    resend_available_at: string;
+  };
+};
+
+export type VerifyContactChangeRequest = {
+  verification_id: string;
+  otp_code: string;
+};
+
+export type VerifyContactChangeResponse = {
+  success: boolean;
+  message: string;
+};

@@ -27,6 +27,7 @@ import {
   useUpdateNotificationSettings,
 } from '../hooks/use-settings';
 import type { SupportTicketType } from '../types/settings.types';
+import { ChangeAccountContactModal } from './change-account-contact-modal';
 import { ChangePasswordModal } from './change-password-modal';
 import { SupportTicketModal } from './support-ticket-modal';
 
@@ -251,6 +252,7 @@ export function SettingsScreen() {
   const notificationSettingsQuery = useNotificationSettings();
   const updateNotificationsMutation = useUpdateNotificationSettings();
   const [supportTicketType, setSupportTicketType] = React.useState<SupportTicketType | null>(null);
+  const [accountContactChange, setAccountContactChange] = React.useState<'email' | 'whatsapp' | null>(null);
   const [isChangePasswordVisible, setIsChangePasswordVisible] = React.useState(false);
   const notificationData = notificationSettingsQuery.data?.data;
   const sessionPremium = Boolean(session?.premium?.isPremium);
@@ -519,13 +521,29 @@ export function SettingsScreen() {
 
           <Section title="Profile">
             {session?.method === 'email' ? (
-              <SettingsRow
-                description="Update your account password."
-                icon="key-outline"
-                onPress={() => setIsChangePasswordVisible(true)}
-                title="Change password"
-              />
+              <>
+                <SettingsRow
+                  description="Verify a new email address for your account."
+                  icon="mail-outline"
+                  onPress={() => setAccountContactChange('email')}
+                  title="Change email"
+                  value={session.email}
+                />
+                <SettingsRow
+                  description="Update your account password."
+                  icon="key-outline"
+                  onPress={() => setIsChangePasswordVisible(true)}
+                  title="Change password"
+                />
+              </>
             ) : null}
+            <SettingsRow
+              description="Verify a new number for account messages."
+              icon="logo-whatsapp"
+              onPress={() => setAccountContactChange('whatsapp')}
+              title="Change WhatsApp number"
+              value={session?.user?.whatsapp_number ?? undefined}
+            />
             <SettingsRow
               description={
                 isProfileActive
@@ -573,6 +591,21 @@ export function SettingsScreen() {
           onClose={() => setIsChangePasswordVisible(false)}
           visible={isChangePasswordVisible}
         />
+        {accountContactChange ? (
+          <ChangeAccountContactModal
+            currentValue={
+              accountContactChange === 'email'
+                ? session?.email
+                : session?.user?.whatsapp_number
+            }
+            kind={accountContactChange}
+            onClose={() => setAccountContactChange(null)}
+            onConfirmed={async () => {
+              await refreshSession();
+            }}
+            visible
+          />
+        ) : null}
       </View>
     </>
   );
