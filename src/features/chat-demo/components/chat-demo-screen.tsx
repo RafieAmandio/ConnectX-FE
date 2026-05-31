@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
@@ -779,16 +780,48 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   const hasMediaUrl = Boolean(mediaUrl);
   const showBody = Boolean(message.body.trim());
   const [isImagePreviewVisible, setImagePreviewVisible] = React.useState(false);
+  const [isCopied, setIsCopied] = React.useState(false);
+  const copiedFeedbackTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const attachmentSize = formatFileSize(message.media?.sizeBytes);
+
+  React.useEffect(() => {
+    return () => {
+      if (copiedFeedbackTimeoutRef.current) {
+        clearTimeout(copiedFeedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = React.useCallback(() => {
+    if (!showBody) {
+      return;
+    }
+
+    void Clipboard.setStringAsync(message.body);
+    setIsCopied(true);
+
+    if (copiedFeedbackTimeoutRef.current) {
+      clearTimeout(copiedFeedbackTimeoutRef.current);
+    }
+
+    copiedFeedbackTimeoutRef.current = setTimeout(() => {
+      setIsCopied(false);
+      copiedFeedbackTimeoutRef.current = null;
+    }, 1_500);
+  }, [message.body, showBody]);
 
   return (
     <View className={isOutgoing ? 'items-end' : 'items-start'}>
-      <View
+      <Pressable
+        accessibilityHint={showBody ? 'Long press to copy message' : undefined}
+        delayLongPress={350}
+        disabled={!showBody}
         className={
           isOutgoing
             ? 'max-w-[82%] rounded-[26px] rounded-br-[10px] bg-[#FF9D3D] px-5 py-4'
             : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] px-5 py-4'
-        }>
+        }
+        onLongPress={handleCopy}>
         {message.type === 'image' && hasMediaUrl ? (
           <Pressable
             accessibilityLabel="Open image"
@@ -863,8 +896,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         <AppText className={isOutgoing ? 'mt-2 text-[#7C5526]' : 'mt-2 text-[#97928B]'} variant="code">
           {formatMessageTime(message.createdAt)}
           {` · ${formatMessageStatus(message)}`}
+          {isCopied ? ' · Copied' : ''}
         </AppText>
-      </View>
+      </Pressable>
       {message.type === 'image' ? (
         <ImagePreviewModal
           imageUrl={mediaUrl}
