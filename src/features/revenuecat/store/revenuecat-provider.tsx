@@ -109,7 +109,7 @@ async function fetchBootstrapState() {
 }
 
 export function RevenueCatProvider({ children }: React.PropsWithChildren) {
-  const { session } = useAuth();
+  const { refreshSession, session } = useAuth();
   const desiredAppUserId = React.useMemo(
     () => getRevenueCatAppUserId(session?.user?.id),
     [session?.user?.id]
@@ -301,6 +301,12 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   const packages = React.useMemo(() => getOfferPackages(currentOffering), [currentOffering]);
   const connectXProEntitlement =
     customerInfo?.entitlements.active[REVENUECAT_ENTITLEMENT_CONNECTX_PRO] ?? null;
+  const refreshRevenueCatAndAuthSession = React.useCallback(async () => {
+    const nextCustomerInfo = await refresh();
+    await refreshSession();
+
+    return nextCustomerInfo;
+  }, [refresh, refreshSession]);
   const restorePurchases = React.useCallback(async () => {
     if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
       return null;
@@ -317,6 +323,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         setError(null);
       });
 
+      await refreshSession();
       return nextCustomerInfo;
     } catch (nextError) {
       const message = getErrorMessage(nextError);
@@ -325,7 +332,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     } finally {
       setIsLoading(false);
     }
-  }, [ensureRevenueCatIdentityReady]);
+  }, [ensureRevenueCatIdentityReady, refreshSession]);
 
   const purchasePackageById = React.useCallback(
     async (packageId: RevenueCatPackageId) => {
@@ -354,6 +361,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
           setError(null);
         });
 
+        await refreshSession();
         return result.customerInfo;
       } catch (nextError) {
         const message = getErrorMessage(nextError);
@@ -363,7 +371,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         setIsLoading(false);
       }
     },
-    [ensureRevenueCatIdentityReady, offerings]
+    [ensureRevenueCatIdentityReady, offerings, refreshSession]
   );
 
   const presentPaywall = React.useCallback(async () => {
@@ -380,7 +388,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       });
 
       if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-        await refresh();
+        await refreshRevenueCatAndAuthSession();
       }
 
       setError(null);
@@ -390,7 +398,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       setError(message);
       throw nextError;
     }
-  }, [currentOffering, ensureRevenueCatIdentityReady, refresh]);
+  }, [currentOffering, ensureRevenueCatIdentityReady, refreshRevenueCatAndAuthSession]);
 
   const presentPaywallForOffering = React.useCallback(
     async (offeringId: string) => {
@@ -416,7 +424,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         });
 
         if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-          await refresh();
+          await refreshRevenueCatAndAuthSession();
         }
 
         setError(null);
@@ -427,7 +435,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         throw nextError;
       }
     },
-    [ensureRevenueCatIdentityReady, offerings, refresh]
+    [ensureRevenueCatIdentityReady, offerings, refreshRevenueCatAndAuthSession]
   );
 
   const presentPaywallIfNeeded = React.useCallback(async () => {
@@ -445,7 +453,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       });
 
       if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-        await refresh();
+        await refreshRevenueCatAndAuthSession();
       }
 
       setError(null);
@@ -455,7 +463,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       setError(message);
       throw nextError;
     }
-  }, [currentOffering, ensureRevenueCatIdentityReady, refresh]);
+  }, [currentOffering, ensureRevenueCatIdentityReady, refreshRevenueCatAndAuthSession]);
 
   const presentCustomerCenter = React.useCallback(async () => {
     if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
@@ -478,14 +486,14 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         },
       });
 
-      await refresh();
+      await refreshRevenueCatAndAuthSession();
       setError(null);
     } catch (nextError) {
       const message = getErrorMessage(nextError);
       setError(message);
       throw nextError;
     }
-  }, [ensureRevenueCatIdentityReady, refresh]);
+  }, [ensureRevenueCatIdentityReady, refreshRevenueCatAndAuthSession]);
 
   const value = React.useMemo<RevenueCatContextValue>(
     () => ({
