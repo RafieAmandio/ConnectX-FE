@@ -21,6 +21,8 @@ import { cn } from '@shared/utils/cn';
 import { useMyProfile, useUpdateStartupProfile } from '../hooks/use-profile';
 import type {
   MyProfileData,
+  ProfileStartupRawData,
+  ProfileStartupRawOpenRole,
   UpdateStartupProfileRequest,
 } from '../types/profile.types';
 
@@ -80,16 +82,24 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 
 type FlatOption = { id: string; label: string };
 
-function buildInitialFormState(startup?: MyProfileData['startup']): FormState {
+function getOpenRoleValue(role: ProfileStartupRawOpenRole): string {
+  if (typeof role === 'string') return role;
+  return role.id ?? role.value ?? role.title ?? '';
+}
+
+function buildInitialFormState(
+  startup?: MyProfileData['startup'],
+  startupRaw?: ProfileStartupRawData
+): FormState {
   return {
     name: startup?.name ?? '',
     tagline: startup?.tagline ?? '',
-    description: '',
+    description: startupRaw?.description ?? '',
     stage: startup?.stage.value ?? 'idea',
     industry: startup?.industries[0]?.id ?? '',
     secondary_industry: startup?.industries[1]?.id ?? '',
-    team_size: '',
-    open_roles: [],
+    team_size: startupRaw?.teamSize == null ? '' : String(startupRaw.teamSize),
+    open_roles: startupRaw?.openRoles?.map(getOpenRoleValue).filter(Boolean) ?? [],
     user_count: getStageDetailValue(startup, 'q_user_count'),
     mau: getStageDetailValue(startup, 'q_mau'),
     revenue: getStageDetailValue(startup, 'q_mvp_revenue') || getStageDetailValue(startup, 'q_mrr') || getStageDetailValue(startup, 'q_arr'),
@@ -326,17 +336,26 @@ function DropdownSelector({
   );
 }
 
-function MultiSelectChips({
+function SearchableMultiSelectDropdown({
   label,
   options,
+  placeholder,
   selected,
   onChange,
 }: {
   label: string;
   options: FlatOption[];
+  placeholder: string;
   selected: string[];
   onChange: (selected: string[]) => void;
 }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+
+  const filtered = search.trim()
+    ? options.filter((option) => option.label.toLowerCase().includes(search.toLowerCase()))
+    : options;
+
   function toggle(id: string) {
     if (selected.includes(id)) {
       onChange(selected.filter((s) => s !== id));
@@ -350,37 +369,77 @@ function MultiSelectChips({
       <AppText style={{ color: palette.textMuted }} variant="label">
         {label}
       </AppText>
-      <View className="flex-row flex-wrap gap-2">
-        {options.map((opt) => {
-          const isActive = selected.includes(opt.id);
-          return (
-            <Pressable
-              key={opt.id}
-              className="flex-row items-center gap-2 rounded-[14px] border px-3 py-2.5"
-              onPress={() => toggle(opt.id)}
-              style={{
-                backgroundColor: isActive ? palette.selected : palette.field,
-                borderColor: isActive ? palette.accent : palette.border,
-              }}>
-              <View
-                className="items-center justify-center rounded-full border"
-                style={{
-                  backgroundColor: isActive ? palette.accent : 'transparent',
-                  borderColor: isActive ? palette.accent : palette.textSoft,
-                  height: 18,
-                  width: 18,
-                }}>
-                {isActive ? <Ionicons color={palette.buttonText} name="checkmark" size={12} /> : null}
+      <Pressable
+        className="min-h-14 flex-row items-center justify-between rounded-[16px] border px-3 py-3"
+        onPress={() => setIsOpen(!isOpen)}
+        style={{ backgroundColor: palette.field, borderColor: isOpen ? palette.accent : palette.border }}>
+        <AppText
+          className="flex-1 text-[15px]"
+          style={{ color: selected.length ? palette.text : palette.textSoft }}>
+          {selected.length ? `${selected.length} role${selected.length === 1 ? '' : 's'} selected` : placeholder}
+        </AppText>
+        <Ionicons color={palette.textMuted} name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} />
+      </Pressable>
+
+      {isOpen ? (
+        <View
+          className="rounded-[16px] border"
+          style={{ backgroundColor: palette.field, borderColor: palette.border, maxHeight: 280 }}>
+          <TextInput
+            autoFocus
+            className="border-b px-3 py-3 text-[14px]"
+            onChangeText={setSearch}
+            placeholder="Search roles..."
+            placeholderTextColor={palette.textSoft}
+            style={{ borderBottomColor: palette.border, color: palette.text }}
+            value={search}
+          />
+          <ScrollView nestedScrollEnabled>
+            {filtered.map((option) => {
+              const isSelected = selected.includes(option.id);
+              return (
+                <Pressable
+                  key={option.id}
+                  className="flex-row items-center gap-3 px-3 py-3"
+                  onPress={() => toggle(option.id)}
+                  style={{ backgroundColor: isSelected ? palette.selected : 'transparent' }}>
+                  <AppText
+                    className="flex-1 text-[14px]"
+                    style={{ color: isSelected ? palette.accent : palette.text }}>
+                    {option.label}
+                  </AppText>
+                  {isSelected ? <Ionicons color={palette.accent} name="checkmark" size={16} /> : null}
+                </Pressable>
+              );
+            })}
+            {filtered.length === 0 ? (
+              <View className="items-center py-4">
+                <AppText className="text-[13px]" tone="muted">No roles found</AppText>
               </View>
-              <AppText
-                className="text-[13px]"
-                style={{ color: isActive ? palette.accent : palette.textMuted }}>
-                {opt.label}
-              </AppText>
-            </Pressable>
-          );
-        })}
-      </View>
+            ) : null}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {selected.length ? (
+        <View className="flex-row flex-wrap gap-2">
+          {selected.map((id) => {
+            const label = options.find((option) => option.id === id)?.label ?? id;
+            return (
+              <Pressable
+                key={id}
+                className="flex-row items-center gap-1.5 rounded-full border px-3 py-2"
+                onPress={() => toggle(id)}
+                style={{ backgroundColor: palette.selected, borderColor: palette.accent }}>
+                <AppText className="text-[13px]" style={{ color: palette.accent }}>
+                  {label}
+                </AppText>
+                <Ionicons color={palette.accent} name="close" size={15} />
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -393,15 +452,20 @@ export function EditStartupScreen() {
   const updateMutation = useUpdateStartupProfile();
 
   const startup = myProfileQuery.data?.data?.startup;
-  const [formState, setFormState] = React.useState<FormState>(() => buildInitialFormState(startup));
+  const startupRaw = myProfileQuery.data?.data?.startupRaw;
+  const hasHydratedStartup = React.useRef(Boolean(startup));
+  const [formState, setFormState] = React.useState<FormState>(() =>
+    buildInitialFormState(startup, startupRaw)
+  );
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (startup && !formState.name) {
-      setFormState(buildInitialFormState(startup));
+    if (startup && !hasHydratedStartup.current) {
+      setFormState(buildInitialFormState(startup, startupRaw));
+      hasHydratedStartup.current = true;
     }
-  }, [startup]);
+  }, [startup, startupRaw]);
 
   const industryOptions = React.useMemo(
     () => flattenGroups(filterOptionsQuery.data?.data?.industries ?? []),
@@ -618,7 +682,7 @@ export function EditStartupScreen() {
             <View className="gap-1">
               <AppText variant="subtitle">Team</AppText>
               <AppText className="text-[13px]" tone="muted">
-                Team setup and what you're looking for.
+                Team setup and what you&apos;re looking for.
               </AppText>
             </View>
             <StartupInput
@@ -633,10 +697,11 @@ export function EditStartupScreen() {
                 <ActivityIndicator color={palette.accent} size="small" />
               </View>
             ) : (
-              <MultiSelectChips
+              <SearchableMultiSelectDropdown
                 label="Open Roles"
                 onChange={(v) => updateField('open_roles', v)}
                 options={roleOptions}
+                placeholder="Select open roles"
                 selected={formState.open_roles}
               />
             )}

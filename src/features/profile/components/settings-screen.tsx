@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -10,7 +11,6 @@ import {
   Switch,
   View,
 } from 'react-native';
-import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
@@ -537,13 +537,13 @@ export function SettingsScreen() {
               title="Delete account"
               tone="danger"
             />
-            <SettingsRow
+            {/* <SettingsRow
               description="Sign out of your ConnectX account."
               icon="log-out-outline"
               onPress={() => void signOut()}
               title="Log Out"
               tone="danger"
-            />
+            /> */}
           </Section>
 
           <AppText align="center" className="text-[12px] pt-2" tone="muted">

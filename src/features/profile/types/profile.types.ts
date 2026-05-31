@@ -99,6 +99,20 @@ export type ProfileStartupData = {
   }[];
 };
 
+export type ProfileStartupRawOpenRole =
+  | string
+  | {
+      id?: string;
+      title?: string;
+      value?: string;
+    };
+
+export type ProfileStartupRawData = {
+  description: string | null;
+  openRoles: ProfileStartupRawOpenRole[] | null;
+  teamSize: number | null;
+};
+
 export type MyProfileSections = {
   about?: ProfileAboutSection;
   personalityAndHobbies?: ProfileListSection;
@@ -120,6 +134,7 @@ export type MyProfileData = {
   stats: ProfileStats;
   badges: ProfileBadge[];
   startup?: ProfileStartupData;
+  startupRaw?: ProfileStartupRawData;
   sections: MyProfileSections;
   createdAt: string;
   updatedAt: string;
