@@ -202,16 +202,16 @@ function MessageBubbleSkeleton({
       <View
         className={
           outgoing
-            ? 'max-w-[82%] rounded-[26px] rounded-br-[10px] px-5 py-4'
-            : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] px-5 py-4'
+            ? 'max-w-[82%] rounded-[16px] rounded-br-[4px] px-4 py-2.5'
+            : 'max-w-[82%] rounded-[16px] rounded-bl-[4px] px-4 py-2.5'
         }
         style={{ backgroundColor: outgoing ? '#4C351D' : '#313131', width }}>
         <SkeletonBlock
-          className="h-3.5 rounded-full"
+          className="h-3 rounded-full"
           style={{ backgroundColor: outgoing ? withAlpha('#FFD39A', 0.24) : withAlpha('#FFFFFF', 0.12) }}
         />
         <SkeletonBlock
-          className="mt-2 h-3.5 w-[72%] rounded-full"
+          className="mt-1.5 h-3 w-[72%] rounded-full"
           style={{ backgroundColor: outgoing ? withAlpha('#FFD39A', 0.2) : withAlpha('#FFFFFF', 0.1) }}
         />
       </View>
@@ -821,6 +821,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     });
   }, [isOutgoing, showBody, windowWidth]);
 
+  const isImageOnly = message.type === 'image' && hasMediaUrl && !showBody;
+  const isFileOnly = message.type !== 'image' && hasMediaUrl && !showBody;
+  const hasMediaOnly = isImageOnly || isFileOnly;
+
   return (
     <View className={isOutgoing ? 'items-end' : 'items-start'} ref={bubbleRef}>
       <Pressable
@@ -829,8 +833,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         disabled={!showBody}
         className={
           isOutgoing
-            ? 'max-w-[82%] rounded-[26px] rounded-br-[10px] bg-[#FF9D3D] px-5 py-4'
-            : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] px-5 py-4'
+            ? `max-w-[82%] rounded-[16px] rounded-br-[4px] bg-[#FF9D3D] ${hasMediaOnly ? 'p-1.5' : 'px-4 py-2.5'}`
+            : `max-w-[82%] rounded-[16px] rounded-bl-[4px] bg-[#313131] border border-white/[0.04] ${hasMediaOnly ? 'p-1.5' : 'px-4 py-2.5'}`
         }
         onLongPress={handleLongPress}>
         {message.type === 'image' && hasMediaUrl ? (
@@ -842,14 +846,22 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             <Image
               contentFit="cover"
               source={{ uri: thumbnailUrl ?? mediaUrl ?? undefined }}
-              style={{ borderRadius: 18, height: 220, width: 240 }}
+              style={{
+                borderRadius: 12,
+                borderBottomRightRadius: isOutgoing ? 2 : 12,
+                borderBottomLeftRadius: isOutgoing ? 12 : 2,
+                height: 220,
+                width: 240,
+              }}
             />
           </Pressable>
         ) : null}
 
         {message.type === 'image' && !hasMediaUrl ? (
           <View
-            className="w-56 items-center gap-2 rounded-[18px] border border-white/10 px-4 py-5"
+            className={`w-56 items-center gap-2 border border-white/10 px-4 py-5 ${
+              isOutgoing ? 'rounded-[12px] rounded-br-[2px]' : 'rounded-[12px] rounded-bl-[2px]'
+            }`}
             style={{ backgroundColor: isOutgoing ? 'rgba(32, 21, 7, 0.08)' : '#292929' }}>
             <Ionicons color={isOutgoing ? '#5C3D18' : '#F7B05B'} name="image-outline" size={24} />
             <AppText
@@ -863,7 +875,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
         {message.type !== 'image' && hasMediaUrl ? (
           <Pressable
-            className="w-56 flex-row items-center gap-3 rounded-[18px] border border-white/10 px-4 py-3 active:opacity-80"
+            className={`w-56 flex-row items-center gap-3 border border-white/10 px-4 py-3 active:opacity-80 ${
+              isOutgoing ? 'rounded-[12px] rounded-br-[2px]' : 'rounded-[12px] rounded-bl-[2px]'
+            }`}
             onPress={() => openMediaUrl(message.media?.url)}>
             <Ionicons
               color={isOutgoing ? '#5C3D18' : '#F7B05B'}
@@ -891,7 +905,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           <AppText
             className={[
               isOutgoing ? 'text-[#201507]' : 'text-[#F3F0EB]',
-              hasMediaUrl || message.type === 'image' ? 'mt-3' : '',
+              hasMediaUrl || message.type === 'image' ? 'mt-2.5' : '',
             ].join(' ')}>
             {showBody ? (
               <MessageText
@@ -904,7 +918,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             )}
           </AppText>
         ) : null}
-        <AppText className={isOutgoing ? 'mt-2 text-[#7C5526]' : 'mt-2 text-[#97928B]'} variant="code">
+        <AppText className={isOutgoing ? 'mt-1.5 text-[#7C5526]' : 'mt-1.5 text-[#97928B]'} variant="code">
           {formatMessageTime(message.createdAt)}
           {isCopied ? ' · Copied' : ''}
         </AppText>
@@ -943,6 +957,80 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
+function AttachmentPickerSheet({
+  onClose,
+  onPickDocument,
+  onPickImage,
+  visible,
+}: {
+  onClose: () => void;
+  onPickDocument: () => void;
+  onPickImage: () => void;
+  visible: boolean;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
+      <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(10, 10, 14, 0.42)' }}>
+        <Pressable className="flex-1" onPress={onClose} />
+        <View
+          className="rounded-t-[28px] border border-white/10 bg-[#2C2C2C] px-4 pt-3"
+          style={{ paddingBottom: Math.max(insets.bottom + 12, 24) }}>
+          <View className="items-center pb-5">
+            <View className="h-[5px] w-10 rounded-full bg-[#555]" />
+          </View>
+
+          <View className="gap-1 px-1 pb-4">
+            <AppText className="text-white" variant="title">
+              Add attachment
+            </AppText>
+            <AppText className="text-[#AFA9A2]">Choose what you want to send.</AppText>
+          </View>
+
+          <View className="gap-3">
+            <Pressable
+              className="min-h-16 flex-row items-center gap-4 rounded-[18px] bg-[#373534] px-4 active:opacity-80"
+              onPress={onPickImage}>
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-[#493A2A]">
+                <Ionicons color="#F7B05B" name="image-outline" size={22} />
+              </View>
+              <View className="flex-1 gap-0.5">
+                <AppText className="text-[#F3F0EB]" variant="bodyStrong">
+                  Photo
+                </AppText>
+                <AppText className="text-[#AFA9A2]">Choose an image from your library</AppText>
+              </View>
+            </Pressable>
+
+            <Pressable
+              className="min-h-16 flex-row items-center gap-4 rounded-[18px] bg-[#373534] px-4 active:opacity-80"
+              onPress={onPickDocument}>
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-[#493A2A]">
+                <Ionicons color="#F7B05B" name="document-attach-outline" size={22} />
+              </View>
+              <View className="flex-1 gap-0.5">
+                <AppText className="text-[#F3F0EB]" variant="bodyStrong">
+                  PDF or audio
+                </AppText>
+                <AppText className="text-[#AFA9A2]">Choose a document or audio file</AppText>
+              </View>
+            </Pressable>
+
+            <Pressable
+              className="min-h-12 items-center justify-center rounded-[18px] bg-[#373534] active:opacity-80"
+              onPress={onClose}>
+              <AppText className="text-[#F3F0EB]" variant="bodyStrong">
+                Cancel
+              </AppText>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export function ChatDemoConversationScreen({ conversationId }: { conversationId: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -955,6 +1043,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const uploadMediaMutation = useUploadChatDemoMedia();
   const [draftMessage, setDraftMessage] = React.useState('');
   const [pendingMedia, setPendingMedia] = React.useState<PendingChatDemoMedia | null>(null);
+  const [attachmentPickerVisible, setAttachmentPickerVisible] = React.useState(false);
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
   const [invitationSent, setInvitationSent] = React.useState(false);
   const [invitationMessage, setInvitationMessage] = React.useState<string | null>(null);
@@ -1179,12 +1268,19 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
       return;
     }
 
-    Alert.alert('Add attachment', undefined, [
-      { text: 'Photo', onPress: () => void handlePickImage() },
-      { text: 'PDF or audio', onPress: () => void handlePickDocument() },
-      { style: 'cancel', text: 'Cancel' },
-    ]);
-  }, [handlePickDocument, handlePickImage, isSending, isUploadingMedia]);
+    Keyboard.dismiss();
+    setAttachmentPickerVisible(true);
+  }, [isSending, isUploadingMedia]);
+
+  const handlePickImageFromSheet = React.useCallback(() => {
+    setAttachmentPickerVisible(false);
+    void handlePickImage();
+  }, [handlePickImage]);
+
+  const handlePickDocumentFromSheet = React.useCallback(() => {
+    setAttachmentPickerVisible(false);
+    void handlePickDocument();
+  }, [handlePickDocument]);
 
   const handleAddToTeam = React.useCallback(() => {
     if (!canInviteToTeam || !conversation?.participantEmail || invitationSent) {
@@ -1454,6 +1550,12 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           visible={inviteComposerVisible}
         />
       ) : null}
+      <AttachmentPickerSheet
+        onClose={() => setAttachmentPickerVisible(false)}
+        onPickDocument={handlePickDocumentFromSheet}
+        onPickImage={handlePickImageFromSheet}
+        visible={attachmentPickerVisible}
+      />
     </>
   );
 }

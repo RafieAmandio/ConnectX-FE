@@ -154,7 +154,13 @@ const MessageBody = React.memo(function MessageBody({
         <Image
           contentFit="cover"
           source={{ uri: message.mediaUrl }}
-          style={{ borderRadius: 18, height: 220, width: 240 }}
+          style={{
+            borderRadius: 12,
+            borderBottomRightRadius: isOutgoing ? 2 : 12,
+            borderBottomLeftRadius: isOutgoing ? 12 : 2,
+            height: 220,
+            width: 240,
+          }}
         />
         {message.content ? (
           <AppText className={textClassName} variant="body">
@@ -176,11 +182,20 @@ const MessageBody = React.memo(function MessageBody({
           <Image
             contentFit="cover"
             source={{ uri: message.thumbnailUrl }}
-            style={{ borderRadius: 18, height: 180, width: 240 }}
+            style={{
+              borderRadius: 12,
+              borderBottomRightRadius: isOutgoing ? 2 : 12,
+              borderBottomLeftRadius: isOutgoing ? 12 : 2,
+              height: 180,
+              width: 240,
+            }}
           />
         ) : null}
 
-        <View className="flex-row items-center gap-3 rounded-[18px] border border-white/10 px-4 py-3">
+        <View
+          className={`flex-row items-center gap-3 border border-white/10 px-4 py-3 ${
+            isOutgoing ? 'rounded-[12px] rounded-br-[2px]' : 'rounded-[12px] rounded-bl-[2px]'
+          }`}>
           <Ionicons
             color={isOutgoing ? '#5C3D18' : '#F7B05B'}
             name={message.messageType === 'video' ? 'videocam-outline' : 'document-outline'}
@@ -501,21 +516,22 @@ function ConversationPanel({
         (message.messageType === 'image' ||
           message.messageType === 'video' ||
           message.messageType === 'file');
+      const hasMediaOnly = hasRichMedia && !message.content;
 
       return (
         <View className={isOutgoing ? 'items-end' : 'items-start'}>
           <View
             className={
               isOutgoing
-                ? `max-w-[82%] rounded-[26px] rounded-br-[10px] bg-[#FF9D3D] ${hasRichMedia ? 'p-3' : 'px-5 py-4'}`
-                : `max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] ${hasRichMedia ? 'p-3' : 'px-5 py-4'}`
+                ? `max-w-[82%] rounded-[16px] rounded-br-[4px] bg-[#FF9D3D] ${hasMediaOnly ? 'p-1.5' : 'px-4 py-2.5'}`
+                : `max-w-[82%] rounded-[16px] rounded-bl-[4px] bg-[#313131] border border-white/[0.04] ${hasMediaOnly ? 'p-1.5' : 'px-4 py-2.5'}`
             }>
             <MessageBody
               isOutgoing={isOutgoing}
               message={message}
             />
             <AppText
-              className={isOutgoing ? 'mt-2 text-[#7C5526]' : 'mt-2 text-[#97928B]'}
+              className={isOutgoing ? 'mt-1.5 text-[#7C5526]' : 'mt-1.5 text-[#97928B]'}
               variant="code">
               {formatMessageTime(message.createdAt)}
               {message.status === 'sending' ? ' · sending' : ''}
