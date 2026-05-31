@@ -21,6 +21,7 @@ import {
   Pressable,
   RefreshControl,
   TextInput,
+  useWindowDimensions,
   View,
   type DimensionValue,
   type LayoutChangeEvent,
@@ -85,18 +86,6 @@ function formatMessageTime(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   });
-}
-
-function formatMessageStatus(message: ChatMessage) {
-  if (message.status === 'sending') {
-    return 'sending';
-  }
-
-  if (message.status === 'failed') {
-    return 'failed';
-  }
-
-  return message.status === 'sent' ? 'sent' : 'read';
 }
 
 function getInitials(value: string) {
@@ -774,13 +763,17 @@ export function ChatDemoListScreen() {
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
+  const { width: windowWidth } = useWindowDimensions();
   const isOutgoing = message.direction === 'outgoing';
   const mediaUrl = normalizeMediaUrl(message.media?.url);
   const thumbnailUrl = normalizeMediaUrl(message.media?.thumbnailUrl);
   const hasMediaUrl = Boolean(mediaUrl);
   const showBody = Boolean(message.body.trim());
   const [isImagePreviewVisible, setImagePreviewVisible] = React.useState(false);
+  const [isCopyMenuVisible, setCopyMenuVisible] = React.useState(false);
+  const [copyMenuPosition, setCopyMenuPosition] = React.useState({ left: 12, top: 12 });
   const [isCopied, setIsCopied] = React.useState(false);
+  const bubbleRef = React.useRef<React.ElementRef<typeof View>>(null);
   const copiedFeedbackTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const attachmentSize = formatFileSize(message.media?.sizeBytes);
 
@@ -798,6 +791,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     }
 
     void Clipboard.setStringAsync(message.body);
+    setCopyMenuVisible(false);
     setIsCopied(true);
 
     if (copiedFeedbackTimeoutRef.current) {
@@ -810,8 +804,25 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     }, 1_500);
   }, [message.body, showBody]);
 
+  const handleLongPress = React.useCallback(() => {
+    if (!showBody) {
+      return;
+    }
+
+    bubbleRef.current?.measureInWindow((x, y, width) => {
+      const menuWidth = 112;
+      const left = isOutgoing ? x + width - menuWidth : x;
+
+      setCopyMenuPosition({
+        left: Math.min(Math.max(left, 12), windowWidth - menuWidth - 12),
+        top: Math.max(y - 52, 12),
+      });
+      setCopyMenuVisible(true);
+    });
+  }, [isOutgoing, showBody, windowWidth]);
+
   return (
-    <View className={isOutgoing ? 'items-end' : 'items-start'}>
+    <View className={isOutgoing ? 'items-end' : 'items-start'} ref={bubbleRef}>
       <Pressable
         accessibilityHint={showBody ? 'Long press to copy message' : undefined}
         delayLongPress={350}
@@ -821,7 +832,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             ? 'max-w-[82%] rounded-[26px] rounded-br-[10px] bg-[#FF9D3D] px-5 py-4'
             : 'max-w-[82%] rounded-[26px] rounded-bl-[10px] bg-[#313131] px-5 py-4'
         }
-        onLongPress={handleCopy}>
+        onLongPress={handleLongPress}>
         {message.type === 'image' && hasMediaUrl ? (
           <Pressable
             accessibilityLabel="Open image"
@@ -895,7 +906,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         ) : null}
         <AppText className={isOutgoing ? 'mt-2 text-[#7C5526]' : 'mt-2 text-[#97928B]'} variant="code">
           {formatMessageTime(message.createdAt)}
-          {` · ${formatMessageStatus(message)}`}
           {isCopied ? ' · Copied' : ''}
         </AppText>
       </Pressable>
@@ -906,6 +916,29 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           visible={isImagePreviewVisible}
         />
       ) : null}
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setCopyMenuVisible(false)}
+        transparent
+        visible={isCopyMenuVisible}>
+        <Pressable className="flex-1" onPress={() => setCopyMenuVisible(false)}>
+          <Pressable
+            accessibilityLabel="Copy message"
+            accessibilityRole="button"
+            className="absolute flex-row items-center gap-2 rounded-[14px] bg-[#F3F0EB] px-4 py-3 active:opacity-80"
+            onPress={handleCopy}
+            style={{
+              boxShadow: '0 4px 18px rgba(0, 0, 0, 0.24)',
+              left: copyMenuPosition.left,
+              top: copyMenuPosition.top,
+            }}>
+            <Ionicons color="#312719" name="copy-outline" size={18} />
+            <AppText className="text-[#312719]" variant="bodyStrong">
+              Copy
+            </AppText>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
