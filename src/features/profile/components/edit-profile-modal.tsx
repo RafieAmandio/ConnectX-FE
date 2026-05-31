@@ -172,22 +172,6 @@ function validateForm(formState: UpdateMyProfileRequest, aboutErrorLabel: string
     nextErrors.personalityAndHobbyIds = 'You can select up to 6 personality and hobby tags.';
   }
 
-  const hasInvalidExperience = formState.experience.some(
-    (item) => !item.title.trim() || !item.organization.trim()
-  );
-
-  if (hasInvalidExperience) {
-    nextErrors.experience = 'Each experience needs a title and organization.';
-  }
-
-  const hasInvalidEducation = formState.education.some(
-    (item) => !item.degree.trim() || !item.school.trim()
-  );
-
-  if (hasInvalidEducation) {
-    nextErrors.education = 'Each education item needs a degree and school.';
-  }
-
   return nextErrors;
 }
 
