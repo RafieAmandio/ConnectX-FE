@@ -27,6 +27,7 @@ import {
   useUpdateNotificationSettings,
 } from '../hooks/use-settings';
 import type { SupportTicketType } from '../types/settings.types';
+import { ChangePasswordModal } from './change-password-modal';
 import { SupportTicketModal } from './support-ticket-modal';
 
 const SETTINGS_LINKS = {
@@ -235,6 +236,7 @@ export function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { refreshSession, session, signOut } = useAuth();
+
   const {
     isConnectXProActive,
     isLoading: isRevenueCatLoading,
@@ -249,6 +251,7 @@ export function SettingsScreen() {
   const notificationSettingsQuery = useNotificationSettings();
   const updateNotificationsMutation = useUpdateNotificationSettings();
   const [supportTicketType, setSupportTicketType] = React.useState<SupportTicketType | null>(null);
+  const [isChangePasswordVisible, setIsChangePasswordVisible] = React.useState(false);
   const notificationData = notificationSettingsQuery.data?.data;
   const sessionPremium = Boolean(session?.premium?.isPremium);
   const isProfileActive = session?.user?.is_active !== false;
@@ -515,6 +518,14 @@ export function SettingsScreen() {
           </Section>
 
           <Section title="Profile">
+            {session?.method === 'email' ? (
+              <SettingsRow
+                description="Update your account password."
+                icon="key-outline"
+                onPress={() => setIsChangePasswordVisible(true)}
+                title="Change password"
+              />
+            ) : null}
             <SettingsRow
               description={
                 isProfileActive
@@ -558,6 +569,10 @@ export function SettingsScreen() {
             visible={Boolean(supportTicketType)}
           />
         ) : null}
+        <ChangePasswordModal
+          onClose={() => setIsChangePasswordVisible(false)}
+          visible={isChangePasswordVisible}
+        />
       </View>
     </>
   );

@@ -2,6 +2,8 @@ import { apiFetch } from '@shared/services/api';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import type {
+  ChangePasswordRequest,
+  ChangePasswordResponse,
   NotificationSettingsResponse,
   SubmitSupportTicketRequest,
   SubmitSupportTicketResponse,
@@ -10,6 +12,7 @@ import type {
 } from '../types/settings.types';
 
 const SETTINGS_API = {
+  CHANGE_PASSWORD: '/api/v1/me/account/password',
   NOTIFICATIONS: '/api/v1/me/settings/notifications',
   SUPPORT_TICKETS: '/api/v1/support/tickets',
 } as const;
@@ -74,5 +77,24 @@ export async function submitSupportTicket(
       };
     }
     throw new Error('Failed to submit support ticket.');
+  }
+}
+
+export async function changePassword(
+  payload: ChangePasswordRequest
+): Promise<ChangePasswordResponse> {
+  try {
+    return await apiFetch<ChangePasswordResponse>(SETTINGS_API.CHANGE_PASSWORD, {
+      body: payload as unknown as BodyInit,
+      method: 'PATCH',
+    });
+  } catch (error) {
+    if (shouldUseMock()) {
+      return {
+        success: true,
+        message: 'Password updated successfully.',
+      };
+    }
+    throw error;
   }
 }

@@ -33,3 +33,14 @@ export type SubmitSupportTicketResponse = {
     ticket_id: string;
   };
 };
+
+export type ChangePasswordRequest = {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+};
+
+export type ChangePasswordResponse = {
+  success: boolean;
+  message: string;
+};

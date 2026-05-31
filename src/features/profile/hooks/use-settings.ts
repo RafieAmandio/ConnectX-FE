@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  changePassword,
   fetchNotificationSettings,
   submitSupportTicket,
   updateNotificationSettings,
@@ -56,5 +57,11 @@ export function useUpdateNotificationSettings() {
 export function useSubmitSupportTicket() {
   return useMutation({
     mutationFn: submitSupportTicket,
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: changePassword,
   });
 }

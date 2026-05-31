@@ -166,7 +166,7 @@ export const discoveryFilterSectionsByMode: Record<DiscoveryMode, DiscoveryFilte
           title: 'Minimum Connection Score',
           type: 'range',
           ui: { component: 'slider', suffix: '%' },
-          min: 50,
+          min: 80,
           max: 99,
           step: 1,
           defaultValue: 81,

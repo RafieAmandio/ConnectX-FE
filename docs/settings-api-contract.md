@@ -102,7 +102,71 @@ Submits a support ticket (feature request, bug report, or contact support messag
 
 ---
 
-## 3. Startup Profile Update
+## 3. Change Password
+
+### PATCH /api/v1/me/account/password
+
+Changes the authenticated user's password. This action is shown only for password-based accounts. OAuth-only accounts should not use this endpoint.
+
+**Headers:**
+- `Authorization: Bearer {token}`
+- `Content-Type: application/json`
+
+**Request body:**
+```json
+{
+  "current_password": "old-password",
+  "password": "new-password",
+  "password_confirmation": "new-password"
+}
+```
+
+| Field                   | Type   | Required | Description |
+|-------------------------|--------|----------|-------------|
+| `current_password`      | string | yes      | The user's existing password. |
+| `password`              | string | yes      | New password, minimum 8 characters. |
+| `password_confirmation` | string | yes      | Must match `password`. |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Password updated successfully."
+}
+```
+
+**Validation Error Response (422):**
+```json
+{
+  "success": false,
+  "message": "Validation failed.",
+  "errors": {
+    "password": ["The password must be at least 8 characters."],
+    "password_confirmation": ["The password confirmation does not match."]
+  }
+}
+```
+
+**Incorrect Current Password Response (422):**
+```json
+{
+  "success": false,
+  "message": "The current password is incorrect.",
+  "errors": {
+    "current_password": ["The current password is incorrect."]
+  }
+}
+```
+
+**Backend rules:**
+- Resolve the user from the bearer token. Do not accept a user ID in the request body.
+- Verify `current_password` before updating the stored password hash.
+- Reject OAuth-only accounts with `422` and a clear message.
+- Existing sessions may remain active unless backend security policy requires revocation.
+
+---
+
+## 4. Startup Profile Update
 
 ### PATCH /api/v1/me/startup
 
