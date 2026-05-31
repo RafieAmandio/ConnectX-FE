@@ -21,9 +21,16 @@ type ApiClientAuthConfig = {
     message?: string | null;
   }) => Promise<void> | void;
   onUnauthorized?: () => Promise<void> | void;
+  refreshAccessToken?: () => Promise<string>;
 };
 
 let apiClientAuthConfig: ApiClientAuthConfig = {};
+let refreshAccessTokenPromise: Promise<string> | null = null;
+
+type ApiFetchOptions = {
+  allowTokenRefresh?: boolean;
+  handleUnauthorized?: boolean;
+};
 
 export function configureApiClient(config: ApiClientAuthConfig) {
   apiClientAuthConfig = {
@@ -116,11 +123,28 @@ function isLinkedInRecoveryResponse(response: Response, payload: unknown) {
   return response.status === 403 && getStringProperty(payload, 'next_step') === 'FIX_LINKEDIN';
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function refreshApiAccessToken() {
+  if (!apiClientAuthConfig.refreshAccessToken) {
+    throw new Error('No API token refresh handler is configured.');
+  }
+
+  if (!refreshAccessTokenPromise) {
+    refreshAccessTokenPromise = apiClientAuthConfig.refreshAccessToken().finally(() => {
+      refreshAccessTokenPromise = null;
+    });
+  }
+
+  return refreshAccessTokenPromise;
+}
+
+async function executeApiFetch<T>(
+  path: string,
+  init: RequestInit,
+  options: ApiFetchOptions,
+  hasRetriedAfterRefresh: boolean
+): Promise<T> {
   const token = await apiClientAuthConfig.getAccessToken?.();
   const headers = new Headers(init.headers);
-
-  console.log('apiFetch token', token);
 
   headers.set('Accept', 'application/json');
 
@@ -161,7 +185,25 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
           ? GENERIC_REQUEST_ERROR_MESSAGE
           : getErrorMessage(payload, `Request failed with status ${response.status}`);
 
-      if (response.status === 401) {
+      if (
+        response.status === 401 &&
+        token &&
+        options.allowTokenRefresh !== false &&
+        !hasRetriedAfterRefresh
+      ) {
+        try {
+          await refreshApiAccessToken();
+          return executeApiFetch<T>(path, init, options, true);
+        } catch {
+          if (options.handleUnauthorized !== false) {
+            await apiClientAuthConfig.onUnauthorized?.();
+          }
+
+          throw new ApiError(message, response.status, payload);
+        }
+      }
+
+      if (response.status === 401 && options.handleUnauthorized !== false) {
         await apiClientAuthConfig.onUnauthorized?.();
       }
 
@@ -183,4 +225,12 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
     throw new ApiError(GENERIC_REQUEST_ERROR_MESSAGE, 0);
   }
+}
+
+export async function apiFetch<T>(
+  path: string,
+  init: RequestInit = {},
+  options: ApiFetchOptions = {}
+): Promise<T> {
+  return executeApiFetch<T>(path, init, options, false);
 }

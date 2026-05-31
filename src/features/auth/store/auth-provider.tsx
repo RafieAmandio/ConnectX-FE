@@ -28,6 +28,7 @@ import {
   getStoredToken,
   loginWithApi,
   loginWithGoogleApi,
+  refreshStoredApiAccessToken,
   refreshAuthSession,
   registerWithApi,
   replaceStoredSession,
@@ -447,6 +448,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       onUnauthorized: async () => {
         await signOut();
       },
+      refreshAccessToken: refreshStoredApiAccessToken,
     });
   }, [signOut]);
 

@@ -168,6 +168,17 @@ export type LoginPasswordSuccessResponse = {
   token_type?: string | null;
 } & AuthSupabaseSessionPayload;
 
+export type AuthTokenRefreshResponse = {
+  data: {
+    user: AuthUser;
+  };
+  message: string;
+  next_step: 'TOKEN_REFRESHED';
+  status: 'success';
+  token: string;
+  token_type: string;
+};
+
 export type LoginOtpMessageResponse = {
   data: [];
   message: string;

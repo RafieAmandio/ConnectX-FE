@@ -32,6 +32,7 @@ import type {
   AuthSessionResponse,
   AuthSuccessResponse,
   AuthSupabaseSessionPayload,
+  AuthTokenRefreshResponse,
   AuthUser,
   EmailAlreadyVerifiedResponse,
   ForgotPasswordPayload,
@@ -72,6 +73,7 @@ export const AUTH_API = {
   LOGIN: '/api/v1/auth/login/password',
   LOGIN_OTP_SEND: '/api/v1/auth/login/otp/send',
   LOGIN_OTP_VERIFY: '/api/v1/auth/login/otp/verify',
+  REFRESH: '/api/v1/auth/refresh',
   REGISTER: '/api/v1/auth/register',
   SESSION: '/api/v1/auth/session',
   VERIFY_EMAIL: '/api/v1/auth/verify-email',
@@ -581,6 +583,28 @@ async function persistStoredUser(user: AuthUser | null) {
 
 export async function getStoredToken() {
   return SecureStore.getItemAsync(TOKEN_KEY);
+}
+
+export async function refreshStoredApiAccessToken() {
+  const response = await apiFetch<AuthTokenRefreshResponse>(
+    AUTH_API.REFRESH,
+    {
+      method: 'POST',
+    },
+    {
+      allowTokenRefresh: false,
+      handleUnauthorized: false,
+    }
+  );
+  const token = typeof response.token === 'string' ? response.token.trim() : '';
+
+  if (!token) {
+    throw new Error('API token refresh succeeded, but no token was returned.');
+  }
+
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+
+  return token;
 }
 
 export async function getStoredUser() {
