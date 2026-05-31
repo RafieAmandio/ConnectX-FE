@@ -1,4 +1,5 @@
 import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
+import type { DiscoveryProfileCard } from '@features/home/types/discovery.types';
 
 export type MatchStatus = 'active' | 'expired';
 
@@ -27,8 +28,7 @@ export type WhoLikedMeResponse = {
   success: boolean;
   message: string;
   data: {
-    locked: boolean;
-    items: LikesYouListItem[];
+    items: DiscoveryProfileCard[];
     total: number;
     page: number;
     limit: number;

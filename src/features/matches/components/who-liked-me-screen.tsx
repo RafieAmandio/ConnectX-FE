@@ -8,12 +8,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSwipeAction } from '@features/home/hooks/use-discovery';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
+import type { DiscoveryProfileCard } from '@features/home/types/discovery.types';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
 
 import { matchesQueryKeys, useWhoLikedMeList } from '../hooks/use-matches';
-import type { LikesYouListItem } from '../types/matches.types';
 
 const PAGE_LIMIT = 10;
 
@@ -49,19 +49,19 @@ function isPremiumRequiredError(error: unknown) {
   return getApiErrorCode(error) === 'PREMIUM_REQUIRED';
 }
 
-function LikeAvatar({ item }: { item: LikesYouListItem }) {
+function LikeAvatar({ item }: { item: DiscoveryProfileCard }) {
   return (
     <View className="h-[78px] w-[78px] overflow-hidden rounded-[18px] bg-[#34343A]">
-      {item.user.photoUrl ? (
+      {item.photoUrl ? (
         <Image
           contentFit="cover"
-          source={{ uri: item.user.photoUrl }}
+          source={{ uri: item.photoUrl }}
           style={{ height: '100%', width: '100%' }}
         />
       ) : (
         <View className="h-full w-full items-center justify-center">
           <AppText className="text-[26px] text-[#FFD33D]" variant="title">
-            {item.user.name.charAt(0).toUpperCase()}
+            {item.name.charAt(0).toUpperCase()}
           </AppText>
         </View>
       )}
@@ -75,8 +75,8 @@ function WhoLikedMeCard({
   onAction,
 }: {
   disabled: boolean;
-  item: LikesYouListItem;
-  onAction: (item: LikesYouListItem, action: 'like' | 'pass') => void;
+  item: DiscoveryProfileCard;
+  onAction: (item: DiscoveryProfileCard, action: 'like' | 'pass') => void;
 }) {
   return (
     <AppCard
@@ -87,13 +87,13 @@ function WhoLikedMeCard({
 
         <View className="min-w-0 flex-1 gap-1">
           <AppText className="text-[18px] leading-[24px] text-[#F1F1F1]" variant="title">
-            {item.user.name}
+            {item.name}
           </AppText>
           <AppText className="text-[13px] leading-[18px] text-[#D8C6A5]">
-            {item.user.headline}
+            {item.headline}
           </AppText>
           <AppText className="text-[13px] leading-[18px] text-[#9F9C99]">
-            {item.user.location}
+            {item.location.display}
           </AppText>
 
           <View className="mt-2 flex-row gap-2">
@@ -127,7 +127,7 @@ export function WhoLikedMeScreen() {
   const queryClient = useQueryClient();
   const { presentPaywallForOffering, supported } = useRevenueCat();
   const [page, setPage] = React.useState(1);
-  const [items, setItems] = React.useState<LikesYouListItem[]>([]);
+  const [items, setItems] = React.useState<DiscoveryProfileCard[]>([]);
   const [banner, setBanner] = React.useState<BannerState | null>(null);
   const [presentedPremiumError, setPresentedPremiumError] = React.useState(false);
   const whoLikedMeQuery = useWhoLikedMeList({ limit: PAGE_LIMIT, page });
@@ -147,12 +147,12 @@ export function WhoLikedMeScreen() {
     setPresentedPremiumError(false);
     setItems((currentItems) => {
       const nextItems = page === 1 ? [] : currentItems;
-      const seenLikeIds = new Set(nextItems.map((item) => item.likeId));
+      const seenIds = new Set(nextItems.map((item) => item.id));
 
       for (const item of data.items) {
-        if (!seenLikeIds.has(item.likeId)) {
+        if (!seenIds.has(item.id)) {
           nextItems.push(item);
-          seenLikeIds.add(item.likeId);
+          seenIds.add(item.id);
         }
       }
 
@@ -201,17 +201,17 @@ export function WhoLikedMeScreen() {
   }, [queryClient]);
 
   const handleAction = React.useCallback(
-    async (item: LikesYouListItem, action: 'like' | 'pass') => {
+    async (item: DiscoveryProfileCard, action: 'like' | 'pass') => {
       setBanner(null);
 
       try {
         await swipeAction.mutateAsync({
-          cardId: item.user.userId,
+          cardId: item.id,
           payload: { action, viewer_context: viewerContext },
-          targetId: item.user.userId,
+          targetId: item.profileId,
         });
 
-        setItems((currentItems) => currentItems.filter((currentItem) => currentItem.likeId !== item.likeId));
+        setItems((currentItems) => currentItems.filter((currentItem) => currentItem.id !== item.id));
         setBanner({
           detail: action === 'like' ? 'We saved your like.' : 'We passed on this connect.',
           title: action === 'like' ? 'Liked' : 'Passed',
@@ -363,7 +363,7 @@ export function WhoLikedMeScreen() {
             <View className="gap-3">
               {items.map((item) => (
                 <WhoLikedMeCard
-                  key={item.likeId}
+                  key={item.id}
                   disabled={actionDisabled}
                   item={item}
                   onAction={(selectedItem, action) => {
