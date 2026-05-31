@@ -109,6 +109,7 @@ export type ProfileStartupRawOpenRole =
 
 export type ProfileStartupRawData = {
   description: string | null;
+  logoUrl: string | null;
   openRoles: ProfileStartupRawOpenRole[] | null;
   teamSize: number | null;
 };

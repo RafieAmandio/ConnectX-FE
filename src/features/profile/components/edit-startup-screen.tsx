@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -18,7 +20,7 @@ import { useDiscoveryFilterOptions } from '@features/home/hooks/use-discovery';
 import { AppCard, AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
 
-import { useMyProfile, useUpdateStartupProfile } from '../hooks/use-profile';
+import { useMyProfile, useUpdateStartupProfile, useUploadProfileImage } from '../hooks/use-profile';
 import type {
   MyProfileData,
   ProfileStartupRawData,
@@ -64,6 +66,7 @@ type FormState = {
   description: string;
   stage: string;
   industry: string;
+  logo_url: string;
   secondary_industry: string;
   team_size: string;
   open_roles: string[];
@@ -97,6 +100,7 @@ function buildInitialFormState(
     description: startupRaw?.description ?? '',
     stage: startup?.stage.value ?? 'idea',
     industry: startup?.industries[0]?.id ?? '',
+    logo_url: startupRaw?.logoUrl ?? '',
     secondary_industry: startup?.industries[1]?.id ?? '',
     team_size: startupRaw?.teamSize == null ? '' : String(startupRaw.teamSize),
     open_roles: startupRaw?.openRoles?.map(getOpenRoleValue).filter(Boolean) ?? [],
@@ -450,6 +454,7 @@ export function EditStartupScreen() {
   const myProfileQuery = useMyProfile();
   const filterOptionsQuery = useDiscoveryFilterOptions('explore_startups');
   const updateMutation = useUpdateStartupProfile();
+  const uploadLogoMutation = useUploadProfileImage();
 
   const startup = myProfileQuery.data?.data?.startup;
   const startupRaw = myProfileQuery.data?.data?.startupRaw;
@@ -485,6 +490,46 @@ export function EditStartupScreen() {
     setSubmitError(null);
   }
 
+  async function handlePickLogo() {
+    if (uploadLogoMutation.isPending || updateMutation.isPending) {
+      return;
+    }
+
+    setSubmitError(null);
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      allowsMultipleSelection: false,
+      aspect: [1, 1],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      selectionLimit: 1,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+
+    if (!asset?.uri) {
+      setSubmitError('The selected image could not be read.');
+      return;
+    }
+
+    try {
+      const uploadedImage = await uploadLogoMutation.mutateAsync({
+        fileName: asset.fileName ?? null,
+        mimeType: asset.mimeType ?? null,
+        uri: asset.uri,
+      });
+
+      updateField('logo_url', uploadedImage.url);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to upload this logo right now.');
+    }
+  }
+
   async function handleSave() {
     const errors = validateForm(formState);
     if (Object.keys(errors).length > 0) {
@@ -500,6 +545,7 @@ export function EditStartupScreen() {
       description: formState.description.trim() || undefined,
       stage: formState.stage || undefined,
       industry: formState.industry || undefined,
+      logo_url: formState.logo_url.trim() || undefined,
       secondary_industry: formState.secondary_industry || undefined,
       team_size: formState.team_size ? Number(formState.team_size) : undefined,
       open_roles: formState.open_roles.length > 0 ? formState.open_roles : undefined,
@@ -523,6 +569,8 @@ export function EditStartupScreen() {
   }
 
   const isOptionsLoading = filterOptionsQuery.isLoading;
+  const isSaving = updateMutation.isPending || uploadLogoMutation.isPending;
+  const logoUrl = formState.logo_url.trim() || null;
 
   return (
     <>
@@ -555,7 +603,7 @@ export function EditStartupScreen() {
             </AppText>
           </View>
 
-          {updateMutation.isPending ? (
+          {isSaving ? (
             <ActivityIndicator color={palette.accent} size="small" />
           ) : (
             <View className="h-11 w-11" />
@@ -578,6 +626,57 @@ export function EditStartupScreen() {
               <AppText className="text-[13px]" tone="muted">
                 The basics people see about your startup.
               </AppText>
+            </View>
+            <View className="flex-row items-center gap-4">
+              {logoUrl ? (
+                <Image
+                  contentFit="cover"
+                  source={{ uri: logoUrl }}
+                  style={{
+                    borderColor: palette.accent,
+                    borderRadius: 18,
+                    borderWidth: 2,
+                    height: 76,
+                    width: 76,
+                  }}
+                />
+              ) : (
+                <View
+                  className="items-center justify-center rounded-[18px] border"
+                  style={{
+                    backgroundColor: palette.accentSoft,
+                    borderColor: palette.accent,
+                    height: 76,
+                    width: 76,
+                  }}>
+                  <Ionicons color={palette.accent} name="business-outline" size={30} />
+                </View>
+              )}
+              <View className="min-w-0 flex-1 gap-1">
+                <AppText className="text-[15px]" variant="bodyStrong">Startup Logo</AppText>
+                <AppText className="text-[13px] leading-5" tone="muted">
+                  Use a square image for the clearest result.
+                </AppText>
+                <Pressable
+                  accessibilityRole="button"
+                  className="mt-2 h-9 self-start flex-row items-center justify-center gap-2 rounded-[12px] border px-3"
+                  disabled={isSaving}
+                  onPress={() => void handlePickLogo()}
+                  style={{
+                    backgroundColor: palette.selected,
+                    borderColor: palette.accent,
+                    opacity: isSaving ? 0.7 : 1,
+                  }}>
+                  {uploadLogoMutation.isPending ? (
+                    <ActivityIndicator color={palette.accent} size="small" />
+                  ) : (
+                    <Ionicons color={palette.accent} name="image-outline" size={16} />
+                  )}
+                  <AppText className="text-[12px]" style={{ color: palette.accent }} variant="bodyStrong">
+                    {uploadLogoMutation.isPending ? 'Uploading...' : logoUrl ? 'Change Logo' : 'Upload Logo'}
+                  </AppText>
+                </Pressable>
+              </View>
             </View>
             <StartupInput
               error={formErrors.name}
@@ -776,21 +875,21 @@ export function EditStartupScreen() {
           <View className="mt-5 flex-row gap-3 pt-1">
             <Pressable
               className="h-12 flex-1 items-center justify-center rounded-[12px] border"
-              disabled={updateMutation.isPending}
+              disabled={isSaving}
               onPress={() => router.back()}
               style={{ backgroundColor: palette.field, borderColor: palette.border }}>
               <AppText className="text-[14px]" variant="bodyStrong">Cancel</AppText>
             </Pressable>
             <Pressable
               className="h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[12px] border"
-              disabled={updateMutation.isPending}
+              disabled={isSaving}
               onPress={() => void handleSave()}
               style={{
                 backgroundColor: palette.accent,
                 borderColor: palette.accent,
-                opacity: updateMutation.isPending ? 0.7 : 1,
+                opacity: isSaving ? 0.7 : 1,
               }}>
-              {updateMutation.isPending ? (
+              {isSaving ? (
                 <ActivityIndicator color={palette.buttonText} size="small" />
               ) : (
                 <>
