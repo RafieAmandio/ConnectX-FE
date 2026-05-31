@@ -1,14 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { chatDemoQueryKeys } from '@features/chat/hooks/use-chat-demo';
+import { MatchModal } from '@features/home/components/match-modal';
 import { useSwipeAction } from '@features/home/hooks/use-discovery';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
-import type { DiscoveryProfileCard } from '@features/home/types/discovery.types';
+import type {
+  DiscoveryProfileCard,
+  SwipeActionSuccessResponse,
+} from '@features/home/types/discovery.types';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
@@ -22,6 +28,22 @@ type BannerState = {
   title: string;
   tone: 'default' | 'success' | 'warning';
 };
+
+type MatchState = {
+  card: DiscoveryProfileCard;
+  conversationId: string | null;
+  matchId: string | null;
+};
+
+function getSwipeMatchConversationId(response: SwipeActionSuccessResponse) {
+  return (
+    response.data.conversationId ??
+    response.data.conversation_id ??
+    response.data.roomId ??
+    response.data.room_id ??
+    null
+  );
+}
 
 function getApiErrorCode(error: unknown) {
   if (!(error instanceof ApiError)) {
@@ -129,6 +151,7 @@ export function WhoLikedMeScreen() {
   const [page, setPage] = React.useState(1);
   const [items, setItems] = React.useState<DiscoveryProfileCard[]>([]);
   const [banner, setBanner] = React.useState<BannerState | null>(null);
+  const [matchState, setMatchState] = React.useState<MatchState | null>(null);
   const [presentedPremiumError, setPresentedPremiumError] = React.useState(false);
   const whoLikedMeQuery = useWhoLikedMeList({ limit: PAGE_LIMIT, page });
   const swipeAction = useSwipeAction();
@@ -205,18 +228,30 @@ export function WhoLikedMeScreen() {
       setBanner(null);
 
       try {
-        await swipeAction.mutateAsync({
+        const response = await swipeAction.mutateAsync({
           cardId: item.id,
           payload: { action, viewer_context: viewerContext },
           targetId: item.profileId,
         });
 
         setItems((currentItems) => currentItems.filter((currentItem) => currentItem.id !== item.id));
-        setBanner({
-          detail: action === 'like' ? 'We saved your like.' : 'We passed on this connect.',
-          title: action === 'like' ? 'Liked' : 'Passed',
-          tone: 'success',
-        });
+
+        if (action === 'like' && response.data.isMatch) {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setMatchState({
+            card: item,
+            conversationId: getSwipeMatchConversationId(response),
+            matchId: response.data.matchId,
+          });
+          void queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversationsRoot });
+        } else {
+          setBanner({
+            detail: action === 'like' ? 'We saved your like.' : 'We passed on this connect.',
+            title: action === 'like' ? 'Liked' : 'Passed',
+            tone: 'success',
+          });
+        }
+
         void queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
       } catch (error) {
         setBanner({
@@ -228,6 +263,29 @@ export function WhoLikedMeScreen() {
     },
     [queryClient, swipeAction, viewerContext]
   );
+
+  const handleOpenMatchChat = React.useCallback(() => {
+    const conversationId = matchState?.conversationId;
+
+    setMatchState(null);
+
+    if (conversationId) {
+      router.push(`/chat_demo/${conversationId}` as never);
+      return;
+    }
+
+    router.push('/chat_demo' as never);
+  }, [matchState?.conversationId, router]);
+
+  const handleOpenMatchReport = React.useCallback(() => {
+    const matchId = matchState?.matchId;
+
+    setMatchState(null);
+
+    if (matchId) {
+      router.push(`/match-analysis/${matchId}` as never);
+    }
+  }, [matchState?.matchId, router]);
 
   const handleLoadMore = React.useCallback(() => {
     if (!hasMore || whoLikedMeQuery.isFetching) {
@@ -387,6 +445,12 @@ export function WhoLikedMeScreen() {
             ) : null}
           </View>
         </ScrollView>
+        <MatchModal
+          card={matchState?.card ?? null}
+          onChat={handleOpenMatchChat}
+          onClose={() => setMatchState(null)}
+          onReport={handleOpenMatchReport}
+        />
       </View>
     </>
   );
