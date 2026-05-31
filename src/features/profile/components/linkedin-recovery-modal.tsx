@@ -16,8 +16,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
+import { useFcmToken } from '@features/auth/hooks/use-fcm-token';
 import { AppInput, AppText } from '@shared/components';
 import { ApiError } from '@shared/services/api';
+import { getOrCreateDeviceId } from '@shared/services/device-id';
 import {
   clearLinkedInRecovery,
   getLinkedInRecoveryState,
@@ -25,7 +27,7 @@ import {
 } from '@shared/services/linkedin-recovery-store';
 
 import { profileQueryKeys } from '../hooks/use-profile';
-import { updateMyLinkedInProfile } from '../services/profile-service';
+import { syncLinkedInProfile, updateMyLinkedInProfile } from '../services/profile-service';
 
 const LINKEDIN_PROFILE_URL_PATTERN = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9%_.-]+\/?$/;
 
@@ -112,6 +114,7 @@ export function LinkedInRecoveryModal() {
     getLinkedInRecoveryState
   );
   const { refreshSession } = useAuth();
+  const fcmToken = useFcmToken(recovery.isRequired);
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -202,6 +205,12 @@ export function LinkedInRecoveryModal() {
 
     try {
       await updateMyLinkedInProfile({ linkedin_url: normalizedLinkedInUrl });
+      const deviceId = await getOrCreateDeviceId();
+      await syncLinkedInProfile({
+        device_id: deviceId,
+        fcm_token: fcmToken ?? '',
+        linkedin_url: normalizedLinkedInUrl,
+      });
       await Promise.all([
         refreshSession(),
         queryClient.invalidateQueries({ queryKey: profileQueryKeys.me }),

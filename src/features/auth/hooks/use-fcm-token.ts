@@ -17,11 +17,11 @@ const APNS_TOKEN_RETRY_DELAY_MS = 500;
 
 const wait = (delayMs: number) => new Promise((resolve) => setTimeout(resolve, delayMs));
 
-export function useFcmToken() {
+export function useFcmToken(enabled = true) {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (Platform.OS === 'web') {
+    if (!enabled || Platform.OS === 'web') {
       return;
     }
 
@@ -116,7 +116,7 @@ export function useFcmToken() {
       isMounted = false;
       unsubscribeTokenRefresh?.();
     };
-  }, []);
+  }, [enabled]);
 
   return fcmToken;
 }

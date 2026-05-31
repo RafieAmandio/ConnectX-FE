@@ -8,6 +8,8 @@ import type {
   ProfileImageUploadResponse,
   ProfileOptionsResponse,
   RequestAccountDeletionResponse,
+  SyncLinkedInProfileRequest,
+  SyncLinkedInProfileResponse,
   UpdateMyLinkedInProfileRequest,
   UpdateMyProfileRequest,
   UpdateMyProfileResponse,
@@ -22,6 +24,7 @@ export const PROFILE_API = {
   ACCOUNT_DELETION_REQUESTS: '/api/v1/me/account/deletion-requests',
   ACCOUNT_PAUSE: '/api/v1/me/account/pause',
   LOCATION: '/api/v1/profile/location',
+  LINKEDIN_SYNC: '/api/v1/auth/linkedin-sync',
   STARTUP: '/api/v1/me/startup',
   ME: '/api/v1/me/profile',
   OPTIONS: '/api/v1/profile-options',
@@ -122,6 +125,13 @@ export async function updateMyLinkedInProfile(payload: UpdateMyLinkedInProfileRe
   return apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
     body: payload as unknown as BodyInit,
     method: 'PATCH',
+  });
+}
+
+export async function syncLinkedInProfile(payload: SyncLinkedInProfileRequest) {
+  return apiFetch<SyncLinkedInProfileResponse>(PROFILE_API.LINKEDIN_SYNC, {
+    body: payload as unknown as BodyInit,
+    method: 'POST',
   });
 }
 

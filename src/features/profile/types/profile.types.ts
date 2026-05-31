@@ -172,6 +172,17 @@ export type UpdateMyLinkedInProfileRequest = {
   linkedin_url: string;
 };
 
+export type SyncLinkedInProfileRequest = {
+  linkedin_url: string;
+  fcm_token: string;
+  device_id: string;
+};
+
+export type SyncLinkedInProfileResponse = {
+  success: boolean;
+  message: string;
+};
+
 export type UpdateProfileLocationRequest = {
   latitude: number;
   longitude: number;
