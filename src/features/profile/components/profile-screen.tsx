@@ -12,13 +12,9 @@ import {
 } from 'react-native';
 
 import { useAuthContext } from '@features/auth/store/auth-provider';
-import { AppCard, AppText, AppTopBar } from '@shared/components';
+import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
 
 import { useMyProfile } from '../hooks/use-profile';
-import {
-  mockIndividualProfileResponse,
-  mockStartupProfileResponse,
-} from '../mock/profile.mock';
 import type {
   MyProfileData,
   MyProfileResponse,
@@ -52,8 +48,6 @@ const ACCENT_BORDER = 'rgba(245, 158, 11, 0.28)';
 const ACCENT_SOFT_BG = '#2A2117';
 const DANGER = '#FF5A67';
 const DANGER_BORDER = 'rgba(255, 90, 103, 0.2)';
-
-type ProfileMockMode = 'startup' | 'individual';
 
 function hasUsableProfile(response?: MyProfileResponse): response is MyProfileResponse {
   return typeof response?.data?.id === 'string' && response.data.id.length > 0;
@@ -277,51 +271,6 @@ function StartupProfileCard({
         </AppText>
       </Pressable>
     </SectionCard>
-  );
-}
-
-function MockProfileToggle({
-  mode,
-  onChange,
-}: {
-  mode: ProfileMockMode;
-  onChange: (mode: ProfileMockMode) => void;
-}) {
-  const options: { label: string; value: ProfileMockMode }[] = [
-    { label: 'Startup', value: 'startup' },
-    { label: 'Individual', value: 'individual' },
-  ];
-
-  return (
-    <View
-      className="flex-row rounded-[18px] border p-1"
-      style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}
-    >
-      {options.map((option) => {
-        const isActive = mode === option.value;
-
-        return (
-          <Pressable
-            key={option.value}
-            className="min-h-10 flex-1 items-center justify-center rounded-[14px] px-3 active:opacity-80"
-            onPress={() => onChange(option.value)}
-            style={{
-              backgroundColor: isActive ? ACCENT_SOFT_BG : 'transparent',
-              borderColor: isActive ? ACCENT_BORDER : 'transparent',
-              borderWidth: 1,
-            }}
-          >
-            <AppText
-              className="text-[13px]"
-              tone={isActive ? 'signal' : 'muted'}
-              variant="bodyStrong"
-            >
-              {option.label}
-            </AppText>
-          </Pressable>
-        );
-      })}
-    </View>
   );
 }
 
@@ -727,33 +676,11 @@ export function ProfileScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { signOut } = useAuthContext();
-  const [mockMode, setMockMode] = React.useState<ProfileMockMode>('startup');
   const myProfileQuery = useMyProfile();
   const myProfileResponse = myProfileQuery.data;
-  const shouldUseMockProfile =
+  const shouldShowProfileError =
     myProfileQuery.isError ||
     (myProfileQuery.isSuccess && !hasUsableProfile(myProfileResponse));
-  const mockProfile =
-    mockMode === 'startup'
-      ? mockStartupProfileResponse.data
-      : mockIndividualProfileResponse.data;
-
-  const effectiveProfile =
-    shouldUseMockProfile || !hasUsableProfile(myProfileResponse)
-      ? mockProfile
-      : myProfileResponse.data;
-
-  const aboutSection = effectiveProfile.sections.about;
-  const startup = effectiveProfile.startup;
-  const isStartupOwnerProfile = Boolean(startup);
-  const personalitySection = effectiveProfile.sections.personalityAndHobbies;
-  const skillsSection = effectiveProfile.sections.skills;
-  const interestsSection = effectiveProfile.sections.interests;
-  const experienceItems = effectiveProfile.sections.experience?.items ?? [];
-  const educationItems = effectiveProfile.sections.education?.items ?? [];
-  const highlightsSection = effectiveProfile.sections.highlights;
-  const shouldShowBackgroundTabs =
-    !isStartupOwnerProfile && (experienceItems.length > 0 || educationItems.length > 0);
   const shouldStackPanels = width < 390;
   const topBarAccessory = (
     <Pressable
@@ -767,12 +694,51 @@ export function ProfileScreen() {
     </Pressable>
   );
 
-  return (
-    <>
-      <Stack.Screen options={{ headerShown: false, title: '' }} />
-      <View className="flex-1" style={{ backgroundColor: '#262626' }}>
-        <AppTopBar rightAccessory={topBarAccessory} />
-        {!shouldUseMockProfile && !hasUsableProfile(myProfileResponse) ? (
+  if (shouldShowProfileError) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false, title: '' }} />
+        <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+          <AppTopBar rightAccessory={topBarAccessory} />
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="px-3.5 pt-3 pb-20"
+            contentInsetAdjustmentBehavior="automatic"
+            refreshControl={
+              <RefreshControl
+                onRefresh={myProfileQuery.refetch}
+                refreshing={myProfileQuery.isRefetching}
+                tintColor={ACCENT}
+              />
+            }>
+            <AppCard className="gap-4">
+              <View className="flex-row items-center gap-3">
+                <Ionicons color={ACCENT} name="alert-circle-outline" size={24} />
+                <AppText variant="subtitle">Unable to load profile</AppText>
+              </View>
+              <AppText tone="muted">
+                We could not load your profile right now. Check your connection and try again.
+              </AppText>
+              <AppButton
+                label={myProfileQuery.isRefetching ? 'Refreshing...' : 'Try Again'}
+                onPress={() => {
+                  void myProfileQuery.refetch();
+                }}
+                variant="secondary"
+              />
+            </AppCard>
+          </ScrollView>
+        </View>
+      </>
+    );
+  }
+
+  if (!hasUsableProfile(myProfileResponse)) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false, title: '' }} />
+        <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+          <AppTopBar rightAccessory={topBarAccessory} />
           <ProfileSkeleton
             refreshControl={
               <RefreshControl
@@ -783,8 +749,29 @@ export function ProfileScreen() {
             }
             shouldStackPanels={shouldStackPanels}
           />
-        ) : (
-          <ScrollView
+        </View>
+      </>
+    );
+  }
+
+  const profile = myProfileResponse.data;
+  const aboutSection = profile.sections.about;
+  const startup = profile.startup;
+  const isStartupOwnerProfile = Boolean(startup);
+  const personalitySection = profile.sections.personalityAndHobbies;
+  const skillsSection = profile.sections.skills;
+  const interestsSection = profile.sections.interests;
+  const experienceItems = profile.sections.experience?.items ?? [];
+  const educationItems = profile.sections.education?.items ?? [];
+  const highlightsSection = profile.sections.highlights;
+  const shouldShowBackgroundTabs =
+    !isStartupOwnerProfile && (experienceItems.length > 0 || educationItems.length > 0);
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: false, title: '' }} />
+      <View className="flex-1" style={{ backgroundColor: '#262626' }}>
+        <AppTopBar rightAccessory={topBarAccessory} />
+        <ScrollView
             className="flex-1"
             contentContainerClassName="gap-5 px-3.5 pt-3 pb-20"
             contentInsetAdjustmentBehavior="automatic"
@@ -796,16 +783,12 @@ export function ProfileScreen() {
               />
             }
           >
-            <ProfileHero
-              onEdit={() => router.push('/profile/edit' as never)}
-              profile={effectiveProfile}
-            />
+              <ProfileHero
+                onEdit={() => router.push('/profile/edit' as never)}
+                profile={profile}
+              />
 
-            {shouldUseMockProfile ? (
-              <MockProfileToggle mode={mockMode} onChange={setMockMode} />
-            ) : null}
-
-            <StatsOverview stats={effectiveProfile.stats} />
+            <StatsOverview stats={profile.stats} />
 
             {startup ? (
               <StartupProfileCard
@@ -884,7 +867,6 @@ export function ProfileScreen() {
 
             <BottomSignOut onPress={() => signOut()} />
           </ScrollView>
-        )}
       </View>
     </>
   );

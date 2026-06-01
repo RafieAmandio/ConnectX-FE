@@ -19,7 +19,7 @@ type AppTopBarProps = {
 export function AppTopBar({ rightAccessory }: AppTopBarProps) {
   const { session } = useAuth();
   const { isConnectXProActive } = useRevenueCat();
-  const badgeLabel = isConnectXProActive ? 'BETA VERSION 1.0.7.1' : 'BETA VERSION 1.0.7.1';
+  const badgeLabel = isConnectXProActive ? '1.0.7' : '1.0.7';
 
   return (
     <View

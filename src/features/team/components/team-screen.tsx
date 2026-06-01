@@ -20,14 +20,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  getAppliedDiscoveryModeSnapshot,
-  subscribeAppliedDiscoveryMode,
-} from '@features/home/services/applied-discovery-mode-store';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
 import { Shadows } from '@shared/theme';
-import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import {
   useCreateStartupInvitation,
@@ -38,10 +33,6 @@ import {
   useTeamOverview,
   useUpdateTeamMember,
 } from '../hooks/use-team';
-import {
-  getMockPersonTeamOverviewResponse,
-  getMockTeamOverviewResponse,
-} from '../mock/team.mock';
 import { isNoActiveStartupError } from '../services/team-service';
 import type { TeamApplication, TeamDashboardInvite, TeamInviteCommitment, TeamMember } from '../types/team.types';
 
@@ -980,12 +971,6 @@ function EquitySlider({
 
 export function TeamScreen() {
   const router = useRouter();
-  const isDevMode = isExpoDevModeEnabled();
-  const appliedDiscoveryMode = React.useSyncExternalStore(
-    subscribeAppliedDiscoveryMode,
-    getAppliedDiscoveryModeSnapshot,
-    getAppliedDiscoveryModeSnapshot
-  );
   const teamOverviewQuery = useTeamOverview();
   const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
   const isNoStartupState = teamOverviewQuery.isError && isNoActiveStartupError(teamOverviewQuery.error);
@@ -1010,17 +995,7 @@ export function TeamScreen() {
   const [invitationActionError, setInvitationActionError] = React.useState<string | null>(null);
   const invitationOptionsQuery = useStartupInvitationOptions(inviteComposerVisible || Boolean(editingMember));
   const insets = useSafeAreaInsets();
-  const shouldRenderFounderDemo =
-    appliedDiscoveryMode === 'finding_cofounder' || appliedDiscoveryMode === 'building_team';
-
-  const devOverview = React.useMemo(
-    () =>
-      shouldRenderFounderDemo
-        ? getMockTeamOverviewResponse()
-        : getMockPersonTeamOverviewResponse(),
-    [shouldRenderFounderDemo]
-  );
-  const overview = teamOverviewQuery.data ?? (isDevMode ? devOverview : undefined);
+  const overview = teamOverviewQuery.data;
   const activeStartupId = overview?.data.viewerContext.startupId ?? overview?.data.startup?.id ?? null;
   const invitationOptions = invitationOptionsQuery.data?.data;
   const inviteRoleOptions = invitationOptions?.roleOptions ?? [];
@@ -1317,7 +1292,7 @@ export function TeamScreen() {
     [handleRemoveMember, openMemberEditor]
   );
 
-  if (!isDevMode && teamOverviewQuery.isPending && !overview) {
+  if (teamOverviewQuery.isPending && !overview) {
     return (
       <>
         <Stack.Screen options={{ title: '', headerShown: false }} />
@@ -1345,7 +1320,7 @@ export function TeamScreen() {
     );
   }
 
-  if (!isDevMode && teamOverviewQuery.isError && !overview) {
+  if (teamOverviewQuery.isError && !overview) {
     return (
       <>
         <Stack.Screen options={{ title: 'Team', headerShown: false }} />

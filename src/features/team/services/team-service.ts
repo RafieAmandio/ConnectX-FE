@@ -1,20 +1,5 @@
 import { ApiError, apiFetch } from '@shared/services/api';
-import { isDiscoveryOnboardingRequiredError } from '@features/home/services/discovery-contract';
 import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
-import { isExpoDevModeEnabled, parseBooleanEnv } from '@shared/utils/env';
-
-import {
-  createMockStartupInvitationResponse,
-  getMockAcceptedStartupId,
-  getMockPersonTeamOverviewResponse,
-  getMockStartupInvitationOptionsResponse,
-  getMockStartupInvitationsResponse,
-  getMockTeamOverviewResponse,
-  removeMockTeamMember,
-  respondToMockStartupInvitation,
-  revokeMockStartupInvitation,
-  updateMockTeamMember,
-} from '../mock/team.mock';
 import type {
   CreateStartupInvitationRequest,
   CreateStartupInvitationResponse,
@@ -361,33 +346,6 @@ export function isNoActiveStartupError(error: unknown) {
   return error instanceof ApiError && error.status === 404 && getApiErrorCode(error) === 'NO_ACTIVE_STARTUP';
 }
 
-function shouldUseMockInvitationFallback(error: unknown) {
-  if (!(error instanceof ApiError)) {
-    return true;
-  }
-
-  return error.status === 0 || error.status === 404 || error.status >= 500;
-}
-
-function shouldUseMockInvitationOptionsFallback(error: unknown) {
-  if (!(error instanceof ApiError)) {
-    return isExpoDevModeEnabled();
-  }
-
-  if (error.status === 0) {
-    return true;
-  }
-
-  return isExpoDevModeEnabled() && (error.status === 404 || error.status >= 500);
-}
-
-function shouldMockNoActiveStartup() {
-  return (
-    isExpoDevModeEnabled() &&
-    parseBooleanEnv(process.env.EXPO_PUBLIC_MOCK_NO_ACTIVE_STARTUP) === true
-  );
-}
-
 function appendViewerContext(path: string, viewerContext: ViewerContext) {
   const params = new URLSearchParams();
 
@@ -397,44 +355,16 @@ function appendViewerContext(path: string, viewerContext: ViewerContext) {
 }
 
 export async function fetchTeamOverview(viewerContext: ViewerContext) {
-  if (shouldMockNoActiveStartup()) {
-    const acceptedStartupId = getMockAcceptedStartupId();
+  const response = await apiFetch<TeamOverviewResponse>(
+    appendViewerContext(TEAM_API.OVERVIEW, viewerContext)
+  );
+  const normalizedResponse = normalizeTeamOverviewResponse(response);
 
-    if (acceptedStartupId) {
-      return getMockTeamOverviewResponse(acceptedStartupId);
-    }
-
-    return getMockPersonTeamOverviewResponse();
+  if (!normalizedResponse) {
+    throw new Error('Unable to load team data. Please try again.');
   }
 
-  try {
-    const response = await apiFetch<TeamOverviewResponse>(
-      appendViewerContext(TEAM_API.OVERVIEW, viewerContext)
-    );
-    const normalizedResponse = normalizeTeamOverviewResponse(response);
-
-    if (!normalizedResponse) {
-      return getMockTeamOverviewResponse();
-    }
-
-    return normalizedResponse;
-  } catch (error) {
-    if (isDiscoveryOnboardingRequiredError(error)) {
-      throw error;
-    }
-
-    if (isNoActiveStartupError(error)) {
-      const acceptedStartupId = getMockAcceptedStartupId();
-
-      if (acceptedStartupId) {
-        return getMockTeamOverviewResponse(acceptedStartupId);
-      }
-
-      return getMockPersonTeamOverviewResponse();
-    }
-
-    return getMockTeamOverviewResponse();
-  }
+  return normalizedResponse;
 }
 
 export async function updateRequiredRoles(startupId: string, payload: UpdateRequiredRolesRequest) {
@@ -449,152 +379,88 @@ export async function updateTeamMember(
   memberId: string,
   payload: UpdateTeamMemberRequest
 ) {
-  try {
-    const response = await apiFetch<TeamMemberMutationResponse>(TEAM_API.TEAM_MEMBER(startupId, memberId), {
-      body: payload as unknown as BodyInit,
-      method: 'PATCH',
-    });
+  const response = await apiFetch<TeamMemberMutationResponse>(TEAM_API.TEAM_MEMBER(startupId, memberId), {
+    body: payload as unknown as BodyInit,
+    method: 'PATCH',
+  });
 
-    if (!hasUsableTeamMemberMutationResponse(response)) {
-      return updateMockTeamMember(memberId, payload);
-    }
-
-    return response;
-  } catch (error) {
-    if (!shouldUseMockInvitationFallback(error)) {
-      throw error;
-    }
-
-    return updateMockTeamMember(memberId, payload);
+  if (!hasUsableTeamMemberMutationResponse(response)) {
+    throw new Error('Unable to update this member. Please try again.');
   }
+
+  return response;
 }
 
 export async function removeTeamMember(startupId: string, memberId: string) {
-  try {
-    const response = await apiFetch<TeamMemberMutationResponse>(TEAM_API.TEAM_MEMBER(startupId, memberId), {
-      method: 'DELETE',
-    });
+  const response = await apiFetch<TeamMemberMutationResponse>(TEAM_API.TEAM_MEMBER(startupId, memberId), {
+    method: 'DELETE',
+  });
 
-    if (!hasUsableTeamMemberMutationResponse(response)) {
-      return removeMockTeamMember(memberId);
-    }
-
-    return response;
-  } catch (error) {
-    if (!shouldUseMockInvitationFallback(error)) {
-      throw error;
-    }
-
-    return removeMockTeamMember(memberId);
+  if (!hasUsableTeamMemberMutationResponse(response)) {
+    throw new Error('Unable to remove this member. Please try again.');
   }
+
+  return response;
 }
 
 export async function createStartupInvitation(payload: CreateStartupInvitationRequest) {
-  try {
-    return await apiFetch<CreateStartupInvitationResponse>(TEAM_API.INVITATIONS, {
-      body: payload as unknown as BodyInit,
-      method: 'POST',
-    });
-  } catch (error) {
-    if (isNoActiveStartupError(error)) {
-      throw error;
-    }
-
-    return createMockStartupInvitationResponse(payload);
-  }
+  return apiFetch<CreateStartupInvitationResponse>(TEAM_API.INVITATIONS, {
+    body: payload as unknown as BodyInit,
+    method: 'POST',
+  });
 }
 
 export async function revokeStartupInvitation(invitationId: string) {
-  try {
-    const response = await apiFetch<RevokeStartupInvitationResponse>(TEAM_API.INVITATION(invitationId), {
-      method: 'DELETE',
-    });
+  const response = await apiFetch<RevokeStartupInvitationResponse>(TEAM_API.INVITATION(invitationId), {
+    method: 'DELETE',
+  });
 
-    if (!hasUsableRevokeStartupInvitationResponse(response)) {
-      return revokeMockStartupInvitation(invitationId);
-    }
-
-    return response;
-  } catch (error) {
-    if (!shouldUseMockInvitationFallback(error)) {
-      throw error;
-    }
-
-    return revokeMockStartupInvitation(invitationId);
+  if (!hasUsableRevokeStartupInvitationResponse(response)) {
+    throw new Error('Unable to revoke this invitation. Please try again.');
   }
+
+  return response;
 }
 
 export async function fetchStartupInvitationOptions() {
-  try {
-    const response = await apiFetch<StartupInvitationOptionsResponse>(
-      appendViewerContext(TEAM_API.INVITATION_OPTIONS, 'startup')
-    );
+  const response = await apiFetch<StartupInvitationOptionsResponse>(
+    appendViewerContext(TEAM_API.INVITATION_OPTIONS, 'startup')
+  );
 
-    if (!hasUsableStartupInvitationOptionsResponse(response)) {
-      return getMockStartupInvitationOptionsResponse();
-    }
-
-    return response;
-  } catch (error) {
-    if (isDiscoveryOnboardingRequiredError(error)) {
-      throw error;
-    }
-
-    if (!shouldUseMockInvitationOptionsFallback(error)) {
-      throw error;
-    }
-
-    return getMockStartupInvitationOptionsResponse();
+  if (!hasUsableStartupInvitationOptionsResponse(response)) {
+    throw new Error('Unable to load invitation options. Please try again.');
   }
+
+  return response;
 }
 
 export async function fetchStartupInvitations() {
-  try {
-    const response = await apiFetch<FetchStartupInvitationsResponse>(
-      appendViewerContext(TEAM_API.STARTUP_INVITATIONS, 'talent')
-    );
+  const response = await apiFetch<FetchStartupInvitationsResponse>(
+    appendViewerContext(TEAM_API.STARTUP_INVITATIONS, 'talent')
+  );
 
-    if (!hasUsableStartupInvitationsResponse(response)) {
-      return getMockStartupInvitationsResponse();
-    }
-
-    return response;
-  } catch (error) {
-    if (isDiscoveryOnboardingRequiredError(error)) {
-      throw error;
-    }
-
-    if (!shouldUseMockInvitationFallback(error)) {
-      throw error;
-    }
-
-    return getMockStartupInvitationsResponse();
+  if (!hasUsableStartupInvitationsResponse(response)) {
+    throw new Error('Unable to load invitations. Please try again.');
   }
+
+  return response;
 }
 
 export async function respondToStartupInvitation(
   invitationId: string,
   payload: RespondToStartupInvitationRequest
 ) {
-  try {
-    const response = await apiFetch<RespondToStartupInvitationResponse>(
-      TEAM_API.RESPOND_TO_STARTUP_INVITATION(invitationId),
-      {
-        body: payload as unknown as BodyInit,
-        method: 'POST',
-      }
-    );
-
-    if (!hasUsableRespondToStartupInvitationResponse(response)) {
-      return respondToMockStartupInvitation(invitationId, payload);
+  const response = await apiFetch<RespondToStartupInvitationResponse>(
+    TEAM_API.RESPOND_TO_STARTUP_INVITATION(invitationId),
+    {
+      body: payload as unknown as BodyInit,
+      method: 'POST',
     }
+  );
 
-    return response;
-  } catch (error) {
-    if (!shouldUseMockInvitationFallback(error)) {
-      throw error;
-    }
-
-    return respondToMockStartupInvitation(invitationId, payload);
+  if (!hasUsableRespondToStartupInvitationResponse(response)) {
+    throw new Error('Unable to respond to this invitation. Please try again.');
   }
+
+  return response;
 }
