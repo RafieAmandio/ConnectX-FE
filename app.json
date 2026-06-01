@@ -27,7 +27,7 @@
     "android": {
       "package": "com.connectx.app",
       "version": "1",
-      "versionCode": 9,
+      "versionCode": 10,
       "googleServicesFile": "./android/google-services.json",
       "permissions": [
         "POST_NOTIFICATIONS",
@@ -36,9 +36,9 @@
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundImage": "./assets/images/icon.png",
+        "monochromeImage": "./assets/images/icon.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -51,8 +51,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/logo_splash.png",
+          "imageWidth": 180,
           "resizeMode": "contain",
           "backgroundColor": "#0B0B0F",
           "dark": {
