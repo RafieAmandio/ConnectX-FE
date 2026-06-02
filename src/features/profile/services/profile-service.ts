@@ -1,3 +1,4 @@
+import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
 import { apiFetch } from '@shared/services/api';
 
 import type {
@@ -76,8 +77,16 @@ function extractProfileImageFileName(asset: ProfileImageUploadAsset) {
   return uriFileName || `profile-photo-${Date.now()}.jpg`;
 }
 
-export async function fetchMyProfile() {
-  const response = await apiFetch<MyProfileResponse>(PROFILE_API.ME);
+export function getMyProfilePath(viewerContext: ViewerContext) {
+  const params = new URLSearchParams();
+
+  params.set('viewer_context', viewerContext);
+
+  return `${PROFILE_API.ME}?${params.toString()}`;
+}
+
+export async function fetchMyProfile(viewerContext: ViewerContext) {
+  const response = await apiFetch<MyProfileResponse>(getMyProfilePath(viewerContext));
   console.log('fetch profile response', response);
 
   return response;
