@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
-import { useViewerContext } from '@features/home/hooks/use-viewer-context';
-import type { ViewerContext } from '@features/home/services/discovery-viewer-context';
 import { createApiQueryOptions } from '@shared/services/api';
 
 import { mockMyProfileResponse } from '../mock/profile.mock';
@@ -9,7 +7,6 @@ import {
   activateMyAccount,
   fetchMyProfile,
   fetchProfileOptions,
-  getMyProfilePath,
   pauseMyAccount,
   PROFILE_API,
   requestMyAccountDeletion,
@@ -26,7 +23,6 @@ import type {
 
 export const profileQueryKeys = {
   me: ['profile', 'me'] as const,
-  meByViewerContext: (viewerContext: ViewerContext) => ['profile', 'me', viewerContext] as const,
   options: ['profile', 'options'] as const,
 };
 
@@ -69,14 +65,9 @@ function mergeProfileResponse(
 }
 
 export function useMyProfile() {
-  const viewerContext = useViewerContext();
-
   return useQuery({
-    ...createApiQueryOptions<MyProfileResponse>(
-      profileQueryKeys.meByViewerContext(viewerContext),
-      getMyProfilePath(viewerContext)
-    ),
-    queryFn: () => fetchMyProfile(viewerContext),
+    ...createApiQueryOptions<MyProfileResponse>(profileQueryKeys.me, PROFILE_API.ME),
+    queryFn: fetchMyProfile,
   });
 }
 
@@ -90,18 +81,14 @@ export function useProfileOptions(enabled = true) {
 
 export function useUpdateMyProfile() {
   const queryClient = useQueryClient();
-  const viewerContext = useViewerContext();
 
   return useMutation({
     mutationFn: updateMyProfile,
     onSuccess: async (response) => {
-      queryClient.setQueryData<MyProfileResponse>(
-        profileQueryKeys.meByViewerContext(viewerContext),
-        (current) => {
-          const baseResponse = current ?? mockMyProfileResponse;
-          return mergeProfileResponse(baseResponse, response);
-        }
-      );
+      queryClient.setQueryData<MyProfileResponse>(profileQueryKeys.me, (current) => {
+        const baseResponse = current ?? mockMyProfileResponse;
+        return mergeProfileResponse(baseResponse, response);
+      });
 
       await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
     },
