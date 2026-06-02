@@ -125,7 +125,7 @@ function WhoLikedMeCard({
               onPress={() => onAction(item, 'pass')}
               style={{ opacity: disabled ? 0.55 : 1 }}>
               <Ionicons color="#CFC8C0" name="close" size={17} />
-              <AppText className="text-[13px] font-semibold text-[#CFC8C0]">Pass</AppText>
+              <AppText className="text-[13px] font-semibold text-[#CFC8C0]">Skip</AppText>
             </Pressable>
 
             <Pressable
@@ -134,7 +134,7 @@ function WhoLikedMeCard({
               onPress={() => onAction(item, 'like')}
               style={{ backgroundColor: '#6A431E', opacity: disabled ? 0.55 : 1 }}>
               <Ionicons color="#FFD33D" name="heart" size={16} />
-              <AppText className="text-[13px] font-semibold text-[#FFD33D]">Like</AppText>
+              <AppText className="text-[13px] font-semibold text-[#FFD33D]">Connect</AppText>
             </Pressable>
           </View>
         </View>
@@ -192,7 +192,7 @@ export function WhoLikedMeScreen() {
     setBanner({
       detail: whoLikedMeQuery.error instanceof Error
         ? whoLikedMeQuery.error.message
-        : 'ConnectX Pro is required to see who liked you.',
+        : 'ConnectX Pro is required to see who wants to connect with you.',
       title: 'ConnectX Pro required',
       tone: 'warning',
     });
@@ -246,8 +246,8 @@ export function WhoLikedMeScreen() {
           void queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversationsRoot });
         } else {
           setBanner({
-            detail: action === 'like' ? 'We saved your like.' : 'We passed on this connect.',
-            title: action === 'like' ? 'Liked' : 'Passed',
+            detail: action === 'like' ? 'We saved your connect.' : 'We skipped on this connect.',
+            title: action === 'like' ? 'Connected' : 'Skipped',
             tone: 'success',
           });
         }
@@ -331,7 +331,7 @@ export function WhoLikedMeScreen() {
                   View Connects
                 </AppText>
                 <AppText className="text-[13px] text-[#9F9C99]">
-                  {total} {total === 1 ? 'person' : 'people'} liked you
+                  {total} {total === 1 ? 'person' : 'people'} want to connect
                 </AppText>
               </View>
             </View>
@@ -385,7 +385,7 @@ export function WhoLikedMeScreen() {
                   Loading connects...
                 </AppText>
                 <AppText className="mt-1 text-[#9F9C99]">
-                  Pulling everyone who liked you.
+                  Pulling everyone who wants to connect.
                 </AppText>
               </AppCard>
             ) : null}
