@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
@@ -356,7 +357,8 @@ export function MatchesScreen() {
     supported,
   } = useRevenueCat();
   const matchesQuery = useMatchesList({ limit: 10, page: 1, status: 'active' });
-  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
+  const { handleOnboardingRequired, onboardingRequiredSheetProps } =
+    useDiscoveryOnboardingRequiredHandler();
   const spotlightActivation = useActivateSpotlight();
   const [spotlightBanner, setSpotlightBanner] = React.useState<SpotlightBannerState | null>(null);
   const [spotlightEndsAt, setSpotlightEndsAt] = React.useState<string | null>(null);
@@ -659,6 +661,7 @@ export function MatchesScreen() {
           )}
         </ScrollView>
       </View>
+      <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
     </>
   );
 }

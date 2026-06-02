@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { AppInput, AppText } from '@shared/components';
 
@@ -224,7 +225,8 @@ export function StartupInvitationComposer({
   const insets = useSafeAreaInsets();
   const createInvitationMutation = useCreateStartupInvitation();
   const invitationOptionsQuery = useStartupInvitationOptions(visible);
-  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
+  const { handleOnboardingRequired, onboardingRequiredSheetProps } =
+    useDiscoveryOnboardingRequiredHandler();
   const invitationOptions = invitationOptionsQuery.data?.data;
   const roleOptions = invitationOptions?.roleOptions ?? [];
   const commitmentOptions = invitationOptions?.commitmentOptions ?? [];
@@ -324,7 +326,8 @@ export function StartupInvitationComposer({
   }, [closeAndReset, commitment, createInvitationMutation, email, equityPercent, onSuccess, roleId]);
 
   return (
-    <Modal animationType="slide" transparent visible={visible} onRequestClose={closeAndReset}>
+    <>
+      <Modal animationType="slide" transparent visible={visible} onRequestClose={closeAndReset}>
       <Pressable className="flex-1" onPress={closeAndReset} />
       <View
         style={{
@@ -494,6 +497,8 @@ export function StartupInvitationComposer({
           </View>
         </ScrollView>
       </View>
-    </Modal>
+      </Modal>
+      <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
+    </>
   );
 }

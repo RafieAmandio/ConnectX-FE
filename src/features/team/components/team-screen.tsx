@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
 import { Shadows } from '@shared/theme';
@@ -972,7 +973,8 @@ function EquitySlider({
 export function TeamScreen() {
   const router = useRouter();
   const teamOverviewQuery = useTeamOverview();
-  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
+  const { handleOnboardingRequired, onboardingRequiredSheetProps } =
+    useDiscoveryOnboardingRequiredHandler();
   const isNoStartupState = teamOverviewQuery.isError && isNoActiveStartupError(teamOverviewQuery.error);
   const respondToStartupInvitationMutation = useRespondToStartupInvitation();
   const createStartupInvitationMutation = useCreateStartupInvitation();
@@ -1316,6 +1318,7 @@ export function TeamScreen() {
             <TeamDashboardSkeleton />
           </ScrollView>
         </View>
+        <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
       </>
     );
   }
@@ -1368,6 +1371,7 @@ export function TeamScreen() {
 
           </ScrollView>
         </View>
+        <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
       </>
     );
   }
@@ -1927,6 +1931,7 @@ export function TeamScreen() {
           ) : null}
         </ScrollView>
       </View>
+      <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
     </>
   );
 }

@@ -5,6 +5,7 @@ import { Pressable, ScrollView, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { isDiscoveryOnboardingRequiredError } from '@features/home/services/discovery-contract';
 import { AppCard, AppPill, AppText } from '@shared/components';
@@ -187,7 +188,8 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const analysisQuery = useMatchAnalysis(matchId);
-  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
+  const { handleOnboardingRequired, onboardingRequiredSheetProps } =
+    useDiscoveryOnboardingRequiredHandler();
   const isOnboardingRequired = isDiscoveryOnboardingRequiredError(analysisQuery.error);
   const response = analysisQuery.data?.data ? analysisQuery.data : null;
 
@@ -262,6 +264,7 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
             ) : null}
           </ScrollView>
         </View>
+        <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
       </>
     );
   }
@@ -459,6 +462,7 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
           ) : null}
         </ScrollView >
       </View >
+      <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
     </>
   );
 }

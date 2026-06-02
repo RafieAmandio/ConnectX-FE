@@ -54,6 +54,7 @@ import type {
 } from '@features/chat/services/chat-demo-api-service';
 import type { ChatConversation, ChatMessage } from '@features/chat/types/chat.types';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
+import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
 import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
 
@@ -653,7 +654,8 @@ export function ChatDemoListScreen() {
   const conversationsQuery = useChatDemoConversations({
     refetchInterval: isFocused ? 10_000 : false,
   });
-  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
+  const { handleOnboardingRequired, onboardingRequiredSheetProps } =
+    useDiscoveryOnboardingRequiredHandler();
   const markConversationReadMutation = useMarkChatDemoConversationRead();
   const refetchConversations = conversationsQuery.refetch;
   const conversations = conversationsQuery.data ?? [];
@@ -759,6 +761,7 @@ export function ChatDemoListScreen() {
           />
         )}
       </View>
+      <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
     </>
   );
 }
@@ -1038,7 +1041,8 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const viewerContext = useViewerContext();
   const conversationsQuery = useChatDemoConversations();
   const messagesQuery = useChatDemoMessages(conversationId);
-  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
+  const { handleOnboardingRequired, onboardingRequiredSheetProps } =
+    useDiscoveryOnboardingRequiredHandler();
   const sendMessageMutation = useSendChatDemoMessage(conversationId);
   const sendMediaMessageMutation = useSendChatDemoMediaMessage(conversationId);
   const uploadMediaMutation = useUploadChatDemoMedia();
@@ -1581,6 +1585,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
         onPickImage={handlePickImageFromSheet}
         visible={attachmentPickerVisible}
       />
+      <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
     </>
   );
 }

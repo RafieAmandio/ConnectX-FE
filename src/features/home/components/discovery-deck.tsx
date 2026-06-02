@@ -86,6 +86,7 @@ import type {
 } from '../types/discovery.types';
 import { isDiscoveryProfileCard } from '../types/discovery.types';
 import { DiscoveryFilterSheet } from './discovery-filter-sheet';
+import { DiscoveryOnboardingRequiredSheet } from './discovery-onboarding-required-sheet';
 import { MatchModal } from './match-modal';
 
 type SwipeDirection = 'left' | 'right';
@@ -2059,7 +2060,8 @@ export function DiscoveryDeck() {
     DISCOVERY_PAGE_LIMIT,
     hasResolvedAuthSessionSetup && hasResolvedInitialLocation
   );
-  const handleOnboardingRequired = useDiscoveryOnboardingRequiredHandler();
+  const { handleOnboardingRequired, onboardingRequiredSheetProps } =
+    useDiscoveryOnboardingRequiredHandler();
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
   const viewerContext = useViewerContext();
@@ -2888,6 +2890,9 @@ export function DiscoveryDeck() {
       onReport={handleOpenMatchReport}
     />
   );
+  const onboardingRequiredSheet = (
+    <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
+  );
 
   if (
     !hasResolvedAuthSessionSetup ||
@@ -2902,6 +2907,7 @@ export function DiscoveryDeck() {
         <DiscoveryDeckSkeleton />
         {filterSheet}
         {matchModal}
+        {onboardingRequiredSheet}
       </View>
     );
   }
@@ -2929,6 +2935,7 @@ export function DiscoveryDeck() {
         </ScrollView>
         {filterSheet}
         {matchModal}
+        {onboardingRequiredSheet}
       </View>
     );
   }
@@ -3098,6 +3105,7 @@ export function DiscoveryDeck() {
         {filterSheet}
       </View>
       {matchModal}
+      {onboardingRequiredSheet}
     </View>
   );
 }

@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert } from 'react-native';
 
 import { ApiError } from '@shared/services/api';
 
+import type { DiscoveryOnboardingRequiredSheetProps } from '../components/discovery-onboarding-required-sheet';
 import {
   getDiscoveryOnboardingRequiredMessage,
   getStartupProfileRequiredMessage,
@@ -30,8 +30,9 @@ function summarizeOnboardingRequiredError(error: unknown) {
 export function useDiscoveryOnboardingRequiredHandler() {
   const router = useRouter();
   const isPresentingRef = React.useRef(false);
+  const [message, setMessage] = React.useState<string | null>(null);
 
-  return React.useCallback(
+  const handleOnboardingRequired = React.useCallback(
     (error: unknown) => {
       const isOnboardingRequired = isDiscoveryOnboardingRequiredError(error);
       const isStartupProfileRequired = isStartupProfileRequiredError(error);
@@ -41,35 +42,41 @@ export function useDiscoveryOnboardingRequiredHandler() {
       }
 
       if (isPresentingRef.current) {
-        console.log('[DiscoveryOnboardingRequired] alert already presenting', summarizeOnboardingRequiredError(error));
+        console.log('[DiscoveryOnboardingRequired] sheet already presenting', summarizeOnboardingRequiredError(error));
         return true;
       }
 
       isPresentingRef.current = true;
-      console.log('[DiscoveryOnboardingRequired] presenting alert', {
+      console.log('[DiscoveryOnboardingRequired] presenting sheet', {
         isOnboardingRequired,
         isStartupProfileRequired,
         error: summarizeOnboardingRequiredError(error),
       });
-      Alert.alert(
-        'Onboarding required',
+      setMessage(
         isStartupProfileRequired
           ? getStartupProfileRequiredMessage(error)
-          : getDiscoveryOnboardingRequiredMessage(error),
-        [
-          {
-            onPress: () => {
-              isPresentingRef.current = false;
-              router.push('/onboarding?mode=post_auth' as never);
-            },
-            text: 'OK',
-          },
-        ],
-        { cancelable: false }
+          : getDiscoveryOnboardingRequiredMessage(error)
       );
 
       return true;
     },
-    [router]
+    []
   );
+
+  const handleContinue = React.useCallback(() => {
+    isPresentingRef.current = false;
+    setMessage(null);
+    router.push('/onboarding?mode=post_auth' as never);
+  }, [router]);
+
+  const onboardingRequiredSheetProps: DiscoveryOnboardingRequiredSheetProps = {
+    message,
+    onContinue: handleContinue,
+    visible: Boolean(message),
+  };
+
+  return {
+    handleOnboardingRequired,
+    onboardingRequiredSheetProps,
+  };
 }
