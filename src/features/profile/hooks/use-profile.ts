@@ -47,17 +47,21 @@ function mergeProfileResponse(
     data: {
       ...baseResponse.data,
       id: updateResponse.data.id,
-      name: updateResponse.data.name,
-      headline: updateResponse.data.headline,
-      photoUrl: updateResponse.data.photoUrl,
-      location: updateResponse.data.location,
-      sections: {
-        ...baseResponse.data.sections,
-        about: updateResponse.data.sections.about,
-        education: updateResponse.data.sections.education ?? baseResponse.data.sections.education,
-        experience: updateResponse.data.sections.experience ?? baseResponse.data.sections.experience,
-        personalityAndHobbies:
-          updateResponse.data.sections.personalityAndHobbies ?? baseResponse.data.sections.personalityAndHobbies,
+      talent: {
+        ...baseResponse.data.talent,
+        name: updateResponse.data.name,
+        headline: updateResponse.data.headline,
+        photoUrl: updateResponse.data.photoUrl,
+        location: updateResponse.data.location,
+        sections: {
+          ...baseResponse.data.talent.sections,
+          about: updateResponse.data.sections.about,
+          education: updateResponse.data.sections.education ?? baseResponse.data.talent.sections.education,
+          experience: updateResponse.data.sections.experience ?? baseResponse.data.talent.sections.experience,
+          personalityAndHobbies:
+            updateResponse.data.sections.personalityAndHobbies ??
+            baseResponse.data.talent.sections.personalityAndHobbies,
+        },
       },
       updatedAt: updateResponse.data.updatedAt,
     },

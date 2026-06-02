@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { useAuthContext } from '@features/auth/store/auth-provider';
+import { useViewerContext } from '@features/home/hooks/use-viewer-context';
 import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
 
 import { useMyProfile } from '../hooks/use-profile';
@@ -23,6 +24,8 @@ import type {
   ProfileEducationItem,
   ProfileExperienceItem,
   ProfileNamedItem,
+  ProfileStats,
+  ProfileTalentData,
 } from '../types/profile.types';
 import { ProfileSkeleton } from './profile-skeleton';
 
@@ -50,7 +53,7 @@ const DANGER = '#FF5A67';
 const DANGER_BORDER = 'rgba(255, 90, 103, 0.2)';
 
 function hasUsableProfile(response?: MyProfileResponse): response is MyProfileResponse {
-  return typeof response?.data?.id === 'string' && response.data.id.length > 0;
+  return typeof response?.data?.talent?.name === 'string' && response.data.talent.name.length > 0;
 }
 
 function getInitials(value: string) {
@@ -184,6 +187,12 @@ function StartupProfileCard({
   onEdit: () => void;
   startup: NonNullable<MyProfileData['startup']>;
 }) {
+  const visionItems = [
+    { icon: 'alert-circle-outline' as const, label: 'Problem', value: startup.vision?.problem },
+    { icon: 'bulb-outline' as const, label: 'Solution', value: startup.vision?.solution },
+    { icon: 'person-circle-outline' as const, label: 'Target Users', value: startup.vision?.targetUsers },
+  ].filter((item) => item.value?.trim());
+
   return (
     <SectionCard className="gap-5 rounded-[24px] px-4 py-4">
       <View className="flex-row items-start gap-3">
@@ -223,6 +232,32 @@ function StartupProfileCard({
             Industries
           </AppText>
           <NamedItemList items={startup.industries} />
+        </View>
+      ) : null}
+
+      {visionItems.length ? (
+        <View className="gap-2.5">
+          <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
+            Vision
+          </AppText>
+          <View className="gap-2">
+            {visionItems.map((item) => (
+              <View
+                key={item.label}
+                className="gap-1.5 rounded-[16px] border px-3.5 py-3"
+                style={{ backgroundColor: SURFACE_MUTED, borderColor: BORDER_COLOR }}>
+                <View className="flex-row items-center gap-1.5">
+                  <Ionicons color={ACCENT} name={item.icon} size={14} />
+                  <AppText className="text-[12px]" tone="signal" variant="bodyStrong">
+                    {item.label}
+                  </AppText>
+                </View>
+                <AppText className="text-[13px] leading-5" tone="muted">
+                  {item.value}
+                </AppText>
+              </View>
+            ))}
+          </View>
         </View>
       ) : null}
 
@@ -279,7 +314,7 @@ function ProfileHero({
   profile,
 }: {
   onEdit: () => void;
-  profile: MyProfileData;
+  profile: ProfileTalentData;
 }) {
   const initials = getInitials(profile.name);
   const photoUri = getImageUri(profile.photoUrl);
@@ -369,7 +404,7 @@ function ProfileHero({
 function StatsOverview({
   stats,
 }: {
-  stats: MyProfileData['stats'];
+  stats: ProfileStats;
 }) {
   const entries = [
     { label: 'Connections', value: stats.connections },
@@ -677,6 +712,7 @@ export function ProfileScreen() {
   const { width } = useWindowDimensions();
   const { signOut } = useAuthContext();
   const myProfileQuery = useMyProfile();
+  const viewerContext = useViewerContext();
   const myProfileResponse = myProfileQuery.data;
   const shouldShowProfileError =
     myProfileQuery.isError ||
@@ -755,17 +791,20 @@ export function ProfileScreen() {
   }
 
   const profile = myProfileResponse.data;
-  const aboutSection = profile.sections.about;
-  const startup = profile.startup;
-  const isStartupOwnerProfile = Boolean(startup);
-  const personalitySection = profile.sections.personalityAndHobbies;
-  const skillsSection = profile.sections.skills;
-  const interestsSection = profile.sections.interests;
-  const experienceItems = profile.sections.experience?.items ?? [];
-  const educationItems = profile.sections.education?.items ?? [];
-  const highlightsSection = profile.sections.highlights;
+  const talent = profile.talent;
+  const ownedStartup = profile.startup;
+  const startup = viewerContext === 'startup' ? ownedStartup : null;
+  const isStartupViewer = Boolean(startup);
+  const sections = startup?.sections ?? talent.sections;
+  const aboutSection = sections.about;
+  const personalitySection = talent.sections.personalityAndHobbies;
+  const skillsSection = sections.skills;
+  const interestsSection = sections.interests;
+  const experienceItems = talent.sections.experience?.items ?? [];
+  const educationItems = talent.sections.education?.items ?? [];
+  const highlightsSection = sections.highlights;
   const shouldShowBackgroundTabs =
-    !isStartupOwnerProfile && (experienceItems.length > 0 || educationItems.length > 0);
+    !isStartupViewer && (experienceItems.length > 0 || educationItems.length > 0);
   return (
     <>
       <Stack.Screen options={{ headerShown: false, title: '' }} />
@@ -785,15 +824,15 @@ export function ProfileScreen() {
           >
               <ProfileHero
                 onEdit={() => router.push('/profile/edit' as never)}
-                profile={profile}
+                profile={talent}
               />
 
             <StatsOverview stats={profile.stats} />
 
-            {startup ? (
+            {ownedStartup ? (
               <StartupProfileCard
                 onEdit={() => router.push('/profile/edit-startup' as never)}
-                startup={startup}
+                startup={ownedStartup}
               />
             ) : null}
 
@@ -811,7 +850,7 @@ export function ProfileScreen() {
               </SectionCard>
             ) : null}
 
-            {!isStartupOwnerProfile && personalitySection ? (
+            {!isStartupViewer && personalitySection ? (
               <SectionCard>
                 <SectionHeader
                   description="Traits and hobbies that make the collaboration style easier to read."
