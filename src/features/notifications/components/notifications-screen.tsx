@@ -85,10 +85,31 @@ function NotificationAvatar({ notification }: { notification: UserNotification }
   );
 }
 
-function NotificationRow({ notification }: { notification: UserNotification }) {
-  const isUnread = notification.readAt === null;
+function getNotificationRoute(notification: UserNotification) {
+  const deepLink = notification.target.deepLink?.trim();
+  const targetId = notification.target.id ? encodeURIComponent(notification.target.id) : null;
 
-  return (
+  switch (notification.target.kind) {
+    case 'conversation':
+      return deepLink?.startsWith('/chat_demo/') ? deepLink : targetId ? `/chat_demo/${targetId}` : null;
+    case 'match':
+      return deepLink?.startsWith('/match-analysis/') ? deepLink : targetId ? `/match-analysis/${targetId}` : null;
+    case 'startup_invitation':
+      return '/(tabs)/team';
+    default:
+      return null;
+  }
+}
+
+function NotificationRow({
+  notification,
+  onPress,
+}: {
+  notification: UserNotification;
+  onPress?: () => void;
+}) {
+  const isUnread = notification.readAt === null;
+  const card = (
     <AppCard
       className="rounded-[20px] border px-4 py-4"
       style={{
@@ -122,6 +143,20 @@ function NotificationRow({ notification }: { notification: UserNotification }) {
         </View>
       </View>
     </AppCard>
+  );
+
+  if (!onPress) {
+    return card;
+  }
+
+  return (
+    <Pressable
+      accessibilityLabel={`Open notification: ${notification.title}`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => ({ opacity: pressed ? 0.72 : 1 })}>
+      {card}
+    </Pressable>
   );
 }
 
@@ -236,9 +271,17 @@ export function NotificationsScreen() {
           ) : notifications.length === 0 ? (
             <NotificationsEmptyState />
           ) : (
-            notifications.map((notification) => (
-              <NotificationRow key={notification.id} notification={notification} />
-            ))
+            notifications.map((notification) => {
+              const route = getNotificationRoute(notification);
+
+              return (
+                <NotificationRow
+                  key={notification.id}
+                  notification={notification}
+                  onPress={route ? () => router.push(route as never) : undefined}
+                />
+              );
+            })
           )}
         </ScrollView>
       </View>
