@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard, AppText } from '@shared/components';
 
 import { useMarkNotificationsRead, useNotifications } from '../hooks/use-notifications';
+import { getNotificationRoute } from '../services/notification-routing';
 import type { NotificationType, UserNotification } from '../types/notifications.types';
 
 const HEADER_BG = '#232323';
@@ -83,22 +84,6 @@ function NotificationAvatar({ notification }: { notification: UserNotification }
       <Ionicons color={ACCENT} name={getNotificationIcon(notification.type)} size={22} />
     </View>
   );
-}
-
-function getNotificationRoute(notification: UserNotification) {
-  const deepLink = notification.target.deepLink?.trim();
-  const targetId = notification.target.id ? encodeURIComponent(notification.target.id) : null;
-
-  switch (notification.target.kind) {
-    case 'conversation':
-      return deepLink?.startsWith('/chat_demo/') ? deepLink : targetId ? `/chat_demo/${targetId}` : null;
-    case 'match':
-      return deepLink?.startsWith('/match-analysis/') ? deepLink : targetId ? `/match-analysis/${targetId}` : null;
-    case 'startup_invitation':
-      return '/(tabs)/team';
-    default:
-      return null;
-  }
 }
 
 function NotificationRow({

@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '@features/auth';
+import { PushNotificationTapHandler } from '@features/notifications';
 import { LinkedInRecoveryModal } from '@features/profile/components/linkedin-recovery-modal';
 import { RevenueCatProvider } from '@features/revenuecat';
 import { useColorScheme } from '@shared/hooks/use-color-scheme';
@@ -27,6 +28,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <PushNotificationTapHandler />
           <RevenueCatProvider>
             <ThemeProvider value={NavigationThemes[colorScheme]}>
               <Stack>
