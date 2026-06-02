@@ -12,6 +12,7 @@
       "bundleIdentifier": "com.connectxapp.ios",
       "googleServicesFile": "./ios/GoogleService-Info.plist",
       "appleTeamId": "NCKSK4UBPZ",
+      "icon": "./assets/images/icon.png",
       "entitlements": {
         "aps-environment": "development"
       },
