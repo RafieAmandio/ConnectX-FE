@@ -4,6 +4,7 @@ import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 
 export type DiscoveryOnboardingRequiredSheetProps = {
   message: string | null;
@@ -17,6 +18,7 @@ export function DiscoveryOnboardingRequiredSheet({
   visible,
 }: DiscoveryOnboardingRequiredSheetProps) {
   const insets = useSafeAreaInsets();
+  const t = useTranslation();
 
   return (
     <Modal animationType="slide" onRequestClose={() => {}} transparent visible={visible}>
@@ -31,10 +33,10 @@ export function DiscoveryOnboardingRequiredSheet({
 
           <View className="gap-1 px-1 pb-4">
             <AppText className="text-white" variant="title">
-              Complete your onboarding
+              {t('home.onboarding.title')}
             </AppText>
             <AppText className="text-[#AFA9A2]">
-              Finish setting up your profile before continuing.
+              {t('home.onboarding.description')}
             </AppText>
           </View>
 
@@ -51,7 +53,7 @@ export function DiscoveryOnboardingRequiredSheet({
               className="min-h-12 items-center justify-center rounded-[18px] bg-[#FF9D3D] active:opacity-80"
               onPress={onContinue}>
               <AppText className="text-[#1F160C]" variant="bodyStrong">
-                Continue onboarding
+                {t('home.onboarding.continue')}
               </AppText>
             </Pressable>
           </View>

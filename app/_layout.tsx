@@ -13,6 +13,7 @@ import { PushNotificationTapHandler } from '@features/notifications';
 import { LinkedInRecoveryModal } from '@features/profile/components/linkedin-recovery-modal';
 import { RevenueCatProvider } from '@features/revenuecat';
 import { useColorScheme } from '@shared/hooks/use-color-scheme';
+import { LocalizationProvider } from '@shared/localization';
 import { createQueryClient } from '@shared/services/api';
 import { NavigationThemes } from '@shared/theme';
 
@@ -30,30 +31,32 @@ export default function RootLayout() {
         <AuthProvider>
           <PushNotificationTapHandler />
           <RevenueCatProvider>
-            <ThemeProvider value={NavigationThemes[colorScheme]}>
-              <Stack>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="(auth)"
-                  options={{ headerShown: false, gestureEnabled: false }}
-                />
-                <Stack.Screen
-                  name="(tabs)"
-                  options={{ headerShown: false, gestureEnabled: false }}
-                />
-                <Stack.Screen
-                  name="modal"
-                  options={{ presentation: 'modal', title: 'Design Principles' }}
-                />
-                <Stack.Screen name="conversation" options={{ headerShown: false }} />
-                <Stack.Screen name="chat_demo" options={{ headerShown: false }} />
-                <Stack.Screen name="match-analysis" options={{ headerShown: false }} />
-                <Stack.Screen name="notifications" options={{ headerShown: false }} />
-                <Stack.Screen name="profile" options={{ headerShown: false }} />
-              </Stack>
-              <LinkedInRecoveryModal />
-              <StatusBar style="light" />
-            </ThemeProvider>
+            <LocalizationProvider>
+              <ThemeProvider value={NavigationThemes[colorScheme]}>
+                <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="(auth)"
+                    options={{ headerShown: false, gestureEnabled: false }}
+                  />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false, gestureEnabled: false }}
+                  />
+                  <Stack.Screen
+                    name="modal"
+                    options={{ presentation: 'modal', title: 'Design Principles' }}
+                  />
+                  <Stack.Screen name="conversation" options={{ headerShown: false }} />
+                  <Stack.Screen name="chat_demo" options={{ headerShown: false }} />
+                  <Stack.Screen name="match-analysis" options={{ headerShown: false }} />
+                  <Stack.Screen name="notifications" options={{ headerShown: false }} />
+                  <Stack.Screen name="profile" options={{ headerShown: false }} />
+                </Stack>
+                <LinkedInRecoveryModal />
+                <StatusBar style="light" />
+              </ThemeProvider>
+            </LocalizationProvider>
           </RevenueCatProvider>
         </AuthProvider>
       </QueryClientProvider>

@@ -18,7 +18,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { useAuth } from '@features/auth';
@@ -31,6 +30,7 @@ import { useNotifications } from '@features/notifications';
 import { useUpdateProfileLocation } from '@features/profile';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 import { ApiError } from '@shared/services/api';
 import { Shadows } from '@shared/theme';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
@@ -100,6 +100,7 @@ type MatchState = {
   conversationId: string | null;
   matchId: string | null;
 };
+type TFunction = ReturnType<typeof useTranslation>;
 
 const SWIPE_THRESHOLD = 120;
 const PRELOAD_THRESHOLD = 3;
@@ -803,6 +804,7 @@ function MatchScoreRing({ score }: { score: number }) {
 }
 
 function MatchScoreBadge({ label, score }: { label?: string; score: number }) {
+  const t = useTranslation();
   const color = getMatchScoreColor(getBoundedMatchScore(score));
 
   return (
@@ -816,7 +818,7 @@ function MatchScoreBadge({ label, score }: { label?: string; score: number }) {
           numberOfLines={1}
           style={{ color, flexShrink: 1 }}
           variant="bodyStrong">
-          {label ?? 'Strong Match'}
+          {label ?? t('home.deck.strongMatch')}
         </AppText>
       </View>
     </View>
@@ -843,7 +845,10 @@ function StartupRoleChip({ title }: { title: string }) {
   );
 }
 
-function formatPremiumValue(value: string | number | string[] | boolean | null | undefined) {
+function formatPremiumValue(
+  value: string | number | string[] | boolean | null | undefined,
+  t: TFunction
+) {
   if (value === null || typeof value === 'undefined') {
     return null;
   }
@@ -853,7 +858,7 @@ function formatPremiumValue(value: string | number | string[] | boolean | null |
   }
 
   if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No';
+    return value ? t('home.common.yes') : t('home.common.no');
   }
 
   return String(value).trim() || null;
@@ -866,7 +871,8 @@ function PremiumValueRow({
   label: string;
   value: string | number | string[] | boolean | null | undefined;
 }) {
-  const formattedValue = formatPremiumValue(value);
+  const t = useTranslation();
+  const formattedValue = formatPremiumValue(value, t);
 
   if (!formattedValue) {
     return null;
@@ -891,6 +897,8 @@ function LockedPremiumField({
   field: Extract<DiscoveryStartupPremiumField<unknown>, { locked: true }>;
   onUpgradePress?: () => void;
 }) {
+  const t = useTranslation();
+
   return (
     <View
       className="gap-3 rounded-[18px] border px-4 py-4"
@@ -913,7 +921,7 @@ function LockedPremiumField({
       </View>
       <AppButton
         className="border-[#3A3F48] bg-[#181A1F]"
-        label="Upgrade to ConnectX Pro"
+        label={t('home.deck.upgradePro')}
         labelClassName="text-[#F2F4F7]"
         size="md"
         variant="secondary"
@@ -996,6 +1004,8 @@ function TeamCompositionPremiumField({
   field: DiscoveryStartupPremiumField<DiscoveryStartupTeamComposition>;
   onUpgradePress?: () => void;
 }) {
+  const t = useTranslation();
+
   if (field.locked) {
     return <LockedPremiumField field={field} onUpgradePress={onUpgradePress} />;
   }
@@ -1006,12 +1016,12 @@ function TeamCompositionPremiumField({
     <View className="gap-3">
       <SectionLabel icon="people-circle-outline" title={field.label} />
       <View className="gap-2">
-        <PremiumValueRow label="Founder setup" value={team.founderCountLabel ?? team.founderCount} />
-        <PremiumValueRow label="Covered roles" value={team.coveredRoles} />
-        <PremiumValueRow label="Has team beyond founders" value={team.hasTeam} />
-        <PremiumValueRow label="Team size" value={team.teamSize} />
-        <PremiumValueRow label="Team roles" value={team.teamRoles} />
-        <PremiumValueRow label="Joined members" value={team.joinedMemberCount} />
+        <PremiumValueRow label={t('home.deck.founderSetup')} value={team.founderCountLabel ?? team.founderCount} />
+        <PremiumValueRow label={t('home.deck.coveredRoles')} value={team.coveredRoles} />
+        <PremiumValueRow label={t('home.deck.hasTeamBeyondFounders')} value={team.hasTeam} />
+        <PremiumValueRow label={t('home.deck.teamSize')} value={team.teamSize} />
+        <PremiumValueRow label={t('home.deck.teamRoles')} value={team.teamRoles} />
+        <PremiumValueRow label={t('home.deck.joinedMembers')} value={team.joinedMemberCount} />
       </View>
     </View>
   );
@@ -1024,6 +1034,8 @@ function CompensationPremiumField({
   field: DiscoveryStartupPremiumField<DiscoveryStartupCompensation>;
   onUpgradePress?: () => void;
 }) {
+  const t = useTranslation();
+
   if (field.locked) {
     return <LockedPremiumField field={field} onUpgradePress={onUpgradePress} />;
   }
@@ -1034,11 +1046,11 @@ function CompensationPremiumField({
     <View className="gap-3">
       <SectionLabel icon="cash-outline" title={field.label} />
       <View className="gap-2">
-        <PremiumValueRow label="Equity available" value={compensation.equityAvailable} />
-        <PremiumValueRow label="Equity range" value={compensation.equityRange} />
-        <PremiumValueRow label="Salary available" value={compensation.salaryAvailable} />
-        <PremiumValueRow label="Salary range" value={compensation.salaryRange} />
-        <PremiumValueRow label="Notes" value={compensation.notes} />
+        <PremiumValueRow label={t('home.deck.equityAvailable')} value={compensation.equityAvailable} />
+        <PremiumValueRow label={t('home.deck.equityRange')} value={compensation.equityRange} />
+        <PremiumValueRow label={t('home.deck.salaryAvailable')} value={compensation.salaryAvailable} />
+        <PremiumValueRow label={t('home.deck.salaryRange')} value={compensation.salaryRange} />
+        <PremiumValueRow label={t('home.deck.notes')} value={compensation.notes} />
       </View>
     </View>
   );
@@ -1051,6 +1063,7 @@ function StartupPremiumSection({
   card: DiscoveryStartupCard;
   onUpgradePress?: () => void;
 }) {
+  const t = useTranslation();
   const fields = card.premium?.fields;
 
   if (!fields) {
@@ -1061,7 +1074,7 @@ function StartupPremiumSection({
     <View className="gap-4">
       {card.premium?.locked ? (
         <View className="gap-1">
-          <SectionLabel icon="sparkles-outline" title="Premium insights" />
+          <SectionLabel icon="sparkles-outline" title={t('home.deck.premiumInsights')} />
           <AppText className="text-[13px] leading-5" tone="muted">
             {card.premium.unlockMessage}
           </AppText>
@@ -1082,6 +1095,8 @@ function StartupPremiumSection({
 }
 
 function StartupJourney({ card }: { card: DiscoveryStartupCard }) {
+  const t = useTranslation();
+
   if (!card.journey?.stages?.length) {
     return null;
   }
@@ -1093,7 +1108,7 @@ function StartupJourney({ card }: { card: DiscoveryStartupCard }) {
         backgroundColor: '#261C15',
         borderColor: 'rgba(255, 154, 62, 0.28)',
       }}>
-      <SectionLabel icon="rocket-outline" title="Startup Journey" />
+      <SectionLabel icon="rocket-outline" title={t('home.deck.startupJourney')} />
       <View className="gap-2">
         <View className="flex-row gap-2">
           {card.journey.stages.map((stage, index) => {
@@ -1145,11 +1160,13 @@ function ProfileBadgePill({ badge }: { badge: DiscoveryCardBadge }) {
 
 function MatchHighlights({
   items,
-  title = 'Why you match',
+  title,
 }: {
   items: string[];
   title?: string;
 }) {
+  const t = useTranslation();
+
   if (!items.length) {
     return null;
   }
@@ -1161,7 +1178,7 @@ function MatchHighlights({
         backgroundColor: '#221F19',
         borderColor: 'rgba(255, 154, 62, 0.24)',
       }}>
-      <SectionLabel icon="sparkles-outline" title={title} />
+      <SectionLabel icon="sparkles-outline" title={title ?? t('home.deck.whyYouMatch')} />
       <View className="gap-2.5">
         {items.map((item, index) => (
           <View key={`${item}-${index}`} className="flex-row gap-2.5">
@@ -1180,6 +1197,7 @@ function MatchHighlights({
 }
 
 function CertificationCard({ item, index }: { item: DiscoveryCardCertification; index: number }) {
+  const t = useTranslation();
   const verificationUrl = item.link?.trim();
 
   return (
@@ -1215,7 +1233,7 @@ function CertificationCard({ item, index }: { item: DiscoveryCardCertification; 
         </View>
         {verificationUrl ? (
           <Pressable
-            accessibilityLabel={`Open certification verification for ${item.name}`}
+            accessibilityLabel={t('home.deck.openCertificationAccessibility', { name: item.name })}
             accessibilityRole="link"
             className="h-9 w-9 items-center justify-center rounded-full"
             onPress={() => openExternalUrl(verificationUrl)}
@@ -1239,6 +1257,7 @@ function ProfileCardContent({
   refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
   scrollEnabled?: boolean;
 }) {
+  const t = useTranslation();
   const bio = card.bio?.trim() ?? '';
   const bioPreview = truncateText(bio, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
   const linkedinUrl = card.linkedinUrl?.trim();
@@ -1293,7 +1312,7 @@ function ProfileCardContent({
                   </AppText>
                   {linkedinUrl ? (
                     <Pressable
-                      accessibilityLabel={`Open ${card.name}'s LinkedIn profile`}
+                      accessibilityLabel={t('home.deck.openLinkedInAccessibility', { name: card.name })}
                       accessibilityRole="link"
                       className="h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
                       onPress={() => openExternalUrl(linkedinUrl)}
@@ -1360,14 +1379,14 @@ function ProfileCardContent({
               backgroundColor: '#2A2117',
               borderColor: 'rgba(255, 154, 62, 0.25)',
             }}>
-            <SectionLabel icon="bulb-outline" title="Startup Idea" />
+            <SectionLabel icon="bulb-outline" title={t('home.deck.startupIdea')} />
             <AppText className="text-[16px] leading-6">{card.startupIdea}</AppText>
           </View>
         ) : null}
 
         {card.interests?.length ? (
           <View className="gap-2.5">
-            <SectionLabel title="Industries & Interests" />
+            <SectionLabel title={t('home.deck.industriesInterests')} />
             <View className="flex-row flex-wrap gap-2">
               {card.interests.map((item) => (
                 <DiscoveryTag
@@ -1382,7 +1401,7 @@ function ProfileCardContent({
 
         {card.skills?.length ? (
           <View className="gap-2.5">
-            <SectionLabel title="Skills" />
+            <SectionLabel title={t('home.deck.skills')} />
             <View className="flex-row flex-wrap gap-2">
               {card.skills.map((item) => (
                 <DiscoveryTag key={item.id} item={item} />
@@ -1393,7 +1412,7 @@ function ProfileCardContent({
 
         {card.experience?.length ? (
           <View className="gap-3">
-            <SectionLabel icon="briefcase-outline" title="Experience" />
+            <SectionLabel icon="briefcase-outline" title={t('home.deck.experience')} />
             {card.experience.map((item, index) => (
               <AppCard
                 key={getExperienceKey(item, index)}
@@ -1434,7 +1453,7 @@ function ProfileCardContent({
 
         {certificationItems.length ? (
           <View className="gap-3">
-            <SectionLabel icon="ribbon-outline" title="Certifications" />
+            <SectionLabel icon="ribbon-outline" title={t('home.deck.certifications')} />
             {certificationItems.map((item, index) => (
               <CertificationCard key={getCertificationKey(item, index)} item={item} index={index} />
             ))}
@@ -1500,6 +1519,7 @@ function StartupCardContent({
   refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
   scrollEnabled?: boolean;
 }) {
+  const t = useTranslation();
   const industryLabels = getStartupIndustryLabels(card.industry);
   const industryPreview = getStartupIndustryPreview(card.industry);
   const hiddenIndustryCount = Math.max(industryLabels.length - 2, 0);
@@ -1565,7 +1585,12 @@ function StartupCardContent({
                 <View className="flex-row items-center gap-1.5">
                   <Ionicons color="#E4E7EC" name="briefcase-outline" size={15} />
                   <AppText className="min-w-0 flex-1 text-[14px]" numberOfLines={2} style={{ color: '#E4E7EC' }}>
-                    {card.founder?.title && card.founder?.name ? `${card.founder.title} by ${card.founder.name}` : card.founder?.name}
+                    {card.founder?.title && card.founder?.name
+                      ? t('home.deck.founderBy', {
+                        name: card.founder.name,
+                        title: card.founder.title,
+                      })
+                      : card.founder?.name}
                   </AppText>
                 </View>
               </View>
@@ -1623,7 +1648,7 @@ function StartupCardContent({
           <View className="gap-3">
             {problem ? (
               <View className="gap-1.5 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-4 py-3.5">
-                <SectionLabel icon="alert-circle-outline" title="Problem" />
+                <SectionLabel icon="alert-circle-outline" title={t('home.deck.problem')} />
                 <AppText className="text-[15px] leading-6" tone="muted">
                   {problem}
                 </AppText>
@@ -1631,7 +1656,7 @@ function StartupCardContent({
             ) : null}
             {solution ? (
               <View className="gap-1.5 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-4 py-3.5">
-                <SectionLabel icon="bulb-outline" title="Solution" />
+                <SectionLabel icon="bulb-outline" title={t('home.deck.solution')} />
                 <AppText className="text-[15px] leading-6" tone="muted">
                   {solution}
                 </AppText>
@@ -1639,7 +1664,7 @@ function StartupCardContent({
             ) : null}
             {targetUsers ? (
               <View className="gap-1.5 rounded-[18px] border border-white/10 bg-[#2C2C2C] px-4 py-3.5">
-                <SectionLabel icon="person-circle-outline" title="Target Users" />
+                <SectionLabel icon="person-circle-outline" title={t('home.deck.targetUsers')} />
                 <AppText className="text-[15px] leading-6" tone="muted">
                   {targetUsers}
                 </AppText>
@@ -1650,7 +1675,7 @@ function StartupCardContent({
 
         {startupInterests.length ? (
           <View className="gap-2.5">
-            <SectionLabel title="Industry & Interests" />
+            <SectionLabel title={t('home.deck.industryInterests')} />
             <View className="flex-row flex-wrap gap-2">
               {startupInterests.map((item) => (
                 <DiscoveryTag key={item.id} item={item} />
@@ -1661,7 +1686,7 @@ function StartupCardContent({
 
         {workArrangement.length ? (
           <View className="gap-2.5">
-            <SectionLabel icon="location-outline" title="Work Preference" />
+            <SectionLabel icon="location-outline" title={t('home.deck.workPreference')} />
             <View className="flex-row flex-wrap gap-2">
               {workArrangement.map((item) => (
                 <DiscoveryTag key={item.id} item={{ name: item.label, type: 'availability' }} tone="availability" />
@@ -1672,7 +1697,7 @@ function StartupCardContent({
 
         {card.openRoles?.length ? (
           <View className="gap-3">
-            <SectionLabel icon="briefcase-outline" title="Open Roles" />
+            <SectionLabel icon="briefcase-outline" title={t('home.deck.openRoles')} />
             <View className="flex-row flex-wrap gap-2">
               {card.openRoles.map((role) => (
                 <StartupRoleChip key={role.id} title={role.title} />
@@ -1688,7 +1713,7 @@ function StartupCardContent({
               backgroundColor: '#2A261B',
               borderColor: 'rgba(255, 190, 61, 0.28)',
             }}>
-            <SectionLabel icon="sparkles-outline" title="Looking For" />
+            <SectionLabel icon="sparkles-outline" title={t('home.deck.lookingFor')} />
             <AppText className="text-[16px] leading-6" numberOfLines={4}>
               {card.lookingFor.join(' & ')}
             </AppText>
@@ -1697,20 +1722,20 @@ function StartupCardContent({
 
         {card.teamStage ? (
           <View className="gap-3">
-            <SectionLabel icon="people-outline" title="Team & Stage" />
+            <SectionLabel icon="people-outline" title={t('home.deck.teamStage')} />
             <AppCard className="rounded-[18px] p-4 bg-[#2C2C2C] border-white/10">
               <View className="flex-row flex-wrap gap-y-4">
                 <View className="w-1/2 gap-1 pr-2">
                   <AppText className="text-[12px]" tone="muted">
-                    Team Size
+                    {t('home.deck.teamSize')}
                   </AppText>
                   <AppText className="text-[18px]" variant="title">
-                    {card.teamStage.teamSize} members
+                    {t('home.deck.members', { count: card.teamStage.teamSize })}
                   </AppText>
                 </View>
                 <View className="w-1/2 gap-1 pl-2">
                   <AppText className="text-[12px]" tone="muted">
-                    Stage
+                    {t('home.deck.stage')}
                   </AppText>
                   <AppText className="text-[18px]" variant="title">
                     {card.teamStage.stage}
@@ -1718,15 +1743,15 @@ function StartupCardContent({
                 </View>
                 <View className="w-1/2 gap-1 pr-2">
                   <AppText className="text-[12px]" tone="muted">
-                    Hiring
+                    {t('home.deck.hiring')}
                   </AppText>
                   <AppText className="text-[18px]" variant="title">
-                    {card.teamStage.hiringCount} roles
+                    {t('home.deck.roles', { count: card.teamStage.hiringCount })}
                   </AppText>
                 </View>
                 <View className="w-full gap-1">
                   <AppText className="text-[12px]" tone="muted">
-                    Industry
+                    {t('home.deck.industry')}
                   </AppText>
                   <AppText className="text-[18px] leading-[23px]" variant="title">
                     {teamStageIndustry}
@@ -1818,6 +1843,7 @@ function EmptyState({
   onStartOver: () => void;
   skippedCount: number;
 }) {
+  const t = useTranslation();
   const hasActivity = connectedCount > 0 || skippedCount > 0;
 
   return (
@@ -1834,17 +1860,20 @@ function EmptyState({
 
       <View className="mt-5 items-center">
         <AppText align="center" className="text-[20px] leading-[26px]" variant="subtitle">
-          {isLoadingMore ? 'Finding more profiles' : 'No more profiles right now.'}
+          {isLoadingMore ? t('home.deck.emptyLoadingTitle') : t('home.deck.emptyTitle')}
         </AppText>
         <AppText align="center" className="mt-2 max-w-[280px] text-[14px] leading-5" tone="muted">
           {isLoadingMore
-            ? 'We are checking for more relevant recommendations.'
-            : 'Try refreshing or adjusting your discovery filters to broaden the search.'}
+            ? t('home.deck.emptyLoadingDescription')
+            : t('home.deck.emptyDescription')}
         </AppText>
 
         {hasActivity ? (
           <AppText align="center" className="mt-3 text-[12px] leading-[17px]" tone="muted">
-            {connectedCount} connected · {skippedCount} skipped
+            {t('home.deck.activitySummary', {
+              connected: connectedCount,
+              skipped: skippedCount,
+            })}
           </AppText>
         ) : null}
       </View>
@@ -1856,7 +1885,7 @@ function EmptyState({
           style={{ backgroundColor: '#FF9836' }}>
           <Ionicons color="#1A120B" name="refresh" size={17} />
           <AppText className="text-[15px]" style={{ color: '#1A120B' }} variant="bodyStrong">
-            Refresh results
+            {t('home.deck.refreshResults')}
           </AppText>
         </Pressable>
       ) : null}
@@ -1866,9 +1895,9 @@ function EmptyState({
 
 export function DiscoveryDeck() {
   const router = useRouter();
+  const t = useTranslation();
   const queryClient = useQueryClient();
   const { height, width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const { isHydrated: isAuthHydrated, session } = useAuth();
   const usingMockCards = isDiscoveryCardsMockEnabled();
   const shouldMergeMockCards = isMergeMockDiscoveryCardsEnabled();
@@ -1994,9 +2023,9 @@ export function DiscoveryDeck() {
   const filterOptionsErrorMessage = React.useMemo(
     () =>
       filterOptionsQuery.error
-        ? getErrorMessage(filterOptionsQuery.error, 'Unable to load filter options right now.')
+        ? getErrorMessage(filterOptionsQuery.error, t('home.deck.filterOptionsFallbackError'))
         : null,
-    [filterOptionsQuery.error]
+    [filterOptionsQuery.error, t]
   );
   React.useEffect(() => {
     console.log('discovery filter-options query state', {
@@ -2347,9 +2376,9 @@ export function DiscoveryDeck() {
     }
 
     setFilterError(
-      getErrorMessage(discoveryQuery.error, 'Premium subscription required to use advanced discovery filters.')
+      getErrorMessage(discoveryQuery.error, t('home.deck.advancedFiltersPremiumError'))
     );
-  }, [discoveryQuery.error, discoveryQuery.isError, handleOnboardingRequired]);
+  }, [discoveryQuery.error, discoveryQuery.isError, handleOnboardingRequired, t]);
 
   React.useEffect(() => {
     setMockCards(getFallbackCards(appliedMode));
@@ -2372,7 +2401,7 @@ export function DiscoveryDeck() {
 
   const maybePresentBoostPaywall = React.useCallback(async () => {
     if (!supported) {
-      setActionError('Boost purchases are available in the native iOS and Android builds.');
+      setActionError(t('home.deck.boostNativeError'));
       return;
     }
 
@@ -2384,25 +2413,25 @@ export function DiscoveryDeck() {
         result !== PAYWALL_RESULT.RESTORED &&
         result !== PAYWALL_RESULT.CANCELLED
       ) {
-        setActionError('No boosts remaining.');
+        setActionError(t('home.deck.noBoostsRemaining'));
       }
     } catch (error) {
-      setActionError(getErrorMessage(error, 'Unable to open the boost purchase flow.'));
+      setActionError(getErrorMessage(error, t('home.deck.boostPurchaseError')));
     }
-  }, [presentPaywallForOffering, supported]);
+  }, [presentPaywallForOffering, supported, t]);
 
   const handlePresentConnectXProPaywall = React.useCallback(async () => {
     if (!supported) {
-      setActionError('ConnectX Pro is available in the native iOS and Android builds.');
+      setActionError(t('home.deck.proNativeError'));
       return;
     }
 
     try {
       await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro);
     } catch (error) {
-      setActionError(getErrorMessage(error, 'Unable to open the ConnectX Pro upgrade flow.'));
+      setActionError(getErrorMessage(error, t('home.deck.proUpgradeError')));
     }
-  }, [presentPaywallForOffering, supported]);
+  }, [presentPaywallForOffering, supported, t]);
 
   const handleSwipeAction = React.useCallback(
     async (action: SwipeActionIntent, direction?: SwipeDirection) => {
@@ -2521,7 +2550,7 @@ export function DiscoveryDeck() {
         } else if (action === 'super_like' && isSuperLikeRequiresBoostError(error)) {
           await maybePresentBoostPaywall();
         } else {
-          setActionError(getErrorMessage(error, 'Unable to record this swipe right now.'));
+          setActionError(getErrorMessage(error, t('home.deck.swipeError')));
         }
       } finally {
         if (didAdvanceCard) {
@@ -2538,6 +2567,7 @@ export function DiscoveryDeck() {
       queryClient,
       resetCardPosition,
       swipeAction,
+      t,
       viewerContext,
     ]
   );
@@ -2571,7 +2601,7 @@ export function DiscoveryDeck() {
       .catch(async (error) => {
         if (isRewindPremiumRequiredError(error)) {
           if (!supported) {
-            setActionError('Rewind is available in the native iOS and Android builds with ConnectX Pro.');
+            setActionError(t('home.deck.rewindNativeError'));
             return;
           }
 
@@ -2582,11 +2612,11 @@ export function DiscoveryDeck() {
               result === PAYWALL_RESULT.RESTORED;
 
             if (!unlockedPro) {
-              setActionError('ConnectX Pro is required to rewind your last swipe.');
+              setActionError(t('home.deck.rewindProRequired'));
             }
           } catch (paywallError) {
             setActionError(
-              getErrorMessage(paywallError, 'Unable to open the ConnectX Pro upgrade flow.')
+              getErrorMessage(paywallError, t('home.deck.proUpgradeError'))
             );
           }
 
@@ -2594,11 +2624,11 @@ export function DiscoveryDeck() {
         }
 
         if (isRewindNotAvailableError(error)) {
-          setActionError(getErrorMessage(error, 'No swipe is available to rewind right now.'));
+          setActionError(getErrorMessage(error, t('home.deck.rewindUnavailable')));
           return;
         }
 
-        setActionError(getErrorMessage(error, 'Unable to rewind the last swipe right now.'));
+        setActionError(getErrorMessage(error, t('home.deck.rewindError')));
       })
       .finally(() => {
         setIsSubmitting(false);
@@ -2609,6 +2639,7 @@ export function DiscoveryDeck() {
     presentPaywallForOffering,
     rewindAction,
     supported,
+    t,
   ]);
 
   const beginSwipe = React.useCallback(
@@ -2693,10 +2724,10 @@ export function DiscoveryDeck() {
         setFilterError(null);
         setIsFilterVisible(false);
       } catch (error) {
-        setFilterError(getErrorMessage(error, 'Unable to generate candidates with these filters.'));
+        setFilterError(getErrorMessage(error, t('home.deck.generateCandidatesError')));
       }
     },
-    [deviceCoordinates, loadDeviceCoordinates]
+    [deviceCoordinates, loadDeviceCoordinates, t]
   );
 
   React.useEffect(() => {
@@ -2798,7 +2829,7 @@ export function DiscoveryDeck() {
 
   const filterButton = (
     <Pressable
-      accessibilityLabel="Open discovery filters"
+      accessibilityLabel={t('home.deck.openFiltersAccessibility')}
       className="flex-row items-center gap-2 rounded-full border px-3 py-2"
       onPress={handleOpenFilters}
       style={{
@@ -2826,7 +2857,7 @@ export function DiscoveryDeck() {
 
   const notificationButton = (
     <Pressable
-      accessibilityLabel="Open notifications"
+      accessibilityLabel={t('home.deck.openNotificationsAccessibility')}
       className="relative h-10 w-10 items-center justify-center rounded-full border"
       onPress={() => router.push('/notifications' as never)}
       style={{ borderColor: 'rgba(152, 162, 179, 0.18)' }}>
@@ -2946,7 +2977,7 @@ export function DiscoveryDeck() {
       <View className="flex-1 px-2 pb-1">
         {filterError ? (
           <AppCard tone="signal" className="mb-2 gap-2 rounded-[16px] p-3">
-            <AppText variant="subtitle">Discovery search</AppText>
+            <AppText variant="subtitle">{t('home.deck.discoverySearch')}</AppText>
             <AppText tone="muted">{filterError}</AppText>
           </AppCard>
         ) : null}
@@ -2994,7 +3025,7 @@ export function DiscoveryDeck() {
                       borderColor: '#EF4444',
                     }}>
                     <AppText className="text-[34px] leading-[38px]" style={{ color: '#F87171' }} variant="hero">
-                      SKIP
+                      {t('home.deck.passOverlay')}
                     </AppText>
                   </View>
                 </Animated.View>
@@ -3010,7 +3041,7 @@ export function DiscoveryDeck() {
                       borderColor: '#10B981',
                     }}>
                     <AppText className="text-[34px] leading-[38px]" style={{ color: '#34D399' }} variant="hero">
-                      CONNECT
+                      {t('home.deck.connectOverlay')}
                     </AppText>
                   </View>
                 </Animated.View>
@@ -3030,7 +3061,7 @@ export function DiscoveryDeck() {
                       className="text-[30px] leading-[34px]"
                       style={{ color: '#FFCD38' }}
                       variant="hero">
-                      SUPER LIKE
+                      {t('home.deck.superConnectOverlay')}
                     </AppText>
                   </View>
                 </Animated.View>
@@ -3053,7 +3084,7 @@ export function DiscoveryDeck() {
                 color="#EF4444"
                 disabled={isSubmitting}
                 icon="close"
-                label="Skip"
+                label={t('home.deck.actionSkip')}
                 onPress={() => beginSwipe('left')}
                 size="medium"
               />
@@ -3061,7 +3092,7 @@ export function DiscoveryDeck() {
                 color="#FFCD38"
                 disabled={history.length === 0 || isSubmitting}
                 icon="arrow-undo"
-                label="Rewind"
+                label={t('home.deck.actionRewind')}
                 onPress={handleRewind}
                 size="small"
               />
@@ -3069,7 +3100,7 @@ export function DiscoveryDeck() {
                 color="#FF9A3E"
                 disabled={isSubmitting}
                 icon="flash"
-                label="Super Connect"
+                label={t('home.deck.actionSuperConnect')}
                 onPress={handleSuperLike}
                 size="medium"
               />
@@ -3077,7 +3108,7 @@ export function DiscoveryDeck() {
                 color="#10B981"
                 disabled={isSubmitting}
                 icon="checkmark"
-                label="Connect"
+                label={t('home.deck.actionConnect')}
                 onPress={() => beginSwipe('right')}
                 size="medium"
               />
@@ -3090,7 +3121,7 @@ export function DiscoveryDeck() {
             className="mt-3 rounded-[18px] border-[#6D3A32] bg-[#332320] px-4 py-3"
             style={{ shadowColor: 'transparent' }}>
             <AppText className="text-[#F7DDD8]" variant="bodyStrong">
-              Discovery action failed
+              {t('home.deck.discoveryActionFailed')}
             </AppText>
             <AppText className="mt-1 text-[#D9A49C]">{actionError}</AppText>
           </AppCard>
@@ -3098,7 +3129,7 @@ export function DiscoveryDeck() {
 
         {Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage) ? (
           <AppText align="center" className="text-[10px]" tone="muted" variant="code">
-            Loading more cards...
+            {t('home.deck.loadingMoreCards')}
           </AppText>
         ) : null}
 

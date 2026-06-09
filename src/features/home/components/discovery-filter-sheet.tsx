@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppText } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 
 import type {
   DiscoveryAppliedFilters,
@@ -42,6 +43,8 @@ type DiscoveryFilterSheetProps = {
   sections: DiscoveryFilterSection[];
   visible: boolean;
 };
+
+type TFunction = ReturnType<typeof useTranslation>;
 
 const GOAL_MODE_MAP: Record<DiscoveryGoalId, DiscoveryMode> = {
   goal_finding_cofounder: 'finding_cofounder',
@@ -539,7 +542,7 @@ function CheckboxRow({
 function SearchInput({
   disabled = false,
   onChangeText,
-  placeholder = 'Search',
+  placeholder,
   value,
 }: {
   disabled?: boolean;
@@ -601,49 +604,50 @@ function filterSearchableCheckboxOptions(
   });
 }
 
-function getSearchableCheckboxPlaceholder(sectionId: string) {
+function getSearchableCheckboxPlaceholder(sectionId: string, t: TFunction) {
   switch (sectionId) {
     case 'industryIds':
-      return 'Search industry';
+      return t('home.filters.searchIndustry');
     case 'founderTypeIds':
-      return 'Search founder type';
+      return t('home.filters.searchFounderType');
     case 'skillIds':
-      return 'Search skills';
+      return t('home.filters.searchSkills');
     case 'skillStrengthIds':
-      return 'Search skill strength';
+      return t('home.filters.searchSkillStrength');
     default:
-      return 'Search';
+      return t('home.common.search');
   }
 }
 
-function getSearchableCheckboxEmptyMessage(sectionId: string, searchTerm: string) {
+function getSearchableCheckboxEmptyMessage(sectionId: string, searchTerm: string, t: TFunction) {
   if (searchTerm.trim()) {
-    return `No results for "${searchTerm}"`;
+    return t('home.filters.noResultsFor', { term: searchTerm });
   }
 
   switch (sectionId) {
     case 'industryIds':
-      return 'No industries available';
+      return t('home.filters.noIndustries');
     case 'founderTypeIds':
-      return 'No founder types available';
+      return t('home.filters.noFounderTypes');
     case 'skillIds':
-      return 'No skills available';
+      return t('home.filters.noSkills');
     case 'skillStrengthIds':
-      return 'No skill strengths available';
+      return t('home.filters.noSkillStrengths');
     default:
-      return 'No options available';
+      return t('home.filters.noOptions');
   }
 }
 
 function getEmptyOptionsMessage(
   options: DiscoveryFilterOption[] | undefined,
-  searchTerm: string
+  searchTerm: string,
+  t: TFunction
 ) {
   if (searchTerm.trim().length > 0 && (options?.length ?? 0) > 0) {
-    return 'No matching options found.';
+    return t('home.filters.noMatchingOptions');
   }
 
-  return 'No options available right now.';
+  return t('home.filters.noOptionsNow');
 }
 
 function getOptionValue(option: DiscoveryFilterOption) {
@@ -707,6 +711,7 @@ export function DiscoveryFilterSheet({
   visible,
 }: DiscoveryFilterSheetProps) {
   const insets = useSafeAreaInsets();
+  const t = useTranslation();
   const [draftByMode, setDraftByMode] = React.useState<Partial<Record<DiscoveryMode, DiscoveryAppliedFilters>>>({});
   const [expandedByMode, setExpandedByMode] = React.useState<
     Partial<Record<DiscoveryMode, Record<string, boolean>>>
@@ -982,7 +987,7 @@ export function DiscoveryFilterSheet({
                 <View className="flex-row items-center justify-between gap-3 rounded-[14px] bg-[#2A2117] px-3 py-2.5">
                   <View className="flex-1 gap-0.5">
                     <AppText className="text-[12px]" tone="muted" variant="label">
-                      Selected city
+                      {t('home.filters.selectedCity')}
                     </AppText>
                     <AppText className="text-[14px] text-[#FFB05B]" variant="bodyStrong">
                       {selectedLabel}
@@ -1005,7 +1010,7 @@ export function DiscoveryFilterSheet({
                     [searchKey]: value,
                   }))
                 }
-                placeholder={field.placeholder ?? field.ui.placeholder ?? 'Search'}
+                placeholder={field.placeholder ?? field.ui.placeholder ?? t('home.common.search')}
                 value={searchTerm}
               />
 
@@ -1057,7 +1062,7 @@ export function DiscoveryFilterSheet({
                   {visibleOptions.length === 0 ? (
                     <View className="px-4 py-6">
                       <AppText align="center" tone="muted">
-                        {`No results for "${searchTerm}"`}
+                        {t('home.filters.noResultsFor', { term: searchTerm })}
                       </AppText>
                     </View>
                   ) : null}
@@ -1085,11 +1090,12 @@ export function DiscoveryFilterSheet({
                 }))
               }
               value={searchTerm}
+              placeholder={t('home.common.search')}
             />
           ) : null}
           {visibleOptions.length === 0 ? (
             <AppText className="text-[13px]" tone="muted">
-              {getEmptyOptionsMessage(field.options, searchTerm)}
+              {getEmptyOptionsMessage(field.options, searchTerm, t)}
             </AppText>
           ) : null}
           {field.ui.component === 'chips' ? (
@@ -1132,7 +1138,7 @@ export function DiscoveryFilterSheet({
         </View>
       );
     },
-    [currentDraft, currentMode, handleFieldValueChange, handleToggleFieldOption, hasConnectXPro, searchTerms, sectionById]
+    [currentDraft, currentMode, handleFieldValueChange, handleToggleFieldOption, hasConnectXPro, searchTerms, sectionById, t]
   );
 
   const renderSectionContent = React.useCallback(
@@ -1180,7 +1186,7 @@ export function DiscoveryFilterSheet({
                     [searchKey]: value,
                   }))
                 }
-                placeholder={getSearchableCheckboxPlaceholder(section.id)}
+                placeholder={getSearchableCheckboxPlaceholder(section.id, t)}
                 placeholderTextColor="#8A8F99"
                 style={{ paddingVertical: 0 }}
                 value={searchTerm}
@@ -1245,7 +1251,7 @@ export function DiscoveryFilterSheet({
               {searchableOptions.length === 0 ? (
                 <View className="px-4 py-8">
                   <AppText align="center" tone="muted">
-                    {getSearchableCheckboxEmptyMessage(section.id, searchTerm)}
+                    {getSearchableCheckboxEmptyMessage(section.id, searchTerm, t)}
                   </AppText>
                 </View>
               ) : null}
@@ -1268,11 +1274,12 @@ export function DiscoveryFilterSheet({
                 }))
               }
               value={searchTerm}
+              placeholder={t('home.common.search')}
             />
           ) : null}
           {visibleOptions.length === 0 ? (
             <AppText className="text-[13px]" tone="muted">
-              {getEmptyOptionsMessage(section.options, searchTerm)}
+              {getEmptyOptionsMessage(section.options, searchTerm, t)}
             </AppText>
           ) : null}
           <View className="flex-row flex-wrap gap-2">
@@ -1295,7 +1302,7 @@ export function DiscoveryFilterSheet({
         </View>
       );
     },
-    [currentDraft, currentMode, handleToggleSectionOption, hasConnectXPro, renderField, searchTerms]
+    [currentDraft, currentMode, handleToggleSectionOption, hasConnectXPro, renderField, searchTerms, t]
   );
 
   const renderAccordionSection = React.useCallback(
@@ -1321,7 +1328,7 @@ export function DiscoveryFilterSheet({
             <>
               {disabled ? (
                 <AppText className="pb-1 text-[12px]" tone="muted">
-                  ConnectX Pro is required to use this advanced filter section.
+                  {t('home.filters.advancedSectionLocked')}
                 </AppText>
               ) : null}
               {renderSectionContent(section)}
@@ -1330,7 +1337,7 @@ export function DiscoveryFilterSheet({
         </View>
       );
     },
-    [currentExpanded, handleToggleSection, hasConnectXPro, renderSectionContent]
+    [currentExpanded, handleToggleSection, hasConnectXPro, renderSectionContent, t]
   );
 
   return (
@@ -1350,11 +1357,11 @@ export function DiscoveryFilterSheet({
               <View className="flex-row items-center gap-3">
                 <Ionicons color="#FF9A3E" name="sparkles-outline" size={20} />
                 <AppText className="text-[18px]" variant="title">
-                  Candidate Filters
+                  {t('home.filters.title')}
                 </AppText>
               </View>
               <AppText tone="muted">
-                Tune the discovery deck and generate candidates from the filters you can use today
+                {t('home.filters.description')}
               </AppText>
             </View>
             <Pressable
@@ -1366,14 +1373,14 @@ export function DiscoveryFilterSheet({
 
           {errorMessage ? (
             <AppCard tone="signal" className="mb-4 gap-1.5 rounded-[18px] border-white/10 bg-[#2C2C2C] p-3">
-              <AppText variant="subtitle">Filters unavailable</AppText>
+              <AppText variant="subtitle">{t('home.filters.unavailable')}</AppText>
               <AppText tone="muted">{errorMessage}</AppText>
             </AppCard>
           ) : null}
 
           {optionsErrorMessage ? (
             <AppCard tone="signal" className="mb-4 gap-1.5 rounded-[18px] border-white/10 bg-[#2C2C2C] p-3">
-              <AppText variant="subtitle">Filter options unavailable</AppText>
+              <AppText variant="subtitle">{t('home.filters.optionsUnavailable')}</AppText>
               <AppText tone="muted">{optionsErrorMessage}</AppText>
             </AppCard>
           ) : null}
@@ -1381,7 +1388,7 @@ export function DiscoveryFilterSheet({
           <ScrollView contentContainerStyle={{ gap: 20, paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
             <View className="gap-4">
               <AppText className="text-[12px] tracking-[1.6px]" tone="muted" variant="label">
-                YOUR GOAL RIGHT NOW
+                {t('home.filters.goalLabel')}
               </AppText>
               <View className="flex-row flex-wrap gap-3">
                 {goalOptions.map((goal) => (
@@ -1400,9 +1407,9 @@ export function DiscoveryFilterSheet({
 
             {isLoadingOptions ? (
               <AppCard tone="default" className="gap-1.5 rounded-[18px] border-white/10 bg-[#2C2C2C] p-4">
-                <AppText variant="subtitle">Loading filter options...</AppText>
+                <AppText variant="subtitle">{t('home.filters.loadingTitle')}</AppText>
                 <AppText tone="muted">
-                  Pulling the latest industries, skills, roles, and languages for this goal.
+                  {t('home.filters.loadingDescription')}
                 </AppText>
               </AppCard>
             ) : (
@@ -1414,7 +1421,7 @@ export function DiscoveryFilterSheet({
                 {advancedSections.length > 0 ? (
                   <View className="gap-3">
                     <AppText className="text-[12px] tracking-[1.8px]" tone="signal" variant="label">
-                      ADVANCED FILTERS
+                      {t('home.filters.advancedLabel')}
                     </AppText>
                     <View className="gap-1">
                       {advancedSections.map((section) => renderAccordionSection(section))}
@@ -1438,7 +1445,11 @@ export function DiscoveryFilterSheet({
               android_ripple={{ color: 'rgba(0,0,0,0.12)' }}>
               <AppText variant="subtitle" className="text-[16px] text-[#1A1208]">
                 <Ionicons color="" name="flash-outline" size={18} />
-                {isApplying ? 'Generating...' : isLoadingOptions ? 'Loading filters...' : 'Generate Candidate'}
+                {isApplying
+                  ? t('home.filters.generating')
+                  : isLoadingOptions
+                    ? t('home.filters.loadingFilters')
+                    : t('home.filters.generateCandidate')}
               </AppText>
             </Pressable>
           </View>
