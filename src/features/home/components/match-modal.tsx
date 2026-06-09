@@ -17,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AppText } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 
 import type { DiscoveryCard } from '../types/discovery.types';
 import { isDiscoveryProfileCard } from '../types/discovery.types';
@@ -85,30 +86,34 @@ function getMatchSubject(card: DiscoveryCard) {
   return card.name;
 }
 
-function getMatchCopy(card: DiscoveryCard) {
+type TFunction = ReturnType<typeof useTranslation>;
+
+function getMatchCopy(card: DiscoveryCard, t: TFunction) {
   if (!isDiscoveryProfileCard(card)) {
-    return `You and ${card.name} are now connected for`;
+    return t('home.match.startupCopy', { name: card.name });
   }
 
   const focus = card.interests[0]?.name || card.startupIdea || card.headline || 'startup';
-  return `You and ${card.name} both want to build ${focus.toLowerCase()} startups.`;
+  return t('home.match.profileCopy', { focus: focus.toLowerCase(), name: card.name });
 }
 
-function getStartupRole(card: DiscoveryCard) {
+function getStartupRole(card: DiscoveryCard, t: TFunction) {
   if (isDiscoveryProfileCard(card)) {
     return null;
   }
 
-  return card.openRoles[0]?.title ?? card.lookingFor[0] ?? 'Co-Founder';
+  return card.openRoles[0]?.title ?? card.lookingFor[0] ?? t('home.match.defaultStartupRole');
 }
 
 export function MatchModal({ card, onChat, onClose, onReport }: MatchModalProps) {
+  const t = useTranslation();
+
   if (!card) {
     return null;
   }
 
   const isProfileMatch = isDiscoveryProfileCard(card);
-  const startupRole = getStartupRole(card);
+  const startupRole = getStartupRole(card, t);
 
   return (
     <Animated.View
@@ -137,7 +142,7 @@ export function MatchModal({ card, onChat, onClose, onReport }: MatchModalProps)
         />
 
         <Pressable
-          accessibilityLabel="Close match modal"
+          accessibilityLabel={t('home.match.closeAccessibility')}
           className="absolute right-3 top-3 z-20 h-10 w-10 items-center justify-center rounded-full"
           onPress={onClose}
           style={{ backgroundColor: 'transparent' }}>
@@ -232,25 +237,25 @@ export function MatchModal({ card, onChat, onClose, onReport }: MatchModalProps)
           {isProfileMatch ? (
             <>
               <AppText align="center" className="text-[24px] leading-[30px]" tone="signal" variant="hero">
-                You&apos;re connected! 🎉
+                {t('home.match.profileTitle')}
               </AppText>
               <AppText align="center" className="max-w-[300px] text-[14px] leading-5" tone="muted">
-                {getMatchCopy(card)}
+                {getMatchCopy(card, t)}
               </AppText>
             </>
           ) : (
             <>
               <AppText align="center" className="text-[24px] leading-[30px]" tone="signal" variant="hero">
-                Connection started! 🚀
+                {t('home.match.startupTitle')}
               </AppText>
               <AppText align="center" className="text-[15px] leading-5" variant="bodyStrong">
                 {card.name}
               </AppText>
               <AppText align="center" className="text-[13px] leading-[18px]" tone="muted">
-                Founded by {card.founder.name}
+                {t('home.match.foundedBy', { name: card.founder.name })}
               </AppText>
               <AppText align="center" className="max-w-[310px] text-[13px] leading-[18px]" tone="muted">
-                {getMatchCopy(card)}{' '}
+                {getMatchCopy(card, t)}{' '}
                 <AppText className="text-[13px] leading-[18px]" tone="signal" variant="bodyStrong">
                   {startupRole}
                 </AppText>
@@ -263,36 +268,36 @@ export function MatchModal({ card, onChat, onClose, onReport }: MatchModalProps)
           {isProfileMatch ? (
             <>
               <Pressable
-                accessibilityLabel={`Start chat with ${getMatchSubject(card)}`}
+                accessibilityLabel={t('home.match.startChatAccessibility', { name: getMatchSubject(card) })}
                 className="min-h-10 flex-1 flex-row items-center justify-center gap-2 rounded-[10px]"
                 onPress={onChat}
                 style={{ backgroundColor: '#FF9836' }}>
                 <Ionicons color="#1A120B" name="chatbubble-outline" size={16} />
                 <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
-                  Start Chat
+                  {t('home.match.startChat')}
                 </AppText>
               </Pressable>
 
               <Pressable
-                accessibilityLabel={`View match report for ${getMatchSubject(card)}`}
+                accessibilityLabel={t('home.match.viewReportAccessibility', { name: getMatchSubject(card) })}
                 className="min-h-10 flex-1 flex-row items-center justify-center gap-2 rounded-[10px] border"
                 onPress={onReport}
                 style={{ backgroundColor: '#22211F', borderColor: 'rgba(255, 255, 255, 0.12)' }}>
                 <Ionicons color="#E3E3E3" name="bar-chart-outline" size={16} />
                 <AppText className="text-[#E3E3E3]" variant="bodyStrong">
-                  View Report
+                  {t('home.match.viewReport')}
                 </AppText>
               </Pressable>
             </>
           ) : (
             <Pressable
-              accessibilityLabel={`Chat with co-founder of ${getMatchSubject(card)}`}
+              accessibilityLabel={t('home.match.chatFounderAccessibility', { name: getMatchSubject(card) })}
               className="min-h-10 flex-1 flex-row items-center justify-center gap-2 rounded-[10px]"
               onPress={onChat}
               style={{ backgroundColor: '#FF9836' }}>
               <Ionicons color="#1A120B" name="chatbubble-outline" size={16} />
               <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
-                Chat with Co-Founder
+                {t('home.match.chatFounder')}
               </AppText>
             </Pressable>
           )}

@@ -4,6 +4,7 @@ import React from 'react';
 import { ActivityIndicator, Modal, Pressable, View } from 'react-native';
 
 import { AppText } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 import {
   clearLinkedInSyncNotice,
   getLinkedInSyncNoticeState,
@@ -12,6 +13,7 @@ import {
 import { DiscoveryDeck } from './discovery-deck';
 
 function LinkedInSyncNoticeModal() {
+  const t = useTranslation();
   const notice = React.useSyncExternalStore(
     subscribeLinkedInSyncNotice,
     getLinkedInSyncNoticeState,
@@ -45,7 +47,7 @@ function LinkedInSyncNoticeModal() {
           <View className="items-end">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close LinkedIn data notice"
+              accessibilityLabel={t('home.linkedin.closeAccessibility')}
               className="h-9 w-9 items-center justify-center rounded-full"
               onPress={clearLinkedInSyncNotice}
               hitSlop={8}>
@@ -64,12 +66,12 @@ function LinkedInSyncNoticeModal() {
               align="center"
               variant="subtitle"
               className="mt-5 text-[20px] leading-[26px] text-white">
-              Getting your LinkedIn data
+              {t('home.linkedin.title')}
             </AppText>
             <AppText
               align="center"
               className="mt-2 text-[14px] leading-[20px] text-text-muted">
-              This may take a few minutes. You can keep exploring while we prepare it.
+              {t('home.linkedin.description')}
             </AppText>
 
             <Pressable
@@ -77,7 +79,7 @@ function LinkedInSyncNoticeModal() {
               style={{ backgroundColor: '#FF9A3E', borderCurve: 'continuous' }}
               onPress={clearLinkedInSyncNotice}>
               <AppText variant="subtitle" className="text-[15px] text-[#1A1208]">
-                Got it
+                {t('home.linkedin.confirm')}
               </AppText>
             </Pressable>
           </View>

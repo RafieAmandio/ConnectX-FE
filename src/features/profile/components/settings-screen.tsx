@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@features/auth';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
+import { LOCALE_LABELS, useLocale, useTranslation, type AppLocale } from '@shared/localization';
 
 import {
   useActivateMyAccount,
@@ -237,6 +238,8 @@ export function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { refreshSession, session, signOut } = useAuth();
+  const { locale, localeLabel, setLocale } = useLocale();
+  const t = useTranslation();
 
   const {
     isConnectXProActive,
@@ -270,6 +273,31 @@ export function SettingsScreen() {
     } catch {
       Alert.alert('Link unavailable', 'This link could not be opened right now.');
     }
+  }
+
+  function selectLanguage(nextLocale: AppLocale) {
+    if (nextLocale === locale) {
+      return;
+    }
+
+    void setLocale(nextLocale);
+  }
+
+  function openLanguageSelector() {
+    Alert.alert(t('settings.language.alertTitle'), t('settings.language.alertMessage'), [
+      {
+        onPress: () => selectLanguage('en'),
+        text: LOCALE_LABELS.en,
+      },
+      {
+        onPress: () => selectLanguage('id'),
+        text: LOCALE_LABELS.id,
+      },
+      {
+        style: 'cancel',
+        text: t('settings.language.cancel'),
+      },
+    ]);
   }
 
   async function handleSubscriptionPress() {
@@ -442,6 +470,16 @@ export function SettingsScreen() {
           }}
           contentInsetAdjustmentBehavior="automatic"
         >
+          <Section title={t('settings.language.section')}>
+            <SettingsRow
+              description={t('settings.language.description')}
+              icon="language-outline"
+              onPress={openLanguageSelector}
+              title={t('settings.language.title')}
+              value={localeLabel}
+            />
+          </Section>
+
           <Section title="Notifications">
             <NotificationToggleRow
               description="Stay updated on new connections."
