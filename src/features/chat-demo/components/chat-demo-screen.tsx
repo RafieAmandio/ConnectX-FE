@@ -36,6 +36,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, AppTopBar } from '@shared/components';
+import { useLocale, useTranslation } from '@shared/localization';
 import { buildApiUrl } from '@shared/services/api/config';
 
 import { ChatEmptyState } from '@features/chat/components/chat-empty-state';
@@ -66,24 +67,25 @@ type PendingChatDemoMedia = {
   mimeType: string | null;
   uploadedMedia: ChatDemoUploadedMedia;
 };
+type TFunction = ReturnType<typeof useTranslation>;
 
-function formatRelativeTime(value: string) {
+function formatRelativeTime(value: string, t: TFunction) {
   const deltaInMinutes = Math.max(
     0,
     Math.round((Date.now() - new Date(value).getTime()) / (1000 * 60))
   );
 
-  if (deltaInMinutes < 1) return 'just now';
-  if (deltaInMinutes < 60) return `${deltaInMinutes}m ago`;
+  if (deltaInMinutes < 1) return t('chat.justNow');
+  if (deltaInMinutes < 60) return t('chat.minutesAgo', { count: deltaInMinutes });
 
   const deltaInHours = Math.round(deltaInMinutes / 60);
-  if (deltaInHours < 24) return `${deltaInHours}h ago`;
+  if (deltaInHours < 24) return t('chat.hoursAgo', { count: deltaInHours });
 
-  return `${Math.round(deltaInHours / 24)}d ago`;
+  return t('chat.daysAgo', { count: Math.round(deltaInHours / 24) });
 }
 
-function formatMessageTime(value: string) {
-  return new Date(value).toLocaleTimeString([], {
+function formatMessageTime(value: string, locale: string) {
+  return new Date(value).toLocaleTimeString(locale === 'id' ? 'id-ID' : undefined, {
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -175,8 +177,10 @@ function ConversationRowSkeleton({ unread = false }: { unread?: boolean }) {
 }
 
 function ChatListSkeleton() {
+  const t = useTranslation();
+
   return (
-    <View className="flex-1 px-4 pt-3" accessibilityLabel="Loading conversations">
+    <View className="flex-1 px-4 pt-3" accessibilityLabel={t('chat.loadingConversations')}>
       <View className="pb-5 pt-1">
         <SkeletonBlock className="h-10 w-40 rounded-[12px]" />
       </View>
@@ -268,8 +272,10 @@ function ChatRoomSkeleton() {
 }
 
 function MessagesSkeleton() {
+  const t = useTranslation();
+
   return (
-    <View className="gap-4 py-2" accessibilityLabel="Loading messages">
+    <View className="gap-4 py-2" accessibilityLabel={t('chat.loadingMessages')}>
       <MessageBubbleSkeleton width="64%" />
       <MessageBubbleSkeleton outgoing width="72%" />
       <MessageBubbleSkeleton width="56%" />
@@ -327,18 +333,18 @@ function getAttachmentIconName(mimeType: string | null | undefined) {
   return 'document-outline' as const;
 }
 
-function getAttachmentLabel(mimeType: string | null | undefined) {
+function getAttachmentLabel(mimeType: string | null | undefined, t: TFunction) {
   const kind = getAttachmentKind(mimeType);
 
   if (kind === 'pdf') {
-    return 'PDF document';
+    return t('chat.pdfDocument');
   }
 
   if (kind === 'audio') {
-    return 'Audio file';
+    return t('chat.audioFile');
   }
 
-  return 'Attachment';
+  return t('chat.attachment');
 }
 
 function formatFileSize(value: number | null | undefined) {
@@ -357,16 +363,16 @@ function formatFileSize(value: number | null | undefined) {
   return `${Math.round(value / (1024 * 102.4)) / 10} MB`;
 }
 
-function openMediaUrl(value: string | null | undefined) {
+function openMediaUrl(value: string | null | undefined, t: TFunction) {
   const mediaUrl = normalizeMediaUrl(value);
 
   if (!mediaUrl) {
-    Alert.alert('Attachment unavailable', 'This attachment could not be opened.');
+    Alert.alert(t('chat.attachmentUnavailableTitle'), t('chat.attachmentUnavailableMessage'));
     return;
   }
 
   void Linking.openURL(mediaUrl).catch(() => {
-    Alert.alert('Unable to open attachment', 'This attachment could not be opened.');
+    Alert.alert(t('chat.openAttachmentErrorTitle'), t('chat.attachmentUnavailableMessage'));
   });
 }
 
@@ -381,17 +387,17 @@ function getImageDownloadFileName(imageUrl: string) {
   return `connectx-image-${Date.now()}.jpg`;
 }
 
-async function getSaveableImageUri(imageUrl: string) {
+async function getSaveableImageUri(imageUrl: string, t: TFunction) {
   if (/^(?:file|content):/i.test(imageUrl)) {
     return imageUrl;
   }
 
   if (!/^https?:\/\//i.test(imageUrl)) {
-    throw new Error('This image format cannot be saved.');
+    throw new Error(t('chat.imageSaveFormatError'));
   }
 
   if (!FileSystem.cacheDirectory) {
-    throw new Error('Image cache is unavailable.');
+    throw new Error(t('chat.imageCacheUnavailable'));
   }
 
   const destinationUri = `${FileSystem.cacheDirectory}${getImageDownloadFileName(imageUrl)}`;
@@ -400,18 +406,18 @@ async function getSaveableImageUri(imageUrl: string) {
   return downloadedImage.uri;
 }
 
-async function saveImageToLibrary(imageUrl: string | null) {
+async function saveImageToLibrary(imageUrl: string | null, t: TFunction) {
   if (!imageUrl) {
-    throw new Error('This image is unavailable.');
+    throw new Error(t('chat.imageUnavailableError'));
   }
 
   const permission = await MediaLibrary.requestPermissionsAsync(true, ['photo']);
 
   if (!permission.granted) {
-    throw new Error('Photo library permission is required to save images.');
+    throw new Error(t('chat.photoPermissionRequired'));
   }
 
-  const localUri = await getSaveableImageUri(imageUrl);
+  const localUri = await getSaveableImageUri(imageUrl, t);
 
   await MediaLibrary.saveToLibraryAsync(localUri);
 }
@@ -426,6 +432,7 @@ function ImagePreviewModal({
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const t = useTranslation();
   const [isSaving, setSaving] = React.useState(false);
   const handleSave = React.useCallback(async () => {
     if (isSaving) {
@@ -435,17 +442,17 @@ function ImagePreviewModal({
     setSaving(true);
 
     try {
-      await saveImageToLibrary(imageUrl);
-      Alert.alert('Image saved', 'The image was saved to your photo library.');
+      await saveImageToLibrary(imageUrl, t);
+      Alert.alert(t('chat.imageSavedTitle'), t('chat.imageSavedMessage'));
     } catch (error) {
       Alert.alert(
-        'Unable to save image',
-        error instanceof Error ? error.message : 'This image could not be saved.'
+        t('chat.imageSaveErrorTitle'),
+        error instanceof Error ? error.message : t('chat.imageSaveErrorFallback')
       );
     } finally {
       setSaving(false);
     }
-  }, [imageUrl, isSaving]);
+  }, [imageUrl, isSaving, t]);
 
   return (
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
@@ -454,7 +461,7 @@ function ImagePreviewModal({
           className="absolute right-4 z-10 flex-row gap-3"
           style={{ top: Math.max(insets.top + 8, 20) }}>
           <Pressable
-            accessibilityLabel="Save image"
+            accessibilityLabel={t('chat.saveImageAccessibility')}
             accessibilityRole="button"
             className="h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/25"
             disabled={isSaving}
@@ -467,7 +474,7 @@ function ImagePreviewModal({
           </Pressable>
 
           <Pressable
-            accessibilityLabel="Close image preview"
+            accessibilityLabel={t('chat.closeImagePreviewAccessibility')}
             accessibilityRole="button"
             className="h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/25"
             onPress={onClose}>
@@ -531,6 +538,8 @@ function MessageText({
   isOutgoing: boolean;
   text: string;
 }) {
+  const t = useTranslation();
+
   if (!isLinkable) {
     return <>{text}</>;
   }
@@ -548,7 +557,7 @@ function MessageText({
             key={`${part.url}-${index}`}
             onPress={() => {
               void Linking.openURL(part.url).catch(() => {
-                Alert.alert('Unable to open link', 'This link could not be opened.');
+                Alert.alert(t('chat.openLinkErrorTitle'), t('chat.openLinkErrorMessage'));
               });
             }}>
             {part.text}
@@ -588,6 +597,8 @@ function ConversationCard({
   conversation: ChatConversation;
   onPress: () => void;
 }) {
+  const t = useTranslation();
+
   return (
     <Pressable className="active:opacity-90" onPress={onPress}>
       <View className="flex-row items-center gap-3 px-1 py-2.5">
@@ -601,7 +612,7 @@ function ConversationCard({
             <AppText
               className={conversation.unreadCount > 0 ? 'text-[#F59E0B]' : 'text-[#8E8B87]'}
               variant="code">
-              {formatRelativeTime(conversation.lastMessageAt)}
+              {formatRelativeTime(conversation.lastMessageAt, t)}
             </AppText>
           </View>
 
@@ -633,9 +644,9 @@ function EmptyState({
   isUnavailable: boolean;
   onExplore: () => void;
 }) {
-  const title = isUnavailable ? 'Unable to load messages' : 'No conversations yet';
-  const description =
-    'Messages will appear here when you get connects. Explore more profiles to start a conversation.';
+  const t = useTranslation();
+  const title = isUnavailable ? t('chat.emptyUnavailableTitle') : t('chat.emptyTitle');
+  const description = t('chat.emptyDescription');
 
   return (
     <ChatEmptyState
@@ -651,6 +662,7 @@ export function ChatDemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
+  const t = useTranslation();
   const conversationsQuery = useChatDemoConversations({
     refetchInterval: isFocused ? 10_000 : false,
   });
@@ -732,7 +744,7 @@ export function ChatDemoListScreen() {
             ListHeaderComponent={
               <View className="pb-3 pt-1">
                 <AppText className="text-white" variant="display">
-                  Messages
+                  {t('chat.messagesTitle')}
                 </AppText>
 
                 {conversationsQuery.error instanceof Error && hasConversations ? (
@@ -740,7 +752,7 @@ export function ChatDemoListScreen() {
                     className="mt-4 rounded-[22px] border px-4 py-4"
                     style={{ backgroundColor: '#30251E', borderColor: 'rgba(255, 179, 94, 0.2)' }}>
                     <AppText className="text-[#FFE0BA]" variant="bodyStrong">
-                      Some messages may be out of date
+                      {t('chat.staleWarningTitle')}
                     </AppText>
                     <AppText className="mt-1 text-[#D9B98E]">
                       {conversationsQuery.error.message}
@@ -767,6 +779,8 @@ export function ChatDemoListScreen() {
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
+  const { locale } = useLocale();
+  const t = useTranslation();
   const { width: windowWidth } = useWindowDimensions();
   const isOutgoing = message.direction === 'outgoing';
   const mediaUrl = normalizeMediaUrl(message.media?.url);
@@ -832,7 +846,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   return (
     <View className={isOutgoing ? 'items-end' : 'items-start'} ref={bubbleRef}>
       <Pressable
-        accessibilityHint={showBody ? 'Long press to copy message' : undefined}
+        accessibilityHint={showBody ? t('chat.longPressCopyHint') : undefined}
         delayLongPress={350}
         disabled={!showBody}
         className={
@@ -843,7 +857,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         onLongPress={handleLongPress}>
         {message.type === 'image' && hasMediaUrl ? (
           <Pressable
-            accessibilityLabel="Open image"
+            accessibilityLabel={t('chat.openImageAccessibility')}
             accessibilityRole="imagebutton"
             className="active:opacity-80"
             onPress={() => setImagePreviewVisible(true)}>
@@ -872,7 +886,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               align="center"
               className={isOutgoing ? 'text-[#5C3D18]' : 'text-[#B8B2AB]'}
               variant="code">
-              Image unavailable
+              {t('chat.imageUnavailable')}
             </AppText>
           </View>
         ) : null}
@@ -882,7 +896,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             className={`w-56 flex-row items-center gap-3 border border-white/10 px-4 py-3 active:opacity-80 ${
               isOutgoing ? 'rounded-[12px] rounded-br-[2px]' : 'rounded-[12px] rounded-bl-[2px]'
             }`}
-            onPress={() => openMediaUrl(message.media?.url)}>
+            onPress={() => openMediaUrl(message.media?.url, t)}>
             <Ionicons
               color={isOutgoing ? '#5C3D18' : '#F7B05B'}
               name={getAttachmentIconName(message.media?.mimeType)}
@@ -893,13 +907,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 className={isOutgoing ? 'text-[#201507]' : 'text-[#F3F0EB]'}
                 numberOfLines={1}
                 variant="bodyStrong">
-                {getAttachmentLabel(message.media?.mimeType)}
+                {getAttachmentLabel(message.media?.mimeType, t)}
               </AppText>
               <AppText
                 className={isOutgoing ? 'text-[#7C5526]' : 'text-[#AFA9A2]'}
                 numberOfLines={1}
                 variant="code">
-                {attachmentSize ? `${attachmentSize} · Open` : 'Open attachment'}
+                {attachmentSize ? `${attachmentSize} · ${t('chat.open')}` : t('chat.openAttachment')}
               </AppText>
             </View>
           </Pressable>
@@ -918,13 +932,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 text={message.body}
               />
             ) : (
-              'Message'
+              t('chat.fallbackMessage')
             )}
           </AppText>
         ) : null}
         <AppText className={isOutgoing ? 'mt-1.5 text-[#7C5526]' : 'mt-1.5 text-[#97928B]'} variant="code">
-          {formatMessageTime(message.createdAt)}
-          {isCopied ? ' · Copied' : ''}
+          {formatMessageTime(message.createdAt, locale)}
+          {isCopied ? ` · ${t('chat.copied')}` : ''}
         </AppText>
       </Pressable>
       {message.type === 'image' ? (
@@ -941,7 +955,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         visible={isCopyMenuVisible}>
         <Pressable className="flex-1" onPress={() => setCopyMenuVisible(false)}>
           <Pressable
-            accessibilityLabel="Copy message"
+            accessibilityLabel={t('chat.copyMessageAccessibility')}
             accessibilityRole="button"
             className="absolute flex-row items-center gap-2 rounded-[14px] bg-[#F3F0EB] px-4 py-3 active:opacity-80"
             onPress={handleCopy}
@@ -952,7 +966,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             }}>
             <Ionicons color="#312719" name="copy-outline" size={18} />
             <AppText className="text-[#312719]" variant="bodyStrong">
-              Copy
+              {t('chat.copy')}
             </AppText>
           </Pressable>
         </Pressable>
@@ -973,6 +987,7 @@ function AttachmentPickerSheet({
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const t = useTranslation();
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
@@ -987,9 +1002,9 @@ function AttachmentPickerSheet({
 
           <View className="gap-1 px-1 pb-4">
             <AppText className="text-white" variant="title">
-              Add attachment
+              {t('chat.addAttachmentTitle')}
             </AppText>
-            <AppText className="text-[#AFA9A2]">Choose what you want to send.</AppText>
+            <AppText className="text-[#AFA9A2]">{t('chat.addAttachmentDescription')}</AppText>
           </View>
 
           <View className="gap-3">
@@ -1001,9 +1016,9 @@ function AttachmentPickerSheet({
               </View>
               <View className="flex-1 gap-0.5">
                 <AppText className="text-[#F3F0EB]" variant="bodyStrong">
-                  Photo
+                  {t('chat.photo')}
                 </AppText>
-                <AppText className="text-[#AFA9A2]">Choose an image from your library</AppText>
+                <AppText className="text-[#AFA9A2]">{t('chat.photoDescription')}</AppText>
               </View>
             </Pressable>
 
@@ -1015,9 +1030,9 @@ function AttachmentPickerSheet({
               </View>
               <View className="flex-1 gap-0.5">
                 <AppText className="text-[#F3F0EB]" variant="bodyStrong">
-                  PDF or audio
+                  {t('chat.pdfOrAudio')}
                 </AppText>
-                <AppText className="text-[#AFA9A2]">Choose a document or audio file</AppText>
+                <AppText className="text-[#AFA9A2]">{t('chat.pdfOrAudioDescription')}</AppText>
               </View>
             </Pressable>
 
@@ -1025,7 +1040,7 @@ function AttachmentPickerSheet({
               className="min-h-12 items-center justify-center rounded-[18px] bg-[#373534] active:opacity-80"
               onPress={onClose}>
               <AppText className="text-[#F3F0EB]" variant="bodyStrong">
-                Cancel
+                {t('chat.cancel')}
               </AppText>
             </Pressable>
           </View>
@@ -1038,6 +1053,7 @@ function AttachmentPickerSheet({
 export function ChatDemoConversationScreen({ conversationId }: { conversationId: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const t = useTranslation();
   const viewerContext = useViewerContext();
   const conversationsQuery = useChatDemoConversations();
   const messagesQuery = useChatDemoMessages(conversationId);
@@ -1209,7 +1225,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     const asset = result.assets[0];
 
     if (!asset?.uri) {
-      Alert.alert('Image unavailable', 'The selected image could not be read.');
+      Alert.alert(t('chat.pickImageUnavailableTitle'), t('chat.pickImageUnavailableMessage'));
       return;
     }
 
@@ -1232,7 +1248,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     } catch {
       return;
     }
-  }, [isSending, isUploadingMedia, uploadMediaMutation]);
+  }, [isSending, isUploadingMedia, t, uploadMediaMutation]);
 
   const handlePickDocument = React.useCallback(async () => {
     if (isSending || isUploadingMedia) {
@@ -1252,7 +1268,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     const asset = result.assets[0];
 
     if (!asset?.uri) {
-      Alert.alert('File unavailable', 'The selected file could not be read.');
+      Alert.alert(t('chat.pickFileUnavailableTitle'), t('chat.pickFileUnavailableMessage'));
       return;
     }
 
@@ -1275,7 +1291,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     } catch {
       return;
     }
-  }, [isSending, isUploadingMedia, uploadMediaMutation]);
+  }, [isSending, isUploadingMedia, t, uploadMediaMutation]);
 
   const handlePickAttachment = React.useCallback(() => {
     if (isSending || isUploadingMedia) {
@@ -1333,13 +1349,13 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           <AppTopBar />
           <View className="flex-1 items-center justify-center px-6">
             <AppText align="center" className="text-white" variant="title">
-              Conversation unavailable
+              {t('chat.conversationUnavailableTitle')}
             </AppText>
             <AppText align="center" className="mt-2 text-[#B8B2AB]">
-              This chat could not be found right now.
+              {t('chat.conversationUnavailableDescription')}
             </AppText>
             <Pressable className="mt-5" onPress={() => router.replace('/chat_demo' as never)}>
-              <AppText tone="signal">Back to chats</AppText>
+              <AppText tone="signal">{t('chat.backToChats')}</AppText>
             </Pressable>
           </View>
         </View>
@@ -1372,7 +1388,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               {conversation.name}
             </AppText>
             <AppText className="text-[#9C9893]" numberOfLines={1}>
-              {conversation.headline?.trim() || 'Direct message'}
+              {conversation.headline?.trim() || t('chat.directMessage')}
             </AppText>
             {invitationMessage ? (
               <AppText className="text-[#7DD37D]" numberOfLines={1} variant="code">
@@ -1398,7 +1414,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
                 size={18}
               />
               <AppText className="text-[#1F160C]" variant="bodyStrong">
-                {invitationSent ? 'Invited' : 'Add to Team'}
+                {invitationSent ? t('chat.invited') : t('chat.addToTeam')}
               </AppText>
             </Pressable>
           ) : null}
@@ -1425,7 +1441,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
                   <ActivityIndicator color="#F59E0B" size="small" />
                 ) : (
                   <AppText className="text-[#F7B05B]" variant="code">
-                    Load earlier messages
+                    {t('chat.loadEarlierMessages')}
                   </AppText>
                 )}
               </Pressable>
@@ -1436,7 +1452,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               <MessagesSkeleton />
             ) : (
               <View className="items-center py-8">
-                <AppText className="text-[#9C9893]">No messages in this chat yet.</AppText>
+                <AppText className="text-[#9C9893]">{t('chat.noMessages')}</AppText>
               </View>
             )
           }
@@ -1460,19 +1476,25 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
         {sendMessageMutation.error instanceof Error ? (
           <View className="px-4 py-2">
-            <AppText tone="danger">Send failed: {sendMessageMutation.error.message}</AppText>
+            <AppText tone="danger">
+              {t('chat.sendFailed', { message: sendMessageMutation.error.message })}
+            </AppText>
           </View>
         ) : null}
 
         {!(sendMessageMutation.error instanceof Error) && sendMediaMessageMutation.error instanceof Error ? (
           <View className="px-4 py-2">
-            <AppText tone="danger">Send failed: {sendMediaMessageMutation.error.message}</AppText>
+            <AppText tone="danger">
+              {t('chat.sendFailed', { message: sendMediaMessageMutation.error.message })}
+            </AppText>
           </View>
         ) : null}
 
         {uploadMediaMutation.error instanceof Error ? (
           <View className="px-4 py-2">
-            <AppText tone="danger">Upload failed: {uploadMediaMutation.error.message}</AppText>
+            <AppText tone="danger">
+              {t('chat.uploadFailed', { message: uploadMediaMutation.error.message })}
+            </AppText>
           </View>
         ) : null}
 
@@ -1499,11 +1521,11 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               <View className="flex-1">
                 <AppText className="text-[#F3F0EB]" numberOfLines={1} variant="bodyStrong">
                   {pendingMedia.mediaType === 'image'
-                    ? 'Image attached'
-                    : pendingMedia.fileName || getAttachmentLabel(pendingMedia.mimeType)}
+                    ? t('chat.imageAttached')
+                    : pendingMedia.fileName || getAttachmentLabel(pendingMedia.mimeType, t)}
                 </AppText>
                 <AppText className="text-[#9C9893]" numberOfLines={1} variant="code">
-                  {formatFileSize(pendingMedia.fileSize) ?? 'Ready to send'}
+                  {formatFileSize(pendingMedia.fileSize) ?? t('chat.readyToSend')}
                 </AppText>
               </View>
               <Pressable
@@ -1535,7 +1557,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
                 className="font-body text-[15px] text-white"
                 multiline
                 onChangeText={setDraftMessage}
-                placeholder="Type a message..."
+                placeholder={t('chat.messagePlaceholder')}
                 placeholderTextColor="#7D7974"
                 scrollEnabled
                 showSoftInputOnFocus
