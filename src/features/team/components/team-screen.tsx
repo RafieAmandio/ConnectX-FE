@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { AppButton, AppCard, AppInput, AppText, AppTopBar } from '@shared/components';
+import { useLocale, useTranslation, type AppLocale } from '@shared/localization';
 import { Shadows } from '@shared/theme';
 
 import {
@@ -38,6 +39,7 @@ import { isNoActiveStartupError } from '../services/team-service';
 import type { TeamApplication, TeamDashboardInvite, TeamInviteCommitment, TeamMember } from '../types/team.types';
 
 const EQUITY_THUMB_SIZE = 24;
+type TFunction = ReturnType<typeof useTranslation>;
 
 function withAlpha(hexColor: string, alpha: number) {
   const normalized = hexColor.replace('#', '');
@@ -121,8 +123,10 @@ function TeamMemberSkeleton({ highlighted = false }: { highlighted?: boolean }) 
 }
 
 function TeamDashboardSkeleton() {
+  const t = useTranslation();
+
   return (
-    <View className="gap-6" accessibilityLabel="Loading team">
+    <View className="gap-6" accessibilityLabel={t('team.loadingAccessibility')}>
       <View className="flex-row items-center gap-3 px-1 pb-1">
         <SkeletonBlock
           className="h-9 w-9 rounded-full"
@@ -196,16 +200,16 @@ function TeamDashboardSkeleton() {
   );
 }
 
-function getCommitmentLabel(value: string) {
+function getCommitmentLabel(value: string, t: TFunction) {
   switch (value) {
     case 'full_time':
-      return 'Full-time';
+      return t('team.commitmentFullTime');
     case 'part_time':
-      return 'Part-time';
+      return t('team.commitmentPartTime');
     case 'advisor':
-      return 'Advisor';
+      return t('team.commitmentAdvisor');
     case 'flexible':
-      return 'Flexible';
+      return t('team.commitmentFlexible');
     default:
       return value.replace(/_/g, ' ');
   }
@@ -226,9 +230,9 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function formatInvitationDate(value: string | null) {
+function formatInvitationDate(value: string | null, locale: AppLocale, t: TFunction) {
   if (!value) {
-    return 'No expiry';
+    return t('team.noExpiry');
   }
 
   const date = new Date(value);
@@ -237,55 +241,55 @@ function formatInvitationDate(value: string | null) {
     return value;
   }
 
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat(locale === 'id' ? 'id-ID' : 'en', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   }).format(date);
 }
 
-function formatRelativeDate(value: string) {
+function formatRelativeDate(value: string, locale: AppLocale, t: TFunction) {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return formatInvitationDate(value);
+    return formatInvitationDate(value, locale, t);
   }
 
   const diffMs = Date.now() - date.getTime();
   const diffDays = Math.max(0, Math.floor(diffMs / 86_400_000));
 
   if (diffDays === 0) {
-    return 'today';
+    return t('team.today');
   }
 
   if (diffDays < 7) {
-    return `${diffDays}d ago`;
+    return t('team.daysAgo', { count: diffDays });
   }
 
-  return formatInvitationDate(value);
+  return formatInvitationDate(value, locale, t);
 }
 
-function getInvitationStatusLabel(status: string) {
+function getInvitationStatusLabel(status: string, t: TFunction) {
   switch (status) {
     case 'accepted':
-      return 'Accepted';
+      return t('team.statusAccepted');
     case 'denied':
     case 'declined':
-      return 'Denied';
+      return t('team.statusDenied');
     case 'expired':
-      return 'Expired';
+      return t('team.statusExpired');
     case 'revoked':
-      return 'Revoked';
+      return t('team.statusRevoked');
     case 'in_review':
-      return 'In Review';
+      return t('team.statusInReview');
     case 'interview':
-      return 'Interview';
+      return t('team.statusInterview');
     case 'applied':
-      return 'Applied';
+      return t('team.statusApplied');
     case 'active':
-      return 'Active';
+      return t('team.statusActive');
     default:
-      return 'Pending';
+      return t('team.statusPending');
   }
 }
 
@@ -356,6 +360,7 @@ function InfoPill({
 }
 
 function StatusPill({ label, status }: { label?: string; status: string }) {
+  const t = useTranslation();
   const palette =
     status === 'accepted' || status === 'active'
       ? {
@@ -392,7 +397,7 @@ function StatusPill({ label, status }: { label?: string; status: string }) {
         className="text-[11px] leading-[13px]"
         style={{ color: palette.color, includeFontPadding: false, textAlignVertical: 'center' }}
         variant="label">
-        {label ?? getInvitationStatusLabel(status)}
+        {label ?? getInvitationStatusLabel(status, t)}
       </AppText>
     </View>
   );
@@ -409,6 +414,7 @@ function MemberCard({
   onEditRole: () => void;
   onRemove: () => void;
 }) {
+  const t = useTranslation();
   const memberActions = member.availableActions ?? [];
 
   return (
@@ -431,7 +437,7 @@ function MemberCard({
             <AppText variant="subtitle">{member.name}</AppText>
             {member.isCurrentUser ? (
               <View className="rounded-full bg-[#FF9A3E]/15 px-2 py-0.5 border border-[#FF9A3E]/30">
-                <AppText className="text-[11px] text-[#FF9A3E]" variant="label">You</AppText>
+                <AppText className="text-[11px] text-[#FF9A3E]" variant="label">{t('team.you')}</AppText>
               </View>
             ) : null}
           </View>
@@ -441,10 +447,10 @@ function MemberCard({
           </View>
           <View className="flex-row flex-wrap gap-x-4 gap-y-1">
             <AppText className="text-[13px] text-[#FF9A3E]" variant="bodyStrong">
-              Equity: {member.equityPercent}%
+              {t('team.equity', { value: member.equityPercent })}
             </AppText>
             <AppText className="text-[13px]" tone="muted">
-              {getCommitmentLabel(member.commitment)}
+              {getCommitmentLabel(member.commitment, t)}
             </AppText>
           </View>
         </View>
@@ -458,7 +464,7 @@ function MemberCard({
               disabled={isRemovePending}
               onPress={onEditRole}
               style={{ opacity: isRemovePending ? 0.65 : 1 }}>
-              <AppText className="text-[13px]" variant="bodyStrong">Edit role</AppText>
+              <AppText className="text-[13px]" variant="bodyStrong">{t('team.editRole')}</AppText>
             </Pressable>
           ) : null}
           {memberActions.includes('remove') ? (
@@ -469,7 +475,7 @@ function MemberCard({
               style={{ opacity: isRemovePending ? 0.65 : 1 }}>
               {isRemovePending ? <ActivityIndicator color="#FF5A67" size="small" /> : null}
               <AppText className="text-[13px]" tone="danger" variant="bodyStrong">
-                {isRemovePending ? 'Removing...' : 'Remove'}
+                {isRemovePending ? t('team.removing') : t('team.remove')}
               </AppText>
             </Pressable>
           ) : null}
@@ -480,10 +486,14 @@ function MemberCard({
 }
 
 function ApplicationCard({ application }: { application: TeamApplication }) {
+  const { locale } = useLocale();
+  const t = useTranslation();
   const statusPalette = getApplicationStatusPalette(application.status);
   const matchScore = application.matchScore;
   const openRoles = application.openRoles?.length ? application.openRoles : [application.role];
   const subtitle = [application.industryLabel, application.stageLabel].filter(Boolean).join(' · ');
+  const teamMemberUnit =
+    application.teamMemberCount === 1 ? t('team.memberUnitSingular') : t('team.memberUnitPlural');
 
   return (
     <View
@@ -523,7 +533,7 @@ function ApplicationCard({ application }: { application: TeamApplication }) {
 
       <View className="gap-2">
         <AppText className="text-[11px] uppercase tracking-[1.5px]" tone="muted" variant="label">
-          Applied Role
+          {t('team.appliedRole')}
         </AppText>
         <View className="flex-row flex-wrap gap-2">
           {openRoles.map((role) => (
@@ -541,7 +551,7 @@ function ApplicationCard({ application }: { application: TeamApplication }) {
           <View className="flex-row items-center gap-3">
             <Ionicons color="#FF9836" name="star-outline" size={18} />
             <AppText className="flex-1 text-[13px] leading-[17px]" tone="muted">
-              Match Score
+              {t('team.matchScore')}
             </AppText>
             <AppText className="text-[13px] leading-[17px] text-[#FF9836]" variant="bodyStrong">
               {Math.round(matchScore)}%
@@ -559,9 +569,12 @@ function ApplicationCard({ application }: { application: TeamApplication }) {
       <View className="flex-row items-center gap-2">
         <Ionicons color="#8F8F8F" name="time-outline" size={15} />
         <AppText className="text-[12px] leading-[16px]" tone="muted">
-          Applied {formatRelativeDate(application.appliedAt)}
+          {t('team.appliedDate', { date: formatRelativeDate(application.appliedAt, locale, t) })}
           {typeof application.teamMemberCount === 'number'
-            ? `  ·  ${application.teamMemberCount} team ${application.teamMemberCount === 1 ? 'member' : 'members'}`
+            ? `  ·  ${t('team.teamMembersCount', {
+              count: application.teamMemberCount,
+              unit: teamMemberUnit,
+            })}`
             : ''}
         </AppText>
       </View>
@@ -586,6 +599,8 @@ function DashboardInviteCard({
   onDecline: () => void;
   onRevoke: () => void;
 }) {
+  const { locale } = useLocale();
+  const t = useTranslation();
   const isPending = invitation.status === 'pending';
   const canAccept = invitation.availableActions.includes('accept');
   const canDecline = invitation.availableActions.includes('decline');
@@ -598,7 +613,7 @@ function DashboardInviteCard({
         <View className="flex-1 gap-1">
           <AppText variant="subtitle">{invitation.startupName}</AppText>
           <AppText className="text-[13px]" tone="muted">
-            {invitation.direction === 'received' ? 'Received' : 'Sent'} • {invitation.role.label}
+            {invitation.direction === 'received' ? t('team.received') : t('team.sent')} • {invitation.role.label}
           </AppText>
         </View>
         <StatusPill label={invitation.statusLabel} status={invitation.status} />
@@ -614,7 +629,7 @@ function DashboardInviteCard({
         <View className="flex-row items-center gap-2">
           <Ionicons color="#98A2B3" name="calendar-outline" size={16} />
           <AppText className="flex-1 text-[13px]" tone="muted">
-            Sent {formatInvitationDate(invitation.sentAt)}
+            {t('team.sentDate', { date: formatInvitationDate(invitation.sentAt, locale, t) })}
           </AppText>
         </View>
       </View>
@@ -633,7 +648,7 @@ function DashboardInviteCard({
                 <Ionicons color="#F5F7FA" name="close-outline" size={18} />
               )}
               <AppText className="text-[#F5F7FA]" variant="bodyStrong">
-                {isDeclinePending ? 'Declining...' : 'Decline'}
+                {isDeclinePending ? t('team.declining') : t('team.decline')}
               </AppText>
             </Pressable>
           ) : null}
@@ -649,7 +664,7 @@ function DashboardInviteCard({
                 <Ionicons color="#11131A" name="checkmark-outline" size={18} />
               )}
               <AppText className="text-[#11131A]" variant="bodyStrong">
-                {isAcceptPending ? 'Accepting...' : 'Accept'}
+                {isAcceptPending ? t('team.accepting') : t('team.accept')}
               </AppText>
             </Pressable>
           ) : null}
@@ -665,14 +680,14 @@ function DashboardInviteCard({
                 <Ionicons color="#FF5A67" name="trash-outline" size={18} />
               )}
               <AppText tone="danger" variant="bodyStrong">
-                {isRevokePending ? 'Revoking...' : 'Revoke'}
+                {isRevokePending ? t('team.revoking') : t('team.revoke')}
               </AppText>
             </Pressable>
           ) : null}
         </View>
       ) : (
         <AppText className="text-[13px]" tone="muted">
-          This invitation is no longer actionable.
+          {t('team.invitationNotActionable')}
         </AppText>
       )}
     </AppCard>
@@ -705,6 +720,8 @@ function EmptySectionCard({ icon, message, title }: {
 }
 
 function MissingRoleCard({ label, onFind }: { label: string; onFind: () => void }) {
+  const t = useTranslation();
+
   return (
     <View
       className="flex-row items-center gap-4 rounded-[20px] border border-white/10 bg-[#2C2C2C] px-4 py-4"
@@ -716,14 +733,14 @@ function MissingRoleCard({ label, onFind }: { label: string; onFind: () => void 
       </View>
 
       <View className="flex-1 gap-1">
-        <AppText variant="subtitle">Early Team</AppText>
+        <AppText variant="subtitle">{t('team.earlyTeam')}</AppText>
         <AppText className="text-[13px]" tone="muted">{label}</AppText>
       </View>
 
       <Pressable
         className="rounded-lg border border-[#FF9A3E] px-4 py-2"
         onPress={onFind}>
-        <AppText className="text-[13px] text-[#FF9A3E]" variant="bodyStrong">Find</AppText>
+        <AppText className="text-[13px] text-[#FF9A3E]" variant="bodyStrong">{t('team.find')}</AppText>
       </Pressable>
     </View>
   );
@@ -788,6 +805,7 @@ function EquitySlider({
   step: number;
   value: number;
 }) {
+  const t = useTranslation();
   const nextValue = clampSteppedValue(value, min, max, step);
   const trackRef = React.useRef<View>(null);
   const trackPageXRef = React.useRef(0);
@@ -908,7 +926,7 @@ function EquitySlider({
   return (
     <View className="gap-3">
       <View className="flex-row items-center justify-between">
-        <AppText tone="muted" variant="label">Equity Share</AppText>
+        <AppText tone="muted" variant="label">{t('team.equityShare')}</AppText>
         <AppText className="text-[#FF9A3E]" variant="bodyStrong">
           {draftValue}%
         </AppText>
@@ -972,6 +990,7 @@ function EquitySlider({
 
 export function TeamScreen() {
   const router = useRouter();
+  const t = useTranslation();
   const teamOverviewQuery = useTeamOverview();
   const { handleOnboardingRequired, onboardingRequiredSheetProps } =
     useDiscoveryOnboardingRequiredHandler();
@@ -1115,17 +1134,17 @@ export function TeamScreen() {
     const normalizedEmail = inviteEmail.trim().toLowerCase();
 
     if (!isValidEmail(normalizedEmail)) {
-      setInviteError('Enter a valid email address.');
+      setInviteError(t('team.validationEmail'));
       return;
     }
 
     if (!inviteRoleId) {
-      setInviteError('Choose a role for this invitation.');
+      setInviteError(t('team.validationRoleInvite'));
       return;
     }
 
     if (!inviteCommitment) {
-      setInviteError('Choose a commitment level.');
+      setInviteError(t('team.validationCommitment'));
       return;
     }
 
@@ -1147,7 +1166,7 @@ export function TeamScreen() {
       setInviteCommitment(null);
       setInviteSuccessMessage(response.message);
     } catch (error) {
-      setInviteError(error instanceof Error ? error.message : 'Unable to send invitation.');
+      setInviteError(error instanceof Error ? error.message : t('team.inviteSendError'));
     }
   }, [
     createStartupInvitationMutation,
@@ -1156,6 +1175,7 @@ export function TeamScreen() {
     inviteEquityOptions.defaultValue,
     inviteEquityPercent,
     inviteRoleId,
+    t,
   ]);
 
   const handleInvitationDecision = React.useCallback(
@@ -1178,26 +1198,26 @@ export function TeamScreen() {
         }
       } catch (error) {
         setInvitationActionError(
-          error instanceof Error ? error.message : 'Unable to respond to this invitation right now.'
+          error instanceof Error ? error.message : t('team.invitationResponseError')
         );
       }
     },
-    [respondToStartupInvitationMutation, teamOverviewQuery]
+    [respondToStartupInvitationMutation, t, teamOverviewQuery]
   );
 
   const handleSaveMemberEdit = React.useCallback(async () => {
     if (!editingMember || !activeStartupId) {
-      setEditMemberError('Unable to find the active startup for this member.');
+      setEditMemberError(t('team.activeStartupMissing'));
       return;
     }
 
     if (!editRoleId) {
-      setEditMemberError('Choose a role for this member.');
+      setEditMemberError(t('team.validationRoleMember'));
       return;
     }
 
     if (!editCommitment) {
-      setEditMemberError('Choose a commitment level.');
+      setEditMemberError(t('team.validationCommitment'));
       return;
     }
 
@@ -1220,7 +1240,7 @@ export function TeamScreen() {
       closeMemberEditor();
       await teamOverviewQuery.refetch();
     } catch (error) {
-      setEditMemberError(error instanceof Error ? error.message : 'Unable to update this member right now.');
+      setEditMemberError(error instanceof Error ? error.message : t('team.memberUpdateError'));
     }
   }, [
     activeStartupId,
@@ -1229,6 +1249,7 @@ export function TeamScreen() {
     editEquityPercent,
     editRoleId,
     editingMember,
+    t,
     teamOverviewQuery,
     updateTeamMemberMutation,
   ]);
@@ -1236,7 +1257,7 @@ export function TeamScreen() {
   const handleRemoveMember = React.useCallback(
     async (member: TeamMember) => {
       if (!activeStartupId) {
-        setInvitationActionError('Unable to find the active startup for this member.');
+        setInvitationActionError(t('team.activeStartupMissing'));
         return;
       }
 
@@ -1257,10 +1278,10 @@ export function TeamScreen() {
         setInvitationFeedbackMessage(response.message);
         await teamOverviewQuery.refetch();
       } catch (error) {
-        setInvitationActionError(error instanceof Error ? error.message : 'Unable to remove this member right now.');
+        setInvitationActionError(error instanceof Error ? error.message : t('team.memberRemoveError'));
       }
     },
-    [activeStartupId, closeMemberEditor, editingMember?.id, removeTeamMemberMutation, teamOverviewQuery]
+    [activeStartupId, closeMemberEditor, editingMember?.id, removeTeamMemberMutation, t, teamOverviewQuery]
   );
 
   const handleInviteRevoke = React.useCallback(
@@ -1275,11 +1296,11 @@ export function TeamScreen() {
         await teamOverviewQuery.refetch();
       } catch (error) {
         setInvitationActionError(
-          error instanceof Error ? error.message : 'Unable to revoke this invitation right now.'
+          error instanceof Error ? error.message : t('team.inviteRevokeError')
         );
       }
     },
-    [revokeStartupInvitationMutation, teamOverviewQuery]
+    [revokeStartupInvitationMutation, t, teamOverviewQuery]
   );
 
   const handleMemberAction = React.useCallback(
@@ -1326,7 +1347,7 @@ export function TeamScreen() {
   if (teamOverviewQuery.isError && !overview) {
     return (
       <>
-        <Stack.Screen options={{ title: 'Team', headerShown: false }} />
+        <Stack.Screen options={{ title: t('team.routeTitle'), headerShown: false }} />
         <View className="flex-1" style={{ backgroundColor: '#262626' }}>
           <AppTopBar />
           <ScrollView
@@ -1352,16 +1373,16 @@ export function TeamScreen() {
                   size={24}
                 />
                 <AppText variant="subtitle">
-                  {isNoStartupState ? 'No startup team yet' : 'Unable to load team'}
+                  {isNoStartupState ? t('team.noStartupTitle') : t('team.loadErrorTitle')}
                 </AppText>
               </View>
               <AppText tone="muted">
                 {isNoStartupState
-                  ? 'This account is not linked to an active startup yet. Once you create or join a startup team, it will show up here.'
-                  : 'We could not load your startup team right now. Try again in a moment.'}
+                  ? t('team.noStartupDescription')
+                  : t('team.loadErrorDescription')}
               </AppText>
               <AppButton
-                label={teamOverviewQuery.isRefetching ? 'Refreshing...' : 'Try Again'}
+                label={teamOverviewQuery.isRefetching ? t('team.refreshing') : t('team.tryAgain')}
                 onPress={() => {
                   void teamOverviewQuery.refetch();
                 }}
@@ -1386,7 +1407,7 @@ export function TeamScreen() {
   const myApplications = overview.data.myApplications;
   const teamInvites = overview.data.teamInvites;
   const hasActiveStartup = viewerContext.hasActiveStartup && Boolean(startup);
-  const screenTitle = hasActiveStartup ? 'Startup Team Builder' : 'Team Dashboard';
+  const screenTitle = hasActiveStartup ? t('team.startupTeamBuilder') : t('team.teamDashboard');
   const editRoleOptions =
     editingMember && editRoleId && !inviteRoleOptions.some((role) => role.id === editRoleId)
       ? [editingMember.role, ...inviteRoleOptions]
@@ -1439,30 +1460,30 @@ export function TeamScreen() {
             <AppCard className="gap-6 bg-[#2C2C2C] border-white/10">
               <View className="gap-4">
                 <View className="gap-1 border-b border-border/30 pb-4">
-                  <AppText tone="muted" variant="label">Startup Name</AppText>
+                  <AppText tone="muted" variant="label">{t('team.startupName')}</AppText>
                   <AppText className="font-display text-xl font-bold text-text py-1">
                     {startup.name}
                   </AppText>
                 </View>
 
                 <View className="gap-1 border-b border-border/30 pb-4">
-                  <AppText tone="muted" variant="label">Startup Idea</AppText>
+                  <AppText tone="muted" variant="label">{t('team.startupIdea')}</AppText>
                   <AppText className="font-body text-[15px] leading-6 text-text-muted py-1">
-                    {startup.description || 'No startup description yet.'}
+                    {startup.description || t('team.noStartupDescriptionYet')}
                   </AppText>
                 </View>
               </View>
 
               <View className="flex-row gap-8">
                 <View className="flex-1 gap-2">
-                  <AppText tone="muted" variant="label">Industry</AppText>
+                  <AppText tone="muted" variant="label">{t('team.industry')}</AppText>
                   <View className="flex-row flex-wrap gap-2">
                     <InfoPill label={startup.industry.label} />
                   </View>
                 </View>
 
                 <View className="flex-1 gap-2">
-                  <AppText tone="muted" variant="label">Stage</AppText>
+                  <AppText tone="muted" variant="label">{t('team.stage')}</AppText>
                   <View className="flex-row flex-wrap gap-2">
                     <InfoPill label={startup.stage.label} />
                   </View>
@@ -1474,7 +1495,7 @@ export function TeamScreen() {
           {hasActiveStartup ? (
             <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
               <View className="flex-row items-center justify-between">
-                <AppText className="text-[15px] font-semibold text-text">Team Completeness</AppText>
+                <AppText className="text-[15px] font-semibold text-text">{t('team.teamCompleteness')}</AppText>
                 <AppText className="text-[17px] font-bold text-[#FF9A3E]">
                   {overview.data.teamCompleteness.percent}%
                 </AppText>
@@ -1493,7 +1514,7 @@ export function TeamScreen() {
             <View className="flex-row items-center justify-between px-1">
               <AppText tone="muted" variant="label">{teamRoster.title}</AppText>
               <StatusPill
-                label={hasActiveStartup ? viewerContext.kind.replace(/_/g, ' ') : 'Person'}
+                label={hasActiveStartup ? viewerContext.kind.replace(/_/g, ' ') : t('team.person')}
                 status={hasActiveStartup ? 'active' : 'pending'}
               />
             </View>
@@ -1503,10 +1524,10 @@ export function TeamScreen() {
                   icon="people-outline"
                   message={
                     hasActiveStartup
-                      ? 'No active team members are listed yet.'
-                      : 'You are not attached to an active startup team yet.'
+                      ? t('team.noActiveMembers')
+                      : t('team.notAttached')
                   }
-                  title="No team members"
+                  title={t('team.noTeamMembers')}
                 />
               ) : null}
               {teamRoster.members.map((member) => (
@@ -1534,24 +1555,24 @@ export function TeamScreen() {
           {editingMember ? (
             <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
               <View className="gap-1">
-                <AppText variant="subtitle">Edit team member</AppText>
+                <AppText variant="subtitle">{t('team.editMemberTitle')}</AppText>
                 <AppText tone="muted">
-                  {`Update ${editingMember.name}'s role, equity, and commitment.`}
+                  {t('team.editMemberDescription', { name: editingMember.name })}
                 </AppText>
               </View>
 
               <View className="gap-3">
-                <AppText tone="muted" variant="label">Role</AppText>
+                <AppText tone="muted" variant="label">{t('team.role')}</AppText>
                 {invitationOptionsQuery.isPending ? (
                   <View className="flex-row items-center gap-2 rounded-[16px] border border-white/10 bg-[#343434] px-4 py-3">
                     <ActivityIndicator color="#FF9A3E" size="small" />
-                    <AppText tone="muted">Loading roles...</AppText>
+                    <AppText tone="muted">{t('team.loadingRoles')}</AppText>
                   </View>
                 ) : null}
                 {invitationOptionsQuery.isError ? (
                   <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
                     <AppText tone="danger">
-                      Unable to load member options right now.
+                      {t('team.memberOptionsLoadError')}
                     </AppText>
                   </View>
                 ) : null}
@@ -1595,7 +1616,7 @@ export function TeamScreen() {
               />
 
               <View className="gap-3">
-                <AppText tone="muted" variant="label">Commitment</AppText>
+                <AppText tone="muted" variant="label">{t('team.commitment')}</AppText>
                 <View className="flex-row gap-2">
                   {inviteCommitmentOptions.map((commitment) => {
                     const isSelected = editCommitment === commitment.id;
@@ -1636,7 +1657,7 @@ export function TeamScreen() {
                 <AppButton
                   className="flex-1 bg-[#3A3A3C] border-white/10"
                   disabled={updateTeamMemberMutation.isPending}
-                  label="Cancel"
+                  label={t('team.cancel')}
                   onPress={closeMemberEditor}
                   variant="secondary"
                 />
@@ -1657,7 +1678,7 @@ export function TeamScreen() {
                     className="flex-1 text-[12px] leading-[14px] text-[#11131A]"
                     numberOfLines={2}
                     variant="bodyStrong">
-                    {updateTeamMemberMutation.isPending ? 'Saving...' : 'Save Changes'}
+                    {updateTeamMemberMutation.isPending ? t('team.saving') : t('team.saveChanges')}
                   </AppText>
                 </Pressable>
               </View>
@@ -1668,16 +1689,16 @@ export function TeamScreen() {
             <View className="gap-4">
               <AppText className="px-1" tone="muted" variant="label">{myApplications.title}</AppText>
               <View className="flex-row gap-3">
-                <DashboardStatCard label="Applied" value={myApplications.stats.applied} />
-                <DashboardStatCard label="In Review" value={myApplications.stats.inReview} />
-                <DashboardStatCard label="Interviews" value={myApplications.stats.interviews} />
+                <DashboardStatCard label={t('team.applied')} value={myApplications.stats.applied} />
+                <DashboardStatCard label={t('team.inReview')} value={myApplications.stats.inReview} />
+                <DashboardStatCard label={t('team.interviews')} value={myApplications.stats.interviews} />
               </View>
               <View className="gap-3">
                 {myApplications.items.length === 0 ? (
                   <EmptySectionCard
                     icon="document-text-outline"
-                    message="Applications you send to startups will show up here."
-                    title="No applications yet"
+                    message={t('team.applicationsEmptyMessage')}
+                    title={t('team.applicationsEmptyTitle')}
                   />
                 ) : null}
                 {myApplications.items.map((application) => (
@@ -1689,7 +1710,7 @@ export function TeamScreen() {
                   <ActionButton
                     compact
                     icon="search-outline"
-                    label="Browse Startups"
+                    label={t('team.browseStartups')}
                     onPress={navigateToHome}
                     variant="primary"
                   />
@@ -1719,8 +1740,8 @@ export function TeamScreen() {
               {teamInvites.items.length === 0 ? (
                 <EmptySectionCard
                   icon="mail-open-outline"
-                  message="Pending sent and received invitations will appear here."
-                  title="No pending invites"
+                  message={t('team.invitesEmptyMessage')}
+                  title={t('team.invitesEmptyTitle')}
                 />
               ) : null}
               {teamInvites.items.map((invitation) => {
@@ -1767,9 +1788,9 @@ export function TeamScreen() {
           {inviteComposerVisible ? (
             <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
               <View className="gap-1">
-                <AppText variant="subtitle">Invite by email</AppText>
+                <AppText variant="subtitle">{t('team.inviteByEmail')}</AppText>
                 <AppText tone="muted">
-                  Assign role, equity, and commitment before sending the invitation.
+                  {t('team.inviteByEmailDescription')}
                 </AppText>
               </View>
 
@@ -1777,7 +1798,7 @@ export function TeamScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
-                label="Email"
+                label={t('team.email')}
                 className="bg-[#3A3A3C] border-none"
                 onChangeText={(value) => {
                   setInviteEmail(value);
@@ -1790,17 +1811,17 @@ export function TeamScreen() {
               />
 
               <View className="gap-3">
-                <AppText tone="muted" variant="label">Assign Role</AppText>
+                <AppText tone="muted" variant="label">{t('team.assignRole')}</AppText>
                 {invitationOptionsQuery.isPending ? (
                   <View className="flex-row items-center gap-2 rounded-[16px] border border-white/10 bg-[#343434] px-4 py-3">
                     <ActivityIndicator color="#FF9A3E" size="small" />
-                    <AppText tone="muted">Loading roles...</AppText>
+                    <AppText tone="muted">{t('team.loadingRoles')}</AppText>
                   </View>
                 ) : null}
                 {invitationOptionsQuery.isError ? (
                   <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
                     <AppText tone="danger">
-                      Unable to load invitation options right now.
+                      {t('team.invitationOptionsLoadError')}
                     </AppText>
                   </View>
                 ) : null}
@@ -1842,7 +1863,7 @@ export function TeamScreen() {
               />
 
               <View className="gap-3">
-                <AppText tone="muted" variant="label">Commitment</AppText>
+                <AppText tone="muted" variant="label">{t('team.commitment')}</AppText>
                 <View className="flex-row gap-2">
                   {inviteCommitmentOptions.map((commitment) => {
                     const isSelected = inviteCommitment === commitment.id;
@@ -1881,7 +1902,7 @@ export function TeamScreen() {
                 <AppButton
                   className="flex-1 bg-[#3A3A3C] border-white/10"
                   disabled={createStartupInvitationMutation.isPending}
-                  label="Cancel"
+                  label={t('team.cancel')}
                   onPress={closeInviteComposer}
                   variant="secondary"
                 />
@@ -1902,7 +1923,7 @@ export function TeamScreen() {
                     className="flex-1 text-[12px] leading-[14px] text-[#11131A]"
                     numberOfLines={2}
                     variant="bodyStrong">
-                    {createStartupInvitationMutation.isPending ? 'Sending...' : 'Confirm Add to Team'}
+                    {createStartupInvitationMutation.isPending ? t('team.sending') : t('team.confirmAddToTeam')}
                   </AppText>
                 </Pressable>
               </View>
@@ -1914,7 +1935,7 @@ export function TeamScreen() {
               {teamRoster.actions.addFromMatches ? (
                 <ActionButton
                   icon="search-outline"
-                  label="Explore more"
+                  label={t('team.exploreMore')}
                   onPress={navigateToHome}
                   variant="primary"
                 />
@@ -1922,7 +1943,7 @@ export function TeamScreen() {
               {teamRoster.actions.inviteViaLink ? (
                 <ActionButton
                   icon="link-outline"
-                  label="Invite via Link"
+                  label={t('team.inviteViaLink')}
                   onPress={openInviteComposer}
                   variant="secondary"
                 />

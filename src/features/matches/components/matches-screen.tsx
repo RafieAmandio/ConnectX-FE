@@ -16,6 +16,7 @@ import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/disc
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
+import { useLocale, useTranslation, type AppLocale } from '@shared/localization';
 
 import { useActivateSpotlight, useMatchesList } from '../hooks/use-matches';
 import {
@@ -29,6 +30,7 @@ type SpotlightBannerState = {
   title: string;
   tone: 'default' | 'success' | 'warning';
 };
+type TFunction = ReturnType<typeof useTranslation>;
 
 function withAlpha(hexColor: string, alpha: number) {
   const normalized = hexColor.replace('#', '');
@@ -116,8 +118,10 @@ function MatchRowSkeleton() {
 }
 
 function MatchesSkeleton() {
+  const t = useTranslation();
+
   return (
-    <View className="gap-8" accessibilityLabel="Loading connects">
+    <View className="gap-8" accessibilityLabel={t('matches.loadingAccessibility')}>
       <View className="gap-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
@@ -167,7 +171,7 @@ function MatchesSkeleton() {
   );
 }
 
-function formatSpotlightTimestamp(value: string | null) {
+function formatSpotlightTimestamp(value: string | null, locale: AppLocale) {
   if (!value) {
     return null;
   }
@@ -178,7 +182,7 @@ function formatSpotlightTimestamp(value: string | null) {
     return null;
   }
 
-  return date.toLocaleString([], {
+  return date.toLocaleString(locale === 'id' ? 'id-ID' : undefined, {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
@@ -287,12 +291,8 @@ function MysteryLikesYouPreviewCard() {
   );
 }
 
-function formatLikesYouCount(totalNew: number) {
-  if (totalNew <= 0) {
-    return '0 new';
-  }
-
-  return `${totalNew} new`;
+function formatLikesYouCount(totalNew: number, t: TFunction) {
+  return t('matches.likesCount', { count: Math.max(totalNew, 0) });
 }
 
 function MatchRow({
@@ -304,8 +304,12 @@ function MatchRow({
   onOpenAnalysis: () => void;
   onOpenChat: () => void;
 }) {
+  const t = useTranslation();
   const canChat = match.actions.canChat && Boolean(match.conversationId);
-  const expiresLabel = match.expiresInDays > 0 ? `Expires in ${match.expiresInDays} days` : 'Expires today';
+  const expiresLabel =
+    match.expiresInDays > 0
+      ? t('matches.expiresInDays', { count: match.expiresInDays })
+      : t('matches.expiresToday');
 
   return (
     <AppCard
@@ -352,6 +356,8 @@ function MatchRow({
 export function MatchesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { locale } = useLocale();
+  const t = useTranslation();
   const {
     presentPaywallForOffering,
     supported,
@@ -369,9 +375,12 @@ export function MatchesScreen() {
   const likesYouLocked = Boolean(responseData?.likesYou?.locked);
   const likesYouCount = responseData?.likesYou?.totalNew ?? likesYou.length;
   const likesYouPreviewItems = Array.from({ length: 3 }, (_, index) => likesYou[index] ?? null);
-  const matchCountLabel = `${matches.length} ${matches.length === 1 ? 'connect' : 'connections'}`;
-  const likesYouCountLabel = formatLikesYouCount(likesYouCount);
-  const spotlightEndsAtLabel = formatSpotlightTimestamp(spotlightEndsAt);
+  const matchCountLabel = t(
+    matches.length === 1 ? 'matches.connectionSingular' : 'matches.connectionPlural',
+    { count: matches.length }
+  );
+  const likesYouCountLabel = formatLikesYouCount(likesYouCount, t);
+  const spotlightEndsAtLabel = formatSpotlightTimestamp(spotlightEndsAt, locale);
 
   React.useEffect(() => {
     if (matchesQuery.isError) {
@@ -382,8 +391,8 @@ export function MatchesScreen() {
   const maybePresentSpotlightPaywall = React.useCallback(async () => {
     if (!supported) {
       setSpotlightBanner({
-        detail: 'Boost purchases are available in the native iOS and Android builds.',
-        title: 'Boost credits unavailable here',
+        detail: t('matches.boostNativeDetail'),
+        title: t('matches.boostNativeTitle'),
         tone: 'warning',
       });
       return;
@@ -393,33 +402,36 @@ export function MatchesScreen() {
       await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.discoveryBoosts);
     } catch (error) {
       setSpotlightBanner({
-        detail: error instanceof Error ? error.message : 'Unable to open the boost paywall.',
-        title: 'Could not open boost paywall',
+        detail: error instanceof Error ? error.message : t('matches.boostPaywallFallbackDetail'),
+        title: t('matches.boostPaywallFailedTitle'),
         tone: 'warning',
       });
     }
-  }, [presentPaywallForOffering, supported]);
+  }, [presentPaywallForOffering, supported, t]);
 
   const handleActivateSpotlight = React.useCallback(async () => {
     setSpotlightBanner(null);
 
     try {
       const response = await spotlightActivation.mutateAsync();
-      const endsAtLabel = formatSpotlightTimestamp(response.data.endsAt);
+      const endsAtLabel = formatSpotlightTimestamp(response.data.endsAt, locale);
 
       setSpotlightEndsAt(response.data.endsAt);
       setSpotlightBanner({
         detail: endsAtLabel
-          ? `Your profile is boosted until ${endsAtLabel}. ${response.data.remainingSpotlights} boosts left.`
-          : `${response.data.remainingSpotlights} boosts left after this activation.`,
-        title: 'Boost is live',
+          ? t('matches.boostLiveUntil', {
+            count: response.data.remainingSpotlights,
+            time: endsAtLabel,
+          })
+          : t('matches.boostLiveRemaining', { count: response.data.remainingSpotlights }),
+        title: t('matches.boostLiveTitle'),
         tone: 'success',
       });
     } catch (error) {
       if (isSpotlightRequiresCreditError(error)) {
         setSpotlightBanner({
-          detail: 'Buy a boost credit to activate your profile now.',
-          title: 'No boost credits remaining',
+          detail: t('matches.noBoostCreditsDetail'),
+          title: t('matches.noBoostCreditsTitle'),
           tone: 'warning',
         });
         await maybePresentSpotlightPaywall();
@@ -429,26 +441,27 @@ export function MatchesScreen() {
       if (isSpotlightAlreadyActiveError(error)) {
         const details = error.payload.error.details;
         const nextEligibleLabel =
-          formatSpotlightTimestamp(details.nextEligibleAt) ?? formatSpotlightTimestamp(details.endsAt);
+          formatSpotlightTimestamp(details.nextEligibleAt, locale) ??
+          formatSpotlightTimestamp(details.endsAt, locale);
 
         setSpotlightEndsAt(details.endsAt);
         setSpotlightBanner({
           detail: nextEligibleLabel
-            ? `Your boost is already active until ${nextEligibleLabel}.`
-            : 'Your boost is already active right now.',
-          title: 'Boost already active',
+            ? t('matches.boostAlreadyActiveUntil', { time: nextEligibleLabel })
+            : t('matches.boostAlreadyActiveNow'),
+          title: t('matches.boostAlreadyActiveTitle'),
           tone: 'default',
         });
         return;
       }
 
       setSpotlightBanner({
-        detail: error instanceof Error ? error.message : 'Unable to activate boost right now.',
-        title: 'Boost activation failed',
+        detail: error instanceof Error ? error.message : t('matches.boostActivationFailedDetail'),
+        title: t('matches.boostActivationFailedTitle'),
         tone: 'warning',
       });
     }
-  }, [maybePresentSpotlightPaywall, spotlightActivation]);
+  }, [locale, maybePresentSpotlightPaywall, spotlightActivation, t]);
 
   const handleViewConnects = React.useCallback(() => {
     router.push('/who-liked-me' as never);
@@ -480,7 +493,7 @@ export function MatchesScreen() {
                 <View className="flex-row items-center gap-3">
                   <Ionicons color="#FF9F3F" name="heart" size={24} />
                   <AppText className="text-[18px] text-[#F1F1F1]" variant="title">
-                    Connection Request
+                    {t('matches.connectionRequestTitle')}
                   </AppText>
                 </View>
 
@@ -517,7 +530,7 @@ export function MatchesScreen() {
                 style={{ backgroundColor: '#5B4720', borderColor: '#AD8528' }}>
                 <Ionicons color="#FFD33D" name="sparkles-outline" size={22} />
                 <AppText className="text-[18px] text-[#FFD33D]" variant="subtitle">
-                  View Connection Request
+                  {t('matches.viewConnectionRequest')}
                 </AppText>
               </Pressable>
 
@@ -596,7 +609,7 @@ export function MatchesScreen() {
             <View className="gap-4">
               <View className="flex-row items-center justify-between">
                 <AppText className="text-[24px] text-[#F1F1F1]" variant="title">
-                  Your Connects
+                  {t('matches.yourConnectsTitle')}
                 </AppText>
                 <AppText className="text-[15px] text-[#9F9C99]">{matchCountLabel}</AppText>
               </View>
@@ -607,12 +620,12 @@ export function MatchesScreen() {
                 className="rounded-[20px] border-[#6D3A32] bg-[#332320] p-4"
                 style={{ shadowColor: 'transparent' }}>
                 <AppText className="text-[#F7DDD8]" variant="subtitle">
-                  Could not load connects
+                  {t('matches.loadErrorTitle')}
                 </AppText>
                 <AppText className="mt-1 text-[#D9A49C]">
                   {matchesQuery.error instanceof Error
                     ? matchesQuery.error.message
-                    : 'The connects request failed.'}
+                    : t('matches.loadErrorFallback')}
                 </AppText>
               </AppCard>
             ) : null}
@@ -622,10 +635,10 @@ export function MatchesScreen() {
                 className="rounded-[24px] border-[#414141] bg-[#2E2C2B] p-5"
                 style={{ shadowColor: 'transparent' }}>
                 <AppText className="text-[#F1F1F1]" variant="title">
-                  No connects yet
+                  {t('matches.emptyTitle')}
                 </AppText>
                 <AppText className="mt-1 text-[#9F9C99]">
-                  New mutual connects will show up here once they’re available.
+                  {t('matches.emptyDescription')}
                 </AppText>
               </AppCard>
             ) : null}
