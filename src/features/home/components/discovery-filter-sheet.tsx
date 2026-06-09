@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppText } from '@shared/components';
-import { useTranslation } from '@shared/localization';
+import { useLocale, useTranslation, type AppLocale } from '@shared/localization';
 
 import type {
   DiscoveryAppliedFilters,
@@ -45,6 +45,191 @@ type DiscoveryFilterSheetProps = {
 };
 
 type TFunction = ReturnType<typeof useTranslation>;
+
+const FILTER_SECTION_LABELS: Record<AppLocale, Record<string, string>> = {
+  en: {},
+  id: {
+    aiMatchPrecision: 'Presisi Koneksi AI',
+    aiStartupFit: 'Kesesuaian Startup AI',
+    aiTalentPrecision: 'Presisi Talenta AI',
+    cofounderReadiness: 'Kesiapan Co-Founder',
+    commitmentIds: 'Komitmen',
+    equityAndCommitment: 'Equity & Komitmen',
+    executionQuality: 'Kualitas Eksekusi',
+    founderBuilderQuality: 'Kualitas Founder & Builder',
+    founderTypeIds: 'Tipe Founder',
+    globalCompatibility: 'Kompatibilitas Global',
+    hiringReadiness: 'Kesiapan Hiring',
+    industryIds: 'Industri',
+    leadershipStrength: 'Kekuatan Leadership',
+    locationAvailability: 'Lokasi & Ketersediaan',
+    opportunityFit: 'Kesesuaian Peluang',
+    roleNeededIds: 'Role yang Dibutuhkan',
+    skillIds: 'Keahlian',
+    skillStrengthIds: 'Kekuatan Skill',
+    startupQuality: 'Kualitas Startup',
+    startupReadiness: 'Kesiapan Startup',
+    startupStageIds: 'Tahap Startup',
+  },
+};
+
+const FILTER_FIELD_LABELS: Record<AppLocale, Record<string, string>> = {
+  en: {},
+  id: {
+    availabilityIds: 'Ketersediaan',
+    city: 'Kota',
+    conditionIds: 'Kondisi',
+    distanceKm: 'Jarak',
+    educationIds: 'Pendidikan',
+    founderBackgroundIds: 'Latar Belakang Founder',
+    languageIds: 'Bahasa',
+    leadershipBackgroundIds: 'Latar Belakang Leadership',
+    leadershipIds: 'Sinyal Leadership',
+    minimumFitScore: 'Skor Kesesuaian Minimum',
+    minimumMatchScore: 'Skor Koneksi Minimum',
+    priorityPreferenceIds: 'Prioritas AI',
+    progressIds: 'Progress',
+    readinessLevelIds: 'Level Kesiapan',
+    remoteReady: 'Tersedia untuk kerja remote',
+    showAiExplainWhyMatch: 'Tampilkan penjelasan AI untuk koneksi ini',
+    startupExperienceIds: 'Pengalaman Startup',
+    termIds: 'Syarat',
+    trackRecordIds: 'Track Record',
+    workArrangementIds: 'Pengaturan Kerja',
+  },
+};
+
+const FILTER_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
+  en: {},
+  id: {
+    ai_functional_balance: 'Keseimbangan Fungsi',
+    ai_geographic_fit: 'Kesesuaian Geografis',
+    ai_immediate_availability: 'Ketersediaan Langsung',
+    ai_language_compatibility: 'Kompatibilitas Bahasa',
+    ai_leadership_compatibility: 'Kompatibilitas Leadership',
+    ai_leadership_potential: 'Potensi Leadership',
+    ai_role_complementarity: 'Kelengkapan Role',
+    ai_same_stage: 'Tahap Startup yang Sama',
+    ai_similar_commitment: 'Level Komitmen Serupa',
+    ai_skill_depth: 'Kedalaman Skill',
+    ai_startup_readiness: 'Kesiapan Startup',
+    commitment_full_time: 'Full-time',
+    commitment_part_time: 'Part-time',
+    commitment_side_project: 'Side Project',
+    cr_build_from_zero: 'Terbuka Membangun dari Nol',
+    cr_equity_based: 'Build Berbasis Equity',
+    cr_existing_founder: 'Terbuka dengan Founder yang Sudah Ada',
+    cr_exploring_ideas: 'Sedang Mengeksplor Ide Startup',
+    cr_long_term: 'Komitmen Jangka Panjang',
+    cr_ready_30_days: 'Siap Mulai dalam 30 Hari',
+    eac_cofounder_equity: 'Equity Co-founder',
+    eac_full_time_expected: 'Ekspektasi Full-time',
+    eac_pre_revenue_build: 'Build Pra-Revenue',
+    edu_bachelor: 'Bachelor',
+    edu_master: 'Master',
+    edu_mba: 'MBA',
+    edu_phd: 'PhD',
+    edu_research: 'Latar Belakang Riset',
+    eq_built_mvp: 'Pernah Membangun MVP',
+    eq_built_systems: 'Pernah Membangun Sistem',
+    eq_led_growth: 'Pernah Memimpin Growth',
+    eq_product_shipped: 'Pernah Meluncurkan Produk',
+    eq_startup_experience: 'Pengalaman Startup',
+    goal_building_team: 'Membangun Tim',
+    goal_explore_startups: 'Jelajahi Startup',
+    goal_finding_cofounder: 'Mencari Co-Founder',
+    goal_joining_startups: 'Bergabung dengan Startup',
+    hr_30_days: '30 Hari',
+    hr_equity_open: 'Terbuka untuk Equity',
+    hr_immediate_join: 'Bisa Bergabung Segera',
+    hr_part_time_first: 'Part-time Dulu',
+    hr_remote_ready: 'Siap Remote',
+    jsr_mvp: 'MVP Sudah Dibangun',
+    jsr_paying_users: 'Pengguna Berbayar',
+    jsr_traction: 'Traction Awal',
+    lang_en: 'English',
+    lang_es: 'Spanyol',
+    lang_id: 'Bahasa Indonesia',
+    lang_ja: 'Jepang',
+    lang_ko: 'Korea',
+    lang_zh: 'Mandarin',
+    lb_advisor_mentor: 'Advisor / Mentor',
+    lb_built_from_zero: 'Membangun Produk dari Nol',
+    lb_led_team: 'Memimpin Tim Startup',
+    lb_owned_revenue: 'Memegang Target Revenue',
+    lb_raised_capital: 'Pernah Raise Capital',
+    ls_built_team: 'Pernah Membangun Tim',
+    ls_growth_ownership: 'Ownership Growth',
+    ls_led_product: 'Pernah Memimpin Produk',
+    ls_operations_leadership: 'Leadership Operasional',
+    of_early_core_role: 'Role Core Awal',
+    of_equity_offered: 'Equity Ditawarkan',
+    of_fast_hiring: 'Hiring Cepat',
+    of_remote_team: 'Tim Remote',
+    role_ai_ml: 'AI / ML',
+    role_designer: 'Designer',
+    role_engineer: 'Engineer',
+    role_finance: 'Finance',
+    role_growth: 'Growth',
+    role_marketing: 'Marketing',
+    role_operations: 'Operations',
+    role_product: 'Product',
+    role_sales: 'Sales',
+    se_accelerator_alumni: 'Alumni Accelerator',
+    se_built_1_startup: 'Pernah Membangun 1 Startup',
+    se_exit_experience: 'Pengalaman Exit Startup',
+    se_first_time_founder: 'Founder Pertama Kali',
+    se_serial_founder: 'Serial Founder',
+    se_vc_backed: 'Founder Backed VC',
+    sq_repeat_founder: 'Repeat Founder',
+    sq_startup_exit: 'Startup Exit',
+    sq_strong_founder_background: 'Latar Founder Kuat',
+    sq_vc_backed_founder: 'Founder Backed VC',
+    sr_existing_team: 'Tim Sudah Ada',
+    sr_mvp_ready: 'MVP Siap',
+    sr_paying_users: 'Pengguna Berbayar',
+    sr_product_live: 'Produk Live',
+    stage_idea: 'Ide',
+    stage_mvp: 'MVP',
+    stage_pre_seed: 'Pre-seed',
+    stage_seed: 'Seed',
+    wa_hybrid: 'Hybrid',
+    wa_onsite: 'Onsite',
+    wa_remote: 'Remote',
+  },
+};
+
+const FILTER_OPTION_DESCRIPTIONS: Record<AppLocale, Record<string, string>> = {
+  en: {},
+  id: {
+    goal_building_team: 'Rekrut anggota tim awal',
+    goal_explore_startups: 'Temukan startup untuk diikuti',
+    goal_finding_cofounder: 'Cari co-founder ideal Anda',
+    goal_joining_startups: 'Bergabung dengan startup yang sudah ada',
+  },
+};
+
+function translateFilterSectionTitle(section: DiscoveryFilterSection, locale: AppLocale) {
+  return FILTER_SECTION_LABELS[locale][section.id] ?? section.title;
+}
+
+function translateFilterFieldTitle(field: DiscoveryFilterField, locale: AppLocale) {
+  return FILTER_FIELD_LABELS[locale][field.id] ?? field.title;
+}
+
+function translateFilterOptionLabel(
+  option: DiscoveryFilterOption,
+  locale: AppLocale
+) {
+  return FILTER_OPTION_LABELS[locale][option.id] ?? option.label;
+}
+
+function translateFilterOptionDescription(
+  option: DiscoveryFilterOption,
+  locale: AppLocale
+) {
+  return FILTER_OPTION_DESCRIPTIONS[locale][option.id] ?? option.description;
+}
 
 const GOAL_MODE_MAP: Record<DiscoveryGoalId, DiscoveryMode> = {
   goal_finding_cofounder: 'finding_cofounder',
@@ -306,6 +491,7 @@ const RangeControl = React.memo(function RangeControl({
   onChange: (value: number) => void;
   value: number;
 }) {
+  const { locale } = useLocale();
   const min = field.min ?? 0;
   const max = field.max ?? 100;
   const step = field.step ?? 1;
@@ -431,7 +617,7 @@ const RangeControl = React.memo(function RangeControl({
     <View className="gap-3">
       <View className="flex-row items-center justify-between">
         <AppText tone="muted" variant="label">
-          {field.title}
+          {translateFilterFieldTitle(field, locale)}
         </AppText>
         <AppText tone="signal" variant="bodyStrong">
           {draftValue}
@@ -569,7 +755,8 @@ function SearchInput({
 
 function filterOptionsBySearch(
   options: DiscoveryFilterOption[] | undefined,
-  searchTerm: string
+  searchTerm: string,
+  locale: AppLocale
 ) {
   if (!options) {
     return [];
@@ -581,12 +768,15 @@ function filterOptionsBySearch(
     return options;
   }
 
-  return options.filter((option) => option.label.toLowerCase().includes(normalizedSearch));
+  return options.filter((option) =>
+    translateFilterOptionLabel(option, locale).toLowerCase().includes(normalizedSearch)
+  );
 }
 
 function filterSearchableCheckboxOptions(
   options: DiscoveryFilterOption[] | undefined,
-  searchTerm: string
+  searchTerm: string,
+  locale: AppLocale
 ) {
   if (!options) {
     return [];
@@ -599,7 +789,7 @@ function filterSearchableCheckboxOptions(
   }
 
   return options.filter((option) => {
-    const haystack = `${option.label} ${option.description ?? ''}`.toLowerCase();
+    const haystack = `${translateFilterOptionLabel(option, locale)} ${translateFilterOptionDescription(option, locale) ?? ''}`.toLowerCase();
     return haystack.includes(normalizedSearch);
   });
 }
@@ -654,17 +844,24 @@ function getOptionValue(option: DiscoveryFilterOption) {
   return option.value ?? option.id;
 }
 
-function getSelectedOptionLabel(options: DiscoveryFilterOption[] | undefined, value: unknown) {
+function getSelectedOptionLabel(
+  options: DiscoveryFilterOption[] | undefined,
+  value: unknown,
+  locale: AppLocale
+) {
   if (typeof value !== 'string' || !value) {
     return '';
   }
 
-  return options?.find((option) => getOptionValue(option) === value)?.label ?? '';
+  const selectedOption = options?.find((option) => getOptionValue(option) === value);
+
+  return selectedOption ? translateFilterOptionLabel(selectedOption, locale) : '';
 }
 
 function filterSearchableDropdownOptions(
   options: DiscoveryFilterOption[] | undefined,
-  searchTerm: string
+  searchTerm: string,
+  locale: AppLocale
 ) {
   if (!options) {
     return [];
@@ -677,7 +874,7 @@ function filterSearchableDropdownOptions(
   }
 
   return options.filter((option) => {
-    const haystack = `${option.label} ${option.group ?? ''}`.toLowerCase();
+    const haystack = `${translateFilterOptionLabel(option, locale)} ${option.group ?? ''}`.toLowerCase();
     return haystack.includes(normalizedSearch);
   });
 }
@@ -711,6 +908,7 @@ export function DiscoveryFilterSheet({
   visible,
 }: DiscoveryFilterSheetProps) {
   const insets = useSafeAreaInsets();
+  const { locale } = useLocale();
   const t = useTranslation();
   const [draftByMode, setDraftByMode] = React.useState<Partial<Record<DiscoveryMode, DiscoveryAppliedFilters>>>({});
   const [expandedByMode, setExpandedByMode] = React.useState<
@@ -940,7 +1138,7 @@ export function DiscoveryFilterSheet({
             key={field.id}
             className="flex-row items-center justify-between rounded-[18px] border px-4 py-3"
             style={{ backgroundColor: '#2C2C2C', borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-            <AppText className="flex-1 text-[14px]">{field.title}</AppText>
+            <AppText className="flex-1 text-[14px]">{translateFilterFieldTitle(field, locale)}</AppText>
             <Switch
               disabled={disabled}
               onValueChange={(value) => handleFieldValueChange(sectionId, field.id, value)}
@@ -965,15 +1163,15 @@ export function DiscoveryFilterSheet({
       }
 
       if (field.ui.component === 'searchable_dropdown') {
-        const selectedLabel = getSelectedOptionLabel(field.options, fieldValue);
+        const selectedLabel = getSelectedOptionLabel(field.options, fieldValue, locale);
         const hasSearchTerm = searchTerm.trim().length > 0;
-        const visibleOptions = filterSearchableDropdownOptions(field.options, searchTerm);
+        const visibleOptions = filterSearchableDropdownOptions(field.options, searchTerm, locale);
 
         return (
           <View key={field.id} className="gap-3">
             {field.title ? (
               <AppText tone="muted" variant="label">
-                {field.title}
+                {translateFilterFieldTitle(field, locale)}
               </AppText>
             ) : null}
             <View
@@ -1029,6 +1227,7 @@ export function DiscoveryFilterSheet({
                         {options.map((option) => {
                           const optionValue = getOptionValue(option);
                           const active = fieldValue === optionValue;
+                          const label = translateFilterOptionLabel(option, locale);
 
                           return (
                             <Pressable
@@ -1050,7 +1249,7 @@ export function DiscoveryFilterSheet({
                                 className="flex-1 text-[14px]"
                                 style={{ color: active ? '#FFB05B' : '#FFFFFF' }}
                                 variant="bodyStrong">
-                                {option.label}
+                                {label}
                               </AppText>
                               {active ? <Ionicons color="#FF9A3E" name="checkmark" size={18} /> : null}
                             </Pressable>
@@ -1073,12 +1272,12 @@ export function DiscoveryFilterSheet({
         );
       }
 
-      const visibleOptions = filterOptionsBySearch(field.options, searchTerm);
+      const visibleOptions = filterOptionsBySearch(field.options, searchTerm, locale);
 
       return (
         <View key={field.id} className="gap-3">
           <AppText tone="muted" variant="label">
-            {field.title}
+            {translateFilterFieldTitle(field, locale)}
           </AppText>
           {field.ui.searchable ? (
             <SearchInput
@@ -1110,7 +1309,7 @@ export function DiscoveryFilterSheet({
                     key={option.id}
                     active={active}
                     disabled={disabled}
-                    label={option.label}
+                    label={translateFilterOptionLabel(option, locale)}
                     onPress={() => handleToggleFieldOption(sectionId, field, option.id)}
                   />
                 );
@@ -1128,7 +1327,7 @@ export function DiscoveryFilterSheet({
                     key={option.id}
                     active={active}
                     disabled={disabled}
-                    label={option.label}
+                    label={translateFilterOptionLabel(option, locale)}
                     onPress={() => handleToggleFieldOption(sectionId, field, option.id)}
                   />
                 );
@@ -1138,7 +1337,7 @@ export function DiscoveryFilterSheet({
         </View>
       );
     },
-    [currentDraft, currentMode, handleFieldValueChange, handleToggleFieldOption, hasConnectXPro, searchTerms, sectionById, t]
+    [currentDraft, currentMode, handleFieldValueChange, handleToggleFieldOption, hasConnectXPro, locale, searchTerms, sectionById, t]
   );
 
   const renderSectionContent = React.useCallback(
@@ -1163,7 +1362,7 @@ export function DiscoveryFilterSheet({
         section.id === 'roleNeededIds' ||
         section.id === 'founderTypeIds'
       ) {
-        const searchableOptions = filterSearchableCheckboxOptions(section.options, searchTerm);
+        const searchableOptions = filterSearchableCheckboxOptions(section.options, searchTerm, locale);
 
         return (
           <View className="gap-4 pt-3">
@@ -1228,11 +1427,11 @@ export function DiscoveryFilterSheet({
                         <AppText
                           className="text-[15px] leading-[21px]"
                           style={{ color: active ? '#FF9A3E' : '#FFFFFF' }}>
-                          {option.label}
+                          {translateFilterOptionLabel(option, locale)}
                         </AppText>
-                        {option.description ? (
+                        {translateFilterOptionDescription(option, locale) ? (
                           <AppText className="text-[13px] leading-[18px]" tone="muted">
-                            {option.description}
+                            {translateFilterOptionDescription(option, locale)}
                           </AppText>
                         ) : null}
                       </View>
@@ -1260,7 +1459,7 @@ export function DiscoveryFilterSheet({
         );
       }
 
-      const visibleOptions = filterOptionsBySearch(section.options, searchTerm);
+      const visibleOptions = filterOptionsBySearch(section.options, searchTerm, locale);
 
       return (
         <View className="gap-3 pt-3">
@@ -1293,7 +1492,7 @@ export function DiscoveryFilterSheet({
                   key={option.id}
                   active={active}
                   disabled={disabled}
-                  label={option.label}
+                  label={translateFilterOptionLabel(option, locale)}
                   onPress={() => handleToggleSectionOption(section, option.id)}
                 />
               );
@@ -1302,7 +1501,7 @@ export function DiscoveryFilterSheet({
         </View>
       );
     },
-    [currentDraft, currentMode, handleToggleSectionOption, hasConnectXPro, renderField, searchTerms, t]
+    [currentDraft, currentMode, handleToggleSectionOption, hasConnectXPro, locale, renderField, searchTerms, t]
   );
 
   const renderAccordionSection = React.useCallback(
@@ -1319,7 +1518,7 @@ export function DiscoveryFilterSheet({
             <View className="flex-row items-center gap-3">
               <Ionicons color={disabled ? '#667085' : '#FF9A3E'} name={sectionIcon(section.id)} size={20} />
               <AppText className="text-[17px]" variant="subtitle">
-                {section.title}
+                {translateFilterSectionTitle(section, locale)}
               </AppText>
             </View>
             <Ionicons color="#98A2B3" name={expanded ? 'chevron-up' : 'chevron-down'} size={18} />
@@ -1337,7 +1536,7 @@ export function DiscoveryFilterSheet({
         </View>
       );
     },
-    [currentExpanded, handleToggleSection, hasConnectXPro, renderSectionContent, t]
+    [currentExpanded, handleToggleSection, hasConnectXPro, locale, renderSectionContent, t]
   );
 
   return (
@@ -1395,9 +1594,9 @@ export function DiscoveryFilterSheet({
                   <View key={goal.id} style={{ width: '48%' }}>
                     <GoalCard
                       active={GOAL_MODE_MAP[goal.id as DiscoveryGoalId] === currentMode}
-                      description={goal.description}
+                      description={translateFilterOptionDescription(goal, locale)}
                       goalId={goal.id}
-                      label={goal.label}
+                      label={translateFilterOptionLabel(goal, locale)}
                       onPress={() => handleGoalPress(goal.id)}
                     />
                   </View>
