@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPasswordError } from '@features/auth/utils/auth-validation';
-import { ApiError } from '@shared/services/api';
+import { getApiDisplayMessage, getApiFieldError } from '@shared/services/api';
 import { AppButton, AppInput, AppText } from '@shared/components';
 
 import { useChangePassword } from '../hooks/use-settings';
@@ -36,26 +36,10 @@ type FieldErrors = {
 };
 
 function getApiFieldErrors(error: unknown): FieldErrors {
-  if (!(error instanceof ApiError) || !error.payload || typeof error.payload !== 'object') {
-    return {};
-  }
-
-  const errors = 'errors' in error.payload ? error.payload.errors : null;
-
-  if (!errors || typeof errors !== 'object') {
-    return {};
-  }
-
-  const fields = errors as Record<string, unknown>;
-  const firstMessage = (key: string) => {
-    const value = fields[key];
-    return Array.isArray(value) && typeof value[0] === 'string' ? value[0] : undefined;
-  };
-
   return {
-    currentPassword: firstMessage('current_password'),
-    password: firstMessage('password'),
-    passwordConfirmation: firstMessage('password_confirmation'),
+    currentPassword: getApiFieldError(error, 'current_password'),
+    password: getApiFieldError(error, 'password'),
+    passwordConfirmation: getApiFieldError(error, 'password_confirmation'),
   };
 }
 
@@ -114,7 +98,10 @@ export function ChangePasswordModal({ onClose, visible }: ChangePasswordModalPro
 
       Alert.alert(
         'Unable to change password',
-        error instanceof Error ? error.message : 'Please try again.'
+        apiErrors.currentPassword ??
+          apiErrors.password ??
+          apiErrors.passwordConfirmation ??
+          getApiDisplayMessage(error, 'Please try again.')
       );
     }
   }

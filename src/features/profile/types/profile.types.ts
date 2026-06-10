@@ -1,4 +1,4 @@
-export type ProfileType = 'founder' | 'builder' | 'investor' | 'operator' | 'student';
+export type ProfileType = string;
 
 export type ProfileLocation = {
   id?: string;
@@ -76,7 +76,7 @@ export type ProfileEducationSection = {
 
 export type ProfileStartupStageValue = 'idea' | 'mvp' | 'live' | 'scale';
 
-export type ProfileStartupStageDetailValue = string | number | string[] | null;
+export type ProfileStartupStageDetailValue = string | number | null;
 
 export type ProfileStartupStageDetail = {
   id: string;
@@ -84,9 +84,37 @@ export type ProfileStartupStageDetail = {
   value: ProfileStartupStageDetailValue;
 };
 
+export type ProfileStartupLinkKind =
+  | 'website'
+  | 'linkedin'
+  | 'twitter'
+  | 'instagram'
+  | 'pitch_deck';
+
+export type ProfileStartupOpenRole = {
+  id: string;
+  title: string;
+};
+
+export type ProfileStartupHiringPreferences = {
+  commitment: 'full_time' | 'part_time' | null;
+  equity: 'equity_only' | 'equity_and_salary' | null;
+  paid: boolean | null;
+};
+
 export type ProfileStartupData = {
+  description: string | null;
+  hiringPreferences: ProfileStartupHiringPreferences;
+  logoUrl: string | null;
   name: string;
+  openRoles: ProfileStartupOpenRole[];
   tagline: string;
+  teamSize: number | null;
+  vision: {
+    problem: string | null;
+    solution: string | null;
+    targetUsers: string | null;
+  };
   stage: {
     value: ProfileStartupStageValue;
     label: string;
@@ -94,27 +122,14 @@ export type ProfileStartupData = {
   };
   industries: ProfileNamedItem[];
   links: {
+    kind: ProfileStartupLinkKind;
     label: string;
     url: string;
   }[];
+  sections: ProfileStartupSections;
 };
 
-export type ProfileStartupRawOpenRole =
-  | string
-  | {
-      id?: string;
-      title?: string;
-      value?: string;
-    };
-
-export type ProfileStartupRawData = {
-  description: string | null;
-  logoUrl: string | null;
-  openRoles: ProfileStartupRawOpenRole[] | null;
-  teamSize: number | null;
-};
-
-export type MyProfileSections = {
+export type ProfileTalentSections = {
   about?: ProfileAboutSection;
   personalityAndHobbies?: ProfileListSection;
   skills?: ProfileListSection;
@@ -124,19 +139,29 @@ export type MyProfileSections = {
   highlights?: ProfileHighlightsSection;
 };
 
-export type MyProfileData = {
-  id: string;
-  teamId: string;
+export type ProfileStartupSections = {
+  about?: ProfileAboutSection;
+  skills?: ProfileListSection;
+  interests?: ProfileListSection;
+  highlights?: ProfileHighlightsSection;
+};
+
+export type ProfileTalentData = {
   profileType: ProfileType;
   name: string;
   headline: string;
   photoUrl: string | null;
   location: ProfileLocation;
-  stats: ProfileStats;
   badges: ProfileBadge[];
-  startup?: ProfileStartupData;
-  startupRaw?: ProfileStartupRawData;
-  sections: MyProfileSections;
+  sections: ProfileTalentSections;
+};
+
+export type MyProfileData = {
+  id: string;
+  teamId: string | null;
+  stats: ProfileStats;
+  talent: ProfileTalentData;
+  startup: ProfileStartupData | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -197,24 +222,7 @@ export type UpdateProfileLocationResponse = {
   };
 };
 
-export type UpdateMyProfileResponse = {
-  success: boolean;
-  message: string;
-  data: {
-    id: string;
-    name: string;
-    headline: string;
-    photoUrl: string | null;
-    location: ProfileLocation;
-    sections: {
-      about: ProfileAboutSection;
-      personalityAndHobbies?: ProfileListSection;
-      experience?: ProfileExperienceSection;
-      education?: ProfileEducationSection;
-    };
-    updatedAt: string;
-  };
-};
+export type UpdateMyProfileResponse = MyProfileResponse;
 
 export type PauseAccountResponse = {
   success: true;
@@ -249,24 +257,27 @@ export type RequestAccountDeletionResponse = {
 };
 
 export type UpdateStartupProfileRequest = {
-  name?: string;
-  tagline?: string;
-  description?: string;
-  logo_url?: string;
-  stage?: string;
-  industry?: string;
-  secondary_industry?: string;
-  team_size?: number;
-  open_roles?: string[];
-  user_count?: string;
-  mau?: string;
-  revenue?: string;
-  website?: string;
-  prototype_url?: string;
-  linkedin?: string;
-  commitment?: string;
-  equity?: string;
-  paid?: boolean;
+  commitment: ProfileStartupHiringPreferences['commitment'];
+  description: string | null;
+  equity: ProfileStartupHiringPreferences['equity'];
+  industry: string | null;
+  instagram: string | null;
+  linkedin: string | null;
+  logo_url: string | null;
+  name: string;
+  open_roles: string[];
+  paid: boolean | null;
+  pitch_deck: string | null;
+  problem: string | null;
+  secondary_industry: string | null;
+  solution: string | null;
+  stage: ProfileStartupStageValue;
+  tagline: string | null;
+  target_users: string | null;
+  team_size: number | null;
+  traction: Record<string, string | number | null>;
+  twitter: string | null;
+  website: string | null;
 };
 
 export type UpdateStartupProfileResponse = {

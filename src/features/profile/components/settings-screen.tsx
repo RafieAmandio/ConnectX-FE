@@ -639,7 +639,8 @@ export function SettingsScreen() {
             kind={accountContactChange}
             onClose={() => setAccountContactChange(null)}
             onConfirmed={async () => {
-              await refreshSession();
+              const res = await refreshSession();
+              console.log('refreshSession response when changing contact:', JSON.stringify(res, null, 2));
             }}
             visible
           />

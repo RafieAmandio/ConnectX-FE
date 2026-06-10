@@ -23,8 +23,8 @@ import { cn } from '@shared/utils/cn';
 import { useMyProfile, useUpdateStartupProfile, useUploadProfileImage } from '../hooks/use-profile';
 import type {
   MyProfileData,
-  ProfileStartupRawData,
-  ProfileStartupRawOpenRole,
+  ProfileStartupLinkKind,
+  ProfileStartupStageValue,
   UpdateStartupProfileRequest,
 } from '../types/profile.types';
 
@@ -60,22 +60,63 @@ const EQUITY_OPTIONS = [
   { value: 'equity_and_salary', label: 'Equity + Salary' },
 ];
 
+const YES_NO_OPTIONS = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
+];
+
+type TractionFieldId =
+  | 'q_arr'
+  | 'q_funding_raised'
+  | 'q_growth_rate'
+  | 'q_has_prototype'
+  | 'q_investors'
+  | 'q_key_metrics'
+  | 'q_live_users'
+  | 'q_mau'
+  | 'q_mrr'
+  | 'q_mvp_revenue'
+  | 'q_prototype_link'
+  | 'q_retention'
+  | 'q_scale_team_size'
+  | 'q_user_count'
+  | 'q_validation_methods'
+  | 'q_waitlist_size';
+
+const TRACTION_FIELDS_BY_STAGE: Record<ProfileStartupStageValue, TractionFieldId[]> = {
+  idea: ['q_has_prototype', 'q_prototype_link', 'q_waitlist_size', 'q_validation_methods'],
+  mvp: ['q_user_count', 'q_mau', 'q_mvp_revenue', 'q_growth_rate'],
+  live: ['q_mrr', 'q_live_users', 'q_retention', 'q_key_metrics'],
+  scale: ['q_funding_raised', 'q_investors', 'q_scale_team_size', 'q_arr'],
+};
+
+const NUMERIC_TRACTION_FIELDS = new Set<TractionFieldId>([
+  'q_live_users',
+  'q_mau',
+  'q_scale_team_size',
+  'q_user_count',
+  'q_waitlist_size',
+]);
+
 type FormState = {
   name: string;
   tagline: string;
   description: string;
-  stage: string;
+  problem: string;
+  solution: string;
+  target_users: string;
+  stage: ProfileStartupStageValue;
   industry: string;
   logo_url: string;
   secondary_industry: string;
   team_size: string;
   open_roles: string[];
-  user_count: string;
-  mau: string;
-  revenue: string;
+  traction: Partial<Record<TractionFieldId, string>>;
   website: string;
-  prototype_url: string;
   linkedin: string;
+  twitter: string;
+  instagram: string;
+  pitch_deck: string;
   commitment: string;
   equity: string;
   paid: boolean;
@@ -83,50 +124,59 @@ type FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
-type FlatOption = { id: string; label: string };
+type FlatOption = { id: string; label: string; value?: string };
 
-function getOpenRoleValue(role: ProfileStartupRawOpenRole): string {
-  if (typeof role === 'string') return role;
-  return role.id ?? role.value ?? role.title ?? '';
-}
-
-function buildInitialFormState(
-  startup?: MyProfileData['startup'],
-  startupRaw?: ProfileStartupRawData
-): FormState {
+function buildInitialFormState(startup?: MyProfileData['startup']): FormState {
   return {
     name: startup?.name ?? '',
     tagline: startup?.tagline ?? '',
-    description: startupRaw?.description ?? '',
+    description: startup?.description ?? '',
+    problem: startup?.vision?.problem ?? '',
+    solution: startup?.vision?.solution ?? '',
+    target_users: startup?.vision?.targetUsers ?? '',
     stage: startup?.stage.value ?? 'idea',
     industry: startup?.industries[0]?.id ?? '',
-    logo_url: startupRaw?.logoUrl ?? '',
+    logo_url: startup?.logoUrl ?? '',
     secondary_industry: startup?.industries[1]?.id ?? '',
-    team_size: startupRaw?.teamSize == null ? '' : String(startupRaw.teamSize),
-    open_roles: startupRaw?.openRoles?.map(getOpenRoleValue).filter(Boolean) ?? [],
-    user_count: getStageDetailValue(startup, 'q_user_count'),
-    mau: getStageDetailValue(startup, 'q_mau'),
-    revenue: getStageDetailValue(startup, 'q_mvp_revenue') || getStageDetailValue(startup, 'q_mrr') || getStageDetailValue(startup, 'q_arr'),
-    website: getLinkUrl(startup, 'Website'),
-    prototype_url: getLinkUrl(startup, 'Prototype') || getLinkUrl(startup, 'Pitch deck'),
-    linkedin: getLinkUrl(startup, 'LinkedIn'),
-    commitment: 'full_time',
-    equity: 'equity_only',
-    paid: false,
+    team_size: startup?.teamSize == null ? '' : String(startup.teamSize),
+    open_roles: startup?.openRoles?.map((role) => role.id) ?? [],
+    traction: Object.fromEntries(
+      startup?.stage.details
+        .filter((detail) => detail.value != null && !Array.isArray(detail.value))
+        .map((detail) => [detail.id, String(detail.value)]) ?? []
+    ),
+    website: getLinkUrl(startup, 'website'),
+    linkedin: getLinkUrl(startup, 'linkedin'),
+    twitter: getLinkUrl(startup, 'twitter'),
+    instagram: getLinkUrl(startup, 'instagram'),
+    pitch_deck: getLinkUrl(startup, 'pitch_deck'),
+    commitment: startup?.hiringPreferences?.commitment ?? 'full_time',
+    equity: startup?.hiringPreferences?.equity ?? 'equity_only',
+    paid: startup?.hiringPreferences?.paid ?? false,
   };
 }
 
-function getStageDetailValue(startup: MyProfileData['startup'], detailId: string): string {
-  const detail = startup?.stage.details?.find((d) => d.id === detailId);
-  if (detail?.value == null) return '';
-  return String(detail.value);
+function getLinkUrl(startup: MyProfileData['startup'] | undefined, kind: ProfileStartupLinkKind): string {
+  const link = startup?.links.find((item) => item.kind === kind);
+  return link?.url ?? '';
 }
 
-function getLinkUrl(startup: MyProfileData['startup'], labelMatch: string): string {
-  const link = startup?.links?.find((l) =>
-    l.label.toLowerCase().includes(labelMatch.toLowerCase())
+function getNullableText(value: string) {
+  return value.trim() || null;
+}
+
+function buildTractionPayload(form: FormState) {
+  return Object.fromEntries(
+    TRACTION_FIELDS_BY_STAGE[form.stage].map((fieldId) => {
+      const trimmedValue = form.traction[fieldId]?.trim() ?? '';
+
+      if (!trimmedValue || (fieldId === 'q_prototype_link' && form.traction.q_has_prototype !== 'yes')) {
+        return [fieldId, null];
+      }
+
+      return [fieldId, NUMERIC_TRACTION_FIELDS.has(fieldId) ? Number(trimmedValue) : trimmedValue];
+    })
   );
-  return link?.url ?? '';
 }
 
 function validateForm(form: FormState): FormErrors {
@@ -139,6 +189,42 @@ function validateForm(form: FormState): FormErrors {
 
 function flattenGroups(groups: { id: string; label: string; options: FlatOption[] }[]): FlatOption[] {
   return groups.flatMap((g) => g.options);
+}
+
+function getOptionValue(option: FlatOption) {
+  return option.value ?? option.id;
+}
+
+function normalizeOptionLookupKey(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function optionMatchesValue(option: FlatOption, value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return false;
+  }
+
+  if (option.id === trimmedValue || option.value === trimmedValue) {
+    return true;
+  }
+
+  const normalizedValue = normalizeOptionLookupKey(trimmedValue);
+
+  return [option.id, option.value, option.label]
+    .filter((item): item is string => Boolean(item))
+    .some((item) => normalizeOptionLookupKey(item) === normalizedValue);
+}
+
+function findOptionByValue(options: FlatOption[], value: string) {
+  return options.find((option) => optionMatchesValue(option, value));
+}
+
+function resolveOptionValue(options: FlatOption[], value: string) {
+  const option = findOptionByValue(options, value);
+
+  return option ? getOptionValue(option) : value;
 }
 
 type StartupInputProps = TextInputProps & {
@@ -262,7 +348,7 @@ function DropdownSelector({
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
-  const selectedLabel = options.find((o) => o.id === value)?.label ?? '';
+  const selectedLabel = findOptionByValue(options, value)?.label ?? '';
 
   const filtered = search.trim()
     ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
@@ -302,13 +388,13 @@ function DropdownSelector({
           ) : null}
           <ScrollView nestedScrollEnabled>
             {filtered.map((opt) => {
-              const isSelected = opt.id === value;
+              const isSelected = optionMatchesValue(opt, value);
               return (
                 <Pressable
                   key={opt.id}
                   className="flex-row items-center gap-3 px-3 py-3"
                   onPress={() => {
-                    onChange(opt.id);
+                    onChange(getOptionValue(opt));
                     setIsOpen(false);
                     setSearch('');
                   }}
@@ -448,6 +534,165 @@ function SearchableMultiSelectDropdown({
   );
 }
 
+function TractionFields({
+  onChange,
+  stage,
+  traction,
+}: {
+  onChange: (key: TractionFieldId, value: string) => void;
+  stage: ProfileStartupStageValue;
+  traction: FormState['traction'];
+}) {
+  function tractionValue(key: TractionFieldId) {
+    return traction[key] ?? '';
+  }
+
+  function updateNumericField(key: TractionFieldId, value: string) {
+    onChange(key, value.replace(/[^0-9]/g, ''));
+  }
+
+  if (stage === 'idea') {
+    const hasPrototype = tractionValue('q_has_prototype');
+
+    return (
+      <>
+        <ChipSelector
+          label="Do you have a prototype?"
+          onChange={(value) => onChange('q_has_prototype', value)}
+          options={YES_NO_OPTIONS}
+          value={hasPrototype}
+        />
+        {hasPrototype === 'yes' ? (
+          <StartupInput
+            autoCapitalize="none"
+            keyboardType="url"
+            label="Prototype Link"
+            onChangeText={(value) => onChange('q_prototype_link', value)}
+            placeholder="https://figma.com/..."
+            value={tractionValue('q_prototype_link')}
+          />
+        ) : null}
+        <StartupInput
+          keyboardType="numeric"
+          label="Waitlist Size"
+          onChangeText={(value) => updateNumericField('q_waitlist_size', value)}
+          placeholder="e.g. 100"
+          value={tractionValue('q_waitlist_size')}
+        />
+        <StartupInput
+          className="min-h-[100px] px-4 py-4 text-[15px]"
+          label="Validation So Far"
+          multiline
+          onChangeText={(value) => onChange('q_validation_methods', value)}
+          placeholder="Interviews, surveys, landing page tests..."
+          style={{ paddingHorizontal: 16, paddingVertical: 16 }}
+          textAlignVertical="top"
+          value={tractionValue('q_validation_methods')}
+        />
+      </>
+    );
+  }
+
+  if (stage === 'mvp') {
+    return (
+      <>
+        <StartupInput
+          keyboardType="numeric"
+          label="User Count"
+          onChangeText={(value) => updateNumericField('q_user_count', value)}
+          placeholder="e.g. 1000"
+          value={tractionValue('q_user_count')}
+        />
+        <StartupInput
+          keyboardType="numeric"
+          label="Monthly Active Users"
+          onChangeText={(value) => updateNumericField('q_mau', value)}
+          placeholder="e.g. 500"
+          value={tractionValue('q_mau')}
+        />
+        <StartupInput
+          label="Revenue"
+          onChangeText={(value) => onChange('q_mvp_revenue', value)}
+          placeholder="e.g. $500 MRR"
+          value={tractionValue('q_mvp_revenue')}
+        />
+        <StartupInput
+          label="Growth Rate"
+          onChangeText={(value) => onChange('q_growth_rate', value)}
+          placeholder="e.g. 20% MoM"
+          value={tractionValue('q_growth_rate')}
+        />
+      </>
+    );
+  }
+
+  if (stage === 'live') {
+    return (
+      <>
+        <StartupInput
+          label="MRR"
+          onChangeText={(value) => onChange('q_mrr', value)}
+          placeholder="e.g. $5,000"
+          value={tractionValue('q_mrr')}
+        />
+        <StartupInput
+          keyboardType="numeric"
+          label="Users / Customers"
+          onChangeText={(value) => updateNumericField('q_live_users', value)}
+          placeholder="e.g. 1000"
+          value={tractionValue('q_live_users')}
+        />
+        <StartupInput
+          label="Retention"
+          onChangeText={(value) => onChange('q_retention', value)}
+          placeholder="e.g. 80% 3-month retention"
+          value={tractionValue('q_retention')}
+        />
+        <StartupInput
+          className="min-h-[100px] px-4 py-4 text-[15px]"
+          label="Key Metrics"
+          multiline
+          onChangeText={(value) => onChange('q_key_metrics', value)}
+          placeholder="GMV, conversion, or anything else worth highlighting"
+          style={{ paddingHorizontal: 16, paddingVertical: 16 }}
+          textAlignVertical="top"
+          value={tractionValue('q_key_metrics')}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <StartupInput
+        label="Funding Raised"
+        onChangeText={(value) => onChange('q_funding_raised', value)}
+        placeholder="e.g. $2M seed"
+        value={tractionValue('q_funding_raised')}
+      />
+      <StartupInput
+        label="Investors"
+        onChangeText={(value) => onChange('q_investors', value)}
+        placeholder="e.g. East Ventures, Alpha JWC"
+        value={tractionValue('q_investors')}
+      />
+      <StartupInput
+        keyboardType="numeric"
+        label="Team Size at Scale"
+        onChangeText={(value) => updateNumericField('q_scale_team_size', value)}
+        placeholder="e.g. 25"
+        value={tractionValue('q_scale_team_size')}
+      />
+      <StartupInput
+        label="Revenue / ARR"
+        onChangeText={(value) => onChange('q_arr', value)}
+        placeholder="e.g. $1.2M ARR"
+        value={tractionValue('q_arr')}
+      />
+    </>
+  );
+}
+
 export function EditStartupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -457,20 +702,19 @@ export function EditStartupScreen() {
   const uploadLogoMutation = useUploadProfileImage();
 
   const startup = myProfileQuery.data?.data?.startup;
-  const startupRaw = myProfileQuery.data?.data?.startupRaw;
   const hasHydratedStartup = React.useRef(Boolean(startup));
   const [formState, setFormState] = React.useState<FormState>(() =>
-    buildInitialFormState(startup, startupRaw)
+    buildInitialFormState(startup)
   );
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (startup && !hasHydratedStartup.current) {
-      setFormState(buildInitialFormState(startup, startupRaw));
+      setFormState(buildInitialFormState(startup));
       hasHydratedStartup.current = true;
     }
-  }, [startup, startupRaw]);
+  }, [startup]);
 
   const industryOptions = React.useMemo(
     () => flattenGroups(filterOptionsQuery.data?.data?.industries ?? []),
@@ -482,11 +726,43 @@ export function EditStartupScreen() {
     [filterOptionsQuery.data]
   );
 
+  React.useEffect(() => {
+    if (!industryOptions.length) {
+      return;
+    }
+
+    setFormState((current) => {
+      const industry = resolveOptionValue(industryOptions, current.industry);
+      const secondaryIndustry = resolveOptionValue(industryOptions, current.secondary_industry);
+
+      if (industry === current.industry && secondaryIndustry === current.secondary_industry) {
+        return current;
+      }
+
+      return {
+        ...current,
+        industry,
+        secondary_industry: secondaryIndustry,
+      };
+    });
+  }, [industryOptions]);
+
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setFormState((prev) => ({ ...prev, [key]: value }));
     if (formErrors[key]) {
       setFormErrors((prev) => ({ ...prev, [key]: undefined }));
     }
+    setSubmitError(null);
+  }
+
+  function updateTractionField(key: TractionFieldId, value: string) {
+    setFormState((current) => ({
+      ...current,
+      traction: {
+        ...current.traction,
+        [key]: value,
+      },
+    }));
     setSubmitError(null);
   }
 
@@ -541,22 +817,29 @@ export function EditStartupScreen() {
 
     const payload: UpdateStartupProfileRequest = {
       name: formState.name.trim(),
-      tagline: formState.tagline.trim() || undefined,
-      description: formState.description.trim() || undefined,
-      stage: formState.stage || undefined,
-      industry: formState.industry || undefined,
-      logo_url: formState.logo_url.trim() || undefined,
-      secondary_industry: formState.secondary_industry || undefined,
-      team_size: formState.team_size ? Number(formState.team_size) : undefined,
-      open_roles: formState.open_roles.length > 0 ? formState.open_roles : undefined,
-      user_count: formState.user_count.trim() || undefined,
-      mau: formState.mau.trim() || undefined,
-      revenue: formState.revenue.trim() || undefined,
-      website: formState.website.trim() || undefined,
-      prototype_url: formState.prototype_url.trim() || undefined,
-      linkedin: formState.linkedin.trim() || undefined,
-      commitment: formState.commitment || undefined,
-      equity: formState.equity || undefined,
+      tagline: getNullableText(formState.tagline),
+      description: getNullableText(formState.description),
+      problem: getNullableText(formState.problem),
+      solution: getNullableText(formState.solution),
+      target_users: getNullableText(formState.target_users),
+      stage: formState.stage,
+      industry: formState.industry || null,
+      logo_url: getNullableText(formState.logo_url),
+      secondary_industry: formState.secondary_industry || null,
+      team_size: formState.team_size ? Number(formState.team_size) : null,
+      open_roles: formState.open_roles,
+      traction: buildTractionPayload(formState),
+      website: getNullableText(formState.website),
+      linkedin: getNullableText(formState.linkedin),
+      twitter: getNullableText(formState.twitter),
+      instagram: getNullableText(formState.instagram),
+      pitch_deck: getNullableText(formState.pitch_deck),
+      commitment: formState.commitment === 'full_time' || formState.commitment === 'part_time'
+        ? formState.commitment
+        : null,
+      equity: formState.equity === 'equity_only' || formState.equity === 'equity_and_salary'
+        ? formState.equity
+        : null,
       paid: formState.paid,
     };
 
@@ -704,9 +987,50 @@ export function EditStartupScreen() {
             />
             <ChipSelector
               label="Stage"
-              onChange={(v) => updateField('stage', v)}
+              onChange={(v) => updateField('stage', v as ProfileStartupStageValue)}
               options={STAGE_OPTIONS}
               value={formState.stage}
+            />
+          </AppCard>
+
+          <AppCard
+            className="mt-4 gap-5"
+            style={{ backgroundColor: palette.field, borderColor: palette.border }}>
+            <View className="gap-1">
+              <AppText variant="subtitle">Vision</AppText>
+              <AppText className="text-[13px]" tone="muted">
+                Explain the problem, your solution, and who you are building for.
+              </AppText>
+            </View>
+            <StartupInput
+              className="min-h-[100px] px-4 py-4 text-[15px]"
+              label="Problem You&apos;re Solving"
+              multiline
+              onChangeText={(v) => updateField('problem', v)}
+              placeholder="Who hurts, and why?"
+              style={{ paddingHorizontal: 16, paddingVertical: 16 }}
+              textAlignVertical="top"
+              value={formState.problem}
+            />
+            <StartupInput
+              className="min-h-[100px] px-4 py-4 text-[15px]"
+              label="Your Solution"
+              multiline
+              onChangeText={(v) => updateField('solution', v)}
+              placeholder="How does your product solve it?"
+              style={{ paddingHorizontal: 16, paddingVertical: 16 }}
+              textAlignVertical="top"
+              value={formState.solution}
+            />
+            <StartupInput
+              className="min-h-[100px] px-4 py-4 text-[15px]"
+              label="Target Users"
+              multiline
+              onChangeText={(v) => updateField('target_users', v)}
+              placeholder="Describe the people you are building for"
+              style={{ paddingHorizontal: 16, paddingVertical: 16 }}
+              textAlignVertical="top"
+              value={formState.target_users}
             />
           </AppCard>
 
@@ -755,23 +1079,10 @@ export function EditStartupScreen() {
                 Share where you stand today.
               </AppText>
             </View>
-            <StartupInput
-              label="User Count"
-              onChangeText={(v) => updateField('user_count', v)}
-              placeholder="e.g. 1000+"
-              value={formState.user_count}
-            />
-            <StartupInput
-              label="Monthly Active Users"
-              onChangeText={(v) => updateField('mau', v)}
-              placeholder="e.g. 500"
-              value={formState.mau}
-            />
-            <StartupInput
-              label="Revenue"
-              onChangeText={(v) => updateField('revenue', v)}
-              placeholder="e.g. $10K ARR"
-              value={formState.revenue}
+            <TractionFields
+              onChange={updateTractionField}
+              stage={formState.stage}
+              traction={formState.traction}
             />
           </AppCard>
 
@@ -851,18 +1162,32 @@ export function EditStartupScreen() {
             <StartupInput
               autoCapitalize="none"
               keyboardType="url"
-              label="Prototype / Demo"
-              onChangeText={(v) => updateField('prototype_url', v)}
-              placeholder="https://figma.com/..."
-              value={formState.prototype_url}
-            />
-            <StartupInput
-              autoCapitalize="none"
-              keyboardType="url"
               label="LinkedIn"
               onChangeText={(v) => updateField('linkedin', v)}
               placeholder="https://linkedin.com/company/..."
               value={formState.linkedin}
+            />
+            <StartupInput
+              autoCapitalize="none"
+              label="Twitter / X"
+              onChangeText={(v) => updateField('twitter', v)}
+              placeholder="@yourhandle"
+              value={formState.twitter}
+            />
+            <StartupInput
+              autoCapitalize="none"
+              label="Instagram"
+              onChangeText={(v) => updateField('instagram', v)}
+              placeholder="@yourstartup"
+              value={formState.instagram}
+            />
+            <StartupInput
+              autoCapitalize="none"
+              keyboardType="url"
+              label="Pitch Deck"
+              onChangeText={(v) => updateField('pitch_deck', v)}
+              placeholder="https://pitch.com/..."
+              value={formState.pitch_deck}
             />
           </AppCard>
 

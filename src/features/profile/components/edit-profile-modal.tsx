@@ -26,12 +26,12 @@ import {
 } from '../hooks/use-profile';
 import { mockMyProfileResponse, mockProfileOptionsResponse } from '../mock/profile.mock';
 import type {
-  MyProfileData,
   MyProfileResponse,
   ProfileAboutSection,
   ProfileEducationItem,
   ProfileExperienceItem,
   ProfileOptionsResponse,
+  ProfileTalentData,
   UpdateMyProfileRequest,
 } from '../types/profile.types';
 
@@ -65,7 +65,7 @@ type ProfileInputProps = TextInputProps & {
 };
 
 function hasUsableProfile(response?: MyProfileResponse) {
-  return typeof response?.data?.id === 'string' && response.data.id.length > 0;
+  return typeof response?.data?.talent?.name === 'string' && response.data.talent.name.length > 0;
 }
 
 function hasUsablePersonalityOptions(response?: ProfileOptionsResponse) {
@@ -94,7 +94,7 @@ function slugifyLocationLabel(value: string) {
     .replace(/^_+|_+$/g, '') ?? '';
 }
 
-function resolveInitialLocationId(profile: MyProfileData, locations: ProfileLocationOption[]) {
+function resolveInitialLocationId(profile: ProfileTalentData, locations: ProfileLocationOption[]) {
   const locationId = profile.location.id?.trim();
 
   if (locationId) {
@@ -111,7 +111,7 @@ function resolveInitialLocationId(profile: MyProfileData, locations: ProfileLoca
 }
 
 function buildInitialFormState(
-  profile: MyProfileData,
+  profile: ProfileTalentData,
   locations: ProfileLocationOption[] = mockProfileOptionsResponse.data.locations
 ): UpdateMyProfileRequest {
   return {
@@ -1001,6 +1001,7 @@ export function EditProfileScreen() {
     profileResponse && hasUsableProfile(profileResponse)
       ? profileResponse.data
       : mockMyProfileResponse.data;
+  const talent = profile.talent;
   const profileOptionsResponse = optionsQuery.data;
   const options = profileOptionsResponse && hasUsablePersonalityOptions(profileOptionsResponse)
     ? profileOptionsResponse.data.personalityAndHobbies
@@ -1008,19 +1009,18 @@ export function EditProfileScreen() {
   const locationOptions = profileOptionsResponse && hasUsableLocationOptions(profileOptionsResponse)
     ? profileOptionsResponse.data.locations
     : mockProfileOptionsResponse.data.locations;
-  const [formState, setFormState] = React.useState(() => buildInitialFormState(profile, locationOptions));
+  const [formState, setFormState] = React.useState(() => buildInitialFormState(talent, locationOptions));
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [backgroundTab, setBackgroundTab] = React.useState<EditableBackgroundTab>('experience');
   const [uploadingLogoKey, setUploadingLogoKey] = React.useState<string | null>(null);
-  const aboutCopy = getAboutCopy(profile.sections.about);
-  const isStartupOwnerProfile = Boolean(profile.startup);
+  const aboutCopy = getAboutCopy(talent.sections.about);
 
   React.useEffect(() => {
-    setFormState(buildInitialFormState(profile, locationOptions));
+    setFormState(buildInitialFormState(talent, locationOptions));
     setFormErrors({});
     setSubmitError(null);
-  }, [locationOptions, profile]);
+  }, [locationOptions, talent]);
 
   const selectedPersonalityIds = formState.personalityAndHobbyIds ?? [];
   const selectedCount = selectedPersonalityIds.length;
@@ -1091,7 +1091,7 @@ export function EditProfileScreen() {
       photoUrl: formState.photoUrl?.trim() || null,
       locationId: formState.locationId.trim(),
       about: formState.about.trim(),
-      ...(isStartupOwnerProfile ? {} : { personalityAndHobbyIds: selectedPersonalityIds }),
+      personalityAndHobbyIds: selectedPersonalityIds,
       experience: sanitizeExperience(formState.experience),
       education: sanitizeEducation(formState.education),
     };
@@ -1209,7 +1209,7 @@ export function EditProfileScreen() {
     }
   }
 
-  const initials = getInitials(profile.name);
+  const initials = getInitials(talent.name);
   const profilePhotoUrl = formState.photoUrl?.trim() || null;
   const isUploadingProfileImage = uploadProfileImageMutation.isPending;
   const isUploadingBackgroundLogo = uploadBackgroundLogoMutation.isPending;
@@ -1454,8 +1454,7 @@ export function EditProfileScreen() {
             )}
           </AppCard>
 
-          {!isStartupOwnerProfile ? (
-            <AppCard
+          <AppCard
               className="mt-4 gap-5"
               style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
               <View className="flex-row items-center justify-between gap-3">
@@ -1493,12 +1492,7 @@ export function EditProfileScreen() {
                   {submitError}
                 </AppText>
               ) : null}
-            </AppCard>
-          ) : submitError ? (
-            <AppText className="mt-4 text-[12px]" tone="danger" variant="code">
-              {submitError}
-            </AppText>
-          ) : null}
+          </AppCard>
 
           <View className="mt-5 flex-row gap-3 pt-1">
             <ActionButton

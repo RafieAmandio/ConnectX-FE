@@ -78,7 +78,7 @@ function extractProfileImageFileName(asset: ProfileImageUploadAsset) {
 
 export async function fetchMyProfile() {
   const response = await apiFetch<MyProfileResponse>(PROFILE_API.ME);
-  console.log('fetch profile response', response);
+  console.log('fetch profile response:', JSON.stringify(response, null, 2));
 
   return response;
 }
@@ -90,10 +90,12 @@ export async function fetchProfileOptions() {
 export async function updateMyProfile(payload: UpdateMyProfileRequest) {
   console.log('updateMyProfile payload', payload);
 
-  return apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
+  const response = await apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
     body: payload as unknown as BodyInit,
     method: 'PATCH',
   });
+  console.log('updateMyProfile response:', JSON.stringify(response, null, 2));
+  return response;
 }
 
 export async function uploadProfileImage(asset: ProfileImageUploadAsset) {
@@ -122,10 +124,12 @@ export async function uploadProfileImage(asset: ProfileImageUploadAsset) {
 }
 
 export async function updateMyLinkedInProfile(payload: UpdateMyLinkedInProfileRequest) {
-  return apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
+  const response = await apiFetch<UpdateMyProfileResponse>(PROFILE_API.ME, {
     body: payload as unknown as BodyInit,
     method: 'PATCH',
   });
+  console.log('updateMyLinkedInProfile response:', JSON.stringify(response, null, 2));
+  return response;
 }
 
 export async function syncLinkedInProfile(payload: SyncLinkedInProfileRequest) {

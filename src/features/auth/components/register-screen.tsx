@@ -15,7 +15,7 @@ import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@shared/components';
-import { ApiError } from '@shared/services/api';
+import { getApiDisplayMessage, getApiFieldError } from '@shared/services/api';
 import { cn } from '@shared/utils/cn';
 
 import { useAuth } from '../hooks/use-auth';
@@ -174,31 +174,24 @@ export function RegisterScreen() {
       });
       router.replace('/verify-email');
     } catch (error: unknown) {
-      if (error instanceof ApiError && error.payload) {
-        const payload = error.payload as {
-          message?: string;
-          errors?: {
-            email?: string[];
-            password?: string[];
-            password_confirmation?: string[];
-          };
-        };
-        const fieldErrors = payload.errors;
+      const fieldErrors = {
+        email: getApiFieldError(error, 'email'),
+        password: getApiFieldError(error, 'password'),
+        passwordConfirmation: getApiFieldError(error, 'password_confirmation'),
+      };
+      const hasFieldErrors = Object.values(fieldErrors).some(Boolean);
 
-        if (fieldErrors?.email?.[0]) setEmailError(fieldErrors.email[0]);
-        if (fieldErrors?.password?.[0]) setPasswordError(fieldErrors.password[0]);
-        if (fieldErrors?.password_confirmation?.[0]) {
-          setPasswordConfirmationError(fieldErrors.password_confirmation[0]);
-        }
-
-        if (!fieldErrors) {
-          setStatusMessage(payload.message ?? error.message);
-        }
-      } else {
-        setStatusMessage(
-          error instanceof Error ? error.message : 'Could Not Create Your Account. Try Again.'
-        );
+      if (fieldErrors.email) setEmailError(fieldErrors.email);
+      if (fieldErrors.password) setPasswordError(fieldErrors.password);
+      if (fieldErrors.passwordConfirmation) {
+        setPasswordConfirmationError(fieldErrors.passwordConfirmation);
       }
+
+      setStatusMessage(
+        hasFieldErrors
+          ? null
+          : getApiDisplayMessage(error, 'Could not create your account. Try again.')
+      );
     } finally {
       setIsSubmitting(false);
     }

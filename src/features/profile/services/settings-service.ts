@@ -173,11 +173,14 @@ export async function requestWhatsappChange(
   payload: RequestWhatsappChangeRequest
 ): Promise<ContactChangeRequestResponse> {
   try {
-    return await apiFetch<ContactChangeRequestResponse>(SETTINGS_API.WHATSAPP_CHANGE_REQUESTS, {
+    const response = await apiFetch<ContactChangeRequestResponse>(SETTINGS_API.WHATSAPP_CHANGE_REQUESTS, {
       body: payload as unknown as BodyInit,
       method: 'POST',
     });
+    console.log('requestWhatsappChange response:', JSON.stringify(response, null, 2));
+    return response;
   } catch (error) {
+    console.log('requestWhatsappChange error:', error instanceof ApiError ? JSON.stringify(error.payload, null, 2) : error);
     if (shouldUseMock() && (!(error instanceof ApiError) || error.status === 0 || error.status === 404)) {
       return buildMockContactChangeRequestResponse('verify_whatsapp');
     }
@@ -189,11 +192,14 @@ export async function verifyWhatsappChange(
   payload: VerifyContactChangeRequest
 ): Promise<VerifyContactChangeResponse> {
   try {
-    return await apiFetch<VerifyContactChangeResponse>(SETTINGS_API.WHATSAPP_CHANGE_VERIFY, {
+    const response = await apiFetch<VerifyContactChangeResponse>(SETTINGS_API.WHATSAPP_CHANGE_VERIFY, {
       body: payload as unknown as BodyInit,
       method: 'POST',
     });
+    console.log('verifyWhatsappChange response:', JSON.stringify(response, null, 2));
+    return response;
   } catch (error) {
+    console.log('verifyWhatsappChange error:', error instanceof ApiError ? JSON.stringify(error.payload, null, 2) : error);
     if (shouldUseMock() && (!(error instanceof ApiError) || error.status === 0 || error.status === 404)) {
       return buildMockContactChangeVerification(payload, '123456');
     }
