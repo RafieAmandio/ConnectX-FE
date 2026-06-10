@@ -264,14 +264,14 @@ export function SettingsScreen() {
   const isProfileStatusPending = pauseAccountMutation.isPending || activateAccountMutation.isPending;
   const isAccountActionPending = isProfileStatusPending || deleteAccountMutation.isPending;
   const subscriptionDescription = isPremiumActive
-    ? 'Your premium access is active for this account.'
-    : 'Review available ConnectX Pro plans and restore purchases.';
+    ? t('settings.subscriptionActiveDescription')
+    : t('settings.subscriptionInactiveDescription');
 
   async function openExternalUrl(url: string) {
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Link unavailable', 'This link could not be opened right now.');
+      Alert.alert(t('settings.linkUnavailableTitle'), t('settings.linkUnavailableMessage'));
     }
   }
 
@@ -313,20 +313,20 @@ export function SettingsScreen() {
           return;
         }
 
-        Alert.alert('Subscription unavailable', 'Subscription management is not available on this build.');
+        Alert.alert(t('settings.subscriptionUnavailableTitle'), t('settings.subscriptionManagementUnavailable'));
         return;
       }
 
       if (!isRevenueCatSupported) {
-        Alert.alert('Subscription unavailable', 'Premium checkout is not available on this build.');
+        Alert.alert(t('settings.subscriptionUnavailableTitle'), t('settings.subscriptionCheckoutUnavailable'));
         return;
       }
 
       await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to open subscription settings.';
-      Alert.alert('Subscription unavailable', message);
+        error instanceof Error ? error.message : t('settings.subscriptionOpenError');
+      Alert.alert(t('settings.subscriptionUnavailableTitle'), message);
     }
   }
 
@@ -334,10 +334,10 @@ export function SettingsScreen() {
     try {
       const response = await pauseAccountMutation.mutateAsync();
       await refreshSession();
-      Alert.alert('Profile paused', response.message || 'Your profile has been paused.');
+      Alert.alert(t('settings.profilePausedTitle'), response.message || t('settings.profilePausedMessage'));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to pause your profile.';
-      Alert.alert('Pause failed', message);
+      const message = error instanceof Error ? error.message : t('settings.pauseFailedMessage');
+      Alert.alert(t('settings.pauseFailedTitle'), message);
     }
   }
 
@@ -345,24 +345,24 @@ export function SettingsScreen() {
     try {
       const response = await activateAccountMutation.mutateAsync();
       await refreshSession();
-      Alert.alert('Profile activated', response.message || 'Your profile is active again.');
+      Alert.alert(t('settings.profileActivatedTitle'), response.message || t('settings.profileActivatedMessage'));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to activate your profile.';
-      Alert.alert('Activation failed', message);
+      const message = error instanceof Error ? error.message : t('settings.activationFailedMessage');
+      Alert.alert(t('settings.activationFailedTitle'), message);
     }
   }
 
   function confirmPauseAccount() {
     Alert.alert(
-      'Pause profile?',
-      'Your profile will be hidden or deactivated.',
+      t('settings.pauseConfirmTitle'),
+      t('settings.pauseConfirmMessage'),
       [
-        { style: 'cancel', text: 'Cancel' },
+        { style: 'cancel', text: t('settings.cancel') },
         {
           onPress: () => {
             void pauseAccount();
           },
-          text: 'Pause',
+          text: t('settings.pause'),
         },
       ]
     );
@@ -370,15 +370,15 @@ export function SettingsScreen() {
 
   function confirmActivateAccount() {
     Alert.alert(
-      'Activate profile?',
-      'Your profile will become visible again according to backend account rules.',
+      t('settings.activateConfirmTitle'),
+      t('settings.activateConfirmMessage'),
       [
-        { style: 'cancel', text: 'Cancel' },
+        { style: 'cancel', text: t('settings.cancel') },
         {
           onPress: () => {
             void activateAccount();
           },
-          text: 'Activate',
+          text: t('settings.activate'),
         },
       ]
     );
@@ -389,35 +389,35 @@ export function SettingsScreen() {
       const response = await deleteAccountMutation.mutateAsync();
 
       Alert.alert(
-        'Deletion requested',
-        response.message || 'Your account deletion request has been scheduled.',
+        t('settings.deletionRequestedTitle'),
+        response.message || t('settings.deletionRequestedMessage'),
         [
           {
             onPress: () => {
               void signOut();
             },
-            text: 'OK',
+            text: t('settings.ok'),
           },
         ]
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to request account deletion.';
-      Alert.alert('Delete failed', message);
+      const message = error instanceof Error ? error.message : t('settings.deleteFailedMessage');
+      Alert.alert(t('settings.deleteFailedTitle'), message);
     }
   }
 
   function confirmDeleteAccount() {
     Alert.alert(
-      'Delete account?',
-      'This will request account deletion and sign you out after the request is accepted.',
+      t('settings.deleteConfirmTitle'),
+      t('settings.deleteConfirmMessage'),
       [
-        { style: 'cancel', text: 'Cancel' },
+        { style: 'cancel', text: t('settings.cancel') },
         {
           onPress: () => {
             void requestAccountDeletion();
           },
           style: 'destructive',
-          text: 'Request deletion',
+          text: t('settings.requestDeletion'),
         },
       ]
     );
@@ -425,7 +425,7 @@ export function SettingsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false, title: 'Settings' }} />
+      <Stack.Screen options={{ headerShown: false, title: t('settings.routeTitle') }} />
       <View className="flex-1" style={{ backgroundColor: palette.canvas }}>
         <View
           className="flex-row items-center justify-between border-b px-5 pb-4"
@@ -446,10 +446,10 @@ export function SettingsScreen() {
 
           <View className="min-w-0 flex-1 px-4">
             <AppText className="text-[21px]" numberOfLines={1} variant="title">
-              Settings
+              {t('settings.headerTitle')}
             </AppText>
             <AppText className="text-[13px]" numberOfLines={1} tone="muted">
-              Account, profile, and subscription controls.
+              {t('settings.headerDescription')}
             </AppText>
           </View>
 
@@ -480,70 +480,70 @@ export function SettingsScreen() {
             />
           </Section>
 
-          <Section title="Notifications">
+          <Section title={t('settings.notifications.section')}>
             <NotificationToggleRow
-              description="Stay updated on new connections."
+              description={t('settings.notifications.pushDescription')}
               enabled={notificationData?.push_enabled ?? true}
               icon="notifications-outline"
               isUpdating={updateNotificationsMutation.isPending}
               onToggle={(value) => {
                 updateNotificationsMutation.mutate({ push_enabled: value });
               }}
-              title="Push Notifications"
+              title={t('settings.notifications.pushTitle')}
             />
             <NotificationToggleRow
-              description="Receive updates in your inbox."
+              description={t('settings.notifications.emailDescription')}
               enabled={notificationData?.email_enabled ?? true}
               icon="mail-outline"
               isUpdating={updateNotificationsMutation.isPending}
               onToggle={(value) => {
                 updateNotificationsMutation.mutate({ email_enabled: value });
               }}
-              title="Email Notifications"
+              title={t('settings.notifications.emailTitle')}
             />
           </Section>
 
-          <Section title="Legal">
+          <Section title={t('settings.legal.section')}>
             <SettingsRow
-              description="Read how ConnectX handles your data."
+              description={t('settings.legal.privacyDescription')}
               icon="shield-checkmark-outline"
               onPress={() => {
                 void openExternalUrl(SETTINGS_LINKS.privacy);
               }}
-              title="Privacy Policy"
+              title={t('settings.legal.privacyTitle')}
             />
             <SettingsRow
-              description="Review the terms that govern ConnectX usage."
+              description={t('settings.legal.termsDescription')}
               icon="document-text-outline"
               onPress={() => {
                 void openExternalUrl(SETTINGS_LINKS.terms);
               }}
-              title="Terms & Policy"
+              title={t('settings.legal.termsTitle')}
             />
           </Section>
 
-          <Section title="Help Center">
+          <Section title={t('settings.help.section')}>
             <SettingsRow
-              description="Share an idea, feature, or enhancement."
+              description={t('settings.help.featureDescription')}
               icon="bulb-outline"
               onPress={() => setSupportTicketType('feature_request')}
-              title="Feature Request"
+              title={t('settings.help.featureTitle')}
             />
             <SettingsRow
-              description="Help us zap those bugs and glitches."
+              description={t('settings.help.bugDescription')}
               icon="bug-outline"
               onPress={() => setSupportTicketType('bug_report')}
-              title="Bug Report"
+              title={t('settings.help.bugTitle')}
             />
             <SettingsRow
-              description="Need a hand? Let us know."
+              description={t('settings.help.supportDescription')}
               icon="chatbubble-ellipses-outline"
               onPress={() => setSupportTicketType('contact_support')}
-              title="Contact Support"
+              title={t('settings.help.supportTitle')}
             />
           </Section>
 
-          <Section title="Subscription">
+          <Section title={t('settings.subscription.section')}>
             <SettingsRow
               description={subscriptionDescription}
               icon={isPremiumActive ? 'sparkles-outline' : 'card-outline'}
@@ -551,57 +551,57 @@ export function SettingsScreen() {
               onPress={() => {
                 void handleSubscriptionPress();
               }}
-              title="ConnectX Premium"
+              title={t('settings.subscription.title')}
               tone={isPremiumActive ? 'success' : 'accent'}
-              value={isPremiumActive ? 'Premium active' : 'Free'}
+              value={isPremiumActive ? t('settings.subscription.activeValue') : t('settings.subscription.freeValue')}
             />
           </Section>
 
-          <Section title="Profile">
+          <Section title={t('settings.profile.section')}>
             {session?.method === 'email' ? (
               <>
                 <SettingsRow
-                  description="Verify a new email address for your account."
+                  description={t('settings.profile.changeEmailDescription')}
                   icon="mail-outline"
                   onPress={() => setAccountContactChange('email')}
-                  title="Change email"
+                  title={t('settings.profile.changeEmailTitle')}
                   value={session.email}
                 />
                 <SettingsRow
-                  description="Update your account password."
+                  description={t('settings.profile.changePasswordDescription')}
                   icon="key-outline"
                   onPress={() => setIsChangePasswordVisible(true)}
-                  title="Change password"
+                  title={t('settings.profile.changePasswordTitle')}
                 />
               </>
             ) : null}
             <SettingsRow
-              description="Verify a new number for account messages."
+              description={t('settings.profile.changeWhatsappDescription')}
               icon="logo-whatsapp"
               onPress={() => setAccountContactChange('whatsapp')}
-              title="Change WhatsApp number"
+              title={t('settings.profile.changeWhatsappTitle')}
               value={session?.user?.whatsapp_number ?? undefined}
             />
             <SettingsRow
               description={
                 isProfileActive
-                  ? 'Hide or deactivate your profile without signing out.'
-                  : 'Make your profile active and visible again.'
+                  ? t('settings.profile.pauseDescription')
+                  : t('settings.profile.activateDescription')
               }
               disabled={isAccountActionPending}
               icon={isProfileActive ? 'pause-circle-outline' : 'play-circle-outline'}
               isLoading={isProfileStatusPending}
               onPress={isProfileActive ? confirmPauseAccount : confirmActivateAccount}
-              title={isProfileActive ? 'Pause profile' : 'Activate profile'}
+              title={isProfileActive ? t('settings.profile.pauseTitle') : t('settings.profile.activateTitle')}
               tone={isProfileActive ? 'accent' : 'success'}
             />
             <SettingsRow
-              description="Request scheduled account deletion from ConnectX."
+              description={t('settings.profile.deleteDescription')}
               disabled={isAccountActionPending}
               icon="trash-outline"
               isLoading={deleteAccountMutation.isPending}
               onPress={confirmDeleteAccount}
-              title="Delete account"
+              title={t('settings.profile.deleteTitle')}
               tone="danger"
             />
             {/* <SettingsRow
@@ -614,7 +614,7 @@ export function SettingsScreen() {
           </Section>
 
           <AppText align="center" className="text-[12px] pt-2" tone="muted">
-            Version {Constants.expoConfig?.version ?? '0.0.0'}
+            {t('settings.version', { version: Constants.expoConfig?.version ?? '0.0.0' })}
           </AppText>
         </ScrollView>
 
