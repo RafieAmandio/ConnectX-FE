@@ -124,7 +124,7 @@ type FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
-type FlatOption = { id: string; label: string };
+type FlatOption = { id: string; label: string; value?: string };
 
 function buildInitialFormState(startup?: MyProfileData['startup']): FormState {
   return {
@@ -189,6 +189,42 @@ function validateForm(form: FormState): FormErrors {
 
 function flattenGroups(groups: { id: string; label: string; options: FlatOption[] }[]): FlatOption[] {
   return groups.flatMap((g) => g.options);
+}
+
+function getOptionValue(option: FlatOption) {
+  return option.value ?? option.id;
+}
+
+function normalizeOptionLookupKey(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function optionMatchesValue(option: FlatOption, value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return false;
+  }
+
+  if (option.id === trimmedValue || option.value === trimmedValue) {
+    return true;
+  }
+
+  const normalizedValue = normalizeOptionLookupKey(trimmedValue);
+
+  return [option.id, option.value, option.label]
+    .filter((item): item is string => Boolean(item))
+    .some((item) => normalizeOptionLookupKey(item) === normalizedValue);
+}
+
+function findOptionByValue(options: FlatOption[], value: string) {
+  return options.find((option) => optionMatchesValue(option, value));
+}
+
+function resolveOptionValue(options: FlatOption[], value: string) {
+  const option = findOptionByValue(options, value);
+
+  return option ? getOptionValue(option) : value;
 }
 
 type StartupInputProps = TextInputProps & {
@@ -312,7 +348,7 @@ function DropdownSelector({
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
-  const selectedLabel = options.find((o) => o.id === value)?.label ?? '';
+  const selectedLabel = findOptionByValue(options, value)?.label ?? '';
 
   const filtered = search.trim()
     ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
@@ -352,13 +388,13 @@ function DropdownSelector({
           ) : null}
           <ScrollView nestedScrollEnabled>
             {filtered.map((opt) => {
-              const isSelected = opt.id === value;
+              const isSelected = optionMatchesValue(opt, value);
               return (
                 <Pressable
                   key={opt.id}
                   className="flex-row items-center gap-3 px-3 py-3"
                   onPress={() => {
-                    onChange(opt.id);
+                    onChange(getOptionValue(opt));
                     setIsOpen(false);
                     setSearch('');
                   }}
@@ -689,6 +725,27 @@ export function EditStartupScreen() {
     () => flattenGroups(filterOptionsQuery.data?.data?.roles ?? []),
     [filterOptionsQuery.data]
   );
+
+  React.useEffect(() => {
+    if (!industryOptions.length) {
+      return;
+    }
+
+    setFormState((current) => {
+      const industry = resolveOptionValue(industryOptions, current.industry);
+      const secondaryIndustry = resolveOptionValue(industryOptions, current.secondary_industry);
+
+      if (industry === current.industry && secondaryIndustry === current.secondary_industry) {
+        return current;
+      }
+
+      return {
+        ...current,
+        industry,
+        secondary_industry: secondaryIndustry,
+      };
+    });
+  }, [industryOptions]);
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setFormState((prev) => ({ ...prev, [key]: value }));
