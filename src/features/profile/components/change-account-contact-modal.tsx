@@ -17,7 +17,7 @@ import {
   normalizeWhatsappNumber,
 } from '@features/auth/utils/whatsapp-validation';
 import { AppButton, AppInput, AppText } from '@shared/components';
-import { ApiError } from '@shared/services/api';
+import { getApiDisplayMessage, getApiFieldError } from '@shared/services/api';
 
 import {
   useRequestEmailChange,
@@ -48,21 +48,6 @@ type ChangeAccountContactModalProps = {
 function getSecondsRemaining(timestamp: string | null) {
   if (!timestamp) return 0;
   return Math.max(0, Math.ceil((new Date(timestamp).getTime() - Date.now()) / 1000));
-}
-
-function getApiFieldError(error: unknown, field: string) {
-  if (!(error instanceof ApiError) || !error.payload || typeof error.payload !== 'object') {
-    return null;
-  }
-
-  const errors = 'errors' in error.payload ? error.payload.errors : null;
-
-  if (!errors || typeof errors !== 'object' || !(field in errors)) {
-    return null;
-  }
-
-  const messages = (errors as Record<string, unknown>)[field];
-  return Array.isArray(messages) && typeof messages[0] === 'string' ? messages[0] : null;
 }
 
 export function ChangeAccountContactModal({
@@ -156,8 +141,12 @@ export function ChangeAccountContactModal({
       setStep('otp');
     } catch (error) {
       const field = isEmail ? 'email' : 'whatsapp_number';
-      setValueError(getApiFieldError(error, field));
-      Alert.alert('Unable to send code', error instanceof Error ? error.message : 'Please try again.');
+      const fieldError = getApiFieldError(error, field);
+      setValueError(fieldError ?? null);
+      Alert.alert(
+        'Unable to send code',
+        fieldError ?? getApiDisplayMessage(error, 'Please try again.')
+      );
     }
   }
 
@@ -184,8 +173,12 @@ export function ChangeAccountContactModal({
         response.message || `${isEmail ? 'Email' : 'WhatsApp number'} updated successfully.`
       );
     } catch (error) {
-      setOtpError(getApiFieldError(error, 'otp_code'));
-      Alert.alert('Unable to verify code', error instanceof Error ? error.message : 'Please try again.');
+      const otpFieldError = getApiFieldError(error, 'otp_code');
+      setOtpError(otpFieldError ?? null);
+      Alert.alert(
+        'Unable to verify code',
+        otpFieldError ?? getApiDisplayMessage(error, 'Please try again.')
+      );
     }
   }
 
