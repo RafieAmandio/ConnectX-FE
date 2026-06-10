@@ -145,7 +145,11 @@ export function ChangeAccountContactModal({
       setValueError(fieldError ?? null);
       Alert.alert(
         'Unable to send code',
-        fieldError ?? getApiDisplayMessage(error, 'Please try again.')
+        fieldError ??
+          getApiDisplayMessage(
+            error,
+            `We could not send a verification code to this ${isEmail ? 'email address' : 'WhatsApp number'}. Please try again.`
+          )
       );
     }
   }
@@ -177,7 +181,8 @@ export function ChangeAccountContactModal({
       setOtpError(otpFieldError ?? null);
       Alert.alert(
         'Unable to verify code',
-        otpFieldError ?? getApiDisplayMessage(error, 'Please try again.')
+        otpFieldError ??
+          getApiDisplayMessage(error, 'We could not verify this code. Please try again.')
       );
     }
   }

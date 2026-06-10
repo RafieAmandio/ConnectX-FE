@@ -22,6 +22,15 @@ const NORMALIZED_MESSAGES: Record<string, string> = {
   'validation failed.': 'Please check the highlighted fields.',
 };
 
+const BACKEND_DIAGNOSTIC_PATTERNS = [
+  /SQLSTATE\[/i,
+  /Connection:\s*\w+/i,
+  /Illuminate\\/i,
+  /\/var\/task\//i,
+  /violates check constraint/i,
+  /\b(insert|update|delete|select)\b.+\b(from|into|where|returning)\b/i,
+];
+
 function capitalize(message: string) {
   return message.charAt(0).toUpperCase() + message.slice(1);
 }
@@ -32,10 +41,18 @@ function humanizeFieldName(field: string) {
   return FIELD_LABELS[normalizedField] ?? field.trim().replace(/_/g, ' ');
 }
 
+function isBackendDiagnosticMessage(message: string) {
+  return BACKEND_DIAGNOSTIC_PATTERNS.some((pattern) => pattern.test(message));
+}
+
 export function normalizeApiDisplayMessage(message: string) {
   const trimmedMessage = message.trim().replace(/\s+/g, ' ');
 
   if (!trimmedMessage) {
+    return '';
+  }
+
+  if (isBackendDiagnosticMessage(trimmedMessage)) {
     return '';
   }
 
@@ -113,7 +130,11 @@ export function getApiDisplayMessage(error: unknown, fallbackMessage = 'Please t
   }
 
   if (error instanceof Error && error.message) {
-    return normalizeApiDisplayMessage(error.message);
+    const errorMessage = normalizeApiDisplayMessage(error.message);
+
+    if (errorMessage) {
+      return errorMessage;
+    }
   }
 
   return fallbackMessage;
