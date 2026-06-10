@@ -222,24 +222,7 @@ export type UpdateProfileLocationResponse = {
   };
 };
 
-export type UpdateMyProfileResponse = {
-  success: boolean;
-  message: string;
-  data: {
-    id: string;
-    name: string;
-    headline: string;
-    photoUrl: string | null;
-    location: ProfileLocation;
-    sections: {
-      about: ProfileAboutSection;
-      personalityAndHobbies?: ProfileListSection;
-      experience?: ProfileExperienceSection;
-      education?: ProfileEducationSection;
-    };
-    updatedAt: string;
-  };
-};
+export type UpdateMyProfileResponse = MyProfileResponse;
 
 export type PauseAccountResponse = {
   success: true;

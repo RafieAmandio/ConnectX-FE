@@ -42,28 +42,26 @@ function mergeProfileResponse(
 ): MyProfileResponse {
   return {
     ...baseResponse,
+    ...updateResponse,
     message: updateResponse.message,
     success: updateResponse.success,
     data: {
       ...baseResponse.data,
-      id: updateResponse.data.id,
+      ...updateResponse.data,
       talent: {
         ...baseResponse.data.talent,
-        name: updateResponse.data.name,
-        headline: updateResponse.data.headline,
-        photoUrl: updateResponse.data.photoUrl,
-        location: updateResponse.data.location,
+        ...updateResponse.data.talent,
         sections: {
           ...baseResponse.data.talent.sections,
-          about: updateResponse.data.sections.about,
-          education: updateResponse.data.sections.education ?? baseResponse.data.talent.sections.education,
-          experience: updateResponse.data.sections.experience ?? baseResponse.data.talent.sections.experience,
+          ...updateResponse.data.talent.sections,
+          about: updateResponse.data.talent.sections.about,
+          education: updateResponse.data.talent.sections.education ?? baseResponse.data.talent.sections.education,
+          experience: updateResponse.data.talent.sections.experience ?? baseResponse.data.talent.sections.experience,
           personalityAndHobbies:
-            updateResponse.data.sections.personalityAndHobbies ??
+            updateResponse.data.talent.sections.personalityAndHobbies ??
             baseResponse.data.talent.sections.personalityAndHobbies,
         },
       },
-      updatedAt: updateResponse.data.updatedAt,
     },
   };
 }
