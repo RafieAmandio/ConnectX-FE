@@ -3,6 +3,11 @@ export type TeamEntityOption = {
   label: string;
 };
 
+export type TeamCatalogOption = {
+  id: string | null;
+  label: string;
+};
+
 export type TeamRole = TeamEntityOption;
 
 export type MissingRole = TeamEntityOption;
@@ -39,8 +44,8 @@ export type StartupTeamOverview = {
   id: string;
   name: string;
   description: string | null;
-  industry: TeamEntityOption;
-  stage: TeamEntityOption;
+  industry: TeamCatalogOption;
+  stage: TeamCatalogOption;
 };
 
 export type TeamCompleteness = {
@@ -199,8 +204,8 @@ export type StartupInvitationStartupSummary = {
   id: string;
   name: string;
   description: string | null;
-  industry: TeamEntityOption;
-  stage: TeamEntityOption;
+  industry: TeamCatalogOption;
+  stage: TeamCatalogOption;
 };
 
 export type StartupInvitationInviterSummary = {

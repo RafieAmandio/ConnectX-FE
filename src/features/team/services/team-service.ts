@@ -39,6 +39,10 @@ function isTeamEntityOption(value: unknown) {
   return isRecord(value) && typeof value.id === 'string' && typeof value.label === 'string';
 }
 
+function isTeamCatalogOption(value: unknown) {
+  return isRecord(value) && (value.id === null || typeof value.id === 'string') && typeof value.label === 'string';
+}
+
 function isStringArray(value: unknown) {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
@@ -88,8 +92,8 @@ function isStartupOverview(payload: unknown) {
     typeof payload.id === 'string' &&
     typeof payload.name === 'string' &&
     (payload.description === null || typeof payload.description === 'string') &&
-    isTeamEntityOption(payload.industry) &&
-    isTeamEntityOption(payload.stage)
+    isTeamCatalogOption(payload.industry) &&
+    isTeamCatalogOption(payload.stage)
   );
 }
 
@@ -108,8 +112,8 @@ function hasUsableStartupInvitation(payload: unknown): payload is StartupInvitat
     typeof payload.startup.id === 'string' &&
     typeof payload.startup.name === 'string' &&
     (payload.startup.description === null || typeof payload.startup.description === 'string') &&
-    isTeamEntityOption(payload.startup.industry) &&
-    isTeamEntityOption(payload.startup.stage) &&
+    isTeamCatalogOption(payload.startup.industry) &&
+    isTeamCatalogOption(payload.startup.stage) &&
     isRecord(payload.inviter) &&
     typeof payload.inviter.userId === 'string' &&
     typeof payload.inviter.name === 'string' &&
@@ -358,6 +362,7 @@ export async function fetchTeamOverview(viewerContext: ViewerContext) {
   const response = await apiFetch<TeamOverviewResponse>(
     appendViewerContext(TEAM_API.OVERVIEW, viewerContext)
   );
+  console.log('fetchTeamOverview response:', JSON.stringify(response, null, 2));
   const normalizedResponse = normalizeTeamOverviewResponse(response);
 
   if (!normalizedResponse) {

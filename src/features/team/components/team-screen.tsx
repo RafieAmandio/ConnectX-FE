@@ -215,6 +215,10 @@ function getCommitmentLabel(value: string, t: TFunction) {
   }
 }
 
+function getCatalogLabel(label: string, t: TFunction) {
+  return label.trim() || t('team.notSet');
+}
+
 function getEditableCommitment(value: string): TeamInviteCommitment | null {
   return value === 'full_time' || value === 'part_time' || value === 'advisor' ? value : null;
 }
@@ -1478,14 +1482,14 @@ export function TeamScreen() {
                 <View className="flex-1 gap-2">
                   <AppText tone="muted" variant="label">{t('team.industry')}</AppText>
                   <View className="flex-row flex-wrap gap-2">
-                    <InfoPill label={startup.industry.label} />
+                    <InfoPill label={getCatalogLabel(startup.industry.label, t)} />
                   </View>
                 </View>
 
                 <View className="flex-1 gap-2">
                   <AppText tone="muted" variant="label">{t('team.stage')}</AppText>
                   <View className="flex-row flex-wrap gap-2">
-                    <InfoPill label={startup.stage.label} />
+                    <InfoPill label={getCatalogLabel(startup.stage.label, t)} />
                   </View>
                 </View>
               </View>
