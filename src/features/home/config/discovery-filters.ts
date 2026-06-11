@@ -8,11 +8,6 @@ import type {
   DiscoveryMode,
 } from '../types/discovery.types';
 
-const mockDiscoveryFilterOptionsResponsesByMode = require('../mock/discovery-filter-options.responses.json') as Record<
-  DiscoveryMode,
-  DiscoveryFilterOptionsResponse
->;
-
 function createPremiumSectionAccess(enabled = false) {
   return {
     requiresEntitlement: 'pro' as const,
@@ -697,32 +692,15 @@ function getCatalogOptions(
 }
 
 function getCityQuestion(
-  mode: DiscoveryMode,
   filterOptionsResponse?: DiscoveryFilterOptionsResponse
 ): DiscoveryFilterQuestion | undefined {
-  const fallbackCity = mockDiscoveryFilterOptionsResponsesByMode[mode]?.data.city;
-  const apiCity = filterOptionsResponse?.data.city;
-
-  if (!apiCity) {
-    return fallbackCity;
-  }
-
-  return {
-    ...fallbackCity,
-    ...apiCity,
-    meta: {
-      ...fallbackCity?.meta,
-      ...apiCity.meta,
-    },
-    options: apiCity.options.length > 0 ? apiCity.options : (fallbackCity?.options ?? []),
-  };
+  return filterOptionsResponse?.data.city;
 }
 
 function getCityFilterField(
-  mode: DiscoveryMode,
   filterOptionsResponse?: DiscoveryFilterOptionsResponse
 ): DiscoveryFilterField | null {
-  const city = getCityQuestion(mode, filterOptionsResponse);
+  const city = getCityQuestion(filterOptionsResponse);
 
   if (!city || city.type !== 'searchable_dropdown') {
     return null;
@@ -761,7 +739,7 @@ export function getDiscoveryFilterSections(
 
     if (nextSection.fields?.length) {
       const cityFilterField =
-        nextSection.id === 'locationAvailability' ? getCityFilterField(mode, filterOptionsResponse) : null;
+        nextSection.id === 'locationAvailability' ? getCityFilterField(filterOptionsResponse) : null;
 
       if (cityFilterField && !nextSection.fields.some((field) => field.id === cityFilterField.id)) {
         const workArrangementIndex = nextSection.fields.findIndex((field) => field.id === 'workArrangementIds');

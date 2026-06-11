@@ -10,6 +10,8 @@ import type {
   DiscoveryCardFeedInput,
   DiscoveryCardsRequest,
   DiscoveryCardsResponse,
+  DiscoveryCitySearchResponse,
+  DiscoveryFilterQuestionOption,
   DiscoveryFilterOptionsResponse,
   DiscoveryMode,
   DiscoverySwipeHistoryEntry,
@@ -20,11 +22,6 @@ import type {
   SwipeActionRequest,
   SwipeActionResponse,
 } from '../types/discovery.types';
-
-const mockDiscoveryFilterOptionsResponsesByMode = require('../mock/discovery-filter-options.responses.json') as Record<
-  DiscoveryMode,
-  DiscoveryFilterOptionsResponse
->;
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 20;
@@ -93,6 +90,7 @@ export function isMergeMockDiscoveryCardsEnabled() {
 
 export const DISCOVERY_API = {
   CARDS: '/api/v1/discovery/cards',
+  CITIES_SEARCH: '/api/v1/discovery/cities/search',
   FILTER_OPTIONS: '/api/v1/discovery/filter-options',
   ACTION: (targetId: string) => `/api/v1/discovery/cards/${targetId}/action`,
   REWIND: '/api/v1/discovery/swipes/rewind',
@@ -186,12 +184,6 @@ function summarizeDiscoveryCardsError(error: unknown) {
   };
 }
 
-export function getMockDiscoveryFilterOptionsResponse(mode: DiscoveryMode) {
-  const response = mockDiscoveryFilterOptionsResponsesByMode[mode];
-
-  return JSON.parse(JSON.stringify(response)) as DiscoveryFilterOptionsResponse;
-}
-
 export async function fetchDiscoveryCards(input: DiscoveryCardFeedInput = {}) {
   const payload = buildDiscoveryCardsPayload(input);
   const token = await getApiAccessToken();
@@ -266,20 +258,6 @@ export async function fetchDiscoveryFilterOptions(mode: DiscoveryMode) {
     console.log('[Discovery] fetch filter options mode', mode);
   }
 
-  // if (isDiscoveryCardsMockEnabled()) {
-  //   const response = getMockDiscoveryFilterOptionsResponse(mode);
-
-  //   if (isExpoDevModeEnabled()) {
-  //     console.log('[Discovery] fetch filter options source', {
-  //       cityOptionCount: response.data.city?.options.length ?? 0,
-  //       mode,
-  //       source: 'mock',
-  //     });
-  //   }
-
-  //   return response;
-  // }
-
   const response = await apiFetch<DiscoveryFilterOptionsResponse>(
     `${DISCOVERY_API.FILTER_OPTIONS}?mode=${encodeURIComponent(mode)}`
   );
@@ -293,6 +271,34 @@ export async function fetchDiscoveryFilterOptions(mode: DiscoveryMode) {
   }
 
   return response;
+}
+
+function normalizeDiscoveryCitySearchOptions(
+  response: DiscoveryCitySearchResponse
+): DiscoveryFilterQuestionOption[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  return response.data?.options ?? response.options ?? [];
+}
+
+export async function searchDiscoveryCities({
+  query,
+  signal,
+}: {
+  query: string;
+  signal?: AbortSignal;
+}) {
+  const params = new URLSearchParams({
+    q: query,
+  });
+  const response = await apiFetch<DiscoveryCitySearchResponse>(
+    `${DISCOVERY_API.CITIES_SEARCH}?${params.toString()}`,
+    { signal }
+  );
+
+  return normalizeDiscoveryCitySearchOptions(response);
 }
 
 export async function postSwipeAction(targetId: string, payload: SwipeActionRequest) {

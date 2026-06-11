@@ -92,7 +92,10 @@ export function useUpdateMyProfile() {
         return mergeProfileResponse(baseResponse, response);
       });
 
-      await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: profileQueryKeys.me }),
+        queryClient.invalidateQueries({ queryKey: ['team'] }),
+      ]);
     },
   });
 }

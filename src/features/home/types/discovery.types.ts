@@ -305,6 +305,17 @@ export type DiscoveryFilterQuestionOption = {
   group?: string | null;
 };
 
+export type DiscoveryCitySearchResponse =
+  | DiscoveryFilterQuestionOption[]
+  | {
+    success?: boolean;
+    message?: string;
+    data?: {
+      options?: DiscoveryFilterQuestionOption[];
+    };
+    options?: DiscoveryFilterQuestionOption[];
+  };
+
 export type DiscoveryFilterQuestion = {
   id: string;
   type: 'searchable_dropdown' | string;

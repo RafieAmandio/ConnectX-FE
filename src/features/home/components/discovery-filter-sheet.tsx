@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
+  ActivityIndicator,
   LayoutChangeEvent,
   Modal,
   PanResponder,
@@ -15,11 +16,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppCard, AppText } from '@shared/components';
 import { useLocale, useTranslation, type AppLocale } from '@shared/localization';
 
+import { searchDiscoveryCities } from '../services/discovery-service';
 import type {
   DiscoveryAppliedFilters,
   DiscoveryFilterField,
   DiscoveryFilterOption,
   DiscoveryFilterOptionsResponse,
+  DiscoveryFilterQuestionOption,
   DiscoveryFilterSection,
   DiscoveryGoalId,
   DiscoveryMode,
@@ -45,6 +48,10 @@ type DiscoveryFilterSheetProps = {
 };
 
 type TFunction = ReturnType<typeof useTranslation>;
+
+const SEARCHABLE_DROPDOWN_DEBOUNCE_MS = 400;
+const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
+const SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH = 2;
 
 const FILTER_SECTION_LABELS: Record<AppLocale, Record<string, string>> = {
   en: {},
@@ -858,27 +865,6 @@ function getSelectedOptionLabel(
   return selectedOption ? translateFilterOptionLabel(selectedOption, locale) : '';
 }
 
-function filterSearchableDropdownOptions(
-  options: DiscoveryFilterOption[] | undefined,
-  searchTerm: string,
-  locale: AppLocale
-) {
-  if (!options) {
-    return [];
-  }
-
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-
-  if (!normalizedSearch) {
-    return [];
-  }
-
-  return options.filter((option) => {
-    const haystack = `${translateFilterOptionLabel(option, locale)} ${option.group ?? ''}`.toLowerCase();
-    return haystack.includes(normalizedSearch);
-  });
-}
-
 function groupDropdownOptions(options: DiscoveryFilterOption[]) {
   const groups = new Map<string, DiscoveryFilterOption[]>();
 
@@ -888,6 +874,273 @@ function groupDropdownOptions(options: DiscoveryFilterOption[]) {
   });
 
   return Array.from(groups.entries());
+}
+
+function normalizeCitySearchOption(option: DiscoveryFilterQuestionOption): DiscoveryFilterOption {
+  return {
+    id: option.id,
+    label: option.label,
+    group: option.group,
+    value: option.value,
+  };
+}
+
+function mergeOptionsByValue(
+  currentOptions: DiscoveryFilterOption[],
+  nextOptions: DiscoveryFilterOption[]
+) {
+  const optionsByValue = new Map<string, DiscoveryFilterOption>();
+
+  currentOptions.forEach((option) => {
+    optionsByValue.set(getOptionValue(option), option);
+  });
+  nextOptions.forEach((option) => {
+    optionsByValue.set(getOptionValue(option), option);
+  });
+
+  return Array.from(optionsByValue.values());
+}
+
+function AsyncCityDropdownField({
+  disabled,
+  field,
+  fieldValue,
+  locale,
+  onChange,
+  onSearchTermChange,
+  searchTerm,
+  t,
+}: {
+  disabled?: boolean;
+  field: DiscoveryFilterField;
+  fieldValue: unknown;
+  locale: AppLocale;
+  onChange: (value: string) => void;
+  onSearchTermChange: (value: string) => void;
+  searchTerm: string;
+  t: TFunction;
+}) {
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [knownOptions, setKnownOptions] = React.useState<DiscoveryFilterOption[]>(
+    () => field.options ?? []
+  );
+  const [retryCount, setRetryCount] = React.useState(0);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
+  const [searchOptions, setSearchOptions] = React.useState<DiscoveryFilterOption[]>([]);
+  const searchRequestIdRef = React.useRef(0);
+  const normalizedSearchTerm = searchTerm.trim();
+  const selectedLabel = getSelectedOptionLabel(knownOptions, fieldValue, locale);
+  const currentValue = typeof fieldValue === 'string' ? fieldValue : '';
+  const hasMinimumQuery =
+    normalizedSearchTerm.length >= SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH;
+  const visibleOptions = React.useMemo(
+    () => searchOptions.slice(0, SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS),
+    [searchOptions]
+  );
+  const hasMoreResults = searchOptions.length > visibleOptions.length;
+
+  React.useEffect(() => {
+    setKnownOptions((currentOptions) =>
+      mergeOptionsByValue(currentOptions, field.options ?? [])
+    );
+  }, [field.id, field.options]);
+
+  React.useEffect(() => {
+    searchRequestIdRef.current += 1;
+    const requestId = searchRequestIdRef.current;
+
+    if (disabled || !hasMinimumQuery) {
+      setIsSearching(false);
+      setSearchError(null);
+      setSearchOptions([]);
+      return;
+    }
+
+    const abortController = new AbortController();
+    setIsSearching(true);
+    setSearchError(null);
+    setSearchOptions([]);
+
+    const debounceTimer = setTimeout(() => {
+      searchDiscoveryCities({
+        query: normalizedSearchTerm,
+        signal: abortController.signal,
+      })
+        .then((options) => {
+          if (searchRequestIdRef.current !== requestId) {
+            return;
+          }
+
+          const nextOptions = options.map(normalizeCitySearchOption);
+          setSearchOptions(nextOptions);
+          setKnownOptions((currentOptions) => mergeOptionsByValue(currentOptions, nextOptions));
+        })
+        .catch((error: unknown) => {
+          if (searchRequestIdRef.current !== requestId || abortController.signal.aborted) {
+            return;
+          }
+
+          setSearchOptions([]);
+          setSearchError(
+            error instanceof Error ? error.message : 'Unable to search cities right now.'
+          );
+        })
+        .finally(() => {
+          if (searchRequestIdRef.current === requestId) {
+            setIsSearching(false);
+          }
+        });
+    }, SEARCHABLE_DROPDOWN_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(debounceTimer);
+      abortController.abort();
+    };
+  }, [disabled, hasMinimumQuery, normalizedSearchTerm, retryCount]);
+
+  const renderSearchStatus = () => {
+    if (!hasMinimumQuery) {
+      return (
+        <View className="px-4 py-4">
+          <AppText tone="muted">
+            Type at least {SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH} characters to search.
+          </AppText>
+        </View>
+      );
+    }
+
+    if (isSearching) {
+      return (
+        <View className="flex-row items-center gap-2 px-4 py-4">
+          <ActivityIndicator color="#FF9A3E" size="small" />
+          <AppText tone="muted">Searching...</AppText>
+        </View>
+      );
+    }
+
+    if (searchError) {
+      return (
+        <View className="gap-3 px-4 py-4">
+          <AppText tone="danger">{searchError}</AppText>
+          <Pressable
+            className="self-start rounded-full px-3 py-2"
+            onPress={() => setRetryCount((currentRetryCount) => currentRetryCount + 1)}
+            style={{ backgroundColor: '#FF9A3E' }}>
+            <AppText className="text-[#1A1208]" variant="label">
+              Try again
+            </AppText>
+          </Pressable>
+        </View>
+      );
+    }
+
+    return (
+      <View className="px-4 py-6">
+        <AppText align="center" tone="muted">
+          {t('home.filters.noResultsFor', { term: searchTerm })}
+        </AppText>
+      </View>
+    );
+  };
+
+  return (
+    <View className="gap-3">
+      {field.title ? (
+        <AppText tone="muted" variant="label">
+          {translateFilterFieldTitle(field, locale)}
+        </AppText>
+      ) : null}
+      <View
+        className="gap-3 rounded-[18px] border p-3"
+        style={{
+          backgroundColor: '#252525',
+          borderColor: selectedLabel ? 'rgba(255, 154, 62, 0.28)' : 'rgba(255, 255, 255, 0.1)',
+          opacity: disabled ? 0.55 : 1,
+        }}>
+        {selectedLabel ? (
+          <View className="flex-row items-center justify-between gap-3 rounded-[14px] bg-[#2A2117] px-3 py-2.5">
+            <View className="flex-1 gap-0.5">
+              <AppText className="text-[12px]" tone="muted" variant="label">
+                {t('home.filters.selectedCity')}
+              </AppText>
+              <AppText className="text-[14px] text-[#FFB05B]" variant="bodyStrong">
+                {selectedLabel}
+              </AppText>
+            </View>
+            <Pressable disabled={disabled} hitSlop={10} onPress={() => onChange('')}>
+              <Ionicons color="#98A2B3" name="close-circle" size={20} />
+            </Pressable>
+          </View>
+        ) : null}
+
+        <SearchInput
+          disabled={disabled}
+          onChangeText={onSearchTermChange}
+          placeholder={field.placeholder ?? field.ui.placeholder ?? t('home.common.search')}
+          value={searchTerm}
+        />
+
+        {searchTerm.trim().length > 0 ? (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            style={{ maxHeight: 260 }}>
+            {!hasMinimumQuery || isSearching || searchError ? (
+              renderSearchStatus()
+            ) : (
+              <View className="gap-2">
+                {groupDropdownOptions(visibleOptions).map(([groupName, options]) => (
+                  <View key={groupName} className="gap-1">
+                    <AppText className="px-1 text-[12px]" tone="muted" variant="label">
+                      {groupName}
+                    </AppText>
+                    {options.map((option) => {
+                      const optionValue = getOptionValue(option);
+                      const active = currentValue === optionValue;
+                      const label = translateFilterOptionLabel(option, locale);
+
+                      return (
+                        <Pressable
+                          key={option.id}
+                          className="flex-row items-center justify-between gap-3 rounded-[14px] px-3 py-3"
+                          disabled={disabled}
+                          onPress={() => {
+                            setKnownOptions((currentOptions) =>
+                              mergeOptionsByValue(currentOptions, [option])
+                            );
+                            onChange(optionValue);
+                            onSearchTermChange('');
+                          }}
+                          style={{
+                            backgroundColor: active ? '#2A2117' : '#2C2C2C',
+                            borderCurve: 'continuous',
+                          }}>
+                          <AppText
+                            className="flex-1 text-[14px]"
+                            style={{ color: active ? '#FFB05B' : '#FFFFFF' }}
+                            variant="bodyStrong">
+                            {label}
+                          </AppText>
+                          {active ? <Ionicons color="#FF9A3E" name="checkmark" size={18} /> : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ))}
+                {visibleOptions.length === 0 ? renderSearchStatus() : null}
+                {hasMoreResults ? (
+                  <View className="px-4 py-3">
+                    <AppText tone="muted">More results available</AppText>
+                  </View>
+                ) : null}
+              </View>
+            )}
+          </ScrollView>
+        ) : null}
+      </View>
+    </View>
+  );
 }
 
 export function DiscoveryFilterSheet({
@@ -1163,112 +1416,23 @@ export function DiscoveryFilterSheet({
       }
 
       if (field.ui.component === 'searchable_dropdown') {
-        const selectedLabel = getSelectedOptionLabel(field.options, fieldValue, locale);
-        const hasSearchTerm = searchTerm.trim().length > 0;
-        const visibleOptions = filterSearchableDropdownOptions(field.options, searchTerm, locale);
-
         return (
-          <View key={field.id} className="gap-3">
-            {field.title ? (
-              <AppText tone="muted" variant="label">
-                {translateFilterFieldTitle(field, locale)}
-              </AppText>
-            ) : null}
-            <View
-              className="gap-3 rounded-[18px] border p-3"
-              style={{
-                backgroundColor: '#252525',
-                borderColor: selectedLabel ? 'rgba(255, 154, 62, 0.28)' : 'rgba(255, 255, 255, 0.1)',
-                opacity: disabled ? 0.55 : 1,
-              }}>
-              {selectedLabel ? (
-                <View className="flex-row items-center justify-between gap-3 rounded-[14px] bg-[#2A2117] px-3 py-2.5">
-                  <View className="flex-1 gap-0.5">
-                    <AppText className="text-[12px]" tone="muted" variant="label">
-                      {t('home.filters.selectedCity')}
-                    </AppText>
-                    <AppText className="text-[14px] text-[#FFB05B]" variant="bodyStrong">
-                      {selectedLabel}
-                    </AppText>
-                  </View>
-                  <Pressable
-                    disabled={disabled}
-                    hitSlop={10}
-                    onPress={() => handleFieldValueChange(sectionId, field.id, '')}>
-                    <Ionicons color="#98A2B3" name="close-circle" size={20} />
-                  </Pressable>
-                </View>
-              ) : null}
-
-              <SearchInput
-                disabled={disabled}
-                onChangeText={(value) =>
-                  setSearchTerms((current) => ({
-                    ...current,
-                    [searchKey]: value,
-                  }))
-                }
-                placeholder={field.placeholder ?? field.ui.placeholder ?? t('home.common.search')}
-                value={searchTerm}
-              />
-
-              {hasSearchTerm ? (
-                <ScrollView
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator
-                  style={{ maxHeight: 260 }}>
-                  <View className="gap-2">
-                    {groupDropdownOptions(visibleOptions).map(([groupName, options]) => (
-                      <View key={groupName} className="gap-1">
-                        <AppText className="px-1 text-[12px]" tone="muted" variant="label">
-                          {groupName}
-                        </AppText>
-                        {options.map((option) => {
-                          const optionValue = getOptionValue(option);
-                          const active = fieldValue === optionValue;
-                          const label = translateFilterOptionLabel(option, locale);
-
-                          return (
-                            <Pressable
-                              key={option.id}
-                              className="flex-row items-center justify-between gap-3 rounded-[14px] px-3 py-3"
-                              disabled={disabled}
-                              onPress={() => {
-                                handleFieldValueChange(sectionId, field.id, optionValue);
-                                setSearchTerms((current) => ({
-                                  ...current,
-                                  [searchKey]: '',
-                                }));
-                              }}
-                              style={{
-                                backgroundColor: active ? '#2A2117' : '#2C2C2C',
-                                borderCurve: 'continuous',
-                              }}>
-                              <AppText
-                                className="flex-1 text-[14px]"
-                                style={{ color: active ? '#FFB05B' : '#FFFFFF' }}
-                                variant="bodyStrong">
-                                {label}
-                              </AppText>
-                              {active ? <Ionicons color="#FF9A3E" name="checkmark" size={18} /> : null}
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    ))}
-                  </View>
-                  {visibleOptions.length === 0 ? (
-                    <View className="px-4 py-6">
-                      <AppText align="center" tone="muted">
-                        {t('home.filters.noResultsFor', { term: searchTerm })}
-                      </AppText>
-                    </View>
-                  ) : null}
-                </ScrollView>
-              ) : null}
-            </View>
-          </View>
+          <AsyncCityDropdownField
+            key={field.id}
+            disabled={disabled}
+            field={field}
+            fieldValue={fieldValue}
+            locale={locale}
+            onChange={(value) => handleFieldValueChange(sectionId, field.id, value)}
+            onSearchTermChange={(value) =>
+              setSearchTerms((current) => ({
+                ...current,
+                [searchKey]: value,
+              }))
+            }
+            searchTerm={searchTerm}
+            t={t}
+          />
         );
       }
 
