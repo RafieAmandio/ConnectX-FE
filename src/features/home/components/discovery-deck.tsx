@@ -2040,10 +2040,14 @@ export function DiscoveryDeck() {
     [matchingFilterOptionsResponse, sheetMode]
   );
   const goalOptions = getGoalOptions(filterSections, sheetMode);
+  const appliedFilterOptionsResponse =
+    filterOptionsQuery.data?.data.mode === (appliedMode ?? DEFAULT_FILTER_MODE)
+      ? filterOptionsQuery.data
+      : undefined;
 
   const appliedSections = React.useMemo(
-    () => getDiscoveryFilterSections(appliedMode ?? DEFAULT_FILTER_MODE),
-    [appliedMode]
+    () => getDiscoveryFilterSections(appliedMode ?? DEFAULT_FILTER_MODE, appliedFilterOptionsResponse),
+    [appliedFilterOptionsResponse, appliedMode]
   );
 
   const sanitizedAppliedFilters = React.useMemo(
@@ -2708,7 +2712,7 @@ export function DiscoveryDeck() {
       try {
         const sanitizedNextFilters = sanitizeDiscoveryFilters(
           nextFilters,
-          getDiscoveryFilterSections(mode)
+          mode === sheetMode ? filterSections : getDiscoveryFilterSections(mode)
         );
         let nextDeviceCoordinates = deviceCoordinates;
 
@@ -2718,7 +2722,7 @@ export function DiscoveryDeck() {
 
         setShouldIncludeLocationAvailability(isRecordValue(sanitizedNextFilters.locationAvailability));
         setAppliedMode(mode);
-        setAppliedFilters(nextFilters);
+        setAppliedFilters(sanitizedNextFilters);
         setSheetMode(mode);
         setAppliedDiscoveryMode(mode);
         setFilterError(null);
@@ -2727,7 +2731,7 @@ export function DiscoveryDeck() {
         setFilterError(getErrorMessage(error, t('home.deck.generateCandidatesError')));
       }
     },
-    [deviceCoordinates, loadDeviceCoordinates, t]
+    [deviceCoordinates, filterSections, loadDeviceCoordinates, sheetMode, t]
   );
 
   React.useEffect(() => {
