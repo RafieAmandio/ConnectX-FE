@@ -5,7 +5,7 @@ export type TeamEntityOption = {
 
 export type TeamCatalogOption = {
   id: string | null;
-  label: string;
+  label: string | null;
 };
 
 export type TeamRole = TeamEntityOption;
@@ -37,7 +37,7 @@ export type TeamMember = {
 };
 
 export type RequiredRole = TeamRole & {
-  status: 'open' | 'filled' | string;
+  status?: 'open' | 'filled' | string;
 };
 
 export type StartupTeamOverview = {

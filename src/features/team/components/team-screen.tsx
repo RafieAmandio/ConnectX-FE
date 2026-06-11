@@ -215,8 +215,8 @@ function getCommitmentLabel(value: string, t: TFunction) {
   }
 }
 
-function getCatalogLabel(label: string, t: TFunction) {
-  return label.trim() || t('team.notSet');
+function getCatalogLabel(label: string | null, t: TFunction) {
+  return label?.trim() || t('team.notSet');
 }
 
 function getEditableCommitment(value: string): TeamInviteCommitment | null {

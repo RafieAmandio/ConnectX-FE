@@ -40,7 +40,11 @@ function isTeamEntityOption(value: unknown) {
 }
 
 function isTeamCatalogOption(value: unknown) {
-  return isRecord(value) && (value.id === null || typeof value.id === 'string') && typeof value.label === 'string';
+  return (
+    isRecord(value) &&
+    (value.id === null || typeof value.id === 'string') &&
+    (value.label === null || typeof value.label === 'string')
+  );
 }
 
 function isStringArray(value: unknown) {
@@ -74,7 +78,11 @@ function isTeamMember(payload: unknown) {
 }
 
 function isRequiredRole(payload: unknown) {
-  return isTeamEntityOption(payload) && isRecord(payload) && typeof payload.status === 'string';
+  return (
+    isTeamEntityOption(payload) &&
+    isRecord(payload) &&
+    (!('status' in payload) || typeof payload.status === 'string')
+  );
 }
 
 function isTeamCompleteness(payload: unknown) {
