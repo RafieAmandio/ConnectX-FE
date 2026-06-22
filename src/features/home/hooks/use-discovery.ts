@@ -16,6 +16,7 @@ import {
 } from '../services/discovery-service';
 import type {
   DiscoveryAppliedFilters,
+  DiscoveryCard,
   DiscoveryCardsRequest,
   DiscoveryCardsResponse,
   DiscoveryFilterOptionsResponse,
@@ -68,6 +69,39 @@ function removeCardFromPages(
   };
 }
 
+function restoreCardToPages(
+  data: InfiniteData<DiscoveryCardsResponse, string | undefined> | undefined,
+  card: DiscoveryCard
+) {
+  if (!data || data.pages.length === 0) {
+    return data;
+  }
+
+  const alreadyPresent = data.pages.some((page) =>
+    page.data.items.some((item) => item.id === card.id)
+  );
+
+  if (alreadyPresent) {
+    return data;
+  }
+
+  const [firstPage, ...remainingPages] = data.pages;
+
+  return {
+    ...data,
+    pages: [
+      {
+        ...firstPage,
+        data: {
+          ...firstPage.data,
+          items: [card, ...firstPage.data.items],
+        },
+      },
+      ...remainingPages,
+    ],
+  };
+}
+
 export function useDiscoveryCards(
   request: Omit<DiscoveryCardsRequest, 'pagination'> = {},
   limit = DEFAULT_LIMIT,
@@ -113,15 +147,46 @@ export function useSwipeAction() {
 
   return useMutation({
     mutationFn: ({
-      cardId,
       payload,
       targetId,
     }: {
+      card: DiscoveryCard;
       cardId: string;
+      optimistic?: boolean;
       payload: SwipeActionRequest;
       targetId: string;
     }) => postSwipeAction(targetId, payload),
+    // For optimistic swipes (pass/connect) drop the card from the deck before the
+    // request resolves so the next card appears instantly, then roll it back on failure.
+    onMutate: (variables) => {
+      if (!variables.optimistic) {
+        return;
+      }
+
+      // Remove synchronously so the next card appears immediately, then cancel any
+      // in-flight feed fetch in the background to avoid it resurrecting the card.
+      queryClient.setQueriesData<InfiniteData<DiscoveryCardsResponse, string | undefined>>(
+        { queryKey: discoveryQueryKeys.cards },
+        (current) => removeCardFromPages(current, variables.cardId)
+      );
+      void queryClient.cancelQueries({ queryKey: discoveryQueryKeys.cards });
+    },
+    onError: (_error, variables) => {
+      if (!variables.optimistic) {
+        return;
+      }
+
+      queryClient.setQueriesData<InfiniteData<DiscoveryCardsResponse, string | undefined>>(
+        { queryKey: discoveryQueryKeys.cards },
+        (current) => restoreCardToPages(current, variables.card)
+      );
+    },
     onSuccess: (_response, variables) => {
+      // Optimistic swipes already removed the card in onMutate.
+      if (variables.optimistic) {
+        return;
+      }
+
       queryClient.setQueriesData<InfiniteData<DiscoveryCardsResponse, string | undefined>>(
         { queryKey: discoveryQueryKeys.cards },
         (current) => removeCardFromPages(current, variables.cardId)

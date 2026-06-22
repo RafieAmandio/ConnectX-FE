@@ -553,6 +553,28 @@ function getCardActionTargetId(card: DiscoveryCard) {
   return isDiscoveryProfileCard(card) ? card.profileId : card.startupId;
 }
 
+function logSwipeError(action: SwipeActionIntent, card: DiscoveryCard, error: unknown) {
+  console.log('[DiscoveryDeck] swipe action failed', {
+    action,
+    cardId: card.id,
+    cardSource: card.__source ?? 'api',
+    error:
+      error instanceof ApiError
+        ? {
+          message: error.message,
+          payload: error.payload,
+          status: error.status,
+        }
+        : error instanceof Error
+          ? {
+            message: error.message,
+            name: error.name,
+          }
+          : error,
+    targetId: getCardActionTargetId(card),
+  });
+}
+
 function getDiscoveryMatchConversationInput(card: DiscoveryCard) {
   if (isDiscoveryProfileCard(card)) {
     return {
@@ -1246,7 +1268,7 @@ function CertificationCard({ item, index }: { item: DiscoveryCardCertification; 
   );
 }
 
-function ProfileCardContent({
+const ProfileCardContent = React.memo(function ProfileCardContent({
   card,
   bottomInset = 24,
   refreshControl,
@@ -1280,10 +1302,11 @@ function ProfileCardContent({
         <View className="overflow-hidden" style={{ height: 260 }}>
           {card.photoUrl ? (
             <Image
-              key={card.id}
+              cachePolicy="memory-disk"
               contentFit="cover"
               source={{ uri: card.photoUrl }}
               style={{ height: '100%', width: '100%' }}
+              transition={120}
             />
           ) : (
             <View className="h-full w-full bg-surface-muted" />
@@ -1504,9 +1527,9 @@ function ProfileCardContent({
       </View>
     </ScrollView>
   );
-}
+});
 
-function StartupCardContent({
+const StartupCardContent = React.memo(function StartupCardContent({
   card,
   bottomInset = 24,
   onPremiumUpgradePress,
@@ -1544,10 +1567,11 @@ function StartupCardContent({
         <View className="overflow-hidden" style={{ height: 260 }}>
           {card.logoUrl ? (
             <Image
-              key={card.id}
+              cachePolicy="memory-disk"
               contentFit="cover"
               source={{ uri: card.logoUrl }}
               style={{ height: '100%', width: '100%' }}
+              transition={120}
             />
           ) : (
             <View className="h-full w-full bg-surface-muted items-center justify-center">
@@ -1768,9 +1792,9 @@ function StartupCardContent({
       </View>
     </ScrollView>
   );
-}
+});
 
-function DiscoveryCardContent({
+const DiscoveryCardContent = React.memo(function DiscoveryCardContent({
   bottomInset = 24,
   card,
   onPremiumUpgradePress,
@@ -1799,7 +1823,7 @@ function DiscoveryCardContent({
       scrollEnabled={scrollEnabled}
     />
   );
-}
+});
 
 function DeckActionButton({
   color,
@@ -2319,6 +2343,17 @@ export function DiscoveryDeck() {
     await discoveryQuery.refetch();
   }, [appliedMode, discoveryQuery, usingLocalMockCards]);
 
+  const discoveryRefreshControl = React.useMemo(
+    () => (
+      <RefreshControl
+        refreshing={discoveryQuery.isRefetching}
+        tintColor="#FF9A3E"
+        onRefresh={handleRefreshDiscovery}
+      />
+    ),
+    [discoveryQuery.isRefetching, handleRefreshDiscovery]
+  );
+
   const currentItem = cards[0] ?? null;
   const nextItem = cards[1] ?? null;
   const remainingCards = cards.length;
@@ -2437,10 +2472,88 @@ export function DiscoveryDeck() {
     }
   }, [presentPaywallForOffering, supported, t]);
 
+  // Advance the deck to the next card. Safe to call before the network settles.
+  const advanceDeck = React.useCallback(
+    (activeCard: DiscoveryCard, action: SwipeActionIntent, direction?: SwipeDirection) => {
+      pendingCardAdvanceResetRef.current = activeCard.id;
+      // Rewound cards are restored from local state, so clear that copy.
+      setRestoredCards((current) => current.filter((card) => card.id !== activeCard.id));
+      setHistory((current) => [...current.slice(-19), { action, card: activeCard }]);
+      setActionError(null);
+
+      if (direction) {
+        triggerSwipeHaptic(direction);
+      }
+    },
+    []
+  );
+
+  const presentLocalMatch = React.useCallback(
+    async (activeCard: DiscoveryCard, action: SwipeActionIntent) => {
+      if (action !== 'like' && action !== 'super_like') {
+        return;
+      }
+
+      const matched =
+        !hasShownGuaranteedMockMatchRef.current || Math.random() < MOCK_MATCH_RANDOM_CHANCE;
+      hasShownGuaranteedMockMatchRef.current = true;
+
+      if (!matched) {
+        return;
+      }
+
+      let conversationId: string | null = null;
+      let matchId: string | null = null;
+
+      try {
+        conversationId = await upsertDiscoveryMatchConversation(
+          getDiscoveryMatchConversationInput(activeCard)
+        );
+        const generatedMatch = upsertGeneratedMockMatch(activeCard, conversationId);
+        matchId = generatedMatch.item.matchId;
+        void queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversationsRoot });
+        void queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
+      } catch (error) {
+        console.warn('Unable to create local mock match records for discovery match.', error);
+      }
+
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setMatchState({ card: activeCard, conversationId, matchId });
+    },
+    [queryClient]
+  );
+
+  const presentRemoteMatch = React.useCallback(
+    async (
+      activeCard: DiscoveryCard,
+      action: SwipeActionIntent,
+      swipeResponse: SwipeActionSuccessResponse | null
+    ) => {
+      if ((action !== 'like' && action !== 'super_like') || !swipeResponse?.data.isMatch) {
+        return;
+      }
+
+      const conversationId = getSwipeMatchConversationId(swipeResponse);
+      const matchId = swipeResponse?.data.matchId ?? null;
+      void queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversationsRoot });
+      void queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
+
+      if (!conversationId) {
+        console.warn('Discovery match response did not include a chat conversation id.', {
+          matchId,
+          response: swipeResponse,
+        });
+      }
+
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setMatchState({ card: activeCard, conversationId, matchId });
+    },
+    [queryClient]
+  );
+
   const handleSwipeAction = React.useCallback(
     async (action: SwipeActionIntent, direction?: SwipeDirection) => {
       const activeCard = currentCardRef.current;
-      let didAdvanceCard = false;
 
       if (!activeCard) {
         setIsSubmitting(false);
@@ -2448,117 +2561,72 @@ export function DiscoveryDeck() {
         return;
       }
 
-      try {
-        let matched = false;
-        let swipeResponse: SwipeActionSuccessResponse | null = null;
+      const shouldHandleLocally = usingFallbackRef.current || isMergedMockCard(activeCard);
 
-        const shouldHandleLocally = usingFallbackRef.current || isMergedMockCard(activeCard);
-
-        if (shouldHandleLocally) {
-          if (usingFallbackRef.current) {
-            setMockCards((current) => current.filter((item) => item.id !== activeCard.id));
-          } else {
-            setDismissedMergedMockCardIds((current) => new Set(current).add(activeCard.id));
-          }
-
-          if (action === 'like' || action === 'super_like') {
-            matched =
-              !hasShownGuaranteedMockMatchRef.current ||
-              Math.random() < MOCK_MATCH_RANDOM_CHANCE;
-            hasShownGuaranteedMockMatchRef.current = true;
-          }
+      // Mock/local cards resolve synchronously, so advance immediately.
+      if (shouldHandleLocally) {
+        if (usingFallbackRef.current) {
+          setMockCards((current) => current.filter((item) => item.id !== activeCard.id));
         } else {
-          swipeResponse = await swipeAction.mutateAsync({
+          setDismissedMergedMockCardIds((current) => new Set(current).add(activeCard.id));
+        }
+
+        advanceDeck(activeCard, action, direction);
+        void presentLocalMatch(activeCard, action);
+        return;
+      }
+
+      // Connect/Pass advance instantly; the swipe mutation removes the card from the
+      // cache optimistically and rolls it back if the request fails.
+      if (action === 'like' || action === 'pass') {
+        advanceDeck(activeCard, action, direction);
+
+        swipeAction
+          .mutateAsync({
+            card: activeCard,
             cardId: activeCard.id,
+            optimistic: true,
             payload: { action, viewer_context: viewerContext },
             targetId: getCardActionTargetId(activeCard),
-          });
-
-          matched = Boolean(swipeResponse.data.isMatch);
-        }
-
-        didAdvanceCard = true;
-        pendingCardAdvanceResetRef.current = activeCard.id;
-
-        // Rewound cards are restored from local state, so clear that copy once
-        // the backend accepts the new swipe.
-        setRestoredCards((current) => current.filter((card) => card.id !== activeCard.id));
-
-        setHistory((current) => [...current.slice(-19), { action, card: activeCard }]);
-
-        if (direction) {
-          triggerSwipeHaptic(direction);
-        }
-
-        if (
-          (action === 'like' || action === 'super_like') &&
-          matched
-        ) {
-          let conversationId: string | null = null;
-          let matchId: string | null = null;
-
-          if (shouldHandleLocally) {
-            try {
-              conversationId = await upsertDiscoveryMatchConversation(
-                getDiscoveryMatchConversationInput(activeCard)
-              );
-              const generatedMatch = upsertGeneratedMockMatch(activeCard, conversationId);
-              matchId = generatedMatch.item.matchId;
-              await queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversationsRoot });
-              await queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
-            } catch (error) {
-              console.warn('Unable to create local mock match records for discovery match.', error);
+          })
+          .then(
+            (swipeResponse) => {
+              void presentRemoteMatch(activeCard, action, swipeResponse);
+            },
+            (error) => {
+              logSwipeError(action, activeCard, error);
+              // The mutation restored the card to the deck; drop the optimistic history
+              // entry so connect/skip counts stay accurate and surface the failure.
+              setHistory((current) => current.filter((entry) => entry.card.id !== activeCard.id));
+              setActionError(getErrorMessage(error, t('home.deck.swipeError')));
             }
-          } else {
-            conversationId = getSwipeMatchConversationId(swipeResponse);
-            matchId = swipeResponse?.data.matchId ?? null;
-            await queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversationsRoot });
-            await queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
+          );
 
-            if (!conversationId) {
-              console.warn('Discovery match response did not include a chat conversation id.', {
-                matchId,
-                response: swipeResponse,
-              });
-            }
-          }
+        return;
+      }
 
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setMatchState({ card: activeCard, conversationId, matchId });
-        }
-
-        setActionError(null);
-      } catch (error) {
-        console.log('[DiscoveryDeck] swipe action failed', {
-          action,
+      // Super Connect can require an upgrade, so keep it blocking and only advance
+      // once the backend confirms the action.
+      try {
+        const swipeResponse = await swipeAction.mutateAsync({
+          card: activeCard,
           cardId: activeCard.id,
-          cardSource: activeCard.__source ?? 'api',
-          error:
-            error instanceof ApiError
-              ? {
-                message: error.message,
-                payload: error.payload,
-                status: error.status,
-              }
-              : error instanceof Error
-                ? {
-                  message: error.message,
-                  name: error.name,
-                }
-                : error,
+          optimistic: false,
+          payload: { action, viewer_context: viewerContext },
           targetId: getCardActionTargetId(activeCard),
         });
 
-        if (action === 'super_like' && isSuperLikePremiumRequiredError(error)) {
+        advanceDeck(activeCard, action, direction);
+        await presentRemoteMatch(activeCard, action, swipeResponse);
+      } catch (error) {
+        logSwipeError(action, activeCard, error);
+
+        if (isSuperLikePremiumRequiredError(error)) {
           await handlePresentConnectXProPaywall();
-        } else if (action === 'super_like' && isSuperLikeRequiresBoostError(error)) {
+        } else if (isSuperLikeRequiresBoostError(error)) {
           await maybePresentBoostPaywall();
         } else {
           setActionError(getErrorMessage(error, t('home.deck.swipeError')));
-        }
-      } finally {
-        if (didAdvanceCard) {
-          return;
         }
 
         setIsSubmitting(false);
@@ -2566,9 +2634,11 @@ export function DiscoveryDeck() {
       }
     },
     [
+      advanceDeck,
       handlePresentConnectXProPaywall,
       maybePresentBoostPaywall,
-      queryClient,
+      presentLocalMatch,
+      presentRemoteMatch,
       resetCardPosition,
       swipeAction,
       t,
@@ -2954,13 +3024,7 @@ export function DiscoveryDeck() {
         <ScrollView
           className="flex-1"
           contentContainerClassName="flex-grow justify-center px-4 py-8"
-          refreshControl={
-            <RefreshControl
-              refreshing={discoveryQuery.isRefetching}
-              tintColor="#FF9A3E"
-              onRefresh={handleRefreshDiscovery}
-            />
-          }>
+          refreshControl={discoveryRefreshControl}>
           <EmptyState
             connectedCount={connectedCount}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
@@ -3009,13 +3073,7 @@ export function DiscoveryDeck() {
                   bottomInset={floatingActionsContentPadding}
                   card={currentItem}
                   onPremiumUpgradePress={handlePresentConnectXProPaywall}
-                  refreshControl={
-                    <RefreshControl
-                      refreshing={discoveryQuery.isRefetching}
-                      tintColor="#FF9A3E"
-                      onRefresh={handleRefreshDiscovery}
-                    />
-                  }
+                  refreshControl={discoveryRefreshControl}
                 />
 
                 <Animated.View

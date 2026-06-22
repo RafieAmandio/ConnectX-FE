@@ -229,6 +229,7 @@ export function WhoLikedMeScreen() {
 
       try {
         const response = await swipeAction.mutateAsync({
+          card: item,
           cardId: item.id,
           payload: { action, viewer_context: viewerContext },
           targetId: item.profileId,
