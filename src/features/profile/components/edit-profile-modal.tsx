@@ -37,10 +37,33 @@ import type {
 
 type FormErrors = Partial<Record<keyof UpdateMyProfileRequest, string>>;
 type EditableBackgroundTab = 'experience' | 'education';
+type EditProfileCardKey = 'identity' | 'about' | 'background' | 'personality';
 type ProfileLocationOption = ProfileOptionsResponse['data']['locations'][number];
 type ProfilePersonalityOption = ProfileOptionsResponse['data']['personalityAndHobbies'][number];
 
 const MAX_PERSONALITY_SELECTIONS = 6;
+
+// Order used to find (and scroll to) the first invalid field on a failed save.
+const ERROR_FIELD_ORDER: (keyof UpdateMyProfileRequest)[] = [
+  'name',
+  'headline',
+  'locationId',
+  'about',
+  'experience',
+  'education',
+  'personalityAndHobbyIds',
+];
+
+// Maps each validatable field to the card it lives in, so we can scroll to it.
+const FIELD_TO_CARD: Partial<Record<keyof UpdateMyProfileRequest, EditProfileCardKey>> = {
+  name: 'identity',
+  headline: 'identity',
+  locationId: 'identity',
+  about: 'about',
+  experience: 'background',
+  education: 'background',
+  personalityAndHobbyIds: 'personality',
+};
 const profilePalette = {
   accent: '#FF9A3E',
   accentSoft: '#2A2117',
@@ -85,15 +108,6 @@ function getInitials(name: string) {
     .join('');
 }
 
-function slugifyLocationLabel(value: string) {
-  return value
-    .split(',')[0]
-    ?.trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '') ?? '';
-}
-
 function resolveInitialLocationId(profile: ProfileTalentData, locations: ProfileLocationOption[]) {
   const locationId = profile.location.id?.trim();
 
@@ -107,7 +121,9 @@ function resolveInitialLocationId(profile: ProfileTalentData, locations: Profile
       location.value === profile.location.city.toLowerCase()
   );
 
-  return matchingLocation?.value ?? slugifyLocationLabel(profile.location.display);
+  // Fall back to an empty selection rather than an unvalidated slug, so the user is
+  // forced to pick a real option and we never submit a locationId the backend rejects.
+  return matchingLocation?.value ?? '';
 }
 
 function buildInitialFormState(
@@ -997,10 +1013,10 @@ export function EditProfileScreen() {
   const uploadProfileImageMutation = useUploadProfileImage();
   const uploadBackgroundLogoMutation = useUploadProfileImage();
   const profileResponse = myProfileQuery.data;
-  const profile =
-    profileResponse && hasUsableProfile(profileResponse)
-      ? profileResponse.data
-      : mockMyProfileResponse.data;
+  const isShowingRealProfile = Boolean(profileResponse && hasUsableProfile(profileResponse));
+  const profile = isShowingRealProfile
+    ? (profileResponse as MyProfileResponse).data
+    : mockMyProfileResponse.data;
   const talent = profile.talent;
   const profileOptionsResponse = optionsQuery.data;
   const options = profileOptionsResponse && hasUsablePersonalityOptions(profileOptionsResponse)
@@ -1015,12 +1031,39 @@ export function EditProfileScreen() {
   const [backgroundTab, setBackgroundTab] = React.useState<EditableBackgroundTab>('experience');
   const [uploadingLogoKey, setUploadingLogoKey] = React.useState<string | null>(null);
   const aboutCopy = getAboutCopy(talent.sections.about);
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const cardOffsetsRef = React.useRef<Partial<Record<EditProfileCardKey, number>>>({});
+  const isDirtyRef = React.useRef(false);
+  const hasSeededRealProfileRef = React.useRef(false);
 
   React.useEffect(() => {
+    // Protect the user's edits from being clobbered by a background refetch — but only
+    // once we've seeded the form from real profile data at least once. Before that, the
+    // form holds mock placeholders, so we still let real data replace them when it lands
+    // (otherwise an early edit would pin the form to mock values and save them).
+    if (isDirtyRef.current && hasSeededRealProfileRef.current) {
+      return;
+    }
+
     setFormState(buildInitialFormState(talent, locationOptions));
     setFormErrors({});
     setSubmitError(null);
-  }, [locationOptions, talent]);
+
+    if (isShowingRealProfile) {
+      hasSeededRealProfileRef.current = true;
+      isDirtyRef.current = false;
+    }
+  }, [isShowingRealProfile, locationOptions, talent]);
+
+  function scrollToFirstError(errors: FormErrors) {
+    const firstField = ERROR_FIELD_ORDER.find((field) => errors[field]);
+    const cardKey = firstField ? FIELD_TO_CARD[firstField] : undefined;
+    const offset = cardKey ? cardOffsetsRef.current[cardKey] : undefined;
+
+    if (typeof offset === 'number') {
+      scrollViewRef.current?.scrollTo({ animated: true, y: Math.max(offset - 16, 0) });
+    }
+  }
 
   const selectedPersonalityIds = formState.personalityAndHobbyIds ?? [];
   const selectedCount = selectedPersonalityIds.length;
@@ -1029,6 +1072,7 @@ export function EditProfileScreen() {
     field: K,
     value: UpdateMyProfileRequest[K]
   ) {
+    isDirtyRef.current = true;
     setFormState((current) => ({
       ...current,
       [field]: value,
@@ -1063,6 +1107,7 @@ export function EditProfileScreen() {
   }
 
   function updateExperienceLogo(index: number, logoUrl: string | null) {
+    isDirtyRef.current = true;
     setFormState((current) => ({
       ...current,
       experience: current.experience.map((item, itemIndex) =>
@@ -1074,6 +1119,7 @@ export function EditProfileScreen() {
   }
 
   function updateEducationLogo(index: number, logoUrl: string | null) {
+    isDirtyRef.current = true;
     setFormState((current) => ({
       ...current,
       education: current.education.map((item, itemIndex) =>
@@ -1100,6 +1146,8 @@ export function EditProfileScreen() {
 
     if (Object.keys(validationErrors).length > 0) {
       setFormErrors(validationErrors);
+      setSubmitError('Please fix the highlighted fields and try again.');
+      scrollToFirstError(validationErrors);
       return;
     }
 
@@ -1107,6 +1155,7 @@ export function EditProfileScreen() {
 
     try {
       await updateProfileMutation.mutateAsync(payload);
+      isDirtyRef.current = false;
       router.back();
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Unable to save profile changes.');
@@ -1258,6 +1307,7 @@ export function EditProfileScreen() {
         </View>
 
         <ScrollView
+          ref={scrollViewRef}
           className="flex-1"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
@@ -1267,6 +1317,9 @@ export function EditProfileScreen() {
           }}>
           <AppCard
             className="gap-6"
+            onLayout={(event) => {
+              cardOffsetsRef.current.identity = event.nativeEvent.layout.y;
+            }}
             style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
             <View className="flex-row items-center gap-4">
               {profilePhotoUrl ? (
@@ -1388,6 +1441,9 @@ export function EditProfileScreen() {
 
           <AppCard
             className="mt-4 gap-5"
+            onLayout={(event) => {
+              cardOffsetsRef.current.about = event.nativeEvent.layout.y;
+            }}
             style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
             <View className="gap-1">
               <AppText variant="subtitle">{aboutCopy.label}</AppText>
@@ -1410,6 +1466,9 @@ export function EditProfileScreen() {
 
           <AppCard
             className="mt-4 gap-5"
+            onLayout={(event) => {
+              cardOffsetsRef.current.background = event.nativeEvent.layout.y;
+            }}
             style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
             <View className="gap-1">
               <AppText variant="subtitle">Experience & Education</AppText>
@@ -1456,6 +1515,9 @@ export function EditProfileScreen() {
 
           <AppCard
               className="mt-4 gap-5"
+              onLayout={(event) => {
+                cardOffsetsRef.current.personality = event.nativeEvent.layout.y;
+              }}
               style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
               <View className="flex-row items-center justify-between gap-3">
                 <View className="flex-row items-center gap-2">
@@ -1486,13 +1548,21 @@ export function EditProfileScreen() {
                 options={options}
                 selectedIds={selectedPersonalityIds}
               />
-
-              {submitError ? (
-                <AppText className="text-[12px]" tone="danger" variant="code">
-                  {submitError}
-                </AppText>
-              ) : null}
           </AppCard>
+
+          {submitError ? (
+            <View
+              className="mt-4 flex-row items-center gap-2 rounded-[14px] border px-4 py-3"
+              style={{
+                backgroundColor: 'rgba(255, 90, 103, 0.12)',
+                borderColor: profilePalette.danger,
+              }}>
+              <Ionicons color={profilePalette.danger} name="alert-circle-outline" size={18} />
+              <AppText className="flex-1 text-[13px]" style={{ color: profilePalette.danger }}>
+                {submitError}
+              </AppText>
+            </View>
+          ) : null}
 
           <View className="mt-5 flex-row gap-3 pt-1">
             <ActionButton

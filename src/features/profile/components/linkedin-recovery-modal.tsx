@@ -25,11 +25,15 @@ import {
   getLinkedInRecoveryState,
   subscribeLinkedInRecovery,
 } from '@shared/services/linkedin-recovery-store';
+import {
+  composeLinkedInUrl,
+  getLinkedInInputPrefix,
+  isValidLinkedInSlug,
+  normalizeLinkedInSlug,
+} from '@shared/utils/linkedin';
 
 import { profileQueryKeys } from '../hooks/use-profile';
 import { syncLinkedInProfile, updateMyLinkedInProfile } from '../services/profile-service';
-
-const LINKEDIN_PROFILE_URL_PATTERN = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9%_.-]+\/?$/;
 
 function getStringProperty(value: unknown, key: string) {
   if (!value || typeof value !== 'object' || !(key in value)) {
@@ -57,7 +61,7 @@ function getFirstErrorMessage(value: unknown): string | null {
 
 function getLinkedInApiErrorMessage(error: unknown) {
   if (!(error instanceof ApiError)) {
-    return error instanceof Error ? error.message : 'Unable to update LinkedIn URL.';
+    return error instanceof Error ? error.message : 'Unable to update LinkedIn username.';
   }
 
   const payload = error.payload;
@@ -82,7 +86,7 @@ function getLinkedInApiErrorMessage(error: unknown) {
     }
 
     if (reason === 'INVALID_FORMAT') {
-      return 'Masukkan URL LinkedIn dengan format https://linkedin.com/in/username.';
+      return 'Masukkan username LinkedIn saja.';
     }
 
     const message = getStringProperty(payload, 'message');
@@ -97,14 +101,14 @@ function getLinkedInApiErrorMessage(error: unknown) {
 
 function getRecoveryHint(reason: string | null, message: string | null) {
   if (reason === 'DUPLICATE') {
-    return 'URL LinkedIn ini terdeteksi dipakai akun lain. Masukkan URL profil LinkedIn personal milikmu.';
+    return 'Username LinkedIn ini terdeteksi dipakai akun lain. Masukkan username profil LinkedIn personal milikmu.';
   }
 
   if (reason === 'INVALID_FORMAT') {
-    return 'Gunakan URL profil personal yang dimulai dengan https://linkedin.com/in/ atau https://www.linkedin.com/in/.';
+    return 'Gunakan username profil personal LinkedIn tanpa https://linkedin.com/in/.';
   }
 
-  return message ?? 'Perbarui URL LinkedIn agar kamu bisa lanjut menggunakan ConnectX.';
+  return message ?? 'Perbarui username LinkedIn agar kamu bisa lanjut menggunakan ConnectX.';
 }
 
 export function LinkedInRecoveryModal() {
@@ -118,7 +122,7 @@ export function LinkedInRecoveryModal() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [linkedInUrl, setLinkedInUrl] = React.useState('');
+  const [linkedInUsername, setLinkedInUsername] = React.useState('');
   const [fieldError, setFieldError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
@@ -180,7 +184,7 @@ export function LinkedInRecoveryModal() {
 
   React.useEffect(() => {
     if (!recovery.isRequired) {
-      setLinkedInUrl('');
+      setLinkedInUsername('');
       setFieldError(null);
       setIsSubmitting(false);
       setAndroidKeyboardOverlap(0);
@@ -193,10 +197,10 @@ export function LinkedInRecoveryModal() {
   const hint = getRecoveryHint(recovery.errorReason, recovery.message);
 
   async function handleSubmit() {
-    const normalizedLinkedInUrl = linkedInUrl.trim();
+    const normalizedLinkedInUsername = normalizeLinkedInSlug(linkedInUsername, 'profile');
 
-    if (!LINKEDIN_PROFILE_URL_PATTERN.test(normalizedLinkedInUrl)) {
-      setFieldError('Masukkan URL LinkedIn valid, contoh: https://linkedin.com/in/username.');
+    if (!isValidLinkedInSlug(normalizedLinkedInUsername)) {
+      setFieldError('Masukkan username LinkedIn saja, contoh: username.');
       return;
     }
 
@@ -204,12 +208,14 @@ export function LinkedInRecoveryModal() {
     setIsSubmitting(true);
 
     try {
-      await updateMyLinkedInProfile({ linkedin_url: normalizedLinkedInUrl });
+      const linkedInUrl = composeLinkedInUrl(normalizedLinkedInUsername, 'profile');
+
+      await updateMyLinkedInProfile({ linkedin_url: linkedInUrl });
       const deviceId = await getOrCreateDeviceId();
       await syncLinkedInProfile({
         device_id: deviceId,
         fcm_token: fcmToken ?? '',
-        linkedin_url: normalizedLinkedInUrl,
+        linkedin_url: linkedInUrl,
       });
       await Promise.all([
         refreshSession(),
@@ -277,16 +283,15 @@ export function LinkedInRecoveryModal() {
               autoCorrect={false}
               editable={!isSubmitting}
               error={fieldError ?? undefined}
-              keyboardType="url"
-              label="LinkedIn URL"
+              label="LinkedIn username"
               onChangeText={(value) => {
-                setLinkedInUrl(value);
+                setLinkedInUsername(normalizeLinkedInSlug(value, 'profile'));
                 setFieldError(null);
               }}
-              placeholder="https://linkedin.com/in/username"
+              placeholder="username"
+              prefix={getLinkedInInputPrefix('profile')}
               returnKeyType="done"
-              textContentType="URL"
-              value={linkedInUrl}
+              value={linkedInUsername}
             />
 
             <Pressable

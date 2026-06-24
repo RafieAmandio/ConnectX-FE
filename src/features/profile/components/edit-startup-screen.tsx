@@ -19,6 +19,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDiscoveryFilterOptions } from '@features/home/hooks/use-discovery';
 import { AppCard, AppText } from '@shared/components';
 import { cn } from '@shared/utils/cn';
+import {
+  composeLinkedInUrl,
+  getLinkedInInputPrefix,
+  normalizeLinkedInSlug,
+} from '@shared/utils/linkedin';
 
 import { useMyProfile, useUpdateStartupProfile, useUploadProfileImage } from '../hooks/use-profile';
 import type {
@@ -146,7 +151,7 @@ function buildInitialFormState(startup?: MyProfileData['startup']): FormState {
         .map((detail) => [detail.id, String(detail.value)]) ?? []
     ),
     website: getLinkUrl(startup, 'website'),
-    linkedin: getLinkUrl(startup, 'linkedin'),
+    linkedin: normalizeLinkedInSlug(getLinkUrl(startup, 'linkedin'), 'company'),
     twitter: getLinkUrl(startup, 'twitter'),
     instagram: getLinkUrl(startup, 'instagram'),
     pitch_deck: getLinkUrl(startup, 'pitch_deck'),
@@ -231,6 +236,7 @@ type StartupInputProps = TextInputProps & {
   className?: string;
   error?: string;
   label?: string;
+  prefix?: string;
   shellClassName?: string;
 };
 
@@ -239,6 +245,7 @@ function StartupInput({
   error,
   label,
   placeholderTextColor = palette.textSoft,
+  prefix,
   shellClassName,
   style,
   ...props
@@ -254,30 +261,65 @@ function StartupInput({
           {label}
         </AppText>
       ) : null}
-      <TextInput
-        className={cn(
-          'min-h-14 rounded-[16px] border py-3 pl-3 pr-4 font-body text-[15px]',
-          className
-        )}
-        onBlur={(e) => {
-          setIsFocused(false);
-          props.onBlur?.(e);
-        }}
-        onFocus={(e) => {
-          setIsFocused(true);
-          props.onFocus?.(e);
-        }}
-        placeholderTextColor={placeholderTextColor}
-        style={[
-          {
+      {prefix ? (
+        <View
+          className={cn(
+            'min-h-14 flex-row items-center rounded-[16px] border pl-3',
+            className
+          )}
+          style={{
             backgroundColor: palette.field,
             borderColor: isFocused ? palette.accent : palette.border,
-            color: palette.text,
-          },
-          style,
-        ]}
-        {...props}
-      />
+          }}>
+          <AppText className="text-[15px]" numberOfLines={1} style={{ color: palette.textSoft }}>
+            {prefix}
+          </AppText>
+          <TextInput
+            className="min-w-0 flex-1 py-3 pr-4 font-body text-[15px]"
+            onBlur={(e) => {
+              setIsFocused(false);
+              props.onBlur?.(e);
+            }}
+            onFocus={(e) => {
+              setIsFocused(true);
+              props.onFocus?.(e);
+            }}
+            placeholderTextColor={placeholderTextColor}
+            style={[
+              {
+                color: palette.text,
+              },
+              style,
+            ]}
+            {...props}
+          />
+        </View>
+      ) : (
+        <TextInput
+          className={cn(
+            'min-h-14 rounded-[16px] border py-3 pl-3 pr-4 font-body text-[15px]',
+            className
+          )}
+          onBlur={(e) => {
+            setIsFocused(false);
+            props.onBlur?.(e);
+          }}
+          onFocus={(e) => {
+            setIsFocused(true);
+            props.onFocus?.(e);
+          }}
+          placeholderTextColor={placeholderTextColor}
+          style={[
+            {
+              backgroundColor: palette.field,
+              borderColor: isFocused ? palette.accent : palette.border,
+              color: palette.text,
+            },
+            style,
+          ]}
+          {...props}
+        />
+      )}
       {error ? (
         <AppText className="text-[12px]" tone="danger" variant="code">
           {error}
@@ -830,7 +872,9 @@ export function EditStartupScreen() {
       open_roles: formState.open_roles,
       traction: buildTractionPayload(formState),
       website: getNullableText(formState.website),
-      linkedin: getNullableText(formState.linkedin),
+      linkedin: formState.linkedin
+        ? getNullableText(composeLinkedInUrl(formState.linkedin, 'company'))
+        : null,
       twitter: getNullableText(formState.twitter),
       instagram: getNullableText(formState.instagram),
       pitch_deck: getNullableText(formState.pitch_deck),
@@ -1161,10 +1205,10 @@ export function EditStartupScreen() {
             />
             <StartupInput
               autoCapitalize="none"
-              keyboardType="url"
               label="LinkedIn"
-              onChangeText={(v) => updateField('linkedin', v)}
-              placeholder="https://linkedin.com/company/..."
+              onChangeText={(v) => updateField('linkedin', normalizeLinkedInSlug(v, 'company'))}
+              placeholder="company-slug"
+              prefix={getLinkedInInputPrefix('company')}
               value={formState.linkedin}
             />
             <StartupInput

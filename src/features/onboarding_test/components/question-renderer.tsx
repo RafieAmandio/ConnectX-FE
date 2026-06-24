@@ -22,6 +22,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AppCard, AppInput, AppText } from '@shared/components';
+import {
+  getLinkedInInputPrefix,
+  getLinkedInSlugKindForQuestionId,
+  normalizeLinkedInSlug,
+} from '@shared/utils/linkedin';
 import { cn } from '@shared/utils/cn';
 
 import {
@@ -96,6 +101,16 @@ function shouldUseHandlePlaceholder(question: OnboardingQuestion) {
 }
 
 function getTextLikePlaceholder(question: OnboardingQuestion) {
+  const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+
+  if (linkedInSlugKind === 'profile') {
+    return 'username';
+  }
+
+  if (linkedInSlugKind === 'company') {
+    return 'company-slug';
+  }
+
   if (question.placeholder) {
     return question.placeholder;
   }
@@ -887,6 +902,7 @@ function TextLikeQuestion({
   value: string;
 }) {
   const [isFocused, setIsFocused] = React.useState(false);
+  const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
 
   return (
     <View className="gap-3">
@@ -899,11 +915,16 @@ function TextLikeQuestion({
         multiline={multiline}
         numberOfLines={multiline ? 5 : 1}
         onBlur={() => setIsFocused(false)}
-        onChangeText={(nextValue) => onChange(nextValue)}
+        onChangeText={(nextValue) =>
+          onChange(
+            linkedInSlugKind ? normalizeLinkedInSlug(nextValue, linkedInSlugKind) : nextValue
+          )
+        }
         onFocus={() => setIsFocused(true)}
         placeholder={getTextLikePlaceholder(question)}
+        prefix={linkedInSlugKind ? getLinkedInInputPrefix(linkedInSlugKind) : undefined}
         textAlignVertical={multiline ? 'top' : 'center'}
-        value={value}
+        value={linkedInSlugKind ? normalizeLinkedInSlug(value, linkedInSlugKind) : value}
         className={cn(
           FIELD_BG,
           isFocused ? 'border-[#FF9A3E]' : FIELD_BORDER,

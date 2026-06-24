@@ -714,13 +714,10 @@ export const onlinePresenceStep = {
     question({
       id: 'q_startup_linkedin',
       label: copy('LinkedIn', 'LinkedIn'),
-      placeholder: copy(
-        'https://linkedin.com/company/...',
-        'https://linkedin.com/company/...'
-      ),
+      placeholder: copy('company-slug', 'slug-company'),
       required: false,
       type: 'url',
-      validation: { max_length: 200 },
+      validation: { max_length: 100 },
     }),
     question({
       id: 'q_twitter',
@@ -1187,11 +1184,11 @@ export const credibilityStep = {
         'Kami akan otomatis mengambil pengalaman, skill, dan foto dari LinkedIn. Kamu bisa edit setelahnya.'
       ),
       id: 'q_linkedin_url',
-      label: copy('LinkedIn URL', 'URL LinkedIn'),
-      placeholder: copy('https://linkedin.com/in/your-name', 'https://linkedin.com/in/namamu'),
+      label: copy('LinkedIn username', 'Username LinkedIn'),
+      placeholder: copy('your-name', 'namamu'),
       required: true,
       type: 'url',
-      validation: { max_length: 200, min_length: 10 },
+      validation: { max_length: 100, min_length: 1 },
     }),
   ],
   section: copy('Finish up', 'Penutup'),

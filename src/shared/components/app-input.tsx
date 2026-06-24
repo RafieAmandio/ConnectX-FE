@@ -10,6 +10,7 @@ export type AppInputProps = TextInputProps & {
   error?: string;
   hint?: string;
   label?: string;
+  prefix?: string;
   shellClassName?: string;
   shellProps?: ViewProps;
 };
@@ -20,12 +21,18 @@ export function AppInput({
   hint,
   label,
   placeholderTextColor = '#667085',
+  prefix,
   shellClassName,
   shellProps,
   style,
   ...props
 }: AppInputProps) {
   const [isFocused, setIsFocused] = React.useState(false);
+  const inputStateClassName = error
+    ? 'border-danger bg-background'
+    : isFocused
+      ? 'border-accent bg-background'
+      : 'border-border bg-background';
 
   return (
     <View className={cn('gap-2', shellClassName)} {...shellProps}>
@@ -34,28 +41,51 @@ export function AppInput({
           {label}
         </AppText>
       ) : null}
-      <TextInput
-        className={cn(
-          'min-h-14 rounded-[16px] border py-3 pl-3 pr-4 font-body text-[15px] text-text',
-          error
-            ? 'border-danger bg-background'
-            : isFocused
-              ? 'border-accent bg-background'
-              : 'border-border bg-background',
-          className
-        )}
-        onBlur={(event) => {
-          setIsFocused(false);
-          props.onBlur?.(event);
-        }}
-        onFocus={(event) => {
-          setIsFocused(true);
-          props.onFocus?.(event);
-        }}
-        placeholderTextColor={placeholderTextColor}
-        style={[{ letterSpacing: 0 }, style]}
-        {...props}
-      />
+      {prefix ? (
+        <View
+          className={cn(
+            'min-h-14 flex-row items-center rounded-[16px] border pl-3',
+            inputStateClassName,
+            className
+          )}>
+          <AppText className="text-[15px] leading-5 text-text-muted" numberOfLines={1}>
+            {prefix}
+          </AppText>
+          <TextInput
+            className="min-w-0 flex-1 py-3 pr-4 font-body text-[15px] text-text"
+            onBlur={(event) => {
+              setIsFocused(false);
+              props.onBlur?.(event);
+            }}
+            onFocus={(event) => {
+              setIsFocused(true);
+              props.onFocus?.(event);
+            }}
+            placeholderTextColor={placeholderTextColor}
+            style={[{ letterSpacing: 0 }, style]}
+            {...props}
+          />
+        </View>
+      ) : (
+        <TextInput
+          className={cn(
+            'min-h-14 rounded-[16px] border py-3 pl-3 pr-4 font-body text-[15px] text-text',
+            inputStateClassName,
+            className
+          )}
+          onBlur={(event) => {
+            setIsFocused(false);
+            props.onBlur?.(event);
+          }}
+          onFocus={(event) => {
+            setIsFocused(true);
+            props.onFocus?.(event);
+          }}
+          placeholderTextColor={placeholderTextColor}
+          style={[{ letterSpacing: 0 }, style]}
+          {...props}
+        />
+      )}
       {error ? (
         <AppText className="px-1" selectable tone="danger" variant="code">
           {error}

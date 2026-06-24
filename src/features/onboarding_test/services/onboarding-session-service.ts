@@ -1,4 +1,10 @@
 import { apiFetch } from '@shared/services/api';
+import {
+  composeLinkedInUrl,
+  getLinkedInSlugKindForQuestionId,
+  isValidLinkedInSlug,
+  normalizeLinkedInSlug,
+} from '@shared/utils/linkedin';
 
 import { getVisibleQuestions } from '../mock/registry';
 import type {
@@ -74,6 +80,11 @@ function normalizeUrlValue(
   value: OnboardingAnswerValue | undefined
 ) {
   const normalizedValue = normalizeStringValue(value);
+  const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+
+  if (linkedInSlugKind) {
+    return normalizeLinkedInSlug(normalizedValue, linkedInSlugKind);
+  }
 
   if (!normalizedValue || shouldAcceptSocialHandle(question) || hasUrlScheme(normalizedValue)) {
     return normalizedValue;
@@ -255,7 +266,13 @@ export function normalizeStepAnswers(
 
   for (const question of visibleQuestions) {
     if (question.id in answers) {
-      normalizedAnswers[question.id] = getQuestionValue(question, answers);
+      const value = getQuestionValue(question, answers);
+      const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+
+      normalizedAnswers[question.id] =
+        linkedInSlugKind && typeof value === 'string'
+          ? composeLinkedInUrl(value, linkedInSlugKind)
+          : value;
     }
   }
 
@@ -296,7 +313,10 @@ function isValidUrl(value: string) {
 }
 
 function shouldSkipUrlValidation(question: OnboardingQuestion) {
-  return shouldAcceptSocialHandle(question);
+  return (
+    shouldAcceptSocialHandle(question) ||
+    getLinkedInSlugKindForQuestionId(question.id) !== null
+  );
 }
 
 function isValidDate(value: string) {
@@ -351,6 +371,21 @@ export function validateStepAnswers(
         locale,
         'Enter a valid email address.',
         'Masukkan alamat email yang valid.'
+      );
+      continue;
+    }
+
+    const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+
+    if (linkedInSlugKind && typeof value === 'string' && !isValidLinkedInSlug(value)) {
+      errors[question.id] = getMessage(
+        locale,
+        linkedInSlugKind === 'profile'
+          ? 'Enter only your LinkedIn username.'
+          : 'Enter only the LinkedIn company slug.',
+        linkedInSlugKind === 'profile'
+          ? 'Masukkan username LinkedIn saja.'
+          : 'Masukkan slug company LinkedIn saja.'
       );
       continue;
     }

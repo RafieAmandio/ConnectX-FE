@@ -1,6 +1,9 @@
 import { buildApiUrl } from './config';
 
 const GENERIC_REQUEST_ERROR_MESSAGE = 'Something went wrong. Please try again in a moment.';
+// Hard ceiling so a stalled request can't hang a mutation forever (which would, e.g.,
+// leave a Save button disabled indefinitely). Aborts surface as a generic ApiError.
+const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 
 export class ApiError extends Error {
   payload?: unknown;
@@ -159,6 +162,9 @@ async function executeApiFetch<T>(
     body = JSON.stringify(body);
   }
 
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
+
   try {
     console.log(
       'apiFetch',
@@ -176,6 +182,7 @@ async function executeApiFetch<T>(
       ...init,
       body,
       headers,
+      signal: init.signal ?? timeoutController.signal,
     });
     const payload = await parseResponsePayload(response);
 
@@ -224,6 +231,8 @@ async function executeApiFetch<T>(
     }
 
     throw new ApiError(GENERIC_REQUEST_ERROR_MESSAGE, 0);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
