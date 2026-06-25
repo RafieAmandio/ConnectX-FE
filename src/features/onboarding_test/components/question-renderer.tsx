@@ -24,7 +24,7 @@ import Animated, {
 import { AppCard, AppInput, AppText } from '@shared/components';
 import {
   getLinkedInInputPrefix,
-  getLinkedInSlugKindForQuestionId,
+  getLinkedInSlugKindForQuestion,
   normalizeLinkedInSlug,
 } from '@shared/utils/linkedin';
 import { cn } from '@shared/utils/cn';
@@ -101,7 +101,7 @@ function shouldUseHandlePlaceholder(question: OnboardingQuestion) {
 }
 
 function getTextLikePlaceholder(question: OnboardingQuestion) {
-  const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+  const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
   if (linkedInSlugKind === 'profile') {
     return 'username';
@@ -902,7 +902,7 @@ function TextLikeQuestion({
   value: string;
 }) {
   const [isFocused, setIsFocused] = React.useState(false);
-  const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+  const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
   return (
     <View className="gap-3">

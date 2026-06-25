@@ -1,7 +1,7 @@
 import { apiFetch } from '@shared/services/api';
 import {
   composeLinkedInUrl,
-  getLinkedInSlugKindForQuestionId,
+  getLinkedInSlugKindForQuestion,
   isValidLinkedInSlug,
   normalizeLinkedInSlug,
 } from '@shared/utils/linkedin';
@@ -80,7 +80,7 @@ function normalizeUrlValue(
   value: OnboardingAnswerValue | undefined
 ) {
   const normalizedValue = normalizeStringValue(value);
-  const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+  const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
   if (linkedInSlugKind) {
     return normalizeLinkedInSlug(normalizedValue, linkedInSlugKind);
@@ -267,7 +267,7 @@ export function normalizeStepAnswers(
   for (const question of visibleQuestions) {
     if (question.id in answers) {
       const value = getQuestionValue(question, answers);
-      const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+      const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
       normalizedAnswers[question.id] =
         linkedInSlugKind && typeof value === 'string'
@@ -315,7 +315,7 @@ function isValidUrl(value: string) {
 function shouldSkipUrlValidation(question: OnboardingQuestion) {
   return (
     shouldAcceptSocialHandle(question) ||
-    getLinkedInSlugKindForQuestionId(question.id) !== null
+    getLinkedInSlugKindForQuestion(question) !== null
   );
 }
 
@@ -375,7 +375,7 @@ export function validateStepAnswers(
       continue;
     }
 
-    const linkedInSlugKind = getLinkedInSlugKindForQuestionId(question.id);
+    const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
     if (linkedInSlugKind && typeof value === 'string' && !isValidLinkedInSlug(value)) {
       errors[question.id] = getMessage(
