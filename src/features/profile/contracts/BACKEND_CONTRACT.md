@@ -84,6 +84,15 @@ type ProfileEducationItem = {
   description?: string | null;
 };
 
+type ProfileCertificationItem = {
+  id?: string;
+  name: string;
+  issuer: string;
+  date?: string | null;
+  link?: string | null;
+  logoUrl?: string | null;
+};
+
 type ProfileExperienceSection = {
   title: string;
   items: ProfileExperienceItem[];
@@ -92,6 +101,11 @@ type ProfileExperienceSection = {
 type ProfileEducationSection = {
   title: string;
   items: ProfileEducationItem[];
+};
+
+type ProfileCertificationSection = {
+  title: string;
+  items: ProfileCertificationItem[];
 };
 
 type ProfileStartupStageValue = 'idea' | 'mvp' | 'live' | 'scale';
@@ -297,6 +311,7 @@ type UpdateMyProfileRequest = {
   personalityAndHobbyIds?: string[];
   experience: ProfileExperienceItem[];
   education: ProfileEducationItem[];
+  certifications: ProfileCertificationItem[];
 };
 ```
 
@@ -305,6 +320,7 @@ type UpdateMyProfileRequest = {
 - `locationId` must match one of `GET /profile-options.data.locations[].value`.
 - `experience` is a full replacement array.
 - `education` is a full replacement array.
+- `certifications` is a full replacement array. Empty array clears saved certificates.
 - `personalityAndHobbyIds` is sent only for non-startup / individual profiles.
 - For startup-owner profiles, frontend omits `personalityAndHobbyIds`.
 - Backend decides whether `about` updates startup idea or personal description based on ownership state.

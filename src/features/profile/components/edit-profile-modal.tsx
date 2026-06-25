@@ -28,6 +28,7 @@ import { mockMyProfileResponse, mockProfileOptionsResponse } from '../mock/profi
 import type {
   MyProfileResponse,
   ProfileAboutSection,
+  ProfileCertificationItem,
   ProfileEducationItem,
   ProfileExperienceItem,
   ProfileOptionsResponse,
@@ -36,7 +37,7 @@ import type {
 } from '../types/profile.types';
 
 type FormErrors = Partial<Record<keyof UpdateMyProfileRequest, string>>;
-type EditableBackgroundTab = 'experience' | 'education';
+type EditableBackgroundTab = 'certifications' | 'experience' | 'education';
 type EditProfileCardKey = 'identity' | 'about' | 'background' | 'personality';
 type ProfileLocationOption = ProfileOptionsResponse['data']['locations'][number];
 type ProfilePersonalityOption = ProfileOptionsResponse['data']['personalityAndHobbies'][number];
@@ -51,6 +52,7 @@ const ERROR_FIELD_ORDER: (keyof UpdateMyProfileRequest)[] = [
   'about',
   'experience',
   'education',
+  'certifications',
   'personalityAndHobbyIds',
 ];
 
@@ -62,6 +64,7 @@ const FIELD_TO_CARD: Partial<Record<keyof UpdateMyProfileRequest, EditProfileCar
   about: 'about',
   experience: 'background',
   education: 'background',
+  certifications: 'background',
   personalityAndHobbyIds: 'personality',
 };
 const profilePalette = {
@@ -108,6 +111,29 @@ function getInitials(name: string) {
     .join('');
 }
 
+function normalizeLocationText(value: string | null | undefined) {
+  return (value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s*,\s*/g, ', ')
+    .replace(/\s+/g, ' ');
+}
+
+function getLocationCityName(city: string, country: string) {
+  const trimmedCity = city.trim();
+  const trimmedCountry = country.trim();
+
+  if (!trimmedCity || !trimmedCountry) {
+    return trimmedCity;
+  }
+
+  const citySuffix = `, ${trimmedCountry}`;
+
+  return trimmedCity.toLowerCase().endsWith(citySuffix.toLowerCase())
+    ? trimmedCity.slice(0, -citySuffix.length).trim()
+    : trimmedCity;
+}
+
 function resolveInitialLocationId(profile: ProfileTalentData, locations: ProfileLocationOption[]) {
   const locationId = profile.location.id?.trim();
 
@@ -115,11 +141,28 @@ function resolveInitialLocationId(profile: ProfileTalentData, locations: Profile
     return locationId;
   }
 
-  const matchingLocation = locations.find(
-    (location) =>
-      location.label === profile.location.display ||
-      location.value === profile.location.city.toLowerCase()
+  const cityName = getLocationCityName(profile.location.city, profile.location.country);
+  const locationCandidates = new Set(
+    [
+      profile.location.display,
+      profile.location.city,
+      cityName,
+      [cityName, profile.location.country].filter(Boolean).join(', '),
+    ]
+      .map(normalizeLocationText)
+      .filter(Boolean)
   );
+
+  const matchingLocation = locations.find((location) => {
+    const optionCandidates = [
+      location.id,
+      location.value,
+      location.label,
+      location.label.split(',')[0],
+    ].map(normalizeLocationText);
+
+    return optionCandidates.some((candidate) => locationCandidates.has(candidate));
+  });
 
   // Fall back to an empty selection rather than an unvalidated slug, so the user is
   // forced to pick a real option and we never submit a locationId the backend rejects.
@@ -140,6 +183,7 @@ function buildInitialFormState(
       profile.sections.personalityAndHobbies?.items.map((item) => item.id) ?? [],
     experience: profile.sections.experience?.items ?? [],
     education: profile.sections.education?.items ?? [],
+    certifications: profile.sections.certifications?.items ?? [],
   };
 }
 
@@ -186,6 +230,14 @@ function validateForm(formState: UpdateMyProfileRequest, aboutErrorLabel: string
 
   if ((formState.personalityAndHobbyIds?.length ?? 0) > MAX_PERSONALITY_SELECTIONS) {
     nextErrors.personalityAndHobbyIds = 'You can select up to 6 personality and hobby tags.';
+  }
+
+  const invalidCertificationIndex = formState.certifications.findIndex(
+    (item) => !item.name.trim() || !item.issuer.trim()
+  );
+
+  if (invalidCertificationIndex >= 0) {
+    nextErrors.certifications = `Certificate ${invalidCertificationIndex + 1} needs a name and issuer.`;
   }
 
   return nextErrors;
@@ -619,10 +671,12 @@ function BackgroundTabButton({
 }
 
 function BackgroundEditorHeader({
+  disabled,
   icon,
   label,
   onAdd,
 }: {
+  disabled?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onAdd: () => void;
@@ -637,8 +691,13 @@ function BackgroundEditorHeader({
       </View>
       <Pressable
         className="min-h-9 flex-row items-center gap-1.5 rounded-full border px-3 active:opacity-80"
+        disabled={disabled}
         onPress={onAdd}
-        style={{ backgroundColor: profilePalette.accentSoft, borderColor: profilePalette.accent }}>
+        style={{
+          backgroundColor: profilePalette.accentSoft,
+          borderColor: profilePalette.accent,
+          opacity: disabled ? 0.7 : 1,
+        }}>
         <Ionicons color={profilePalette.accent} name="add" size={16} />
         <AppText className="text-[12px]" style={{ color: profilePalette.accent }} variant="bodyStrong">
           Add
@@ -790,6 +849,17 @@ function sanitizeEducation(items: ProfileEducationItem[]) {
   }));
 }
 
+function sanitizeCertifications(items: ProfileCertificationItem[]) {
+  return items.map((item) => ({
+    ...item,
+    name: sanitizeRequiredText(item.name),
+    issuer: sanitizeRequiredText(item.issuer),
+    date: sanitizeOptionalText(item.date),
+    link: sanitizeOptionalText(item.link),
+    logoUrl: sanitizeOptionalText(item.logoUrl),
+  }));
+}
+
 function ExperienceEditor({
   disabled,
   error,
@@ -816,6 +886,7 @@ function ExperienceEditor({
   return (
     <View className="gap-4">
       <BackgroundEditorHeader
+        disabled={disabled}
         icon="briefcase-outline"
         label={`Experience (${items.length})`}
         onAdd={() => onChange([...items, { title: '', organization: '', period: '', location: '' }])}
@@ -831,7 +902,7 @@ function ExperienceEditor({
               <AppText className="text-[13px]" tone="muted" variant="label">
                 Experience {index + 1}
               </AppText>
-              <Pressable hitSlop={10} onPress={() => removeItem(index)}>
+              <Pressable disabled={disabled} hitSlop={10} onPress={() => removeItem(index)}>
                 <Ionicons color={profilePalette.danger} name="trash-outline" size={18} />
               </Pressable>
             </View>
@@ -923,6 +994,7 @@ function EducationEditor({
   return (
     <View className="gap-4">
       <BackgroundEditorHeader
+        disabled={disabled}
         icon="school-outline"
         label={`Education (${items.length})`}
         onAdd={() => onChange([...items, { degree: '', school: '', field: '', period: '' }])}
@@ -938,7 +1010,7 @@ function EducationEditor({
               <AppText className="text-[13px]" tone="muted" variant="label">
                 Education {index + 1}
               </AppText>
-              <Pressable hitSlop={10} onPress={() => removeItem(index)}>
+              <Pressable disabled={disabled} hitSlop={10} onPress={() => removeItem(index)}>
                 <Ionicons color={profilePalette.danger} name="trash-outline" size={18} />
               </Pressable>
             </View>
@@ -991,6 +1063,104 @@ function EducationEditor({
           <Ionicons color={profilePalette.textSoft} name="school-outline" size={24} />
           <AppText align="center" className="text-[13px]" tone="muted">
             Add education so matches can read your training and credentials.
+          </AppText>
+        </View>
+      )}
+
+      {error ? (
+        <AppText className="text-[12px]" tone="danger" variant="code">
+          {error}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function CertificationEditor({
+  disabled,
+  error,
+  items,
+  onChange,
+}: {
+  disabled?: boolean;
+  error?: string;
+  items: ProfileCertificationItem[];
+  onChange: (items: ProfileCertificationItem[]) => void;
+}) {
+  function updateItem(index: number, patch: Partial<ProfileCertificationItem>) {
+    onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+  }
+
+  function removeItem(index: number) {
+    onChange(items.filter((_item, itemIndex) => itemIndex !== index));
+  }
+
+  return (
+    <View className="gap-4">
+      <BackgroundEditorHeader
+        disabled={disabled}
+        icon="ribbon-outline"
+        label={`Certificates (${items.length})`}
+        onAdd={() => onChange([...items, { name: '', issuer: '', date: '', link: '' }])}
+      />
+
+      {items.length ? (
+        items.map((item, index) => (
+          <View
+            key={item.id ?? `certification-${index}`}
+            className="gap-4 rounded-[18px] border p-4"
+            style={{ backgroundColor: '#252525', borderColor: profilePalette.border }}>
+            <View className="flex-row items-center justify-between gap-3">
+              <AppText className="text-[13px]" tone="muted" variant="label">
+                Certificate {index + 1}
+              </AppText>
+              <Pressable disabled={disabled} hitSlop={10} onPress={() => removeItem(index)}>
+                <Ionicons color={profilePalette.danger} name="trash-outline" size={18} />
+              </Pressable>
+            </View>
+            <ProfileInput
+              autoCapitalize="words"
+              label="Certificate name"
+              onChangeText={(value) => updateItem(index, { name: value })}
+              placeholder="AWS Certified Solutions Architect"
+              value={item.name}
+            />
+            <ProfileInput
+              autoCapitalize="words"
+              label="Issuer"
+              onChangeText={(value) => updateItem(index, { issuer: value })}
+              placeholder="Amazon Web Services"
+              value={item.issuer}
+            />
+            <View className="flex-row gap-3">
+              <ProfileInput
+                autoCapitalize="sentences"
+                label="Date"
+                onChangeText={(value) => updateItem(index, { date: value })}
+                placeholder="Issued 2024"
+                shellClassName="flex-1"
+                value={item.date ?? ''}
+              />
+              <ProfileInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                label="Proof URL"
+                onChangeText={(value) => updateItem(index, { link: value })}
+                placeholder="https://..."
+                shellClassName="flex-1"
+                value={item.link ?? ''}
+              />
+            </View>
+          </View>
+        ))
+      ) : (
+        <View
+          className="items-center gap-2 rounded-[16px] border px-4 py-6"
+          style={{ backgroundColor: '#252525', borderColor: profilePalette.border }}>
+          <Ionicons color={profilePalette.textSoft} name="ribbon-outline" size={24} />
+          <AppText align="center" className="text-[13px]" tone="muted">
+            Add certificates so matches can verify your credentials.
           </AppText>
         </View>
       )}
@@ -1140,6 +1310,7 @@ export function EditProfileScreen() {
       personalityAndHobbyIds: selectedPersonalityIds,
       experience: sanitizeExperience(formState.experience),
       education: sanitizeEducation(formState.education),
+      certifications: sanitizeCertifications(formState.certifications),
     };
 
     const validationErrors = validateForm(payload, aboutCopy.errorLabel);
@@ -1248,7 +1419,7 @@ export function EditProfileScreen() {
 
       if (type === 'experience') {
         updateExperienceLogo(index, uploadedImage.url);
-      } else {
+      } else if (type === 'education') {
         updateEducationLogo(index, uploadedImage.url);
       }
     } catch (error) {
@@ -1471,7 +1642,7 @@ export function EditProfileScreen() {
             }}
             style={{ backgroundColor: profilePalette.field, borderColor: profilePalette.border }}>
             <View className="gap-1">
-              <AppText variant="subtitle">Experience & Education</AppText>
+              <AppText variant="subtitle">Experience, Education & Certificates</AppText>
               <AppText className="text-[13px]" tone="muted">
                 Add the background people will scan before matching.
               </AppText>
@@ -1490,6 +1661,11 @@ export function EditProfileScreen() {
                 label="Education"
                 onPress={() => setBackgroundTab('education')}
               />
+              <BackgroundTabButton
+                active={backgroundTab === 'certifications'}
+                label="Certificates"
+                onPress={() => setBackgroundTab('certifications')}
+              />
             </View>
 
             {backgroundTab === 'experience' ? (
@@ -1501,7 +1677,7 @@ export function EditProfileScreen() {
                 onPickLogo={(index) => handlePickBackgroundLogo('experience', index)}
                 uploadingLogoKey={uploadingLogoKey}
               />
-            ) : (
+            ) : backgroundTab === 'education' ? (
               <EducationEditor
                 disabled={isSavingProfile}
                 error={formErrors.education}
@@ -1509,6 +1685,13 @@ export function EditProfileScreen() {
                 onChange={(items) => updateField('education', items)}
                 onPickLogo={(index) => handlePickBackgroundLogo('education', index)}
                 uploadingLogoKey={uploadingLogoKey}
+              />
+            ) : (
+              <CertificationEditor
+                disabled={isSavingProfile}
+                error={formErrors.certifications}
+                items={formState.certifications}
+                onChange={(items) => updateField('certifications', items)}
               />
             )}
           </AppCard>

@@ -92,6 +92,10 @@ type ProfileTalentData = {
       title: string;
       items: ProfileEducationItem[];
     };
+    certifications: {
+      title: string;
+      items: ProfileCertificationItem[];
+    };
     highlights?: {
       items: string[];
     };
@@ -118,15 +122,24 @@ type ProfileEducationItem = {
   schoolLogo?: string | null;
   description?: string | null;
 };
+
+type ProfileCertificationItem = {
+  id?: string;
+  name: string;
+  issuer: string;
+  date?: string | null;
+  link?: string | null;
+  logoUrl?: string | null;
+};
 ```
 
-Always return `talent.sections.experience` and `talent.sections.education`. Use `items: []` when no entries exist.
+Always return `talent.sections.experience`, `talent.sections.education`, and `talent.sections.certifications`. Use `items: []` when no entries exist.
 
 ### Talent Response Rules
 
 - Always return `talent`, including for accounts that also own a startup.
 - Return talent identity and sections from the personal user profile, not from the startup record.
-- Return empty arrays, not `null`, for `badges`, `sections.experience.items`, and `sections.education.items`.
+- Return empty arrays, not `null`, for `badges`, `sections.experience.items`, `sections.education.items`, and `sections.certifications.items`.
 - `profileType` remains informational. The frontend does not use it to decide whether startup data exists; use `startup !== null` for that.
 
 ### Talent Normalization
@@ -142,6 +155,10 @@ When the source is LinkedIn data, normalize raw fields before returning the resp
 | `education[].schoolName` | `talent.sections.education.items[].school` |
 | `education[].fieldOfStudy` | `talent.sections.education.items[].field` |
 | `education[].schoolLogo.url` | `talent.sections.education.items[].schoolLogo` |
+| `certifications[].name` | `talent.sections.certifications.items[].name` |
+| `certifications[].issuer` | `talent.sections.certifications.items[].issuer` |
+| `certifications[].date` or formatted issue date | `talent.sections.certifications.items[].date` |
+| `certifications[].url` or credential URL | `talent.sections.certifications.items[].link` |
 
 ## Startup Profile
 
@@ -274,13 +291,14 @@ type UpdateMyProfileRequest = {
   personalityAndHobbyIds?: string[];
   experience: ProfileExperienceItem[];
   education: ProfileEducationItem[];
+  certifications: ProfileCertificationItem[];
 };
 ```
 
 ### Talent PATCH Rules
 
 - Persist personal identity fields and return them under `talent` on the next owner GET.
-- Replace personal experience and education with the submitted arrays. Empty arrays clear the saved values.
+- Replace personal experience, education, and certifications with the submitted arrays. Empty arrays clear the saved values.
 - Apply `personalityAndHobbyIds` only to the talent profile. Omission means the frontend is intentionally not changing that field.
 - Do not update startup identity, startup sections, or startup edit fields from this endpoint.
 - A successful PATCH may keep its existing JSON response shape. The frontend refetches `GET /api/v1/me/profile`.
@@ -295,6 +313,7 @@ type UpdateMyProfileRequest = {
 | `personalityAndHobbyIds` | `talent.sections.personalityAndHobbies.items` |
 | `experience` | `talent.sections.experience.items` |
 | `education` | `talent.sections.education.items` |
+| `certifications` | `talent.sections.certifications.items` |
 
 ## PATCH `/api/v1/me/startup`
 

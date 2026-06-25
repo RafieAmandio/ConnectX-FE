@@ -64,6 +64,15 @@ export type ProfileEducationItem = {
   description?: string | null;
 };
 
+export type ProfileCertificationItem = {
+  id?: string;
+  name: string;
+  issuer: string;
+  date?: string | null;
+  link?: string | null;
+  logoUrl?: string | null;
+};
+
 export type ProfileExperienceSection = {
   title: string;
   items: ProfileExperienceItem[];
@@ -72,6 +81,11 @@ export type ProfileExperienceSection = {
 export type ProfileEducationSection = {
   title: string;
   items: ProfileEducationItem[];
+};
+
+export type ProfileCertificationSection = {
+  title: string;
+  items: ProfileCertificationItem[];
 };
 
 export type ProfileStartupStageValue = 'idea' | 'mvp' | 'live' | 'scale';
@@ -131,6 +145,7 @@ export type ProfileStartupData = {
 
 export type ProfileTalentSections = {
   about?: ProfileAboutSection;
+  certifications?: ProfileCertificationSection;
   personalityAndHobbies?: ProfileListSection;
   skills?: ProfileListSection;
   interests?: ProfileListSection;
@@ -178,6 +193,7 @@ export type UpdateMyProfileRequest = {
   photoUrl?: string | null;
   locationId: string;
   about: string;
+  certifications: ProfileCertificationItem[];
   personalityAndHobbyIds?: string[];
   experience: ProfileExperienceItem[];
   education: ProfileEducationItem[];
