@@ -257,12 +257,12 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   }, [connectXUserId, desiredAppUserId]);
 
   const ensureRevenueCatIdentityReady = React.useCallback(async () => {
-    if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
-      return;
-    }
-
     if (!desiredAppUserId) {
       throw new Error('Sign in before opening RevenueCat purchases.');
+    }
+
+    if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
+      throw new Error('RevenueCat is not ready yet. Please try again.');
     }
 
     const currentAppUserId = await Purchases.getAppUserID();
@@ -319,7 +319,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     return nextCustomerInfo;
   }, [refresh, refreshSession]);
   const restorePurchases = React.useCallback(async () => {
-    if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
+    if (!REVENUECAT_RUNTIME_SUPPORTED) {
       return null;
     }
 
@@ -347,7 +347,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
   const purchasePackageById = React.useCallback(
     async (packageId: RevenueCatPackageId) => {
-      if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
+      if (!REVENUECAT_RUNTIME_SUPPORTED) {
         return null;
       }
 
@@ -386,7 +386,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   );
 
   const presentPaywall = React.useCallback(async () => {
-    if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
+    if (!REVENUECAT_RUNTIME_SUPPORTED) {
       return null;
     }
 
@@ -413,7 +413,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
   const presentPaywallForOffering = React.useCallback(
     async (offeringId: string) => {
-      if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
+      if (!REVENUECAT_RUNTIME_SUPPORTED) {
         return null;
       }
 
@@ -450,7 +450,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   );
 
   const presentPaywallIfNeeded = React.useCallback(async () => {
-    if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
+    if (!REVENUECAT_RUNTIME_SUPPORTED) {
       return null;
     }
 
@@ -477,7 +477,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   }, [currentOffering, ensureRevenueCatIdentityReady, refreshRevenueCatAndAuthSession]);
 
   const presentCustomerCenter = React.useCallback(async () => {
-    if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
+    if (!REVENUECAT_RUNTIME_SUPPORTED) {
       return;
     }
 
