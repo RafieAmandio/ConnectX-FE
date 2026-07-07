@@ -108,11 +108,19 @@ async function fetchBootstrapState() {
   };
 }
 
+async function setConnectXSubscriberAttributes(userId: string, appUserId: string) {
+  await Purchases.setAttributes({
+    connectx_app_user_id: appUserId,
+    connectx_user_id: userId,
+  });
+}
+
 export function RevenueCatProvider({ children }: React.PropsWithChildren) {
-  const { refreshSession, session } = useAuth();
+  const { isHydrated: isAuthHydrated, refreshSession, session } = useAuth();
+  const connectXUserId = session?.user?.id?.trim() || null;
   const desiredAppUserId = React.useMemo(
-    () => getRevenueCatAppUserId(session?.user?.id),
-    [session?.user?.id]
+    () => getRevenueCatAppUserId(connectXUserId),
+    [connectXUserId]
   );
   const [isConfigured, setIsConfigured] = React.useState(!REVENUECAT_RUNTIME_SUPPORTED);
   const [isLoading, setIsLoading] = React.useState(REVENUECAT_RUNTIME_SUPPORTED);
@@ -127,6 +135,15 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
   React.useEffect(() => {
     if (!REVENUECAT_RUNTIME_SUPPORTED || configuredRef.current) {
+      return;
+    }
+
+    if (!isAuthHydrated) {
+      return;
+    }
+
+    if (!desiredAppUserId) {
+      setIsLoading(false);
       return;
     }
 
@@ -159,7 +176,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     return () => {
       Purchases.removeCustomerInfoUpdateListener(customerInfoListener);
     };
-  }, [desiredAppUserId]);
+  }, [desiredAppUserId, isAuthHydrated]);
 
   const refresh = React.useCallback(async () => {
     if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
@@ -202,23 +219,21 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       setIsLoading(true);
 
       try {
-        if (desiredAppUserId) {
-          const currentAppUserId = await Purchases.getAppUserID();
+        if (!connectXUserId || !desiredAppUserId) {
+          return;
+        }
 
-          if (currentAppUserId !== desiredAppUserId) {
-            const result = await Purchases.logIn(desiredAppUserId);
+        const currentAppUserId = await Purchases.getAppUserID();
 
-            React.startTransition(() => {
-              setCustomerInfo(result.customerInfo);
-            });
-          }
-        } else if (!(await Purchases.isAnonymous())) {
-          const anonymousCustomerInfo = await Purchases.logOut();
+        if (currentAppUserId !== desiredAppUserId) {
+          const result = await Purchases.logIn(desiredAppUserId);
 
           React.startTransition(() => {
-            setCustomerInfo(anonymousCustomerInfo);
+            setCustomerInfo(result.customerInfo);
           });
         }
+
+        await setConnectXSubscriberAttributes(connectXUserId, desiredAppUserId);
 
         const nextState = await fetchBootstrapState();
 
@@ -239,31 +254,27 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
     identitySyncPromiseRef.current = syncTask;
     await syncTask;
-  }, [desiredAppUserId]);
+  }, [connectXUserId, desiredAppUserId]);
 
   const ensureRevenueCatIdentityReady = React.useCallback(async () => {
     if (!REVENUECAT_RUNTIME_SUPPORTED || !configuredRef.current) {
       return;
     }
 
-    const currentAppUserId = await Purchases.getAppUserID();
-
-    if (desiredAppUserId) {
-      if (currentAppUserId !== desiredAppUserId || appUserId !== desiredAppUserId) {
-        await syncRevenueCatIdentity();
-      }
-
-      const syncedAppUserId = await Purchases.getAppUserID();
-
-      if (syncedAppUserId !== desiredAppUserId) {
-        throw new Error('RevenueCat is still syncing your account. Please try again.');
-      }
-
-      return;
+    if (!desiredAppUserId) {
+      throw new Error('Sign in before opening RevenueCat purchases.');
     }
 
-    if (appUserId !== currentAppUserId) {
+    const currentAppUserId = await Purchases.getAppUserID();
+
+    if (currentAppUserId !== desiredAppUserId || appUserId !== desiredAppUserId) {
       await syncRevenueCatIdentity();
+    }
+
+    const syncedAppUserId = await Purchases.getAppUserID();
+
+    if (syncedAppUserId !== desiredAppUserId) {
+      throw new Error('RevenueCat is still syncing your account. Please try again.');
     }
   }, [appUserId, desiredAppUserId, syncRevenueCatIdentity]);
 
