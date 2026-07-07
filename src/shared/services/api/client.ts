@@ -32,6 +32,7 @@ let refreshAccessTokenPromise: Promise<string> | null = null;
 
 type ApiFetchOptions = {
   allowTokenRefresh?: boolean;
+  baseUrl?: string;
   handleUnauthorized?: boolean;
 };
 
@@ -168,7 +169,7 @@ async function executeApiFetch<T>(
   try {
     console.log(
       'apiFetch',
-      buildApiUrl(path),
+      buildApiUrl(path, options.baseUrl),
       JSON.stringify(
         {
           ...init,
@@ -178,7 +179,7 @@ async function executeApiFetch<T>(
         2
       )
     );
-    const response = await fetch(buildApiUrl(path), {
+    const response = await fetch(buildApiUrl(path, options.baseUrl), {
       ...init,
       body,
       headers,

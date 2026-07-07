@@ -1,4 +1,5 @@
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const profileApiFallbackBaseUrl = process.env.EXPO_PUBLIC_PROFILE_API_FALLBACK_BASE_URL?.trim();
 
 export function getApiBaseUrl() {
   if (!apiBaseUrl) {
@@ -10,11 +11,19 @@ export function getApiBaseUrl() {
   return apiBaseUrl.replace(/\/+$/, '');
 }
 
-export function buildApiUrl(path: string) {
+export function getProfileApiFallbackBaseUrl() {
+  if (!profileApiFallbackBaseUrl) {
+    return null;
+  }
+
+  return profileApiFallbackBaseUrl.replace(/\/+$/, '');
+}
+
+export function buildApiUrl(path: string, baseUrl = getApiBaseUrl()) {
   if (/^https?:\/\//i.test(path)) {
     return path;
   }
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${getApiBaseUrl()}${normalizedPath}`;
+  return `${baseUrl.replace(/\/+$/, '')}${normalizedPath}`;
 }
