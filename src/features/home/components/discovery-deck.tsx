@@ -1927,8 +1927,18 @@ export function DiscoveryDeck() {
   const shouldMergeMockCards = isMergeMockDiscoveryCardsEnabled();
   const notificationsQuery = useNotifications();
   const { mutateAsync: updateProfileLocationAsync } = useUpdateProfileLocation();
-  const { presentPaywallForOffering, supported } = useRevenueCat();
-  const hasAdvancedDiscoveryFilters = session?.premium?.isPremium === true;
+  const { isConnectXProActive, presentPaywallForOffering, supported } = useRevenueCat();
+  const hasAdvancedDiscoveryFilters = isConnectXProActive || session?.premium?.isPremium === true;
+
+  React.useEffect(() => {
+    console.log('[DiscoveryDeck] session premium', {
+      hasAdvancedDiscoveryFilters,
+      isConnectXProActive,
+      premium: session?.premium ?? null,
+      isPremium: session?.premium?.isPremium,
+    });
+    console.log(isConnectXProActive,"isconnectxproactivess")
+  }, [hasAdvancedDiscoveryFilters, isConnectXProActive, session?.premium]);
   const [mockCards, setMockCards] = React.useState<DiscoveryCard[]>(getFallbackCards(null));
   const [restoredCards, setRestoredCards] = React.useState<DiscoveryCard[]>([]);
   const [dismissedMergedMockCardIds, setDismissedMergedMockCardIds] = React.useState<Set<string>>(

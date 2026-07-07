@@ -11,6 +11,7 @@ import Purchases, {
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 import { useAuth } from '@features/auth';
+import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import {
   getRevenueCatApiKey,
@@ -275,6 +276,13 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
     if (syncedAppUserId !== desiredAppUserId) {
       throw new Error('RevenueCat is still syncing your account. Please try again.');
+    }
+
+    if (isExpoDevModeEnabled()) {
+      console.debug('[revenuecat] identity ready', {
+        desiredAppUserId,
+        syncedAppUserId,
+      });
     }
   }, [appUserId, desiredAppUserId, syncRevenueCatIdentity]);
 
