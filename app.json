@@ -73,6 +73,14 @@
       ],
       "expo-secure-store",
       "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "buildReactNativeFromSource": false
+          }
+        }
+      ],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "@react-native-firebase/messaging",
