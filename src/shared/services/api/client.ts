@@ -4,20 +4,6 @@ const GENERIC_REQUEST_ERROR_MESSAGE = 'Something went wrong. Please try again in
 // Hard ceiling so a stalled request can't hang a mutation forever (which would, e.g.,
 // leave a Save button disabled indefinitely). Aborts surface as a generic ApiError.
 const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
-const REDACTED_LOG_VALUE = '[REDACTED]';
-const SENSITIVE_LOG_KEYS = new Set([
-  'authorization_code',
-  'fcm_token',
-  'nonce',
-  'password',
-  'password_confirmation',
-  'provider_token',
-  'refresh_token',
-  'supabase_access_token',
-  'supabase_refresh_token',
-  'supabase_token',
-  'token',
-]);
 
 export class ApiError extends Error {
   payload?: unknown;
@@ -71,25 +57,6 @@ function isPlainJsonBody(value: unknown): value is Record<string, unknown> | unk
   }
 
   return true;
-}
-
-function redactSensitiveLogValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(redactSensitiveLogValue);
-  }
-
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-
-  return Object.fromEntries(
-    Object.entries(value).map(([key, nestedValue]) => [
-      key,
-      SENSITIVE_LOG_KEYS.has(key.toLowerCase())
-        ? REDACTED_LOG_VALUE
-        : redactSensitiveLogValue(nestedValue),
-    ])
-  );
 }
 
 async function parseResponsePayload(response: Response) {
@@ -200,18 +167,13 @@ async function executeApiFetch<T>(
   const timeoutId = setTimeout(() => timeoutController.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
 
   try {
-    console.log(
-      'apiFetch',
-      buildApiUrl(path, options.baseUrl),
-      JSON.stringify(
-        {
-          ...init,
-          body: redactSensitiveLogValue(init.body),
-        },
-        null,
-        2
-      )
-    );
+    if (__DEV__) {
+      console.log(
+        'apiFetch',
+        buildApiUrl(path, options.baseUrl),
+        JSON.stringify(init, null, 2)
+      );
+    }
     const response = await fetch(buildApiUrl(path, options.baseUrl), {
       ...init,
       body,

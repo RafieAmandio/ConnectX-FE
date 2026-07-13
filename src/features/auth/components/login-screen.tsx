@@ -1,5 +1,4 @@
 import { AntDesign, Ionicons } from '@expo/vector-icons';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -505,33 +504,18 @@ export function LoginScreen() {
                     onPress={handleLinkedInLogin}
                   />
                   {isAppleAvailable ? (
-                    <View
-                      pointerEvents={isAnySubmitting ? 'none' : 'auto'}
-                      style={{
-                        height: 56,
-                        opacity: isAnySubmitting && !isAppleSubmitting ? 0.5 : 1,
-                        position: 'relative',
-                        width: '100%',
-                      }}>
-                      <AppleAuthentication.AppleAuthenticationButton
-                        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                        cornerRadius={16}
-                        onPress={handleAppleLogin}
-                        style={{ height: 56, width: '100%' }}
-                      />
-                      {isAppleSubmitting ? (
-                        <View
-                          pointerEvents="none"
-                          style={{
-                            position: 'absolute',
-                            right: 18,
-                            top: 18,
-                          }}>
-                          <ActivityIndicator color="#FFFFFF" size="small" />
-                        </View>
-                      ) : null}
-                    </View>
+                    <SocialCta
+                      disabled={isAnySubmitting}
+                      icon={
+                        isAppleSubmitting ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <Ionicons color="#FFFFFF" name="logo-apple" size={20} />
+                        )
+                      }
+                      label="Sign in with Apple"
+                      onPress={handleAppleLogin}
+                    />
                   ) : null}
                 </>
               ) : null}
