@@ -12,11 +12,16 @@
       "bundleIdentifier": "com.connectxapp.ios",
       "googleServicesFile": "./ios/GoogleService-Info.plist",
       "appleTeamId": "NCKSK4UBPZ",
+      "usesAppleSignIn": true,
       "icon": "./assets/images/icon.png",
       "entitlements": {
-        "aps-environment": "development"
+        "aps-environment": "development",
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
       },
       "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
         "UIBackgroundModes": [
           "fetch",
           "remote-notification"
@@ -67,6 +72,15 @@
         }
       ],
       "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "buildReactNativeFromSource": false
+          }
+        }
+      ],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "@react-native-firebase/messaging",

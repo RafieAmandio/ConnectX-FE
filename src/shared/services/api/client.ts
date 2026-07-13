@@ -167,18 +167,13 @@ async function executeApiFetch<T>(
   const timeoutId = setTimeout(() => timeoutController.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
 
   try {
-    console.log(
-      'apiFetch',
-      buildApiUrl(path, options.baseUrl),
-      JSON.stringify(
-        {
-          ...init,
-          body: init.body,
-        },
-        null,
-        2
-      )
-    );
+    if (__DEV__) {
+      console.log(
+        'apiFetch',
+        buildApiUrl(path, options.baseUrl),
+        JSON.stringify(init, null, 2)
+      );
+    }
     const response = await fetch(buildApiUrl(path, options.baseUrl), {
       ...init,
       body,

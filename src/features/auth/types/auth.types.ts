@@ -1,7 +1,7 @@
 import type { DiscoveryMode } from '@features/home/types/discovery.types';
 
 export type AuthMethod = 'email' | 'google' | 'linkedin' | 'apple' | 'developer-bypass';
-export type OAuthAuthMethod = Extract<AuthMethod, 'google' | 'linkedin'>;
+export type OAuthAuthMethod = Extract<AuthMethod, 'google' | 'linkedin' | 'apple'>;
 
 export type AuthPhase =
   | 'signed_out'
@@ -136,6 +136,19 @@ export type GoogleAuthResult = {
   googleAccessToken: string | null;
   idToken: string | null;
   fcmToken: string | null;
+  userId: string;
+};
+
+export type AppleAuthResult = {
+  authorizationCode: string | null;
+  displayName: string | null;
+  email: string | null;
+  familyName: string | null;
+  givenName: string | null;
+  identityToken: string;
+  middleName: string | null;
+  nonce: string;
+  provider: 'apple';
   userId: string;
 };
 

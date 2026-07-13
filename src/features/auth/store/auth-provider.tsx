@@ -27,6 +27,7 @@ import {
   getPersistedAuthState,
   getStoredToken,
   loginWithApi,
+  loginWithAppleApi,
   loginWithGoogleApi,
   refreshStoredApiAccessToken,
   refreshAuthSession,
@@ -42,12 +43,14 @@ import {
   verifyLoginOtp as verifyLoginOtpRequest,
   verifyWhatsappOtp as verifyWhatsappOtpRequest,
 } from '../services/auth-service';
+import { signInWithAppleToken } from '../services/apple-auth-service';
 import { signInWithGoogleToken, signOutGoogle } from '../services/google-auth-service';
 import { signInWithLinkedInToken } from '../services/linkedin-auth-service';
 import type {
   AuthPhase,
   AuthSession,
   LoginOtpVerifyPayload,
+  OAuthAuthMethod,
   RegisterPayload,
   VerifyEmailPayload,
   VerifyWhatsappPayload,
@@ -74,6 +77,7 @@ type AuthContextValue = {
   sendLoginOtp: () => ReturnType<typeof sendLoginOtpRequest>;
   sendEmailOtp: () => ReturnType<typeof sendEmailOtpRequest>;
   sendWhatsappOtp: (payload: WhatsappOtpPayload) => ReturnType<typeof sendWhatsappOtpRequest>;
+  signInWithApple: (payload?: { fcmToken?: string | null }) => ReturnType<typeof loginWithAppleApi>;
   signInWithGoogle: (payload?: { fcmToken?: string | null }) => ReturnType<typeof loginWithGoogleApi>;
   signInWithLinkedIn: (payload?: { fcmToken?: string | null }) => ReturnType<typeof bootstrapLinkedInAuthSession>;
   bootstrapLinkedInCallback: (payload: Parameters<typeof bootstrapLinkedInAuthSession>[0]) => ReturnType<typeof bootstrapLinkedInAuthSession>;
@@ -109,7 +113,22 @@ function canRestoreWithoutToken(authPhase: AuthPhase) {
 }
 
 function isExternalOAuthMethod(method?: AuthSession['method'] | null) {
-  return method === 'google' || method === 'linkedin';
+  return method === 'apple' || method === 'google' || method === 'linkedin';
+}
+
+function resolveSupabaseOAuthMethod(
+  provider: unknown,
+  currentMethod?: AuthSession['method'] | null
+): OAuthAuthMethod {
+  if (isExternalOAuthMethod(currentMethod)) {
+    return currentMethod;
+  }
+
+  if (provider === 'apple' || provider === 'google' || provider === 'linkedin') {
+    return provider;
+  }
+
+  return 'google';
 }
 
 function resetDiscoveryContextForAuthBoundary(clearQueryCache?: () => void) {
@@ -357,9 +376,10 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
               persistedSession.email === normalizedEmail
               ? persistedSession
               : null;
-          const oauthMethod = persistedSession && isExternalOAuthMethod(persistedSession.method)
-            ? persistedSession.method
-            : 'google';
+          const oauthMethod = resolveSupabaseOAuthMethod(
+            supabaseSession.user.app_metadata?.provider,
+            persistedSession?.method
+          );
           const nextSession =
             persistedOAuthSession ??
             createOAuthAuthSessionFromSupabaseSession(supabaseSession, oauthMethod);
@@ -499,9 +519,10 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       ) {
         const normalizedEmail = nextSupabaseSession.user.email?.trim().toLowerCase() ?? null;
         const currentSession = sessionRef.current;
-        const oauthMethod = currentSession && isExternalOAuthMethod(currentSession.method)
-          ? currentSession.method
-          : 'google';
+        const oauthMethod = resolveSupabaseOAuthMethod(
+          nextSupabaseSession.user.app_metadata?.provider,
+          currentSession?.method
+        );
         const nextSession =
           currentSession &&
             isExternalOAuthMethod(currentSession.method) &&
@@ -551,6 +572,20 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       idToken: googleResult.idToken,
     });
     console.log('[auth:google] API login result', result);
+
+    resetDiscoveryContextForAuthBoundary(() => queryClient.clear());
+    setSession(result.session);
+    setAuthPhase(result.session.authPhase);
+
+    return result;
+  }, [queryClient]);
+
+  const signInWithApple = React.useCallback(async (payload?: { fcmToken?: string | null }) => {
+    const appleResult = await signInWithAppleToken();
+    const result = await loginWithAppleApi({
+      ...appleResult,
+      fcmToken: payload?.fcmToken ?? '',
+    });
 
     resetDiscoveryContextForAuthBoundary(() => queryClient.clear());
     setSession(result.session);
@@ -682,6 +717,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       sendWhatsappOtp,
       session,
       shouldShowWelcomeLaunchSplash,
+      signInWithApple,
       signInWithGoogle,
       signInWithLinkedIn,
       signOut,
@@ -710,6 +746,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       sendWhatsappOtp,
       session,
       shouldShowWelcomeLaunchSplash,
+      signInWithApple,
       signInWithGoogle,
       signInWithLinkedIn,
       signOut,
