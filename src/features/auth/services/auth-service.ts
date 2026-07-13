@@ -3,10 +3,12 @@ import * as SecureStore from 'expo-secure-store';
 
 import { ApiError, apiFetch } from '@shared/services/api';
 import {
+  clearSupabaseSession,
   getStoredSupabaseIdentity,
   setStoredSupabaseAccessToken,
   setSupabaseRealtimeToken,
   setSupabaseSession,
+  supabase,
 } from '@shared/services/supabase/client';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
@@ -25,6 +27,7 @@ import {
   MOCK_WHATSAPP_OTP,
 } from '../mock/auth.mock';
 import type {
+  AppleAuthResult,
   AuthNextStep,
   AuthPhase,
   AuthPremiumState,
@@ -66,6 +69,7 @@ const SESSION_KEY = 'connectx.auth.session';
 const USER_KEY = 'connectx.auth.user';
 
 export const AUTH_API = {
+  APPLE_OAUTH_VERIFY: '/api/v1/auth/oauth/apple/verify-token',
   EMAIL_RESEND_OTP: '/api/v1/auth/email/resend-otp',
   EMAIL_SEND_OTP: '/api/v1/auth/email/send-otp',
   FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
@@ -122,6 +126,8 @@ type GoogleOAuthVerifyResponse = AuthSuccessResponse & {
   };
 };
 
+type AppleOAuthVerifyResponse = AuthSuccessResponse;
+
 export type GoogleOAuthLoginPayload = {
   accessToken: string;
   displayName?: string | null;
@@ -135,6 +141,12 @@ export type GoogleSupabaseLoginResponse = AuthSuccessResponse & {
     oauth_provider: 'google';
   };
 };
+
+export type AppleOAuthLoginPayload = AppleAuthResult & {
+  fcmToken?: string | null;
+};
+
+export type AppleSupabaseLoginResponse = AppleOAuthVerifyResponse;
 
 export type LoginPayload = {
   email: string;
@@ -900,6 +912,93 @@ async function verifyGoogleOAuthWithApi(
       provider_token: payload.accessToken,
     } as any,
   });
+}
+
+async function verifyAppleOAuthWithApi(
+  payload: AppleOAuthLoginPayload
+): Promise<AppleOAuthVerifyResponse> {
+  return apiFetch<AppleOAuthVerifyResponse>(AUTH_API.APPLE_OAUTH_VERIFY, {
+    method: 'POST',
+    body: {
+      authorization_code: payload.authorizationCode,
+      family_name: payload.familyName,
+      fcm_token: payload.fcmToken ?? '',
+      given_name: payload.givenName,
+      middle_name: payload.middleName,
+      nonce: payload.nonce,
+      provider_token: payload.identityToken,
+    } as any,
+  });
+}
+
+async function updateAppleSupabaseMetadata(payload: AppleOAuthLoginPayload) {
+  const fullName =
+    payload.displayName?.trim() ||
+    [payload.givenName, payload.middleName, payload.familyName].filter(Boolean).join(' ').trim();
+
+  if (!fullName) {
+    return;
+  }
+
+  try {
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        family_name: payload.familyName,
+        full_name: fullName,
+        given_name: payload.givenName,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    if (isExpoDevModeEnabled()) {
+      console.warn('[auth:apple] failed to save first-login name metadata', error);
+    }
+  }
+}
+
+export async function loginWithAppleApi(
+  payload: AppleOAuthLoginPayload
+): Promise<SessionActionResult<AppleSupabaseLoginResponse>> {
+  const response = await verifyAppleOAuthWithApi(payload);
+  const token = response.token.trim();
+  const supabaseAccessToken = response.supabase_access_token?.trim() || null;
+  const supabaseRefreshToken = response.supabase_refresh_token?.trim() || null;
+
+  if (!token) {
+    throw new Error('Apple login succeeded, but no API token was returned.');
+  }
+
+  if (!supabaseAccessToken || !supabaseRefreshToken) {
+    throw new Error('Apple login succeeded, but no refreshable Supabase session was returned.');
+  }
+
+  const session = createAuthSession({
+    displayName: payload.displayName,
+    method: 'apple',
+    nextStep: response.next_step,
+    user: response.data.user,
+  });
+
+  try {
+    // Persist the ConnectX token before setSession emits SIGNED_IN so the auth listener
+    // can safely refresh the backend session during the Supabase state change.
+    await persistAuthSession(session, token);
+    await applySupabaseAuthResponse(response);
+    await updateAppleSupabaseMetadata(payload);
+
+    const refreshedSessionResult = await refreshAuthSession(session);
+
+    return {
+      response,
+      session: refreshedSessionResult.session,
+    };
+  } catch (error) {
+    await Promise.allSettled([clearPersistedAuth(), clearSupabaseSession()]);
+    throw error;
+  }
 }
 
 export async function loginWithGoogleApi(

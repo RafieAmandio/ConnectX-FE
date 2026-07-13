@@ -12,6 +12,7 @@ export { VerifyWhatsappScreen } from './components/verify-whatsapp-screen';
 export { useAuth } from './hooks/use-auth';
 export { AuthProvider } from './store/auth-provider';
 export type {
+  AppleAuthResult,
   AuthPhase,
   AuthSession,
   ForgotPasswordPayload,

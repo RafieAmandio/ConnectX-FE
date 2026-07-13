@@ -1,4 +1,5 @@
 import { AntDesign, Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -20,6 +21,7 @@ import { cn } from '@shared/utils/cn';
 
 import { useAuth } from '../hooks/use-auth';
 import { useFcmToken } from '../hooks/use-fcm-token';
+import { isAppleSignInCanceled, isAppleSignInAvailable } from '../services/apple-auth-service';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
 import { getEmailError, getPasswordError } from '../utils/auth-validation';
 
@@ -158,8 +160,15 @@ function CheckBox({ checked }: { checked: boolean }) {
 export function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { authPhase, isHydrated, login, session, signInWithGoogle, signInWithLinkedIn } =
-    useAuth();
+  const {
+    authPhase,
+    isHydrated,
+    login,
+    session,
+    signInWithApple,
+    signInWithGoogle,
+    signInWithLinkedIn,
+  } = useAuth();
   const searchParams = useLocalSearchParams<{
     linkedin_error?: string | string[];
     linkedin_message?: string | string[];
@@ -173,8 +182,12 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [rememberMe, setRememberMe] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = React.useState(false);
+  const [isAppleSubmitting, setIsAppleSubmitting] = React.useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
   const [isLinkedInSubmitting, setIsLinkedInSubmitting] = React.useState(false);
+  const isAnySubmitting =
+    isSubmitting || isAppleSubmitting || isGoogleSubmitting || isLinkedInSubmitting;
   const linkedInErrorMessage = React.useMemo(
     () =>
       getSingleSearchParam(searchParams.linkedin_message) ??
@@ -197,6 +210,32 @@ export function LoginScreen() {
       linkedin_message: undefined,
     });
   }, [linkedInErrorMessage, router]);
+
+  React.useEffect(() => {
+    let isActive = true;
+
+    if (process.env.EXPO_OS !== 'ios') {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    void isAppleSignInAvailable()
+      .then((isAvailable) => {
+        if (isActive) {
+          setIsAppleAvailable(isAvailable);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setIsAppleAvailable(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   if (!isHydrated) {
     return null;
@@ -256,7 +295,7 @@ export function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
-    if (isGoogleSubmitting || isLinkedInSubmitting || isSubmitting) {
+    if (isAnySubmitting) {
       return;
     }
 
@@ -280,7 +319,7 @@ export function LoginScreen() {
   };
 
   const handleLinkedInLogin = async () => {
-    if (isLinkedInSubmitting || isGoogleSubmitting || isSubmitting) {
+    if (isAnySubmitting) {
       return;
     }
 
@@ -300,6 +339,32 @@ export function LoginScreen() {
       );
     } finally {
       setIsLinkedInSubmitting(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    if (!isAppleAvailable || isAnySubmitting) {
+      return;
+    }
+
+    setEmailError(null);
+    setPasswordError(null);
+    setStatusMessage(null);
+    setIsAppleSubmitting(true);
+
+    try {
+      const result = await signInWithApple({
+        fcmToken,
+      });
+      router.replace(getRouteForAuthPhase(result.session.authPhase));
+    } catch (error) {
+      if (!isAppleSignInCanceled(error)) {
+        setStatusMessage(
+          error instanceof Error ? error.message : 'Apple Sign-In failed. Please try again.'
+        );
+      }
+    } finally {
+      setIsAppleSubmitting(false);
     }
   };
 
@@ -416,7 +481,7 @@ export function LoginScreen() {
                     />
                   </View>
                   <SocialCta
-                    disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
+                    disabled={isAnySubmitting}
                     icon={
                       isGoogleSubmitting ? (
                         <ActivityIndicator color="#FFFFFF" />
@@ -428,7 +493,7 @@ export function LoginScreen() {
                     onPress={handleGoogleLogin}
                   />
                   <SocialCta
-                    disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
+                    disabled={isAnySubmitting}
                     icon={
                       isLinkedInSubmitting ? (
                         <ActivityIndicator color="#FFFFFF" />
@@ -439,6 +504,35 @@ export function LoginScreen() {
                     label="Sign in with LinkedIn"
                     onPress={handleLinkedInLogin}
                   />
+                  {isAppleAvailable ? (
+                    <View
+                      pointerEvents={isAnySubmitting ? 'none' : 'auto'}
+                      style={{
+                        height: 56,
+                        opacity: isAnySubmitting && !isAppleSubmitting ? 0.5 : 1,
+                        position: 'relative',
+                        width: '100%',
+                      }}>
+                      <AppleAuthentication.AppleAuthenticationButton
+                        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                        cornerRadius={16}
+                        onPress={handleAppleLogin}
+                        style={{ height: 56, width: '100%' }}
+                      />
+                      {isAppleSubmitting ? (
+                        <View
+                          pointerEvents="none"
+                          style={{
+                            position: 'absolute',
+                            right: 18,
+                            top: 18,
+                          }}>
+                          <ActivityIndicator color="#FFFFFF" size="small" />
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
                 </>
               ) : null}
             </Animated.View>
@@ -452,11 +546,11 @@ export function LoginScreen() {
             ) : null}
 
             <Pressable
-              disabled={isSubmitting || isGoogleSubmitting || isLinkedInSubmitting}
+              disabled={isAnySubmitting}
               onPress={handleLogin}
               className={cn(
                 'h-14 flex-row items-center justify-center gap-3 rounded-[18px]',
-                (isSubmitting || isGoogleSubmitting || isLinkedInSubmitting) && 'opacity-50'
+                isAnySubmitting && 'opacity-50'
               )}
               style={{ backgroundColor: ACCENT, borderCurve: 'continuous' }}
               android_ripple={{ color: 'rgba(0,0,0,0.12)' }}>
