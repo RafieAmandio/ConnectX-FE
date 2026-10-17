@@ -29,10 +29,10 @@ export function AppInput({
 }: AppInputProps) {
   const [isFocused, setIsFocused] = React.useState(false);
   const inputStateClassName = error
-    ? 'border-danger bg-background'
+    ? 'border-danger bg-surface-raised'
     : isFocused
-      ? 'border-accent bg-background'
-      : 'border-border bg-background';
+      ? 'border-accent bg-surface-raised'
+      : 'border-border bg-surface-raised';
 
   return (
     <View className={cn('gap-2', shellClassName)} {...shellProps}>

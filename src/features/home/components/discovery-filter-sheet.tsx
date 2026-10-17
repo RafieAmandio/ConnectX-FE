@@ -750,6 +750,7 @@ function SearchInput({
       <Ionicons color="#667085" name="search-outline" size={16} />
       <TextInput
         className="flex-1 font-body text-[14px] text-text"
+        style={{ letterSpacing: 0 }}
         editable={!disabled}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -1551,7 +1552,7 @@ export function DiscoveryFilterSheet({
                 }
                 placeholder={getSearchableCheckboxPlaceholder(section.id, t)}
                 placeholderTextColor="#8A8F99"
-                style={{ paddingVertical: 0 }}
+                style={{ letterSpacing: 0, paddingVertical: 0 }}
                 value={searchTerm}
               />
               {searchTerm ? (

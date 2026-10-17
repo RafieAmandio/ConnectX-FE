@@ -288,6 +288,7 @@ function StartupInput({
             style={[
               {
                 color: palette.text,
+                letterSpacing: 0,
               },
               style,
             ]}
@@ -314,6 +315,7 @@ function StartupInput({
               backgroundColor: palette.field,
               borderColor: isFocused ? palette.accent : palette.border,
               color: palette.text,
+              letterSpacing: 0,
             },
             style,
           ]}
@@ -424,7 +426,7 @@ function DropdownSelector({
               onChangeText={setSearch}
               placeholder="Search..."
               placeholderTextColor={palette.textSoft}
-              style={{ borderBottomColor: palette.border, color: palette.text }}
+              style={{ borderBottomColor: palette.border, color: palette.text, letterSpacing: 0 }}
               value={search}
             />
           ) : null}
@@ -523,7 +525,7 @@ function SearchableMultiSelectDropdown({
             onChangeText={setSearch}
             placeholder="Search roles..."
             placeholderTextColor={palette.textSoft}
-            style={{ borderBottomColor: palette.border, color: palette.text }}
+            style={{ borderBottomColor: palette.border, color: palette.text, letterSpacing: 0 }}
             value={search}
           />
           <ScrollView nestedScrollEnabled>

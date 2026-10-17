@@ -1063,6 +1063,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const sendMediaMessageMutation = useSendChatDemoMediaMessage(conversationId);
   const uploadMediaMutation = useUploadChatDemoMedia();
   const [draftMessage, setDraftMessage] = React.useState('');
+  const [composerHeight, setComposerHeight] = React.useState(24);
   const [pendingMedia, setPendingMedia] = React.useState<PendingChatDemoMedia | null>(null);
   const [attachmentPickerVisible, setAttachmentPickerVisible] = React.useState(false);
   const [inviteComposerVisible, setInviteComposerVisible] = React.useState(false);
@@ -1561,7 +1562,13 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
                 placeholderTextColor="#7D7974"
                 scrollEnabled
                 showSoftInputOnFocus
+                onContentSizeChange={(event) =>
+                  setComposerHeight(Math.min(COMPOSER_INPUT_MAX_HEIGHT, Math.max(24, event.nativeEvent.contentSize.height)))
+                }
                 style={{
+                  // Height is driven by content so the box shrinks back after a send clears the draft.
+                  height: draftMessage ? composerHeight : 24,
+                  letterSpacing: 0,
                   maxHeight: COMPOSER_INPUT_MAX_HEIGHT,
                   minHeight: 24,
                   padding: 0,
