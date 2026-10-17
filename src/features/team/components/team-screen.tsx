@@ -1946,7 +1946,7 @@ export function TeamScreen() {
               ) : null}
               {teamRoster.actions.inviteViaLink ? (
                 <ActionButton
-                  icon="link-outline"
+                  icon="mail-outline"
                   label={t('team.inviteViaLink')}
                   onPress={openInviteComposer}
                   variant="secondary"
