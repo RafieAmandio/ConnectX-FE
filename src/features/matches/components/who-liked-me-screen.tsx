@@ -270,7 +270,7 @@ export function WhoLikedMeScreen() {
         });
       }
     },
-    [queryClient, swipeAction, viewerContext]
+    [queryClient, swipeAction, t, viewerContext]
   );
 
   const handleOpenMatchChat = React.useCallback(() => {

@@ -1215,16 +1215,18 @@ export function EditStartupScreen() {
             />
             <StartupInput
               autoCapitalize="none"
+              keyboardType="url"
               label="Twitter / X"
               onChangeText={(v) => updateField('twitter', v)}
-              placeholder="@yourhandle"
+              placeholder="https://x.com/yourstartup"
               value={formState.twitter}
             />
             <StartupInput
               autoCapitalize="none"
+              keyboardType="url"
               label="Instagram"
               onChangeText={(v) => updateField('instagram', v)}
-              placeholder="@yourstartup"
+              placeholder="https://instagram.com/yourstartup"
               value={formState.instagram}
             />
             <StartupInput

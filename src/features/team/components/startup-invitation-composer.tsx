@@ -326,7 +326,7 @@ export function StartupInvitationComposer({
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : t('team.inviteSendError'));
     }
-  }, [closeAndReset, commitment, createInvitationMutation, email, equityPercent, onSuccess, roleId]);
+  }, [closeAndReset, commitment, createInvitationMutation, email, equityPercent, onSuccess, roleId, t]);
 
   return (
     <>
