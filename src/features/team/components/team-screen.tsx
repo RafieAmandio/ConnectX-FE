@@ -702,7 +702,7 @@ function DashboardStatCard({ label, value }: { label: string; value: number }) {
   return (
     <View className="min-h-[86px] flex-1 justify-center rounded-[18px] border border-white/10 bg-[#2C2C2C] px-4 py-3">
       <AppText className="text-2xl font-bold text-[#FF9A3E]">{value}</AppText>
-      <AppText className="text-[12px]" tone="muted" variant="label">{label}</AppText>
+      <AppText adjustsFontSizeToFit className="text-[12px]" minimumFontScale={0.7} numberOfLines={1} tone="muted" variant="label">{label}</AppText>
     </View>
   );
 }
@@ -1496,7 +1496,8 @@ export function TeamScreen() {
             </AppCard>
           ) : null}
 
-          {hasActiveStartup ? (
+          {/* Backend reports 100% for a founder with no members; hide the meter until there is a roster. */}
+          {hasActiveStartup && teamRoster.members.length > 0 ? (
             <AppCard className="gap-4 bg-[#2C2C2C] border-white/10">
               <View className="flex-row items-center justify-between">
                 <AppText className="text-[15px] font-semibold text-text">{t('team.teamCompleteness')}</AppText>
@@ -1516,11 +1517,10 @@ export function TeamScreen() {
 
           <View className="gap-4">
             <View className="flex-row items-center justify-between px-1">
-              <AppText tone="muted" variant="label">{teamRoster.title}</AppText>
-              <StatusPill
-                label={hasActiveStartup ? viewerContext.kind.replace(/_/g, ' ') : t('team.person')}
-                status={hasActiveStartup ? 'active' : 'pending'}
-              />
+              <AppText tone="muted" variant="label">{t('team.yourTeam')}</AppText>
+              {hasActiveStartup ? (
+                <StatusPill label={t('team.startupBadge')} status="active" />
+              ) : null}
             </View>
             <View className="gap-3">
               {teamRoster.members.length === 0 ? (
@@ -1691,7 +1691,7 @@ export function TeamScreen() {
 
           {!hasActiveStartup ? (
             <View className="gap-4">
-              <AppText className="px-1" tone="muted" variant="label">{myApplications.title}</AppText>
+              <AppText className="px-1" tone="muted" variant="label">{t('team.myApplications')}</AppText>
               <View className="flex-row gap-3">
                 <DashboardStatCard label={t('team.applied')} value={myApplications.stats.applied} />
                 <DashboardStatCard label={t('team.inReview')} value={myApplications.stats.inReview} />
@@ -1724,7 +1724,7 @@ export function TeamScreen() {
           ) : null}
 
           <View className="gap-4">
-            <AppText className="px-1" tone="muted" variant="label">{teamInvites.title}</AppText>
+            <AppText className="px-1" tone="muted" variant="label">{t('team.teamInvites')}</AppText>
 
             {invitationFeedbackMessage ? (
               <View className="rounded-[18px] border border-[#FF9A3E]/30 bg-[#FF9A3E]/10 px-4 py-3">

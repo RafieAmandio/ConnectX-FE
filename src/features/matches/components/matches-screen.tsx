@@ -524,6 +524,8 @@ export function MatchesScreen() {
                 })}
               </View>
 
+              {/* Nothing to view at 0 new: hide the call to action instead of leading to an empty screen. */}
+              {likesYouCount > 0 || likesYou.length > 0 ? (
               <Pressable
                 className="flex-row items-center justify-center gap-3 rounded-[24px] border px-6 py-5"
                 onPress={handleViewConnects}
@@ -533,6 +535,7 @@ export function MatchesScreen() {
                   {t('matches.viewConnectionRequest')}
                 </AppText>
               </Pressable>
+              ) : null}
 
               {/* <Pressable
                 className="flex-row items-center justify-between rounded-[24px] border px-5 py-4"

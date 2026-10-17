@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { AppInput, AppText } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 
 import { useCreateStartupInvitation, useStartupInvitationOptions } from '../hooks/use-team';
 import type { TeamInviteCommitment } from '../types/team.types';
@@ -46,6 +47,7 @@ function EquitySlider({
   step: number;
   value: number;
 }) {
+  const t = useTranslation();
   const nextValue = clampSteppedValue(value, min, max, step);
   const trackRef = React.useRef<View>(null);
   const trackPageXRef = React.useRef(0);
@@ -166,7 +168,7 @@ function EquitySlider({
   return (
     <View className="gap-3">
       <View className="flex-row items-center justify-between">
-        <AppText tone="muted" variant="label">Equity Share</AppText>
+        <AppText tone="muted" variant="label">{t('team.equityShare')}</AppText>
         <AppText className="text-[#FF9A3E]" variant="bodyStrong">
           {draftValue}%
         </AppText>
@@ -223,6 +225,7 @@ export function StartupInvitationComposer({
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const t = useTranslation();
   const createInvitationMutation = useCreateStartupInvitation();
   const invitationOptionsQuery = useStartupInvitationOptions(visible);
   const { handleOnboardingRequired, onboardingRequiredSheetProps } =
@@ -299,12 +302,12 @@ export function StartupInvitationComposer({
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!isValidEmail(normalizedEmail)) {
-      setError('Enter a valid email address.');
+      setError(t('team.validationEmail'));
       return;
     }
 
     if (!roleId || !commitment) {
-      setError('Choose a role and commitment level.');
+      setError(t('team.validationRoleAndCommitment'));
       return;
     }
 
@@ -321,7 +324,7 @@ export function StartupInvitationComposer({
       onSuccess?.(response.message);
       closeAndReset();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Unable to send team invitation.');
+      setError(nextError instanceof Error ? nextError.message : t('team.inviteSendError'));
     }
   }, [closeAndReset, commitment, createInvitationMutation, email, equityPercent, onSuccess, roleId]);
 
@@ -353,10 +356,10 @@ export function StartupInvitationComposer({
             <View className="flex-row items-start justify-between gap-3">
               <View className="flex-1 gap-1">
                 <AppText variant="subtitle">
-                  {recipientName ? `Add ${recipientName}` : 'Add to Team'}
+                  {recipientName ? t('team.addRecipient', { name: recipientName }) : t('team.inviteByEmail')}
                 </AppText>
                 <AppText tone="muted">
-                  Assign role, equity, and commitment before sending the invitation.
+                  {t('team.inviteByEmailDescription')}
                 </AppText>
               </View>
               <Pressable
@@ -371,7 +374,7 @@ export function StartupInvitationComposer({
               autoCorrect={false}
               className="border-none bg-[#3A3A3C]"
               keyboardType="email-address"
-              label="Email"
+              label={t('team.email')}
               onChangeText={(value) => {
                 setEmail(value);
                 setError(null);
@@ -381,16 +384,16 @@ export function StartupInvitationComposer({
             />
 
             <View className="gap-3">
-              <AppText tone="muted" variant="label">Assign Role</AppText>
+              <AppText tone="muted" variant="label">{t('team.assignRole')}</AppText>
               {invitationOptionsQuery.isPending ? (
                 <View className="flex-row items-center gap-2 rounded-[16px] border border-white/10 bg-[#343434] px-4 py-3">
                   <ActivityIndicator color="#FF9A3E" size="small" />
-                  <AppText tone="muted">Loading roles...</AppText>
+                  <AppText tone="muted">{t('team.loadingRoles')}</AppText>
                 </View>
               ) : null}
               {invitationOptionsQuery.isError ? (
                 <View className="rounded-[16px] border border-danger/30 bg-danger-tint px-4 py-3">
-                  <AppText tone="danger">Unable to load invitation options right now.</AppText>
+                  <AppText tone="danger">{t('team.invitationOptionsLoadError')}</AppText>
                 </View>
               ) : null}
               <View className="flex-row flex-wrap gap-2">
@@ -431,7 +434,7 @@ export function StartupInvitationComposer({
             />
 
             <View className="gap-3">
-              <AppText tone="muted" variant="label">Commitment</AppText>
+              <AppText tone="muted" variant="label">{t('team.commitment')}</AppText>
               <View className="flex-row gap-2">
                 {commitmentOptions.map((item) => {
                   const isSelected = commitment === item.id;
@@ -471,7 +474,7 @@ export function StartupInvitationComposer({
                 className="min-h-10 flex-1 items-center justify-center rounded-[14px] border border-white/10 bg-[#3A3A3C] px-3 py-2"
                 disabled={createInvitationMutation.isPending}
                 onPress={closeAndReset}>
-                <AppText className="text-[13px]" variant="bodyStrong">Cancel</AppText>
+                <AppText className="text-[13px]" variant="bodyStrong">{t('team.cancel')}</AppText>
               </Pressable>
               <Pressable
                 className="min-h-10 flex-1 flex-row items-center justify-center gap-1.5 rounded-[14px] bg-[#FF9A3E] px-3 py-2"
@@ -490,7 +493,7 @@ export function StartupInvitationComposer({
                   className="flex-1 text-[11px] leading-[13px] text-[#11131A]"
                   numberOfLines={2}
                   variant="bodyStrong">
-                  {createInvitationMutation.isPending ? 'Sending...' : 'Confirm Add to Team'}
+                  {createInvitationMutation.isPending ? t('team.sending') : t('team.confirmAddToTeam')}
                 </AppText>
               </Pressable>
             </View>

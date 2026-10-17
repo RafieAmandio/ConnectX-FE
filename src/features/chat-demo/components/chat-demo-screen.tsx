@@ -1026,7 +1026,7 @@ function AttachmentPickerSheet({
               className="min-h-16 flex-row items-center gap-4 rounded-[18px] bg-[#373534] px-4 active:opacity-80"
               onPress={onPickDocument}>
               <View className="h-10 w-10 items-center justify-center rounded-full bg-[#493A2A]">
-                <Ionicons color="#F7B05B" name="document-attach-outline" size={22} />
+                <Ionicons color="#F7B05B" name="document-text-outline" size={22} />
               </View>
               <View className="flex-1 gap-0.5">
                 <AppText className="text-[#F3F0EB]" variant="bodyStrong">
