@@ -39,12 +39,12 @@ function createGoalSection(defaultGoal: DiscoveryGoalId): DiscoveryFilterSection
       {
         id: 'goal_explore_startups',
         label: 'Explore Startups',
-        description: 'Find a startup to join',
+        description: 'Browse startups and opportunities',
       },
       {
         id: 'goal_joining_startups',
         label: 'Joining Startups',
-        description: 'Join an existing startup',
+        description: 'Find an early-stage team to join',
       },
     ],
     defaultValue: defaultGoal,
@@ -81,7 +81,8 @@ function createLocationAvailabilitySection(): DiscoveryFilterSection {
         ui: {
           component: 'switch',
         },
-        defaultValue: true,
+        // Off by default: when on, the backend limits the deck to remote-ready people.
+        defaultValue: false,
       },
       {
         id: 'distanceKm',
@@ -122,8 +123,8 @@ const commonStageSection: DiscoveryFilterSection = {
   options: [
     { id: 'stage_idea', label: 'Idea' },
     { id: 'stage_mvp', label: 'MVP' },
-    { id: 'stage_pre_seed', label: 'Pre-seed' },
-    { id: 'stage_seed', label: 'Seed' },
+    { id: 'stage_live', label: 'Live' },
+    { id: 'stage_scale', label: 'Scale' },
   ],
 };
 

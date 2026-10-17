@@ -178,7 +178,7 @@ export const en = {
   'home.filters.noOptionsNow': 'No options available right now.',
   'home.filters.advancedSectionLocked': 'ConnectX Pro is required to use this advanced filter section.',
   'home.filters.title': 'Candidate Filters',
-  'home.filters.description': 'Tune the discovery deck and generate candidates from the filters you can use today',
+  'home.filters.description': 'Tune the discovery deck and generate candidates from the filters you can use today.',
   'home.filters.unavailable': 'Filters unavailable',
   'home.filters.optionsUnavailable': 'Filter options unavailable',
   'home.filters.goalLabel': 'YOUR GOAL RIGHT NOW',
@@ -187,7 +187,7 @@ export const en = {
   'home.filters.advancedLabel': 'ADVANCED FILTERS',
   'home.filters.generating': 'Generating...',
   'home.filters.loadingFilters': 'Loading filters...',
-  'home.filters.generateCandidate': 'Generate Candidate',
+  'home.filters.generateCandidate': 'Generate Candidates',
 
   'home.match.defaultStartupRole': 'Co-Founder',
   'home.match.profileCopy': 'You and {name} both want to build {focus} startups.',
@@ -395,6 +395,15 @@ export const en = {
   'team.confirmAddToTeam': 'Confirm Add to Team',
   'team.exploreMore': 'Explore more',
   'team.inviteViaLink': 'Invite via Link',
+  'home.deck.member': '{count} member',
+  'home.deck.role': '{count} role',
+  'home.deck.notHiring': 'Not hiring yet',
+  'home.filters.titleStartups': 'Startup Filters',
+  'home.filters.descriptionStartups': 'Tune which startups show up in your discovery deck.',
+  'home.filters.findStartups': 'Find Startups',
+  'home.filters.unlockAdvanced': 'Unlock advanced filters with ConnectX Pro',
+  'home.filters.showAll': 'Show all ({count})',
+  'home.filters.showLess': 'Show less',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -572,7 +581,7 @@ export const id: Record<TranslationKey, string> = {
   'home.filters.noOptionsNow': 'Belum ada opsi tersedia saat ini.',
   'home.filters.advancedSectionLocked': 'ConnectX Pro diperlukan untuk memakai bagian filter lanjutan ini.',
   'home.filters.title': 'Filter Kandidat',
-  'home.filters.description': 'Sesuaikan discovery deck dan buat kandidat dari filter yang bisa Anda gunakan hari ini',
+  'home.filters.description': 'Sesuaikan discovery deck dan buat kandidat dari filter yang bisa Anda gunakan hari ini.',
   'home.filters.unavailable': 'Filter tidak tersedia',
   'home.filters.optionsUnavailable': 'Opsi filter tidak tersedia',
   'home.filters.goalLabel': 'GOAL ANDA SEKARANG',
@@ -789,6 +798,15 @@ export const id: Record<TranslationKey, string> = {
   'team.confirmAddToTeam': 'Konfirmasi Tambah ke Tim',
   'team.exploreMore': 'Jelajahi lagi',
   'team.inviteViaLink': 'Undang via Link',
+  'home.deck.member': '{count} anggota',
+  'home.deck.role': '{count} role',
+  'home.deck.notHiring': 'Belum merekrut',
+  'home.filters.titleStartups': 'Filter Startup',
+  'home.filters.descriptionStartups': 'Atur startup yang muncul di discovery deck Anda.',
+  'home.filters.findStartups': 'Cari Startup',
+  'home.filters.unlockAdvanced': 'Buka filter lanjutan dengan ConnectX Pro',
+  'home.filters.showAll': 'Tampilkan semua ({count})',
+  'home.filters.showLess': 'Tampilkan lebih sedikit',
 };
 
 export const translations = {

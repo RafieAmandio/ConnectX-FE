@@ -61,6 +61,7 @@ import {
   isMergeMockDiscoveryCardsEnabled,
 } from '../services/discovery-service';
 import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discovery-preference';
+import { toLargePhotoUrl } from '@shared/utils/photo-url';
 import type {
   DiscoveryAppliedFilters,
   DiscoveryCard,
@@ -832,12 +833,12 @@ function MatchScoreBadge({ label, score }: { label?: string; score: number }) {
   return (
     <View className="shrink-0 items-center gap-1">
       <MatchScoreRing score={score} />
-      <View className="max-w-[104px] flex-row items-center justify-center gap-1">
-        <Ionicons color={color} name="star" size={12} />
+      <View className="max-w-[96px] flex-row items-start justify-center gap-1">
+        <Ionicons color={color} name="star" size={12} style={{ marginTop: 1 }} />
         <AppText
-          className="min-w-0 text-[11px] leading-[14px]"
+          className="min-w-0 text-center text-[11px] leading-[14px]"
           ellipsizeMode="tail"
-          numberOfLines={1}
+          numberOfLines={2}
           style={{ color, flexShrink: 1 }}
           variant="bodyStrong">
           {label ?? t('home.deck.strongMatch')}
@@ -919,8 +920,6 @@ function LockedPremiumField({
   field: Extract<DiscoveryStartupPremiumField<unknown>, { locked: true }>;
   onUpgradePress?: () => void;
 }) {
-  const t = useTranslation();
-
   return (
     <View
       className="gap-3 rounded-[18px] border px-4 py-4"
@@ -941,14 +940,6 @@ function LockedPremiumField({
           </AppText>
         ) : null}
       </View>
-      <AppButton
-        className="border-[#3A3F48] bg-[#181A1F]"
-        label={t('home.deck.upgradePro')}
-        labelClassName="text-[#F2F4F7]"
-        size="md"
-        variant="secondary"
-        onPress={onUpgradePress}
-      />
     </View>
   );
 }
@@ -1111,6 +1102,17 @@ function StartupPremiumSection({
       ) : null}
       {fields.compensation ? (
         <CompensationPremiumField field={fields.compensation} onUpgradePress={onUpgradePress} />
+      ) : null}
+      {/* One upgrade call to action for the whole section instead of one per locked field. */}
+      {Object.values(fields).some((field) => field?.locked) ? (
+        <AppButton
+          className="border-[#3A3F48] bg-[#181A1F]"
+          label={t('home.deck.upgradePro')}
+          labelClassName="text-[#F2F4F7]"
+          size="md"
+          variant="secondary"
+          onPress={onUpgradePress}
+        />
       ) : null}
     </View>
   );
@@ -1304,7 +1306,7 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
             <Image
               cachePolicy="memory-disk"
               contentFit="cover"
-              source={{ uri: card.photoUrl }}
+              source={{ uri: toLargePhotoUrl(card.photoUrl) }}
               style={{ height: '100%', width: '100%' }}
               transition={120}
             />
@@ -1754,7 +1756,7 @@ const StartupCardContent = React.memo(function StartupCardContent({
                     {t('home.deck.teamSize')}
                   </AppText>
                   <AppText className="text-[18px]" variant="title">
-                    {t('home.deck.members', { count: card.teamStage.teamSize })}
+                    {t(card.teamStage.teamSize === 1 ? 'home.deck.member' : 'home.deck.members', { count: card.teamStage.teamSize })}
                   </AppText>
                 </View>
                 <View className="w-1/2 gap-1 pl-2">
@@ -1770,7 +1772,11 @@ const StartupCardContent = React.memo(function StartupCardContent({
                     {t('home.deck.hiring')}
                   </AppText>
                   <AppText className="text-[18px]" variant="title">
-                    {t('home.deck.roles', { count: card.teamStage.hiringCount })}
+                    {card.teamStage.hiringCount
+                      ? t(card.teamStage.hiringCount === 1 ? 'home.deck.role' : 'home.deck.roles', {
+                          count: card.teamStage.hiringCount,
+                        })
+                      : t('home.deck.notHiring')}
                   </AppText>
                 </View>
                 <View className="w-full gap-1">
@@ -2905,6 +2911,10 @@ export function DiscoveryDeck() {
       onClose={handleCloseFilters}
       onModeChange={handleModeChange}
       onReset={handleResetFilters}
+      onUpgradePress={() => {
+        handleCloseFilters();
+        void handlePresentConnectXProPaywall();
+      }}
       optionsErrorMessage={filterOptionsErrorMessage}
       sections={filterSections}
       visible={isFilterVisible}
@@ -3067,6 +3077,7 @@ export function DiscoveryDeck() {
                 className="absolute inset-0 overflow-hidden rounded-[24px] border border-border"
                 style={[Shadows.card, nextCardStyle, { backgroundColor: '#232323' }]}>
                 <DiscoveryCardContent
+                  key={nextItem.id}
                   bottomInset={floatingActionsContentPadding}
                   card={nextItem}
                   onPremiumUpgradePress={handlePresentConnectXProPaywall}
@@ -3080,6 +3091,8 @@ export function DiscoveryDeck() {
                 className="absolute inset-0 overflow-hidden rounded-[24px] border border-border"
                 style={[Shadows.card, topCardStyle, { backgroundColor: '#232323' }]}>
                 <DiscoveryCardContent
+                  // Remount per card so a new card opens at the top, not at the last card's scroll offset.
+                  key={currentItem.id}
                   bottomInset={floatingActionsContentPadding}
                   card={currentItem}
                   onPremiumUpgradePress={handlePresentConnectXProPaywall}
