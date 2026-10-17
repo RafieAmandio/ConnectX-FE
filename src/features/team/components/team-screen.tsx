@@ -380,8 +380,8 @@ function StatusPill({ label, status }: { label?: string; status: string }) {
         }
         : status === 'in_review' || status === 'interview'
           ? {
-            backgroundColor: 'rgba(0, 117, 255, 0.12)',
-            borderColor: 'rgba(0, 117, 255, 0.28)',
+            backgroundColor: 'rgba(255, 154, 62, 0.12)',
+            borderColor: 'rgba(255, 154, 62, 0.28)',
             color: '#3394FF',
           }
           : {

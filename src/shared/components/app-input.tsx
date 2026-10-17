@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { TextInput, View, type TextInputProps, type ViewProps } from 'react-native';
+import { Pressable, TextInput, View, type TextInputProps, type ViewProps } from 'react-native';
 
 import { cn } from '@shared/utils/cn';
 
@@ -22,12 +23,14 @@ export function AppInput({
   label,
   placeholderTextColor = '#667085',
   prefix,
+  secureTextEntry,
   shellClassName,
   shellProps,
   style,
   ...props
 }: AppInputProps) {
   const [isFocused, setIsFocused] = React.useState(false);
+  const [isSecretVisible, setIsSecretVisible] = React.useState(false);
   const inputStateClassName = error
     ? 'border-danger bg-surface-raised'
     : isFocused
@@ -67,9 +70,11 @@ export function AppInput({
           />
         </View>
       ) : (
+        <View className="justify-center">
         <TextInput
           className={cn(
             'min-h-14 rounded-[16px] border py-3 pl-3 pr-4 font-body text-[15px] text-text',
+            secureTextEntry && 'pr-12',
             inputStateClassName,
             className
           )}
@@ -82,9 +87,21 @@ export function AppInput({
             props.onFocus?.(event);
           }}
           placeholderTextColor={placeholderTextColor}
+          secureTextEntry={secureTextEntry && !isSecretVisible}
           style={[{ letterSpacing: 0 }, style]}
           {...props}
         />
+        {secureTextEntry ? (
+          <Pressable
+            accessibilityLabel={isSecretVisible ? 'Hide password' : 'Show password'}
+            className="absolute right-3 h-9 w-9 items-center justify-center"
+            hitSlop={8}
+            onPress={() => setIsSecretVisible((visible) => !visible)}
+          >
+            <Ionicons color="#98A2B3" name={isSecretVisible ? 'eye-off-outline' : 'eye-outline'} size={20} />
+          </Pressable>
+        ) : null}
+        </View>
       )}
       {error ? (
         <AppText className="px-1" selectable tone="danger" variant="code">
