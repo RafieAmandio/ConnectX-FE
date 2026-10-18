@@ -1220,6 +1220,26 @@ function MatchHighlights({
   );
 }
 
+// Remote logos and photos can fail (expired LinkedIn links, private storage); show the fallback instead of an empty box.
+function LogoBox({ fallback, uri }: { fallback: React.ReactNode; uri?: string | null }) {
+  const [failed, setFailed] = React.useState(false);
+
+  if (!uri || failed) {
+    return <>{fallback}</>;
+  }
+
+  return (
+    <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+      <Image
+        contentFit="contain"
+        onError={() => setFailed(true)}
+        source={{ uri }}
+        style={{ height: '100%', width: '100%' }}
+      />
+    </View>
+  );
+}
+
 function CertificationCard({ item, index }: { item: DiscoveryCardCertification; index: number }) {
   const t = useTranslation();
   const verificationUrl = item.link?.trim();
@@ -1227,24 +1247,19 @@ function CertificationCard({ item, index }: { item: DiscoveryCardCertification; 
   return (
     <AppCard className="rounded-[16px] border border-white/10 bg-[#2C2C2C] p-4">
       <View className="flex-row items-center gap-3.5">
-        {item.logoUrl ? (
-          <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
-            <Image
-              contentFit="contain"
-              source={{ uri: item.logoUrl }}
-              style={{ height: '100%', width: '100%' }}
-            />
-          </View>
-        ) : (
-          <View
-            className="h-11 w-11 items-center justify-center rounded-[12px] border"
-            style={{
-              backgroundColor: 'rgba(255, 154, 62, 0.12)',
-              borderColor: 'rgba(255, 154, 62, 0.22)',
-            }}>
-            <Ionicons color="#FF9A3E" name="ribbon-outline" size={22} />
-          </View>
-        )}
+        <LogoBox
+          fallback={
+            <View
+              className="h-11 w-11 items-center justify-center rounded-[12px] border"
+              style={{
+                backgroundColor: 'rgba(255, 154, 62, 0.12)',
+                borderColor: 'rgba(255, 154, 62, 0.22)',
+              }}>
+              <Ionicons color="#FF9A3E" name="ribbon-outline" size={22} />
+            </View>
+          }
+          uri={item.logoUrl}
+        />
         <View className="min-w-0 flex-1 gap-1">
           <AppText className="text-[16px]" numberOfLines={2} variant="title">
             {item.name}
@@ -1292,6 +1307,12 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
   const certificationItems = card.certifications?.items ?? [];
   const { width } = useWindowDimensions();
   const isCompactHeader = width < 390;
+  const [photoFailed, setPhotoFailed] = React.useState(false);
+  const initials = card.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 
   return (
     <ScrollView
@@ -1302,16 +1323,21 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
       contentContainerStyle={{ paddingBottom: bottomInset }}>
       <View>
         <View className="overflow-hidden" style={{ height: 260 }}>
-          {card.photoUrl ? (
+          {card.photoUrl && !photoFailed ? (
             <Image
               cachePolicy="memory-disk"
               contentFit="cover"
+              onError={() => setPhotoFailed(true)}
               source={{ uri: toLargePhotoUrl(card.photoUrl) }}
               style={{ height: '100%', width: '100%' }}
               transition={120}
             />
           ) : (
-            <View className="h-full w-full bg-surface-muted" />
+            <View className="h-full w-full items-center justify-center bg-surface-muted pb-16">
+              <AppText className="text-[64px] leading-[72px] text-[#FF9A3E]" style={{ opacity: 0.5 }} variant="title">
+                {initials}
+              </AppText>
+            </View>
           )}
 
           <View
@@ -1443,15 +1469,7 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
                 key={getExperienceKey(item, index)}
                 className="rounded-[16px] bg-[#2C2C2C] border border-white/10 border-l-[2.5px] border-l-[#FF9A3E] p-4">
                 <View className="flex-row gap-3.5">
-                  {item.companyLogo ? (
-                    <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
-                      <Image
-                        contentFit="contain"
-                        source={{ uri: item.companyLogo }}
-                        style={{ height: '100%', width: '100%' }}
-                      />
-                    </View>
-                  ) : null}
+                  <LogoBox fallback={null} uri={item.companyLogo} />
                   <View className="min-w-0 flex-1 gap-1.5">
                     <AppText className="text-[16px]" numberOfLines={2} variant="title">
                       {item.title}
@@ -1489,17 +1507,10 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
           <View className="gap-3">
             {card.education.map((item, index) => (
               <AppCard key={getEducationKey(item, index)} className="flex-row items-center gap-3.5 rounded-[16px] p-4 bg-[#2C2C2C] border-white/10">
-                {item.schoolLogo ? (
-                  <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
-                    <Image
-                      contentFit="contain"
-                      source={{ uri: item.schoolLogo }}
-                      style={{ height: '100%', width: '100%' }}
-                    />
-                  </View>
-                ) : (
-                  <Ionicons color="#FFCD38" name="school-outline" size={24} />
-                )}
+                <LogoBox
+                  fallback={<Ionicons color="#FFCD38" name="school-outline" size={24} />}
+                  uri={item.schoolLogo}
+                />
                 <View className="flex-1 gap-0.5">
                   <AppText className="text-[16px]" numberOfLines={2} variant="title">
                     {item.degree}
