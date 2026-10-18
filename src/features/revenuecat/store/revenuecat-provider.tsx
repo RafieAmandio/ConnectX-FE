@@ -188,7 +188,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
     try {
       Purchases.configure({
-        apiKey: getRevenueCatApiKey(),
+        apiKey: getRevenueCatApiKey() ?? '',
         appUserID: desiredAppUserId ?? undefined,
       });
       Purchases.addCustomerInfoUpdateListener(customerInfoListener);
