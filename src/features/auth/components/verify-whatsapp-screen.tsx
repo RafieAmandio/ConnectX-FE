@@ -132,7 +132,7 @@ export function VerifyWhatsappScreen() {
                 Enter WhatsApp Number
               </AppText>
               <AppText className="text-base leading-6" style={{ color: TEXT_MUTED }}>
-                We&apos;ll send a 6-digit code to verify your identity.
+                We&apos;ll use this number for account updates. No code needed.
               </AppText>
             </View>
 
