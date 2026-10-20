@@ -27,7 +27,7 @@ import { upsertDiscoveryMatchConversation } from '@features/chat/services/chat-s
 import { matchesQueryKeys } from '@features/matches/hooks/use-matches';
 import { upsertGeneratedMockMatch } from '@features/matches/services/generated-matches-storage';
 import { useNotifications } from '@features/notifications';
-import { useUpdateProfileLocation } from '@features/profile';
+import { ProfileCompletenessCard, useProfileCompleteness, useUpdateProfileLocation } from '@features/profile';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
 import { useTranslation } from '@shared/localization';
@@ -1936,6 +1936,7 @@ function EmptyState({
 
 export function DiscoveryDeck() {
   const router = useRouter();
+  const profileCompleteness = useProfileCompleteness();
   const t = useTranslation();
   const queryClient = useQueryClient();
   const { height, width } = useWindowDimensions();
@@ -3030,6 +3031,17 @@ export function DiscoveryDeck() {
     <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
   );
 
+  // An incomplete profile gets skeleton cards from the backend (profileGate); say why and where to fix it.
+  const completenessNotice = profileCompleteness.missingCount > 0 ? (
+    <View className="mt-2">
+      <ProfileCompletenessCard
+        compact
+        missingCount={profileCompleteness.missingCount}
+        onPress={() => router.push('/profile/edit-answers' as never)}
+      />
+    </View>
+  ) : null;
+
   if (
     !hasResolvedAuthSessionSetup ||
     (!usingLocalMockCards && isApplyingFilters) ||
@@ -3054,8 +3066,9 @@ export function DiscoveryDeck() {
         <AppTopBar rightAccessory={topBarAccessory} />
         <ScrollView
           className="flex-1"
-          contentContainerClassName="flex-grow justify-center px-4 py-8"
+          contentContainerClassName="flex-grow justify-center gap-4 px-4 py-8"
           refreshControl={discoveryRefreshControl}>
+          {completenessNotice}
           <EmptyState
             connectedCount={connectedCount}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
@@ -3074,6 +3087,7 @@ export function DiscoveryDeck() {
     <View className="flex-1">
       <AppTopBar rightAccessory={topBarAccessory} />
       <View className="flex-1 px-2 pb-1">
+        {completenessNotice}
         {filterError ? (
           <AppCard tone="signal" className="mb-2 gap-2 rounded-[16px] p-3">
             <AppText variant="subtitle">{t('home.deck.discoverySearch')}</AppText>

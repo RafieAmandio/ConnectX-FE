@@ -94,7 +94,6 @@ export const DISCOVERY_API = {
   FILTER_OPTIONS: '/api/v1/discovery/filter-options',
   ACTION: (targetId: string) => `/api/v1/discovery/cards/${targetId}/action`,
   REWIND: '/api/v1/discovery/swipes/rewind',
-  SPOTLIGHT_ACTIVATE: '/api/v1/discovery/spotlight/activate',
 } as const;
 
 function normalizeLimit(limit?: number) {
@@ -415,9 +414,3 @@ export async function postRewindAction(
   });
 }
 
-export async function postSpotlightActivation(payload: SpotlightActivationRequest = {}) {
-  return apiFetch<SpotlightActivationSuccessResponse>(DISCOVERY_API.SPOTLIGHT_ACTIVATE, {
-    body: payload as unknown as BodyInit,
-    method: 'POST',
-  });
-}

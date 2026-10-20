@@ -28,6 +28,12 @@ type ApiClientAuthConfig = {
 };
 
 let apiClientAuthConfig: ApiClientAuthConfig = {};
+// The backend localizes messages, card labels and emails from Accept-Language (en | id).
+let apiLocale: string | null = null;
+
+export function setApiLocale(locale: string) {
+  apiLocale = locale;
+}
 let refreshAccessTokenPromise: Promise<string> | null = null;
 
 type ApiFetchOptions = {
@@ -151,6 +157,10 @@ async function executeApiFetch<T>(
   const headers = new Headers(init.headers);
 
   headers.set('Accept', 'application/json');
+
+  if (apiLocale && !headers.has('Accept-Language')) {
+    headers.set('Accept-Language', apiLocale);
+  }
 
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);

@@ -177,6 +177,10 @@ export type MyProfileData = {
   stats: ProfileStats;
   talent: ProfileTalentData;
   startup: ProfileStartupData | null;
+  // Missing onboarding answers (keys); the labels come from GET /me/onboarding-answers.
+  profileCompleteness?: { complete: boolean; missingCount: number; missing: string[] } | null;
+  // Last LinkedIn import, null when none ever ran.
+  linkedinSync?: { status: string; reason: string | null } | null;
   createdAt: string;
   updatedAt: string;
 };

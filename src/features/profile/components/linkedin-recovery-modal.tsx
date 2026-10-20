@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@features/auth';
 import { useFcmToken } from '@features/auth/hooks/use-fcm-token';
 import { AppInput, AppText } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 import { ApiError } from '@shared/services/api';
 import { getOrCreateDeviceId } from '@shared/services/device-id';
 import {
@@ -194,7 +195,10 @@ export function LinkedInRecoveryModal() {
     setFieldError(null);
   }, [recovery.isRequired]);
 
-  const hint = getRecoveryHint(recovery.errorReason, recovery.message);
+  const t = useTranslation();
+  const hint = recovery.optional
+    ? t('profile.linkedinRecommendHint')
+    : getRecoveryHint(recovery.errorReason, recovery.message);
 
   async function handleSubmit() {
     const normalizedLinkedInUsername = normalizeLinkedInSlug(linkedInUsername, 'profile');
@@ -233,7 +237,9 @@ export function LinkedInRecoveryModal() {
   return (
     <Modal
       animationType="fade"
-      onRequestClose={() => undefined}
+      onRequestClose={() => {
+        if (recovery.optional) clearLinkedInRecovery();
+      }}
       transparent
       visible={recovery.isRequired}>
       <KeyboardAvoidingView
@@ -270,7 +276,7 @@ export function LinkedInRecoveryModal() {
               </View>
               <View className="flex-1">
                 <AppText variant="subtitle" className="text-[20px] leading-[26px] text-white">
-                  Update LinkedIn
+                  {recovery.optional ? t('profile.linkedinRecommendTitle') : 'Update LinkedIn'}
                 </AppText>
                 <AppText className="mt-1 text-[14px] leading-5 text-text-muted">
                   {hint}
@@ -288,7 +294,7 @@ export function LinkedInRecoveryModal() {
                 setLinkedInUsername(normalizeLinkedInSlug(value, 'profile'));
                 setFieldError(null);
               }}
-              placeholder="username"
+              placeholder="your-name"
               prefix={getLinkedInInputPrefix('profile')}
               returnKeyType="done"
               value={linkedInUsername}
@@ -309,6 +315,17 @@ export function LinkedInRecoveryModal() {
                 Save LinkedIn
               </AppText>
             </Pressable>
+            {recovery.optional ? (
+              <Pressable
+                accessibilityRole="button"
+                className="mt-3 h-12 items-center justify-center"
+                disabled={isSubmitting}
+                onPress={clearLinkedInRecovery}>
+                <AppText className="text-text-muted" variant="bodyStrong">
+                  {t('profile.linkedinRecommendLater')}
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

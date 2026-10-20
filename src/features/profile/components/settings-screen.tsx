@@ -13,10 +13,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useQuery } from '@tanstack/react-query';
+
 import { useAuth } from '@features/auth';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
 import { LOCALE_LABELS, useLocale, useTranslation, type AppLocale } from '@shared/localization';
+import { apiFetch } from '@shared/services/api';
+
+import { useProfileCompleteness } from '../hooks/use-onboarding-answers';
 
 import {
   useActivateMyAccount,
@@ -28,6 +33,7 @@ import {
   useUpdateNotificationSettings,
 } from '../hooks/use-settings';
 import type { SupportTicketType } from '../types/settings.types';
+import { ProfileCompletenessCard } from './profile-completeness-card';
 import { ChangeAccountContactModal } from './change-account-contact-modal';
 import { ChangePasswordModal } from './change-password-modal';
 import { SupportTicketModal } from './support-ticket-modal';
@@ -244,6 +250,10 @@ function NotificationToggleRow({
   );
 }
 
+type ProPlansResponse = {
+  plans?: { id: string; available: boolean; remaining?: number; cap?: number }[];
+};
+
 export function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -268,6 +278,11 @@ export function SettingsScreen() {
   const [accountContactChange, setAccountContactChange] = React.useState<'email' | 'whatsapp' | null>(null);
   const [isChangePasswordVisible, setIsChangePasswordVisible] = React.useState(false);
   const notificationData = notificationSettingsQuery.data?.data;
+  const completeness = useProfileCompleteness();
+  const lifetimePlan = useQuery({
+    queryFn: () => apiFetch<ProPlansResponse>('/api/v1/pro/plans'),
+    queryKey: ['pro', 'plans'],
+  }).data?.plans?.find((plan) => plan.id === 'lifetime');
   const sessionPremium = Boolean(session?.premium?.isPremium);
   const isProfileActive = session?.user?.is_active !== false;
   const isPremiumActive = isConnectXProActive || sessionPremium;
@@ -480,6 +495,11 @@ export function SettingsScreen() {
           }}
           contentInsetAdjustmentBehavior="automatic"
         >
+          <ProfileCompletenessCard
+            {...completeness}
+            onPress={() => router.push('/profile/edit-answers' as never)}
+          />
+
           <Section title={t('settings.language.section')}>
             <SettingsRow
               description={t('settings.language.description')}
@@ -565,6 +585,14 @@ export function SettingsScreen() {
               tone={isPremiumActive ? 'success' : 'accent'}
               value={isPremiumActive ? t('settings.subscription.activeValue') : t('settings.subscription.freeValue')}
             />
+            {!isPremiumActive && lifetimePlan?.available ? (
+              <AppText className="px-1 text-[12px] leading-5 text-[#FFB066]">
+                {t('settings.subscription.lifetimeNotice', {
+                  cap: (lifetimePlan.cap ?? 10000).toLocaleString(locale === 'id' ? 'id-ID' : 'en-US'),
+                  remaining: (lifetimePlan.remaining ?? 0).toLocaleString(locale === 'id' ? 'id-ID' : 'en-US'),
+                })}
+              </AppText>
+            ) : null}
           </Section>
 
           <Section title={t('settings.profile.section')}>
