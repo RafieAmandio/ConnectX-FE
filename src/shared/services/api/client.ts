@@ -193,10 +193,8 @@ async function executeApiFetch<T>(
     const payload = await parseResponsePayload(response);
 
     if (!response.ok) {
-      const message =
-        response.status === 400
-          ? GENERIC_REQUEST_ERROR_MESSAGE
-          : getErrorMessage(payload, `Request failed with status ${response.status}`);
+      // The backend writes a user-facing, localized `message` for every error: show it, not the code.
+      const message = getErrorMessage(payload, GENERIC_REQUEST_ERROR_MESSAGE);
 
       if (
         response.status === 401 &&

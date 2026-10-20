@@ -27,7 +27,12 @@ import { upsertDiscoveryMatchConversation } from '@features/chat/services/chat-s
 import { matchesQueryKeys } from '@features/matches/hooks/use-matches';
 import { upsertGeneratedMockMatch } from '@features/matches/services/generated-matches-storage';
 import { useNotifications } from '@features/notifications';
-import { ProfileCompletenessCard, useProfileCompleteness, useUpdateProfileLocation } from '@features/profile';
+import {
+  ProfileCompletenessCard,
+  UserSafetyButton,
+  useProfileCompleteness,
+  useUpdateProfileLocation,
+} from '@features/profile';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
 import { useTranslation } from '@shared/localization';
@@ -1537,6 +1542,11 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
             </AppText>
           </View>
         ) : null}
+
+        {/* Report / Block (App Store guideline 1.2). Startup cards carry no owner user id yet. */}
+        <View className="items-center pt-2">
+          <UserSafetyButton name={card.name} userId={card.profileId} />
+        </View>
       </View>
     </ScrollView>
   );

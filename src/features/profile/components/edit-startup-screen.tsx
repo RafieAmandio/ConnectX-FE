@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -18,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDiscoveryFilterOptions } from '@features/home/hooks/use-discovery';
 import { AppCard, AppText } from '@shared/components';
+import { apiFetch } from '@shared/services/api';
 import { cn } from '@shared/utils/cn';
 import {
   composeLinkedInUrl,
@@ -125,6 +127,8 @@ type FormState = {
   commitment: string;
   equity: string;
   paid: boolean;
+  salary_range: string;
+  founder_roles: string[];
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
@@ -158,6 +162,8 @@ function buildInitialFormState(startup?: MyProfileData['startup']): FormState {
     commitment: startup?.hiringPreferences?.commitment ?? 'full_time',
     equity: startup?.hiringPreferences?.equity ?? 'equity_only',
     paid: startup?.hiringPreferences?.paid ?? false,
+    salary_range: startup?.hiringPreferences?.salaryRange ?? '',
+    founder_roles: startup?.team?.founderRoles ?? [],
   };
 }
 
@@ -742,10 +748,23 @@ export function EditStartupScreen() {
   const insets = useSafeAreaInsets();
   const myProfileQuery = useMyProfile();
   const filterOptionsQuery = useDiscoveryFilterOptions('explore_startups');
+  const founderRoleOptionsQuery = useQuery({
+    queryFn: () =>
+      apiFetch<{ options: { id: string; label: string; value: string }[] }>(
+        '/api/v1/onboarding/options/search?question_id=q_su_founder_roles'
+      ),
+    queryKey: ['onboarding', 'options', 'q_su_founder_roles'],
+    staleTime: Infinity,
+  });
+  const founderRoleOptions = React.useMemo<FlatOption[]>(
+    () => founderRoleOptionsQuery.data?.options.map((o) => ({ id: o.value, label: o.label, value: o.value })) ?? [],
+    [founderRoleOptionsQuery.data]
+  );
   const updateMutation = useUpdateStartupProfile();
   const uploadLogoMutation = useUploadProfileImage();
 
   const startup = myProfileQuery.data?.data?.startup;
+  const hasCoFounders = Boolean(startup?.team?.founderCount) && startup?.team?.founderCount !== 'solo';
   const hasHydratedStartup = React.useRef(Boolean(startup));
   const [formState, setFormState] = React.useState<FormState>(() =>
     buildInitialFormState(startup)
@@ -887,6 +906,9 @@ export function EditStartupScreen() {
         ? formState.equity
         : null,
       paid: formState.paid,
+      // The backend keeps a salary range only for a paid role, and founder roles only with co-founders.
+      salary_range: formState.paid ? getNullableText(formState.salary_range) : null,
+      ...(hasCoFounders ? { founder_roles: formState.founder_roles } : {}),
     };
 
     try {
@@ -1186,6 +1208,23 @@ export function EditStartupScreen() {
                 value={formState.paid}
               />
             </View>
+            {formState.paid ? (
+              <StartupInput
+                label="Salary Range"
+                onChangeText={(v) => updateField('salary_range', v)}
+                placeholder="e.g. IDR 8-12 million / month"
+                value={formState.salary_range}
+              />
+            ) : null}
+            {hasCoFounders && founderRoleOptions.length ? (
+              <SearchableMultiSelectDropdown
+                label="Founder Roles"
+                onChange={(v) => updateField('founder_roles', v)}
+                options={founderRoleOptions}
+                placeholder="What do the co-founders cover?"
+                selected={formState.founder_roles}
+              />
+            ) : null}
           </AppCard>
 
           <AppCard

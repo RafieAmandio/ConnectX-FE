@@ -2,6 +2,8 @@ export { ProfileScreen } from './components/profile-screen';
 export { EditProfileScreen } from './components/edit-profile-modal';
 export { EditStartupScreen } from './components/edit-startup-screen';
 export { EditAnswersScreen } from './components/edit-answers-screen';
+export { BlockedUsersScreen } from './components/blocked-users-screen';
+export { UserSafetyButton } from './components/user-safety-sheet';
 export { ProfileCompletenessCard } from './components/profile-completeness-card';
 export { useOnboardingAnswers, useProfileCompleteness } from './hooks/use-onboarding-answers';
 export { SettingsScreen } from './components/settings-screen';

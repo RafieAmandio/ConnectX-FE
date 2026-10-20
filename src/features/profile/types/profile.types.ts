@@ -114,10 +114,13 @@ export type ProfileStartupHiringPreferences = {
   commitment: 'full_time' | 'part_time' | null;
   equity: 'equity_only' | 'equity_and_salary' | null;
   paid: boolean | null;
+  salaryRange?: string | null;
 };
 
 export type ProfileStartupData = {
   description: string | null;
+  // Option values (q_su_founder_roles etc.); founderCount 'solo' means no co-founder roles.
+  team?: { founderCount?: string | null; founderRoles?: string[] } | null;
   hiringPreferences: ProfileStartupHiringPreferences;
   logoUrl: string | null;
   name: string;
@@ -280,6 +283,7 @@ export type UpdateStartupProfileRequest = {
   commitment: ProfileStartupHiringPreferences['commitment'];
   description: string | null;
   equity: ProfileStartupHiringPreferences['equity'];
+  founder_roles?: string[] | null;
   industry: string | null;
   instagram: string | null;
   linkedin: string | null;
@@ -289,6 +293,7 @@ export type UpdateStartupProfileRequest = {
   paid: boolean | null;
   pitch_deck: string | null;
   problem: string | null;
+  salary_range?: string | null;
   secondary_industry: string | null;
   solution: string | null;
   stage: ProfileStartupStageValue;

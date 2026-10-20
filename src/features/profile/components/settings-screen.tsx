@@ -621,6 +621,12 @@ export function SettingsScreen() {
               value={session?.user?.whatsapp_number ?? undefined}
             />
             <SettingsRow
+              description={t('safety.blockedUsersDescription')}
+              icon="ban-outline"
+              onPress={() => router.push('/profile/blocked-users' as never)}
+              title={t('safety.blockedUsers')}
+            />
+            <SettingsRow
               description={
                 isProfileActive
                   ? t('settings.profile.pauseDescription')

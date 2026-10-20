@@ -74,6 +74,14 @@
       "expo-secure-store",
       "expo-apple-authentication",
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": "ConnectX uses your camera so you can take a photo and send it in chat.",
+          "photosPermission": "ConnectX uses your photos so you can share them in chat and on your profile.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {

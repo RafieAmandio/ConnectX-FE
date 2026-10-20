@@ -38,6 +38,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, AppTopBar } from '@shared/components';
 import { useLocale, useTranslation } from '@shared/localization';
 import { buildApiUrl } from '@shared/services/api/config';
+import { UserSafetyButton } from '@features/profile/components/user-safety-sheet';
 
 import { ChatEmptyState } from '@features/chat/components/chat-empty-state';
 import {
@@ -107,7 +108,8 @@ const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
 const TRAILING_URL_PUNCTUATION_PATTERN = /[),.!?:;]+$/;
 const COMPOSER_INPUT_MAX_HEIGHT = 92;
 const ATTACHMENT_PICKER_DISMISS_DELAY_MS = 300;
-const CHAT_DEMO_DOCUMENT_TYPES = ['application/pdf', 'audio/*'] as const;
+// Any file: PDF, Word, Excel, slides, audio... The upload is presigned, the backend takes any type.
+const CHAT_DEMO_DOCUMENT_TYPES = ['*/*'] as const;
 
 function withAlpha(hexColor: string, alpha: number) {
   const normalized = hexColor.replace('#', '');
@@ -979,11 +981,13 @@ function AttachmentPickerSheet({
   onClose,
   onPickDocument,
   onPickImage,
+  onTakePhoto,
   visible,
 }: {
   onClose: () => void;
   onPickDocument: () => void;
   onPickImage: () => void;
+  onTakePhoto: () => void;
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
@@ -1008,6 +1012,20 @@ function AttachmentPickerSheet({
           </View>
 
           <View className="gap-3">
+            <Pressable
+              className="min-h-16 flex-row items-center gap-4 rounded-[18px] bg-[#373534] px-4 active:opacity-80"
+              onPress={onTakePhoto}>
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-[#493A2A]">
+                <Ionicons color="#F7B05B" name="camera-outline" size={22} />
+              </View>
+              <View className="flex-1 gap-0.5">
+                <AppText className="text-[#F3F0EB]" variant="bodyStrong">
+                  {t('chat.camera')}
+                </AppText>
+                <AppText className="text-[#AFA9A2]">{t('chat.cameraDescription')}</AppText>
+              </View>
+            </Pressable>
+
             <Pressable
               className="min-h-16 flex-row items-center gap-4 rounded-[18px] bg-[#373534] px-4 active:opacity-80"
               onPress={onPickImage}>
@@ -1180,7 +1198,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           previewUri: pendingMedia.localUri,
           uploadedMedia: pendingMedia.uploadedMedia,
         });
-      } catch {
+      } catch (error) {
+        // e.g. 403 USER_BLOCKED: say why instead of only marking the bubble failed.
+        Alert.alert(t('chat.sendFailedTitle'), error instanceof Error ? error.message : '');
         return;
       }
 
@@ -1188,7 +1208,8 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     } else {
       try {
         await sendMessageMutation.mutateAsync(body);
-      } catch {
+      } catch (error) {
+        Alert.alert(t('chat.sendFailedTitle'), error instanceof Error ? error.message : '');
         return;
       }
     }
@@ -1204,20 +1225,36 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     pendingMedia,
     sendMediaMessageMutation,
     sendMessageMutation,
+    t,
   ]);
 
-  const handlePickImage = React.useCallback(async () => {
+  const handlePickImage = React.useCallback(async (source: 'camera' | 'library' = 'library') => {
     if (isSending || isUploadingMedia) {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert(t('chat.cameraPermissionTitle'), t('chat.cameraPermissionMessage'), [
+          { style: 'cancel', text: t('chat.cancel') },
+          { onPress: () => void Linking.openSettings(), text: t('chat.openSettings') },
+        ]);
+        return;
+      }
+    }
+
+    const options: ImagePicker.ImagePickerOptions = {
       allowsEditing: false,
       allowsMultipleSelection: false,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
       selectionLimit: 1,
-    });
+    };
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
 
     if (result.canceled) {
       return;
@@ -1322,6 +1359,12 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     });
   }, [handlePickImage, runAfterAttachmentPickerDismiss]);
 
+  const handleTakePhotoFromSheet = React.useCallback(() => {
+    runAfterAttachmentPickerDismiss(() => {
+      void handlePickImage('camera');
+    });
+  }, [handlePickImage, runAfterAttachmentPickerDismiss]);
+
   const handlePickDocumentFromSheet = React.useCallback(() => {
     runAfterAttachmentPickerDismiss(() => {
       void handlePickDocument();
@@ -1419,6 +1462,12 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
               </AppText>
             </Pressable>
           ) : null}
+
+          <UserSafetyButton
+            name={conversation.name}
+            onBlocked={() => router.back()}
+            userId={conversation.participantUserId}
+          />
         </View>
 
         <View className="mx-4 h-px bg-[#3A3938]" />
@@ -1612,6 +1661,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
         onClose={() => setAttachmentPickerVisible(false)}
         onPickDocument={handlePickDocumentFromSheet}
         onPickImage={handlePickImageFromSheet}
+        onTakePhoto={handleTakePhotoFromSheet}
         visible={attachmentPickerVisible}
       />
       <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
