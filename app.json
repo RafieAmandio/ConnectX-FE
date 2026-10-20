@@ -38,7 +38,8 @@
       "permissions": [
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "CAMERA"
       ],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_AUDIO",

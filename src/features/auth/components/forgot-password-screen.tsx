@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   TextInput,
@@ -178,7 +177,7 @@ export function ForgotPasswordScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       className="flex-1"
       style={{ backgroundColor: CANVAS_BG }}>
       <Stack.Screen options={{ headerShown: false }} />

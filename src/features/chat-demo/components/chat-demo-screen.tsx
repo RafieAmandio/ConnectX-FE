@@ -1411,11 +1411,10 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         onLayout={handleContainerLayout}
         style={{ backgroundColor: '#262626', flex: 1 }}
-        keyboardVerticalOffset={0}
-        enabled={Platform.OS === 'ios'}>
+        keyboardVerticalOffset={0}>
         <View
           className="flex-row items-center gap-3 px-4 pb-4"
           style={{ paddingTop: Math.max(insets.top + 8, 16) }}>

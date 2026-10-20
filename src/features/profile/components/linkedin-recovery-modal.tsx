@@ -243,9 +243,8 @@ export function LinkedInRecoveryModal() {
       transparent
       visible={recovery.isRequired}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         className="flex-1"
-        enabled={Platform.OS === 'ios'}
         keyboardVerticalOffset={0}
         onLayout={handleContainerLayout}
         style={{

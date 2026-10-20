@@ -526,6 +526,8 @@ export const en = {
   'chat.cameraPermissionTitle': 'Camera access needed',
   'chat.cameraPermissionMessage': 'Allow camera access in Settings to take a photo.',
   'chat.openSettings': 'Open Settings',
+  'home.deck.showMoreCertifications': 'Show {count} more',
+  'home.deck.showLessCertifications': 'Show less',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1051,6 +1053,8 @@ export const id: Record<TranslationKey, string> = {
   'chat.cameraPermissionTitle': 'Akses kamera dibutuhkan',
   'chat.cameraPermissionMessage': 'Izinkan akses kamera di Pengaturan untuk mengambil foto.',
   'chat.openSettings': 'Buka Pengaturan',
+  'home.deck.showMoreCertifications': 'Tampilkan {count} lagi',
+  'home.deck.showLessCertifications': 'Tampilkan lebih sedikit',
 };
 
 export const translations = {

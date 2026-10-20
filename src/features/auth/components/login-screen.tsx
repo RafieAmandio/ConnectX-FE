@@ -376,7 +376,7 @@ export function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       className="flex-1"
       style={{ backgroundColor: CANVAS_BG }}>
       <Stack.Screen options={{ headerShown: false }} />

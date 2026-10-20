@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   TextInput,
@@ -413,30 +412,38 @@ function LocationSelector({
                 {selectedLabel}
               </AppText>
             </View>
-            <Pressable hitSlop={10} onPress={() => onChange('')}>
-              <Ionicons color={profilePalette.textMuted} name="close-circle" size={20} />
+            <Pressable
+              accessibilityRole="button"
+              className="rounded-full border px-3 py-1.5 active:opacity-80"
+              hitSlop={10}
+              onPress={() => onChange('')}
+              style={{ borderColor: profilePalette.accent }}>
+              <AppText className="text-[12px]" style={{ color: profilePalette.accent }} variant="bodyStrong">
+                Change
+              </AppText>
             </Pressable>
           </View>
-        ) : null}
-
-        <View
-          className="flex-row items-center gap-2 rounded-[14px] border px-4"
-          style={{
-            backgroundColor: '#2C2C2C',
-            borderColor: 'rgba(255,255,255,0.1)',
-            minHeight: 46,
-          }}>
-          <Ionicons color={profilePalette.textSoft} name="search-outline" size={16} />
-          <TextInput
-            autoCapitalize="words"
-            className="flex-1 font-body text-[14px]"
-            onChangeText={setSearchTerm}
-            placeholder="Search a city"
-            placeholderTextColor={profilePalette.textSoft}
-            style={{ color: profilePalette.text, letterSpacing: 0 }}
-            value={searchTerm}
-          />
-        </View>
+        ) : (
+          // Search only while no city is picked: a chosen city shows as the chip above.
+          <View
+            className="flex-row items-center gap-2 rounded-[14px] border px-4"
+            style={{
+              backgroundColor: '#2C2C2C',
+              borderColor: 'rgba(255,255,255,0.1)',
+              minHeight: 46,
+            }}>
+            <Ionicons color={profilePalette.textSoft} name="search-outline" size={16} />
+            <TextInput
+              autoCapitalize="words"
+              className="flex-1 font-body text-[14px]"
+              onChangeText={setSearchTerm}
+              placeholder="Search a city"
+              placeholderTextColor={profilePalette.textSoft}
+              style={{ color: profilePalette.text, letterSpacing: 0 }}
+              value={searchTerm}
+            />
+          </View>
+        )}
 
         {hasSearchTerm ? (
           <ScrollView
@@ -1452,7 +1459,7 @@ export function EditProfileScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         className="flex-1"
         style={{ backgroundColor: profilePalette.canvas }}>
         <View

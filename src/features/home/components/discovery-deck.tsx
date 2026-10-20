@@ -1290,6 +1290,9 @@ function CertificationCard({ item, index }: { item: DiscoveryCardCertification; 
   );
 }
 
+// Long LinkedIn imports list 15+ certificates; show a few and let people expand.
+const CERTIFICATIONS_PREVIEW_COUNT = 3;
+
 const ProfileCardContent = React.memo(function ProfileCardContent({
   card,
   bottomInset = 24,
@@ -1310,6 +1313,12 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
   const highlightsTitle = card.sections?.highlights?.title?.trim() || undefined;
   const languageItems = normalizeStringList(card.sections?.languages?.items ?? card.languages);
   const certificationItems = card.certifications?.items ?? [];
+  const [showAllCertifications, setShowAllCertifications] = React.useState(false);
+  const visibleCertifications = showAllCertifications
+    ? certificationItems
+    : certificationItems.slice(0, CERTIFICATIONS_PREVIEW_COUNT);
+  // LinkedIn imports store a missing headline as "--"; show nothing instead.
+  const headline = /^[\s\-–—]*$/.test(card.headline ?? '') ? '' : card.headline;
   const { width } = useWindowDimensions();
   const isCompactHeader = width < 390;
   const [photoFailed, setPhotoFailed] = React.useState(false);
@@ -1359,13 +1368,15 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
                   {card.age ? `${card.name}, ${card.age}` : card.name}
                 </AppText>
                 <View className="min-w-0 flex-row items-center gap-2">
-                  <AppText
-                    className="min-w-0 flex-shrink text-[15px] leading-tight"
-                    ellipsizeMode="tail"
-                    numberOfLines={2}
-                    style={{ color: '#E4E7EC', flexShrink: 1 }}>
-                    {card.headline}
-                  </AppText>
+                  {headline ? (
+                    <AppText
+                      className="min-w-0 flex-shrink text-[15px] leading-tight"
+                      ellipsizeMode="tail"
+                      numberOfLines={2}
+                      style={{ color: '#E4E7EC', flexShrink: 1 }}>
+                      {headline}
+                    </AppText>
+                  ) : null}
                   {linkedinUrl ? (
                     <Pressable
                       accessibilityLabel={t('home.deck.openLinkedInAccessibility', { name: card.name })}
@@ -1502,9 +1513,22 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
         {certificationItems.length ? (
           <View className="gap-3">
             <SectionLabel icon="ribbon-outline" title={t('home.deck.certifications')} />
-            {certificationItems.map((item, index) => (
+            {visibleCertifications.map((item, index) => (
               <CertificationCard key={getCertificationKey(item, index)} item={item} index={index} />
             ))}
+            {certificationItems.length > CERTIFICATIONS_PREVIEW_COUNT ? (
+              <Pressable
+                className="self-start rounded-full border border-white/10 px-3.5 py-2 active:opacity-80"
+                onPress={() => setShowAllCertifications((current) => !current)}>
+                <AppText className="text-[13px] text-[#FF9A3E]" variant="bodyStrong">
+                  {showAllCertifications
+                    ? t('home.deck.showLessCertifications')
+                    : t('home.deck.showMoreCertifications', {
+                        count: certificationItems.length - CERTIFICATIONS_PREVIEW_COUNT,
+                      })}
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 

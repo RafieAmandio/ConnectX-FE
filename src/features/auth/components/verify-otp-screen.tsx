@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Pressable, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText } from '@shared/components';
@@ -151,7 +151,7 @@ export function VerifyOtpScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       className="flex-1"
       style={{ backgroundColor: CANVAS_BG }}
     >
