@@ -10,7 +10,7 @@ const variantStyles = {
   body: 'font-body text-[15px] leading-[22px]',
   bodyStrong: 'font-body text-[15px] leading-[22px] font-semibold',
   label: 'font-body text-xs font-semibold uppercase tracking-[0.9px]',
-  code: 'font-code text-[13px] leading-5',
+  code: 'font-body text-[13px] leading-5',
 } as const;
 
 const toneStyles = {
@@ -19,6 +19,7 @@ const toneStyles = {
   soft: 'text-text-soft',
   accent: 'text-accent',
   inverse: 'text-text',
+  onAccent: 'text-[#1A1208]',
   signal: 'text-signal',
   success: 'text-success',
   danger: 'text-danger',

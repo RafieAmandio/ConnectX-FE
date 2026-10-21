@@ -41,6 +41,7 @@ type DiscoveryFilterSheetProps = {
   onApply: (mode: DiscoveryMode, filters: DiscoveryAppliedFilters) => void;
   onClose: () => void;
   onModeChange: (mode: DiscoveryMode) => void;
+  onUpgradePress?: () => void;
   onReset: () => void;
   optionsErrorMessage?: string | null;
   sections: DiscoveryFilterSection[];
@@ -52,6 +53,7 @@ type TFunction = ReturnType<typeof useTranslation>;
 const SEARCHABLE_DROPDOWN_DEBOUNCE_MS = 400;
 const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
 const SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH = 2;
+const COLLAPSED_OPTION_COUNT = 8;
 
 const FILTER_SECTION_LABELS: Record<AppLocale, Record<string, string>> = {
   en: {},
@@ -198,8 +200,8 @@ const FILTER_OPTION_LABELS: Record<AppLocale, Record<string, string>> = {
     sr_product_live: 'Produk Live',
     stage_idea: 'Ide',
     stage_mvp: 'MVP',
-    stage_pre_seed: 'Pre-seed',
-    stage_seed: 'Seed',
+    stage_live: 'Live',
+    stage_scale: 'Scale',
     wa_hybrid: 'Hybrid',
     wa_onsite: 'Onsite',
     wa_remote: 'Remote',
@@ -210,9 +212,9 @@ const FILTER_OPTION_DESCRIPTIONS: Record<AppLocale, Record<string, string>> = {
   en: {},
   id: {
     goal_building_team: 'Rekrut anggota tim awal',
-    goal_explore_startups: 'Temukan startup untuk diikuti',
+    goal_explore_startups: 'Lihat startup dan peluangnya',
     goal_finding_cofounder: 'Cari co-founder ideal Anda',
-    goal_joining_startups: 'Bergabung dengan startup yang sudah ada',
+    goal_joining_startups: 'Cari tim early-stage untuk bergabung',
   },
 };
 
@@ -451,7 +453,7 @@ function GoalCard({
 }) {
   return (
     <Pressable
-      className="h-[82px] w-full rounded-[16px] border px-3.5 py-3"
+      className="min-h-[82px] w-full rounded-[16px] border px-3.5 py-3"
       disabled={disabled}
       onPress={onPress}
       style={{
@@ -467,7 +469,7 @@ function GoalCard({
           <Ionicons color={active ? '#FF9A3E' : disabled ? '#667085' : '#98A2B3'} name={goalIcon(goalId)} size={16} />
           <AppText
             className="flex-1 text-[13px] font-semibold"
-            numberOfLines={1}
+            numberOfLines={2}
             style={{ color: active ? '#FF9A3E' : disabled ? '#667085' : '#F2F4F7' }}>
             {label}
           </AppText>
@@ -750,6 +752,7 @@ function SearchInput({
       <Ionicons color="#667085" name="search-outline" size={16} />
       <TextInput
         className="flex-1 font-body text-[14px] text-text"
+        style={{ letterSpacing: 0 }}
         editable={!disabled}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -1156,6 +1159,7 @@ export function DiscoveryFilterSheet({
   onApply,
   onClose,
   onModeChange,
+  onUpgradePress,
   sections,
   optionsErrorMessage,
   visible,
@@ -1163,11 +1167,14 @@ export function DiscoveryFilterSheet({
   const insets = useSafeAreaInsets();
   const { locale } = useLocale();
   const t = useTranslation();
+  // Talents browsing startups are not generating "candidates".
+  const isStartupMode = currentMode === 'explore_startups' || currentMode === 'joining_startups';
   const [draftByMode, setDraftByMode] = React.useState<Partial<Record<DiscoveryMode, DiscoveryAppliedFilters>>>({});
   const [expandedByMode, setExpandedByMode] = React.useState<
     Partial<Record<DiscoveryMode, Record<string, boolean>>>
   >({});
   const [searchTerms, setSearchTerms] = React.useState<Record<string, string>>({});
+  const [showAllOptions, setShowAllOptions] = React.useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
     console.log('[DiscoveryFilterSheet] filter-options response', {
@@ -1551,7 +1558,7 @@ export function DiscoveryFilterSheet({
                 }
                 placeholder={getSearchableCheckboxPlaceholder(section.id, t)}
                 placeholderTextColor="#8A8F99"
-                style={{ paddingVertical: 0 }}
+                style={{ letterSpacing: 0, paddingVertical: 0 }}
                 value={searchTerm}
               />
               {searchTerm ? (
@@ -1569,13 +1576,13 @@ export function DiscoveryFilterSheet({
               ) : null}
             </View>
 
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-              showsVerticalScrollIndicator
-              style={{ maxHeight: 320 }}>
+            {/* A short list plus "show all" instead of a nested scroll view that traps swipes. */}
+            <View>
               <View className="gap-1">
-                {searchableOptions.map((option) => {
+                {(searchTerm || showAllOptions[searchKey]
+                  ? searchableOptions
+                  : searchableOptions.slice(0, COLLAPSED_OPTION_COUNT)
+                ).map((option) => {
                   const active = Array.isArray(sectionValue)
                     ? sectionValue.includes(option.id)
                     : sectionValue === option.id;
@@ -1618,7 +1625,20 @@ export function DiscoveryFilterSheet({
                   </AppText>
                 </View>
               ) : null}
-            </ScrollView>
+              {!searchTerm && searchableOptions.length > COLLAPSED_OPTION_COUNT ? (
+                <Pressable
+                  className="py-3"
+                  onPress={() =>
+                    setShowAllOptions((current) => ({ ...current, [searchKey]: !current[searchKey] }))
+                  }>
+                  <AppText className="text-[14px]" style={{ color: '#FF9A3E' }} variant="bodyStrong">
+                    {showAllOptions[searchKey]
+                      ? t('home.filters.showLess')
+                      : t('home.filters.showAll', { count: searchableOptions.length })}
+                  </AppText>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         );
       }
@@ -1665,7 +1685,7 @@ export function DiscoveryFilterSheet({
         </View>
       );
     },
-    [currentDraft, currentMode, handleToggleSectionOption, hasConnectXPro, locale, renderField, searchTerms, t]
+    [currentDraft, currentMode, handleToggleSectionOption, hasConnectXPro, locale, renderField, searchTerms, showAllOptions, t]
   );
 
   const renderAccordionSection = React.useCallback(
@@ -1690,17 +1710,19 @@ export function DiscoveryFilterSheet({
           {expanded ? (
             <>
               {disabled ? (
-                <AppText className="pb-1 text-[12px]" tone="muted">
-                  {t('home.filters.advancedSectionLocked')}
-                </AppText>
-              ) : null}
-              {renderSectionContent(section)}
+                // Locked options open the paywall instead of silently ignoring the tap.
+                <Pressable onPress={onUpgradePress}>
+                  <View pointerEvents="none">{renderSectionContent(section)}</View>
+                </Pressable>
+              ) : (
+                renderSectionContent(section)
+              )}
             </>
           ) : null}
         </View>
       );
     },
-    [currentExpanded, handleToggleSection, hasConnectXPro, locale, renderSectionContent, t]
+    [currentExpanded, handleToggleSection, hasConnectXPro, locale, onUpgradePress, renderSectionContent]
   );
 
   return (
@@ -1720,11 +1742,11 @@ export function DiscoveryFilterSheet({
               <View className="flex-row items-center gap-3">
                 <Ionicons color="#FF9A3E" name="sparkles-outline" size={20} />
                 <AppText className="text-[18px]" variant="title">
-                  {t('home.filters.title')}
+                  {t(isStartupMode ? 'home.filters.titleStartups' : 'home.filters.title')}
                 </AppText>
               </View>
               <AppText tone="muted">
-                {t('home.filters.description')}
+                {t(isStartupMode ? 'home.filters.descriptionStartups' : 'home.filters.description')}
               </AppText>
             </View>
             <Pressable
@@ -1786,6 +1808,17 @@ export function DiscoveryFilterSheet({
                     <AppText className="text-[12px] tracking-[1.8px]" tone="signal" variant="label">
                       {t('home.filters.advancedLabel')}
                     </AppText>
+                    {!hasConnectXPro && onUpgradePress ? (
+                      <Pressable
+                        className="flex-row items-center justify-center gap-2 rounded-[14px] border px-4 py-3"
+                        onPress={onUpgradePress}
+                        style={{ backgroundColor: '#3B2A1C', borderColor: '#FF9A3E' }}>
+                        <Ionicons color="#FF9A3E" name="lock-open-outline" size={16} />
+                        <AppText className="text-[14px]" style={{ color: '#FF9A3E' }} variant="bodyStrong">
+                          {t('home.filters.unlockAdvanced')}
+                        </AppText>
+                      </Pressable>
+                    ) : null}
                     <View className="gap-1">
                       {advancedSections.map((section) => renderAccordionSection(section))}
                     </View>
@@ -1812,7 +1845,7 @@ export function DiscoveryFilterSheet({
                   ? t('home.filters.generating')
                   : isLoadingOptions
                     ? t('home.filters.loadingFilters')
-                    : t('home.filters.generateCandidate')}
+                    : t(isStartupMode ? 'home.filters.findStartups' : 'home.filters.generateCandidate')}
               </AppText>
             </Pressable>
           </View>

@@ -719,6 +719,7 @@ function ConversationPanel({
               multiline
               onChangeText={setDraftMessage}
               placeholder="Type a message..."
+              style={{ letterSpacing: 0 }}
               placeholderTextColor="#7D7974"
               value={draftMessage}
             />

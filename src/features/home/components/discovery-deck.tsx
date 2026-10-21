@@ -61,6 +61,7 @@ import {
   isMergeMockDiscoveryCardsEnabled,
 } from '../services/discovery-service';
 import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discovery-preference';
+import { toLargePhotoUrl } from '@shared/utils/photo-url';
 import type {
   DiscoveryAppliedFilters,
   DiscoveryCard,
@@ -832,12 +833,12 @@ function MatchScoreBadge({ label, score }: { label?: string; score: number }) {
   return (
     <View className="shrink-0 items-center gap-1">
       <MatchScoreRing score={score} />
-      <View className="max-w-[104px] flex-row items-center justify-center gap-1">
-        <Ionicons color={color} name="star" size={12} />
+      <View className="max-w-[96px] flex-row items-start justify-center gap-1">
+        <Ionicons color={color} name="star" size={12} style={{ marginTop: 1 }} />
         <AppText
-          className="min-w-0 text-[11px] leading-[14px]"
+          className="min-w-0 text-center text-[11px] leading-[14px]"
           ellipsizeMode="tail"
-          numberOfLines={1}
+          numberOfLines={2}
           style={{ color, flexShrink: 1 }}
           variant="bodyStrong">
           {label ?? t('home.deck.strongMatch')}
@@ -919,8 +920,6 @@ function LockedPremiumField({
   field: Extract<DiscoveryStartupPremiumField<unknown>, { locked: true }>;
   onUpgradePress?: () => void;
 }) {
-  const t = useTranslation();
-
   return (
     <View
       className="gap-3 rounded-[18px] border px-4 py-4"
@@ -941,14 +940,6 @@ function LockedPremiumField({
           </AppText>
         ) : null}
       </View>
-      <AppButton
-        className="border-[#3A3F48] bg-[#181A1F]"
-        label={t('home.deck.upgradePro')}
-        labelClassName="text-[#F2F4F7]"
-        size="md"
-        variant="secondary"
-        onPress={onUpgradePress}
-      />
     </View>
   );
 }
@@ -1112,6 +1103,17 @@ function StartupPremiumSection({
       {fields.compensation ? (
         <CompensationPremiumField field={fields.compensation} onUpgradePress={onUpgradePress} />
       ) : null}
+      {/* One upgrade call to action for the whole section instead of one per locked field. */}
+      {Object.values(fields).some((field) => field?.locked) ? (
+        <AppButton
+          className="border-[#3A3F48] bg-[#181A1F]"
+          label={t('home.deck.upgradePro')}
+          labelClassName="text-[#F2F4F7]"
+          size="md"
+          variant="secondary"
+          onPress={onUpgradePress}
+        />
+      ) : null}
     </View>
   );
 }
@@ -1218,6 +1220,26 @@ function MatchHighlights({
   );
 }
 
+// Remote logos and photos can fail (expired LinkedIn links, private storage); show the fallback instead of an empty box.
+function LogoBox({ fallback, uri }: { fallback: React.ReactNode; uri?: string | null }) {
+  const [failed, setFailed] = React.useState(false);
+
+  if (!uri || failed) {
+    return <>{fallback}</>;
+  }
+
+  return (
+    <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
+      <Image
+        contentFit="contain"
+        onError={() => setFailed(true)}
+        source={{ uri }}
+        style={{ height: '100%', width: '100%' }}
+      />
+    </View>
+  );
+}
+
 function CertificationCard({ item, index }: { item: DiscoveryCardCertification; index: number }) {
   const t = useTranslation();
   const verificationUrl = item.link?.trim();
@@ -1225,24 +1247,19 @@ function CertificationCard({ item, index }: { item: DiscoveryCardCertification; 
   return (
     <AppCard className="rounded-[16px] border border-white/10 bg-[#2C2C2C] p-4">
       <View className="flex-row items-center gap-3.5">
-        {item.logoUrl ? (
-          <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
-            <Image
-              contentFit="contain"
-              source={{ uri: item.logoUrl }}
-              style={{ height: '100%', width: '100%' }}
-            />
-          </View>
-        ) : (
-          <View
-            className="h-11 w-11 items-center justify-center rounded-[12px] border"
-            style={{
-              backgroundColor: 'rgba(255, 154, 62, 0.12)',
-              borderColor: 'rgba(255, 154, 62, 0.22)',
-            }}>
-            <Ionicons color="#FF9A3E" name="ribbon-outline" size={22} />
-          </View>
-        )}
+        <LogoBox
+          fallback={
+            <View
+              className="h-11 w-11 items-center justify-center rounded-[12px] border"
+              style={{
+                backgroundColor: 'rgba(255, 154, 62, 0.12)',
+                borderColor: 'rgba(255, 154, 62, 0.22)',
+              }}>
+              <Ionicons color="#FF9A3E" name="ribbon-outline" size={22} />
+            </View>
+          }
+          uri={item.logoUrl}
+        />
         <View className="min-w-0 flex-1 gap-1">
           <AppText className="text-[16px]" numberOfLines={2} variant="title">
             {item.name}
@@ -1290,6 +1307,12 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
   const certificationItems = card.certifications?.items ?? [];
   const { width } = useWindowDimensions();
   const isCompactHeader = width < 390;
+  const [photoFailed, setPhotoFailed] = React.useState(false);
+  const initials = card.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 
   return (
     <ScrollView
@@ -1300,16 +1323,21 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
       contentContainerStyle={{ paddingBottom: bottomInset }}>
       <View>
         <View className="overflow-hidden" style={{ height: 260 }}>
-          {card.photoUrl ? (
+          {card.photoUrl && !photoFailed ? (
             <Image
               cachePolicy="memory-disk"
               contentFit="cover"
-              source={{ uri: card.photoUrl }}
+              onError={() => setPhotoFailed(true)}
+              source={{ uri: toLargePhotoUrl(card.photoUrl) }}
               style={{ height: '100%', width: '100%' }}
               transition={120}
             />
           ) : (
-            <View className="h-full w-full bg-surface-muted" />
+            <View className="h-full w-full items-center justify-center bg-surface-muted pb-16">
+              <AppText className="text-[64px] leading-[72px] text-[#FF9A3E]" style={{ opacity: 0.5 }} variant="title">
+                {initials}
+              </AppText>
+            </View>
           )}
 
           <View
@@ -1441,15 +1469,7 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
                 key={getExperienceKey(item, index)}
                 className="rounded-[16px] bg-[#2C2C2C] border border-white/10 border-l-[2.5px] border-l-[#FF9A3E] p-4">
                 <View className="flex-row gap-3.5">
-                  {item.companyLogo ? (
-                    <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
-                      <Image
-                        contentFit="contain"
-                        source={{ uri: item.companyLogo }}
-                        style={{ height: '100%', width: '100%' }}
-                      />
-                    </View>
-                  ) : null}
+                  <LogoBox fallback={null} uri={item.companyLogo} />
                   <View className="min-w-0 flex-1 gap-1.5">
                     <AppText className="text-[16px]" numberOfLines={2} variant="title">
                       {item.title}
@@ -1487,17 +1507,10 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
           <View className="gap-3">
             {card.education.map((item, index) => (
               <AppCard key={getEducationKey(item, index)} className="flex-row items-center gap-3.5 rounded-[16px] p-4 bg-[#2C2C2C] border-white/10">
-                {item.schoolLogo ? (
-                  <View className="h-11 w-11 overflow-hidden rounded-[12px] border border-white/10 bg-white">
-                    <Image
-                      contentFit="contain"
-                      source={{ uri: item.schoolLogo }}
-                      style={{ height: '100%', width: '100%' }}
-                    />
-                  </View>
-                ) : (
-                  <Ionicons color="#FFCD38" name="school-outline" size={24} />
-                )}
+                <LogoBox
+                  fallback={<Ionicons color="#FFCD38" name="school-outline" size={24} />}
+                  uri={item.schoolLogo}
+                />
                 <View className="flex-1 gap-0.5">
                   <AppText className="text-[16px]" numberOfLines={2} variant="title">
                     {item.degree}
@@ -1754,7 +1767,7 @@ const StartupCardContent = React.memo(function StartupCardContent({
                     {t('home.deck.teamSize')}
                   </AppText>
                   <AppText className="text-[18px]" variant="title">
-                    {t('home.deck.members', { count: card.teamStage.teamSize })}
+                    {t(card.teamStage.teamSize === 1 ? 'home.deck.member' : 'home.deck.members', { count: card.teamStage.teamSize })}
                   </AppText>
                 </View>
                 <View className="w-1/2 gap-1 pl-2">
@@ -1770,7 +1783,11 @@ const StartupCardContent = React.memo(function StartupCardContent({
                     {t('home.deck.hiring')}
                   </AppText>
                   <AppText className="text-[18px]" variant="title">
-                    {t('home.deck.roles', { count: card.teamStage.hiringCount })}
+                    {card.teamStage.hiringCount
+                      ? t(card.teamStage.hiringCount === 1 ? 'home.deck.role' : 'home.deck.roles', {
+                          count: card.teamStage.hiringCount,
+                        })
+                      : t('home.deck.notHiring')}
                   </AppText>
                 </View>
                 <View className="w-full gap-1">
@@ -2905,6 +2922,10 @@ export function DiscoveryDeck() {
       onClose={handleCloseFilters}
       onModeChange={handleModeChange}
       onReset={handleResetFilters}
+      onUpgradePress={() => {
+        handleCloseFilters();
+        void handlePresentConnectXProPaywall();
+      }}
       optionsErrorMessage={filterOptionsErrorMessage}
       sections={filterSections}
       visible={isFilterVisible}
@@ -3067,6 +3088,7 @@ export function DiscoveryDeck() {
                 className="absolute inset-0 overflow-hidden rounded-[24px] border border-border"
                 style={[Shadows.card, nextCardStyle, { backgroundColor: '#232323' }]}>
                 <DiscoveryCardContent
+                  key={nextItem.id}
                   bottomInset={floatingActionsContentPadding}
                   card={nextItem}
                   onPremiumUpgradePress={handlePresentConnectXProPaywall}
@@ -3080,6 +3102,8 @@ export function DiscoveryDeck() {
                 className="absolute inset-0 overflow-hidden rounded-[24px] border border-border"
                 style={[Shadows.card, topCardStyle, { backgroundColor: '#232323' }]}>
                 <DiscoveryCardContent
+                  // Remount per card so a new card opens at the top, not at the last card's scroll offset.
+                  key={currentItem.id}
                   bottomInset={floatingActionsContentPadding}
                   card={currentItem}
                   onPremiumUpgradePress={handlePresentConnectXProPaywall}

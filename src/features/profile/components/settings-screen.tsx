@@ -126,6 +126,8 @@ function SettingsRow({
 }) {
   const toneColors = getToneColors(tone);
   const isDisabled = disabled || isLoading;
+  // Emails and phone numbers do not fit the right column; show them under the title instead.
+  const isLongValue = Boolean(value && value.length > 12);
 
   return (
     <Pressable
@@ -154,23 +156,31 @@ function SettingsRow({
             {description}
           </AppText>
         ) : null}
-      </View>
-
-      <View className="min-w-[36px] items-end">
-        {isLoading ? (
-          <ActivityIndicator color={toneColors.iconColor} size="small" />
-        ) : value ? (
-          <AppText
-            align="right"
-            className="max-w-[96px] text-[12px] leading-4"
-            numberOfLines={2}
-            style={{ color: toneColors.iconColor }}
-            variant="bodyStrong"
-          >
+        {isLongValue ? (
+          <AppText className="text-[13px] leading-5" numberOfLines={1} style={{ color: palette.accent }} variant="bodyStrong">
             {value}
           </AppText>
+        ) : null}
+      </View>
+
+      <View className="flex-row items-center gap-1.5">
+        {isLoading ? (
+          <ActivityIndicator color={toneColors.iconColor} size="small" />
         ) : (
-          <Ionicons color="rgba(255,255,255,0.45)" name="chevron-forward" size={17} />
+          <>
+            {value && !isLongValue ? (
+              <AppText
+                align="right"
+                className="max-w-[96px] text-[12px] leading-4"
+                numberOfLines={2}
+                style={{ color: toneColors.iconColor }}
+                variant="bodyStrong"
+              >
+                {value}
+              </AppText>
+            ) : null}
+            <Ionicons color="rgba(255,255,255,0.45)" name="chevron-forward" size={17} />
+          </>
         )}
       </View>
     </Pressable>

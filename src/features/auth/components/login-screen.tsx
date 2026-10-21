@@ -21,6 +21,7 @@ import { cn } from '@shared/utils/cn';
 import { useAuth } from '../hooks/use-auth';
 import { useFcmToken } from '../hooks/use-fcm-token';
 import { isAppleSignInCanceled, isAppleSignInAvailable } from '../services/apple-auth-service';
+import { isSignInCanceled } from '../services/sign-in-canceled';
 import { getRouteForAuthPhase } from '../utils/auth-routing';
 import { getEmailError, getPasswordError } from '../utils/auth-validation';
 
@@ -309,6 +310,9 @@ export function LoginScreen() {
       });
       router.replace(getRouteForAuthPhase(result.session.authPhase));
     } catch (error) {
+      if (isSignInCanceled(error)) {
+        return;
+      }
       setStatusMessage(
         error instanceof Error ? error.message : 'Google Sign-In failed. Please try again.'
       );
@@ -333,6 +337,9 @@ export function LoginScreen() {
       });
       router.replace(getRouteForAuthPhase(result.session.authPhase));
     } catch (error) {
+      if (isSignInCanceled(error)) {
+        return;
+      }
       setStatusMessage(
         error instanceof Error ? error.message : 'LinkedIn Sign-In failed. Please try again.'
       );
