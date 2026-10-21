@@ -2,7 +2,7 @@
   "expo": {
     "name": "connectx",
     "slug": "connectx",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "connectx",
@@ -33,7 +33,7 @@
     "android": {
       "package": "com.connectx.app",
       "version": "1",
-      "versionCode": 14,
+      "versionCode": 15,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "POST_NOTIFICATIONS",
