@@ -32,7 +32,6 @@
     },
     "android": {
       "package": "com.connectx.app",
-      "version": "1",
       "versionCode": 15,
       "googleServicesFile": "./google-services.json",
       "permissions": [
