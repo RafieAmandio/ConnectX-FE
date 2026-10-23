@@ -9,7 +9,7 @@ import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/disc
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { isDiscoveryOnboardingRequiredError } from '@features/home/services/discovery-contract';
 import { ProfileCompletenessCard, UserSafetyButton, useProfileCompleteness } from '@features/profile';
-import { AppCard, AppPill, AppText } from '@shared/components';
+import { AppButton, AppCard, AppPill, AppText } from '@shared/components';
 
 import { useMatchAnalysis } from '../hooks/use-matches';
 
@@ -262,6 +262,13 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
                     ? analysisQuery.error.message
                     : 'The analysis request failed.'}
                 </AppText>
+                <AppButton
+                  className="mt-1"
+                  label={analysisQuery.isFetching ? 'Retrying...' : 'Try again'}
+                  onPress={() => void analysisQuery.refetch()}
+                  size="md"
+                  variant="secondary"
+                />
               </AppCard>
             ) : null}
           </ScrollView>

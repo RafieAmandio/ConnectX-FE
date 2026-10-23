@@ -90,7 +90,9 @@ export async function fetchMatchesList(params: MatchesListQueryParams = {}) {
 }
 
 export async function fetchMatchAnalysis(matchId: string, viewerContext?: ViewerContext) {
-  return apiFetch<MatchAnalysisResponse>(buildMatchAnalysisPath(matchId, viewerContext));
+  // The analysis is computed in well under a second; a request still open after 15s is stuck,
+  // so fail fast and let the person retry instead of showing "Loading" for up to two minutes.
+  return apiFetch<MatchAnalysisResponse>(buildMatchAnalysisPath(matchId, viewerContext), {}, { timeoutMs: 15_000 });
 }
 
 export async function fetchWhoLikedMe(params: WhoLikedMeQueryParams = {}) {

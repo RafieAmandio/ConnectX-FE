@@ -1,6 +1,7 @@
 import { buildApiUrl } from './config';
 
 const GENERIC_REQUEST_ERROR_MESSAGE = 'Something went wrong. Please try again in a moment.';
+const REQUEST_TIMEOUT_MESSAGE = 'This is taking too long. Check your connection and try again.';
 // Hard ceiling so a stalled request can't hang a mutation forever (which would, e.g.,
 // leave a Save button disabled indefinitely). Aborts surface as a generic ApiError.
 const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
@@ -40,6 +41,7 @@ type ApiFetchOptions = {
   allowTokenRefresh?: boolean;
   baseUrl?: string;
   handleUnauthorized?: boolean;
+  timeoutMs?: number;
 };
 
 export function configureApiClient(config: ApiClientAuthConfig) {
@@ -174,7 +176,10 @@ async function executeApiFetch<T>(
   }
 
   const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(
+    () => timeoutController.abort(),
+    options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS
+  );
 
   try {
     if (__DEV__) {
@@ -232,6 +237,10 @@ async function executeApiFetch<T>(
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
+    }
+
+    if (timeoutController.signal.aborted) {
+      throw new ApiError(REQUEST_TIMEOUT_MESSAGE, 0, { code: 'REQUEST_TIMEOUT' });
     }
 
     throw new ApiError(GENERIC_REQUEST_ERROR_MESSAGE, 0);
