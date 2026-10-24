@@ -12,7 +12,7 @@ import {
   type TextInputProps,
   View,
 } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView, KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppText } from '@shared/components';
@@ -1208,7 +1208,7 @@ export function EditProfileScreen() {
   const [backgroundTab, setBackgroundTab] = React.useState<EditableBackgroundTab>('experience');
   const [uploadingLogoKey, setUploadingLogoKey] = React.useState<string | null>(null);
   const aboutCopy = getAboutCopy(talent.sections.about);
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const scrollViewRef = React.useRef<KeyboardAwareScrollViewRef>(null);
   const cardOffsetsRef = React.useRef<Partial<Record<EditProfileCardKey, number>>>({});
   const isDirtyRef = React.useRef(false);
   const hasSeededRealProfileRef = React.useRef(false);
@@ -1496,7 +1496,7 @@ export function EditProfileScreen() {
           )}
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={240}
           ref={scrollViewRef}
           className="flex-1"
           keyboardShouldPersistTaps="handled"
@@ -1796,7 +1796,7 @@ export function EditProfileScreen() {
               )}
             </Pressable>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </>
   );

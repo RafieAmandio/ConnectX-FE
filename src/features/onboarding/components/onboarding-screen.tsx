@@ -6,10 +6,9 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
-  ScrollView,
   View,
 } from 'react-native';
-import { KeyboardAvoidingView, useKeyboardState } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView, KeyboardAwareScrollView, useKeyboardState } from 'react-native-keyboard-controller';
 import Animated, {
   Easing,
   FadeInDown,
@@ -715,7 +714,7 @@ export function OnboardingScreen() {
           </View>
         ) : (
           <>
-            <ScrollView
+            <KeyboardAwareScrollView bottomOffset={240}
               className="flex-1"
               contentContainerStyle={{
                 flexGrow: 1,
@@ -771,7 +770,7 @@ export function OnboardingScreen() {
                   {statusMessage}
                 </AppText>
               ) : null}
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             {isAutoAdvanceStep ? (
               <View

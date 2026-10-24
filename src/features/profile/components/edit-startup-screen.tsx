@@ -13,7 +13,7 @@ import {
   type TextInputProps,
   View,
 } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDiscoveryFilterOptions } from '@features/home/hooks/use-discovery';
@@ -960,7 +960,7 @@ export function EditStartupScreen() {
           )}
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={240}
           className="flex-1"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
@@ -1315,7 +1315,7 @@ export function EditStartupScreen() {
               )}
             </Pressable>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </>
   );

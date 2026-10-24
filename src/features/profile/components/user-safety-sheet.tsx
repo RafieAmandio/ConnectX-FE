@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { Alert, Modal, Pressable, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppInput, AppText } from '@shared/components';
@@ -116,7 +117,7 @@ export function UserSafetyButton({
       </Pressable>
 
       <Modal animationType="slide" onRequestClose={close} transparent visible={mode !== 'closed'}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(10, 10, 14, 0.42)' }}>
+        <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end" style={{ backgroundColor: 'rgba(10, 10, 14, 0.42)' }}>
           <Pressable className="flex-1" onPress={close} />
           <View
             className="gap-3 rounded-t-[28px] border border-white/10 bg-[#2C2C2C] px-4 pt-5"
@@ -156,7 +157,7 @@ export function UserSafetyButton({
               </>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );

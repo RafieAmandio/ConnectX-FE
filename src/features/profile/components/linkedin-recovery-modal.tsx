@@ -4,17 +4,11 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
-  Keyboard,
-  // RN Modal is its own Android window, outside KeyboardProvider: keep the built-in one here.
-  // eslint-disable-next-line no-restricted-imports
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
-  ScrollView,
-  type LayoutChangeEvent,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
@@ -128,69 +122,12 @@ export function LinkedInRecoveryModal() {
   const [linkedInUsername, setLinkedInUsername] = React.useState('');
   const [fieldError, setFieldError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
-  const containerFrameRef = React.useRef({ height: 0, y: 0 });
-
-  const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    if (!keyboardY) {
-      setAndroidKeyboardOverlap(0);
-      return;
-    }
-
-    const { height, y } = containerFrameRef.current;
-
-    if (height <= 0) {
-      return;
-    }
-
-    setAndroidKeyboardOverlap(Math.max(y + height - keyboardY, 0));
-  }, []);
-
-  const handleContainerLayout = React.useCallback(
-    (event: LayoutChangeEvent) => {
-      containerFrameRef.current = event.nativeEvent.layout;
-
-      if (Platform.OS === 'android') {
-        updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
-      }
-    },
-    [updateAndroidKeyboardOverlap]
-  );
-
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
-      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
-    });
-    const changeSubscription = Keyboard.addListener('keyboardDidChangeFrame', (event) => {
-      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      updateAndroidKeyboardOverlap();
-    });
-
-    updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
-
-    return () => {
-      showSubscription.remove();
-      changeSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [updateAndroidKeyboardOverlap]);
 
   React.useEffect(() => {
     if (!recovery.isRequired) {
       setLinkedInUsername('');
       setFieldError(null);
       setIsSubmitting(false);
-      setAndroidKeyboardOverlap(0);
       return;
     }
 
@@ -245,14 +182,13 @@ export function LinkedInRecoveryModal() {
       transparent
       visible={recovery.isRequired}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         className="flex-1"
         keyboardVerticalOffset={0}
-        onLayout={handleContainerLayout}
         style={{
           backgroundColor: 'rgba(0,0,0,0.68)',
         }}>
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={24}
           alwaysBounceVertical={false}
           contentContainerStyle={{
             flexGrow: 1,
@@ -266,7 +202,6 @@ export function LinkedInRecoveryModal() {
               backgroundColor: '#262626',
               borderColor: '#3A3A3A',
               borderCurve: 'continuous',
-              marginBottom: androidKeyboardOverlap,
               paddingBottom: Math.max(insets.bottom + 20, 28),
             }}>
             <View className="mb-5 flex-row items-center gap-3">
@@ -328,7 +263,7 @@ export function LinkedInRecoveryModal() {
               </Pressable>
             ) : null}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );

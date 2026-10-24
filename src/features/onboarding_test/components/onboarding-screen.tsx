@@ -7,10 +7,9 @@ import {
   Alert,
   Platform,
   Pressable,
-  ScrollView,
   View,
 } from 'react-native';
-import { KeyboardAvoidingView, useKeyboardState } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView, KeyboardAwareScrollView, type KeyboardAwareScrollViewRef, useKeyboardState } from 'react-native-keyboard-controller';
 import Animated, {
   Easing,
   FadeInDown,
@@ -459,7 +458,7 @@ export function OnboardingScreen() {
   // Only for the footer's bottom padding: keyboard-controller's KeyboardAvoidingView does the lifting.
   const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
   const [isExiting, setIsExiting] = React.useState(false);
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const scrollViewRef = React.useRef<KeyboardAwareScrollViewRef>(null);
 
   React.useEffect(() => {
     setActiveQuestionIndex(0);
@@ -721,7 +720,7 @@ export function OnboardingScreen() {
         ) : (
           <>
             <OnboardingScrollContext.Provider value={scrollViewRef}>
-            <ScrollView
+            <KeyboardAwareScrollView bottomOffset={240}
               ref={scrollViewRef}
               className="flex-1"
               contentContainerStyle={{
@@ -777,7 +776,7 @@ export function OnboardingScreen() {
                   {statusMessage}
                 </AppText>
               ) : null}
-            </ScrollView>
+            </KeyboardAwareScrollView>
             </OnboardingScrollContext.Provider>
 
             {isAutoAdvanceStep ? (

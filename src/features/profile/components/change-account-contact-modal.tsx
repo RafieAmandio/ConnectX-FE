@@ -2,15 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
   Alert,
-  // RN Modal is its own Android window, outside KeyboardProvider: keep the built-in one here.
-  // eslint-disable-next-line no-restricted-imports
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
-  ScrollView,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getEmailError } from '@features/auth/utils/auth-validation';
@@ -197,7 +193,7 @@ export function ChangeAccountContactModal({
       visible={visible}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         className="flex-1"
         style={{ backgroundColor: palette.canvas }}
       >
@@ -221,7 +217,7 @@ export function ChangeAccountContactModal({
           <View className="h-11 w-11" />
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={24}
           className="flex-1"
           contentContainerStyle={{ gap: 18, padding: 20 }}
           contentInsetAdjustmentBehavior="automatic"
@@ -298,7 +294,7 @@ export function ChangeAccountContactModal({
               </View>
             </>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <View
           className="border-t px-5 pt-4"

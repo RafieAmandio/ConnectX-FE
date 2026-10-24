@@ -1,8 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  View,
+} from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getVisibleQuestions } from '@features/onboarding_test/mock/registry';
@@ -35,7 +40,7 @@ export function EditAnswersScreen() {
   const { locale } = useLocale();
   const answersQuery = useOnboardingAnswers();
   const updateAnswers = useUpdateOnboardingAnswers();
-  const scrollRef = React.useRef<ScrollView>(null);
+  const scrollRef = React.useRef<KeyboardAwareScrollViewRef>(null);
   const data = answersQuery.data?.data;
 
   const savedAnswers = React.useMemo<OnboardingAnswers>(() => {
@@ -135,7 +140,7 @@ export function EditAnswersScreen() {
           </View>
         ) : (
           <OnboardingScrollContext.Provider value={scrollRef}>
-            <ScrollView
+            <KeyboardAwareScrollView bottomOffset={240}
               ref={scrollRef}
               contentContainerStyle={{ gap: 20, paddingBottom: insets.bottom + 120, paddingHorizontal: 16, paddingTop: 16 }}
               keyboardShouldPersistTaps="handled">
@@ -175,7 +180,7 @@ export function EditAnswersScreen() {
                   </AppCard>
                 </View>
               ))}
-            </ScrollView>
+            </KeyboardAwareScrollView>
           </OnboardingScrollContext.Provider>
         )}
 
