@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -46,7 +47,7 @@ const SEARCHABLE_DROPDOWN_DEBOUNCE_MS = 400;
 const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
 const SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH = 2;
 // Lets a search field scroll itself to the top of the onboarding page so its results clear the keyboard.
-export const OnboardingScrollContext = React.createContext<React.RefObject<ScrollView | null> | null>(null);
+export const OnboardingScrollContext = React.createContext<React.RefObject<KeyboardAwareScrollViewRef | null> | null>(null);
 
 const SINGLE_LINE_TEXT_INPUT_STYLE = {
   letterSpacing: 0,

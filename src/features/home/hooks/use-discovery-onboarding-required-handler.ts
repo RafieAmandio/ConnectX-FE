@@ -27,7 +27,7 @@ function summarizeOnboardingRequiredError(error: unknown) {
   };
 }
 
-export function useDiscoveryOnboardingRequiredHandler() {
+export function useDiscoveryOnboardingRequiredHandler(onDismissed?: () => void) {
   const router = useRouter();
   const isPresentingRef = React.useRef(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -69,9 +69,16 @@ export function useDiscoveryOnboardingRequiredHandler() {
     router.push('/onboarding?mode=post_auth' as never);
   }, [router]);
 
+  const handleDismiss = React.useCallback(() => {
+    isPresentingRef.current = false;
+    setMessage(null);
+    onDismissed?.();
+  }, [onDismissed]);
+
   const onboardingRequiredSheetProps: DiscoveryOnboardingRequiredSheetProps = {
     message,
     onContinue: handleContinue,
+    onDismiss: handleDismiss,
     visible: Boolean(message),
   };
 

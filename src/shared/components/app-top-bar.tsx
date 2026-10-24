@@ -1,9 +1,7 @@
+import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import React from 'react';
 import { View } from 'react-native';
-
-import { useAuth } from '@features/auth';
-import { useRevenueCat } from '@features/revenuecat';
 
 import { AppText } from './app-text';
 
@@ -17,9 +15,8 @@ type AppTopBarProps = {
 };
 
 export function AppTopBar({ rightAccessory }: AppTopBarProps) {
-  const { session } = useAuth();
-  const { isConnectXProActive } = useRevenueCat();
-  const badgeLabel = isConnectXProActive ? '1.0.8' : '1.0.8';
+  // The installed app's version (app.json), never a typed-in number.
+  const badgeLabel = Constants.expoConfig?.version ?? '';
 
   return (
     <View

@@ -1,6 +1,7 @@
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, TouchableOpacity, View } from 'react-native';
+import { Keyboard, Pressable, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppInput, AppText } from '@shared/components';
@@ -105,7 +106,7 @@ export function VerifyWhatsappScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       className="flex-1"
       style={{ backgroundColor: CANVAS_BG }}
     >

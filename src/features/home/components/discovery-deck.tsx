@@ -27,7 +27,12 @@ import { upsertDiscoveryMatchConversation } from '@features/chat/services/chat-s
 import { matchesQueryKeys } from '@features/matches/hooks/use-matches';
 import { upsertGeneratedMockMatch } from '@features/matches/services/generated-matches-storage';
 import { useNotifications } from '@features/notifications';
-import { useUpdateProfileLocation } from '@features/profile';
+import {
+  ProfileCompletenessCard,
+  UserSafetyButton,
+  useProfileCompleteness,
+  useUpdateProfileLocation,
+} from '@features/profile';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
 import { useTranslation } from '@shared/localization';
@@ -1285,6 +1290,9 @@ function CertificationCard({ item, index }: { item: DiscoveryCardCertification; 
   );
 }
 
+// Long LinkedIn imports list 15+ certificates; show a few and let people expand.
+const CERTIFICATIONS_PREVIEW_COUNT = 3;
+
 const ProfileCardContent = React.memo(function ProfileCardContent({
   card,
   bottomInset = 24,
@@ -1305,6 +1313,12 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
   const highlightsTitle = card.sections?.highlights?.title?.trim() || undefined;
   const languageItems = normalizeStringList(card.sections?.languages?.items ?? card.languages);
   const certificationItems = card.certifications?.items ?? [];
+  const [showAllCertifications, setShowAllCertifications] = React.useState(false);
+  const visibleCertifications = showAllCertifications
+    ? certificationItems
+    : certificationItems.slice(0, CERTIFICATIONS_PREVIEW_COUNT);
+  // LinkedIn imports store a missing headline as "--"; show nothing instead.
+  const headline = /^[\s\-–—]*$/.test(card.headline ?? '') ? '' : card.headline;
   const { width } = useWindowDimensions();
   const isCompactHeader = width < 390;
   const [photoFailed, setPhotoFailed] = React.useState(false);
@@ -1354,13 +1368,15 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
                   {card.age ? `${card.name}, ${card.age}` : card.name}
                 </AppText>
                 <View className="min-w-0 flex-row items-center gap-2">
-                  <AppText
-                    className="min-w-0 flex-shrink text-[15px] leading-tight"
-                    ellipsizeMode="tail"
-                    numberOfLines={2}
-                    style={{ color: '#E4E7EC', flexShrink: 1 }}>
-                    {card.headline}
-                  </AppText>
+                  {headline ? (
+                    <AppText
+                      className="min-w-0 flex-shrink text-[15px] leading-tight"
+                      ellipsizeMode="tail"
+                      numberOfLines={2}
+                      style={{ color: '#E4E7EC', flexShrink: 1 }}>
+                      {headline}
+                    </AppText>
+                  ) : null}
                   {linkedinUrl ? (
                     <Pressable
                       accessibilityLabel={t('home.deck.openLinkedInAccessibility', { name: card.name })}
@@ -1497,9 +1513,22 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
         {certificationItems.length ? (
           <View className="gap-3">
             <SectionLabel icon="ribbon-outline" title={t('home.deck.certifications')} />
-            {certificationItems.map((item, index) => (
+            {visibleCertifications.map((item, index) => (
               <CertificationCard key={getCertificationKey(item, index)} item={item} index={index} />
             ))}
+            {certificationItems.length > CERTIFICATIONS_PREVIEW_COUNT ? (
+              <Pressable
+                className="self-start rounded-full border border-white/10 px-3.5 py-2 active:opacity-80"
+                onPress={() => setShowAllCertifications((current) => !current)}>
+                <AppText className="text-[13px] text-[#FF9A3E]" variant="bodyStrong">
+                  {showAllCertifications
+                    ? t('home.deck.showLessCertifications')
+                    : t('home.deck.showMoreCertifications', {
+                        count: certificationItems.length - CERTIFICATIONS_PREVIEW_COUNT,
+                      })}
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -1537,6 +1566,11 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
             </AppText>
           </View>
         ) : null}
+
+        {/* Report / Block (App Store guideline 1.2). Startup cards carry no owner user id yet. */}
+        <View className="items-center pt-2">
+          <UserSafetyButton name={card.name} userId={card.profileId} />
+        </View>
       </View>
     </ScrollView>
   );
@@ -1811,7 +1845,7 @@ const StartupCardContent = React.memo(function StartupCardContent({
   );
 });
 
-const DiscoveryCardContent = React.memo(function DiscoveryCardContent({
+export const DiscoveryCardContent = React.memo(function DiscoveryCardContent({
   bottomInset = 24,
   card,
   onPremiumUpgradePress,
@@ -1936,6 +1970,7 @@ function EmptyState({
 
 export function DiscoveryDeck() {
   const router = useRouter();
+  const profileCompleteness = useProfileCompleteness();
   const t = useTranslation();
   const queryClient = useQueryClient();
   const { height, width } = useWindowDimensions();
@@ -2144,8 +2179,18 @@ export function DiscoveryDeck() {
     DISCOVERY_PAGE_LIMIT,
     hasResolvedAuthSessionSetup && hasResolvedInitialLocation
   );
+  // Dismissing "continue onboarding" goes back to the last mode whose cards loaded.
+  const lastLoadedModeRef = React.useRef<DiscoveryMode | null>(null);
+  const revertModeRef = React.useRef<() => void>(() => undefined);
+  const handleOnboardingDismissed = React.useCallback(() => revertModeRef.current(), []);
   const { handleOnboardingRequired, onboardingRequiredSheetProps } =
-    useDiscoveryOnboardingRequiredHandler();
+    useDiscoveryOnboardingRequiredHandler(handleOnboardingDismissed);
+
+  React.useEffect(() => {
+    if (discoveryQuery.isSuccess && !discoveryQuery.isPlaceholderData && appliedMode) {
+      lastLoadedModeRef.current = appliedMode;
+    }
+  }, [appliedMode, discoveryQuery.isPlaceholderData, discoveryQuery.isSuccess]);
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
   const viewerContext = useViewerContext();
@@ -2831,6 +2876,14 @@ export function DiscoveryDeck() {
     [deviceCoordinates, filterSections, loadDeviceCoordinates, sheetMode, t]
   );
 
+  revertModeRef.current = () => {
+    const lastLoadedMode = lastLoadedModeRef.current;
+
+    if (lastLoadedMode && lastLoadedMode !== appliedMode) {
+      void handleApplyFilters(lastLoadedMode, appliedFilters);
+    }
+  };
+
   React.useEffect(() => {
     if (!isApplyingFilters || discoveryQuery.isFetching) {
       return;
@@ -3030,6 +3083,17 @@ export function DiscoveryDeck() {
     <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
   );
 
+  // An incomplete profile gets skeleton cards from the backend (profileGate); say why and where to fix it.
+  const completenessNotice = profileCompleteness.missingCount > 0 ? (
+    <View className="mt-2">
+      <ProfileCompletenessCard
+        compact
+        missingCount={profileCompleteness.missingCount}
+        onPress={() => router.push('/profile/edit-answers' as never)}
+      />
+    </View>
+  ) : null;
+
   if (
     !hasResolvedAuthSessionSetup ||
     (!usingLocalMockCards && isApplyingFilters) ||
@@ -3054,8 +3118,9 @@ export function DiscoveryDeck() {
         <AppTopBar rightAccessory={topBarAccessory} />
         <ScrollView
           className="flex-1"
-          contentContainerClassName="flex-grow justify-center px-4 py-8"
+          contentContainerClassName="flex-grow justify-center gap-4 px-4 py-8"
           refreshControl={discoveryRefreshControl}>
+          {completenessNotice}
           <EmptyState
             connectedCount={connectedCount}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
@@ -3074,6 +3139,7 @@ export function DiscoveryDeck() {
     <View className="flex-1">
       <AppTopBar rightAccessory={topBarAccessory} />
       <View className="flex-1 px-2 pb-1">
+        {completenessNotice}
         {filterError ? (
           <AppCard tone="signal" className="mb-2 gap-2 rounded-[16px] p-3">
             <AppText variant="subtitle">{t('home.deck.discoverySearch')}</AppText>

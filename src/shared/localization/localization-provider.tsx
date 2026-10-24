@@ -1,5 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
+
+import { setApiLocale } from '@shared/services/api';
 
 import {
   DEFAULT_LOCALE,
@@ -47,6 +50,13 @@ async function isSecureStoreAvailable() {
 
 export function LocalizationProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = React.useState<AppLocale>(DEFAULT_LOCALE);
+  const queryClient = useQueryClient();
+
+  // Every request carries the app language; server text (cards, filters, errors) reloads in it.
+  React.useEffect(() => {
+    setApiLocale(locale);
+    void queryClient.invalidateQueries();
+  }, [locale, queryClient]);
 
   React.useEffect(() => {
     let isMounted = true;
