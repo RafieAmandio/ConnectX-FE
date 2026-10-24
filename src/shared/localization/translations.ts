@@ -531,6 +531,7 @@ export const en = {
   'matches.likesCountMax': '100+ new',
   'matches.connects.viewProfile': 'View profile',
   'matches.connects.closeProfile': 'Close profile',
+  'home.onboarding.notNow': 'Not now',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1061,6 +1062,7 @@ export const id: Record<TranslationKey, string> = {
   'matches.likesCountMax': '100+ baru',
   'matches.connects.viewProfile': 'Lihat profil',
   'matches.connects.closeProfile': 'Tutup profil',
+  'home.onboarding.notNow': 'Nanti saja',
 };
 
 export const translations = {

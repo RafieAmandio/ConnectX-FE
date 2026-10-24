@@ -2179,8 +2179,18 @@ export function DiscoveryDeck() {
     DISCOVERY_PAGE_LIMIT,
     hasResolvedAuthSessionSetup && hasResolvedInitialLocation
   );
+  // Dismissing "continue onboarding" goes back to the last mode whose cards loaded.
+  const lastLoadedModeRef = React.useRef<DiscoveryMode | null>(null);
+  const revertModeRef = React.useRef<() => void>(() => undefined);
+  const handleOnboardingDismissed = React.useCallback(() => revertModeRef.current(), []);
   const { handleOnboardingRequired, onboardingRequiredSheetProps } =
-    useDiscoveryOnboardingRequiredHandler();
+    useDiscoveryOnboardingRequiredHandler(handleOnboardingDismissed);
+
+  React.useEffect(() => {
+    if (discoveryQuery.isSuccess && !discoveryQuery.isPlaceholderData && appliedMode) {
+      lastLoadedModeRef.current = appliedMode;
+    }
+  }, [appliedMode, discoveryQuery.isPlaceholderData, discoveryQuery.isSuccess]);
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
   const viewerContext = useViewerContext();
@@ -2865,6 +2875,14 @@ export function DiscoveryDeck() {
     },
     [deviceCoordinates, filterSections, loadDeviceCoordinates, sheetMode, t]
   );
+
+  revertModeRef.current = () => {
+    const lastLoadedMode = lastLoadedModeRef.current;
+
+    if (lastLoadedMode && lastLoadedMode !== appliedMode) {
+      void handleApplyFilters(lastLoadedMode, appliedFilters);
+    }
+  };
 
   React.useEffect(() => {
     if (!isApplyingFilters || discoveryQuery.isFetching) {
