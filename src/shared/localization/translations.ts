@@ -528,6 +528,9 @@ export const en = {
   'chat.openSettings': 'Open Settings',
   'home.deck.showMoreCertifications': 'Show {count} more',
   'home.deck.showLessCertifications': 'Show less',
+  'matches.likesCountMax': '100+ new',
+  'matches.connects.viewProfile': 'View profile',
+  'matches.connects.closeProfile': 'Close profile',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1055,6 +1058,9 @@ export const id: Record<TranslationKey, string> = {
   'chat.openSettings': 'Buka Pengaturan',
   'home.deck.showMoreCertifications': 'Tampilkan {count} lagi',
   'home.deck.showLessCertifications': 'Tampilkan lebih sedikit',
+  'matches.likesCountMax': '100+ baru',
+  'matches.connects.viewProfile': 'Lihat profil',
+  'matches.connects.closeProfile': 'Tutup profil',
 };
 
 export const translations = {

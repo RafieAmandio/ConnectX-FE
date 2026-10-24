@@ -1845,7 +1845,7 @@ const StartupCardContent = React.memo(function StartupCardContent({
   );
 });
 
-const DiscoveryCardContent = React.memo(function DiscoveryCardContent({
+export const DiscoveryCardContent = React.memo(function DiscoveryCardContent({
   bottomInset = 24,
   card,
   onPremiumUpgradePress,
