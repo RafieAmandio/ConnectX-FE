@@ -5,13 +5,15 @@ import React from 'react';
 import {
   ActivityIndicator,
   Keyboard,
+  // RN Modal is its own Android window, outside KeyboardProvider: keep the built-in one here.
+  // eslint-disable-next-line no-restricted-imports
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
-  View,
   type LayoutChangeEvent,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -243,7 +245,7 @@ export function LinkedInRecoveryModal() {
       transparent
       visible={recovery.isRequired}>
       <KeyboardAvoidingView
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
         keyboardVerticalOffset={0}
         onLayout={handleContainerLayout}

@@ -6,7 +6,6 @@ import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   Switch,
@@ -14,6 +13,7 @@ import {
   type TextInputProps,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDiscoveryFilterOptions } from '@features/home/hooks/use-discovery';

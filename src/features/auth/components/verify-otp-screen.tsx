@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { Keyboard, KeyboardAvoidingView, Pressable, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, Pressable, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText } from '@shared/components';

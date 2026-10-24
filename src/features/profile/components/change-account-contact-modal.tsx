@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
   Alert,
+  // RN Modal is its own Android window, outside KeyboardProvider: keep the built-in one here.
+  // eslint-disable-next-line no-restricted-imports
   KeyboardAvoidingView,
   Modal,
   Platform,

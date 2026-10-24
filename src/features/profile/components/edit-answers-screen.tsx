@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getVisibleQuestions } from '@features/onboarding_test/mock/registry';

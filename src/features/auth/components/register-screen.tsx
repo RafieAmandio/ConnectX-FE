@@ -4,12 +4,12 @@ import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
 import {
   Keyboard,
-  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

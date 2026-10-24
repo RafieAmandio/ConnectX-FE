@@ -6,13 +6,13 @@ import { Stack, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   TextInput,
   type TextInputProps,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppText } from '@shared/components';
