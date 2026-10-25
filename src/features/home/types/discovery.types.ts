@@ -233,6 +233,8 @@ export type DiscoveryCardsResponse = {
     items: DiscoveryCard[];
     nextCursor: string | null;
     hasMore: boolean;
+    /** True when items are empty because filters or the text search matched nobody (#160). */
+    filteredEmpty?: boolean;
   };
 };
 

@@ -64,6 +64,7 @@ import {
 import {
   isDiscoveryCardsMockEnabled,
   isMergeMockDiscoveryCardsEnabled,
+  switchActiveDiscoverySide,
 } from '../services/discovery-service';
 import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discovery-preference';
 import { toLargePhotoUrl } from '@shared/utils/photo-url';
@@ -1908,13 +1909,17 @@ function DeckActionButton({
 }
 
 function EmptyState({
+  isFilteredEmpty,
   isLoadingMore,
   connectedCount,
+  onClearFilters,
   onStartOver,
   skippedCount,
 }: {
   connectedCount: number;
+  isFilteredEmpty: boolean;
   isLoadingMore: boolean;
+  onClearFilters: () => void;
   onStartOver: () => void;
   skippedCount: number;
 }) {
@@ -1935,12 +1940,18 @@ function EmptyState({
 
       <View className="mt-5 items-center">
         <AppText align="center" className="text-[20px] leading-[26px]" variant="subtitle">
-          {isLoadingMore ? t('home.deck.emptyLoadingTitle') : t('home.deck.emptyTitle')}
+          {isLoadingMore
+            ? t('home.deck.emptyLoadingTitle')
+            : isFilteredEmpty
+              ? t('home.deck.filteredEmptyTitle')
+              : t('home.deck.emptyTitle')}
         </AppText>
         <AppText align="center" className="mt-2 max-w-[280px] text-[14px] leading-5" tone="muted">
           {isLoadingMore
             ? t('home.deck.emptyLoadingDescription')
-            : t('home.deck.emptyDescription')}
+            : isFilteredEmpty
+              ? t('home.deck.filteredEmptyDescription')
+              : t('home.deck.emptyDescription')}
         </AppText>
 
         {hasActivity ? (
@@ -1956,11 +1967,11 @@ function EmptyState({
       {!isLoadingMore ? (
         <Pressable
           className="mt-6 h-12 flex-row items-center justify-center gap-2 rounded-[14px] px-5"
-          onPress={onStartOver}
+          onPress={isFilteredEmpty ? onClearFilters : onStartOver}
           style={{ backgroundColor: '#FF9836' }}>
-          <Ionicons color="#1A120B" name="refresh" size={17} />
+          <Ionicons color="#1A120B" name={isFilteredEmpty ? 'close-circle-outline' : 'refresh'} size={17} />
           <AppText className="text-[15px]" style={{ color: '#1A120B' }} variant="bodyStrong">
-            {t('home.deck.refreshResults')}
+            {isFilteredEmpty ? t('home.deck.clearFilters') : t('home.deck.refreshResults')}
           </AppText>
         </Pressable>
       ) : null}
@@ -1974,7 +1985,7 @@ export function DiscoveryDeck() {
   const t = useTranslation();
   const queryClient = useQueryClient();
   const { height, width } = useWindowDimensions();
-  const { isHydrated: isAuthHydrated, session } = useAuth();
+  const { isHydrated: isAuthHydrated, refreshSession, session } = useAuth();
   const usingMockCards = isDiscoveryCardsMockEnabled();
   const shouldMergeMockCards = isMergeMockDiscoveryCardsEnabled();
   const notificationsQuery = useNotifications();
@@ -2007,6 +2018,8 @@ export function DiscoveryDeck() {
   const [sheetMode, setSheetMode] = React.useState<DiscoveryMode>(DEFAULT_FILTER_MODE);
   const [appliedMode, setAppliedMode] = React.useState<DiscoveryMode | null>(null);
   const [appliedFilters, setAppliedFilters] = React.useState<DiscoveryAppliedFilters>({});
+  // Free-text search over role, bio, skills, industry, experience and education (#160).
+  const [searchQuery, setSearchQuery] = React.useState('');
   const [deviceCoordinates, setDeviceCoordinates] = React.useState<DeviceCoordinates | null>(null);
   const [hasResolvedAuthSessionSetup, setHasResolvedAuthSessionSetup] = React.useState(false);
   const [hasResolvedInitialLocation, setHasResolvedInitialLocation] = React.useState(false);
@@ -2140,15 +2153,15 @@ export function DiscoveryDeck() {
     () => sanitizeDiscoveryFilters(appliedFilters, appliedSections),
     [appliedFilters, appliedSections]
   );
-  const requestFilters = React.useMemo(
-    () =>
-      buildDiscoveryRequestFilters(
-        sanitizedAppliedFilters,
-        deviceCoordinates,
-        shouldIncludeLocationAvailability
-      ),
-    [deviceCoordinates, sanitizedAppliedFilters, shouldIncludeLocationAvailability]
-  );
+  const requestFilters = React.useMemo(() => {
+    const filters = buildDiscoveryRequestFilters(
+      sanitizedAppliedFilters,
+      deviceCoordinates,
+      shouldIncludeLocationAvailability
+    );
+
+    return searchQuery ? { ...filters, q: searchQuery } : filters;
+  }, [deviceCoordinates, sanitizedAppliedFilters, searchQuery, shouldIncludeLocationAvailability]);
 
   const discoveryRequest = React.useMemo<Omit<DiscoveryCardsRequest, 'pagination'>>(() => {
     const hasRequestFilters = Object.keys(requestFilters).length > 0;
@@ -2840,6 +2853,7 @@ export function DiscoveryDeck() {
   const handleResetFilters = React.useCallback(() => {
     setAppliedMode(null);
     setAppliedFilters({});
+    setSearchQuery('');
     setShouldIncludeLocationAvailability(false);
     setFilterError(null);
     setSheetMode(DEFAULT_FILTER_MODE);
@@ -2848,8 +2862,29 @@ export function DiscoveryDeck() {
   }, []);
 
   const handleApplyFilters = React.useCallback(
-    async (mode: DiscoveryMode, nextFilters: DiscoveryAppliedFilters) => {
+    async (mode: DiscoveryMode, nextFilters: DiscoveryAppliedFilters, nextSearchQuery = searchQuery) => {
       setIsApplyingFilters(true);
+
+      // A goal of the other side switches the active mode when that side was onboarded
+      // before (#156); otherwise the cards answer 409 and the onboarding sheet opens.
+      const side = mode === 'finding_cofounder' || mode === 'building_team' ? 'startup' : 'talent';
+
+      if (session?.activeMode && session.activeMode !== side && session.availableModes?.includes(side)) {
+        try {
+          await switchActiveDiscoverySide(side);
+          await refreshSession();
+          // Everything but the cards, which reload for the new mode below.
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] !== 'discovery',
+          });
+        } catch (error) {
+          setIsApplyingFilters(false);
+          if (!handleOnboardingRequired(error)) {
+            setFilterError(getErrorMessage(error, t('home.deck.generateCandidatesError')));
+          }
+          return;
+        }
+      }
 
       try {
         const sanitizedNextFilters = sanitizeDiscoveryFilters(
@@ -2865,6 +2900,7 @@ export function DiscoveryDeck() {
         setShouldIncludeLocationAvailability(isRecordValue(sanitizedNextFilters.locationAvailability));
         setAppliedMode(mode);
         setAppliedFilters(sanitizedNextFilters);
+        setSearchQuery(nextSearchQuery.trim().slice(0, 100));
         setSheetMode(mode);
         setAppliedDiscoveryMode(mode);
         setFilterError(null);
@@ -2873,7 +2909,19 @@ export function DiscoveryDeck() {
         setFilterError(getErrorMessage(error, t('home.deck.generateCandidatesError')));
       }
     },
-    [deviceCoordinates, filterSections, loadDeviceCoordinates, sheetMode, t]
+    [
+      deviceCoordinates,
+      filterSections,
+      handleOnboardingRequired,
+      loadDeviceCoordinates,
+      queryClient,
+      refreshSession,
+      searchQuery,
+      session?.activeMode,
+      session?.availableModes,
+      sheetMode,
+      t,
+    ]
   );
 
   revertModeRef.current = () => {
@@ -2969,6 +3017,7 @@ export function DiscoveryDeck() {
       hasConnectXPro={hasAdvancedDiscoveryFilters}
       initialAppliedMode={appliedMode}
       initialFilters={appliedFilters}
+      initialSearchQuery={searchQuery}
       isApplying={isApplyingFilters}
       isLoadingOptions={isFilterOptionsLoading}
       onApply={handleApplyFilters}
@@ -3123,7 +3172,9 @@ export function DiscoveryDeck() {
           {completenessNotice}
           <EmptyState
             connectedCount={connectedCount}
+            isFilteredEmpty={Boolean(discoveryQuery.data?.pages.at(-1)?.data.filteredEmpty)}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
+            onClearFilters={handleResetFilters}
             onStartOver={handleStartOver}
             skippedCount={skippedCount}
           />

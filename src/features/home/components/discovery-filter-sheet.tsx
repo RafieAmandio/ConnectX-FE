@@ -37,9 +37,10 @@ type DiscoveryFilterSheetProps = {
   hasConnectXPro?: boolean;
   initialAppliedMode: DiscoveryMode | null;
   initialFilters: DiscoveryAppliedFilters;
+  initialSearchQuery: string;
   isApplying?: boolean;
   isLoadingOptions?: boolean;
-  onApply: (mode: DiscoveryMode, filters: DiscoveryAppliedFilters) => void;
+  onApply: (mode: DiscoveryMode, filters: DiscoveryAppliedFilters, searchQuery: string) => void;
   onClose: () => void;
   onModeChange: (mode: DiscoveryMode) => void;
   onUpgradePress?: () => void;
@@ -1155,6 +1156,7 @@ export function DiscoveryFilterSheet({
   hasConnectXPro = false,
   initialAppliedMode,
   initialFilters,
+  initialSearchQuery,
   isApplying = false,
   isLoadingOptions = false,
   onApply,
@@ -1185,6 +1187,14 @@ export function DiscoveryFilterSheet({
       response: filterOptionsResponse,
     });
   }, [currentMode, filterOptionsResponse]);
+
+  const [searchQuery, setSearchQuery] = React.useState(initialSearchQuery);
+
+  React.useEffect(() => {
+    if (visible) {
+      setSearchQuery(initialSearchQuery);
+    }
+  }, [initialSearchQuery, visible]);
 
   React.useEffect(() => {
     if (!visible) {
@@ -1784,6 +1794,17 @@ export function DiscoveryFilterSheet({
             contentContainerStyle={{ gap: 20, paddingBottom: 8 }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
+            <View className="gap-3">
+              <AppText className="text-[12px] tracking-[1.6px]" tone="muted" variant="label">
+                {t('home.filters.searchLabel')}
+              </AppText>
+              <SearchInput
+                onChangeText={(value) => setSearchQuery(value.slice(0, 100))}
+                placeholder={t('home.filters.searchPlaceholder')}
+                value={searchQuery}
+              />
+            </View>
+
             <View className="gap-4">
               <AppText className="text-[12px] tracking-[1.6px]" tone="muted" variant="label">
                 {t('home.filters.goalLabel')}
@@ -1844,7 +1865,9 @@ export function DiscoveryFilterSheet({
           <View className={isKeyboardVisible ? 'hidden' : 'mt-5'}>
             <Pressable
               disabled={isApplying || isLoadingOptions}
-              onPress={() => onApply(currentMode, stripDisabledDiscoveryFilters(currentDraft, sections, hasConnectXPro))}
+              onPress={() =>
+                onApply(currentMode, stripDisabledDiscoveryFilters(currentDraft, sections, hasConnectXPro), searchQuery)
+              }
               className="h-14 flex-row items-center justify-center gap-3 rounded-[18px]"
               style={{
                 backgroundColor: '#FF9A3E',

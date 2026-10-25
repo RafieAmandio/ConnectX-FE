@@ -532,6 +532,11 @@ export const en = {
   'matches.connects.viewProfile': 'View profile',
   'matches.connects.closeProfile': 'Close profile',
   'home.onboarding.notNow': 'Not now',
+  'home.deck.filteredEmptyTitle': 'No matches for your filters or search.',
+  'home.deck.filteredEmptyDescription': 'Try a different search or clear some filters.',
+  'home.deck.clearFilters': 'Clear filters',
+  'home.filters.searchLabel': 'Search',
+  'home.filters.searchPlaceholder': 'Role, skill, industry, company or school',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1063,6 +1068,11 @@ export const id: Record<TranslationKey, string> = {
   'matches.connects.viewProfile': 'Lihat profil',
   'matches.connects.closeProfile': 'Tutup profil',
   'home.onboarding.notNow': 'Nanti saja',
+  'home.deck.filteredEmptyTitle': 'Tidak ada hasil yang cocok dengan filter atau pencarian.',
+  'home.deck.filteredEmptyDescription': 'Coba kata kunci lain atau hapus beberapa filter.',
+  'home.deck.clearFilters': 'Hapus filter',
+  'home.filters.searchLabel': 'Cari',
+  'home.filters.searchPlaceholder': 'Role, skill, industri, perusahaan, atau kampus',
 };
 
 export const translations = {

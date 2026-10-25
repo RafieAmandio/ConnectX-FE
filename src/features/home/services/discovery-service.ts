@@ -1,3 +1,4 @@
+import type { DiscoverySide } from '@features/auth/types/auth.types';
 import { ApiError, apiFetch, getApiAccessToken } from '@shared/services/api';
 import { buildApiUrl } from '@shared/services/api/config';
 import { isExpoDevModeEnabled, parseBooleanEnv } from '@shared/utils/env';
@@ -414,3 +415,12 @@ export async function postRewindAction(
   });
 }
 
+
+// Switches the active side to one the person already onboarded for (#156); 409
+// DISCOVERY_ONBOARDING_REQUIRED when they never did.
+export async function switchActiveDiscoverySide(mode: DiscoverySide) {
+  return apiFetch<unknown>('/api/v1/me/mode', {
+    body: { mode } as unknown as BodyInit,
+    method: 'POST',
+  });
+}
