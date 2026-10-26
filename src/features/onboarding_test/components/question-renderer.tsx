@@ -65,9 +65,36 @@ type QuestionRendererProps = {
   locale?: OnboardingLocale;
   onChange: (value: OnboardingAnswerValue) => void;
   question: OnboardingQuestion;
+  /** The step's other answers, for a field shown with them (the salary amount's unit). */
+  siblingAnswers?: Record<string, OnboardingAnswerValue | undefined>;
   value: OnboardingAnswerValue | undefined;
   variant?: 'default' | 'dropdown_multi_select' | 'inline_searchable_checkbox_multi_select';
 };
+
+// q_*_salary_amount sits below its q_*_salary_period and q_*_salary_currency, which scroll off
+// screen while the numpad is open: the amount carries both, as "USD 5000 / month".
+function getSalaryAmountUnit(
+  questionId: string,
+  answers: QuestionRendererProps['siblingAnswers'],
+  locale: OnboardingLocale | undefined
+) {
+  if (!questionId.endsWith('_salary_amount') || !answers) {
+    return {};
+  }
+
+  const base = questionId.slice(0, -'_amount'.length);
+  const currency = answers[`${base}_currency`];
+  const period = answers[`${base}_period`];
+  const periodLabels: Record<string, Record<OnboardingLocale, string>> = {
+    annual: { en: '/ year', id: '/ tahun' },
+    monthly: { en: '/ month', id: '/ bulan' },
+  };
+
+  return {
+    prefix: typeof currency === 'string' && currency ? `${currency} ` : undefined,
+    suffix: typeof period === 'string' ? periodLabels[period]?.[locale ?? 'en'] : undefined,
+  };
+}
 
 function getStringValue(value: OnboardingAnswerValue | undefined) {
   return typeof value === 'string' ? value : '';
@@ -745,10 +772,10 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'calendar',
     iconColor: '#C48BFF',
   },
-  hourly: {
+  monthly: {
     bg: '#1F242E',
     border: '#2E3547',
-    icon: 'time-outline',
+    icon: 'calendar-outline',
     iconColor: '#CBD4E0',
   },
   IDR: {
@@ -920,12 +947,16 @@ const FIELD_CLASS = `${FIELD_BG} ${FIELD_BORDER}`;
 
 function TextLikeQuestion({
   error,
+  inputPrefix,
+  inputSuffix,
   keyboardType,
   multiline = false,
   onChange,
   question,
   value,
 }: Omit<QuestionRendererProps, 'value'> & {
+  inputPrefix?: string;
+  inputSuffix?: string;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'url';
   multiline?: boolean;
   value: string;
@@ -951,7 +982,8 @@ function TextLikeQuestion({
         }
         onFocus={() => setIsFocused(true)}
         placeholder={getTextLikePlaceholder(question)}
-        prefix={linkedInSlugKind ? getLinkedInInputPrefix(linkedInSlugKind) : undefined}
+        prefix={linkedInSlugKind ? getLinkedInInputPrefix(linkedInSlugKind) : inputPrefix}
+        suffix={inputSuffix}
         textAlignVertical={multiline ? 'top' : 'center'}
         value={linkedInSlugKind ? normalizeLinkedInSlug(value, linkedInSlugKind) : value}
         className={cn(
@@ -3238,6 +3270,7 @@ export function QuestionRenderer({
   locale,
   onChange,
   question,
+  siblingAnswers,
   variant = 'default',
   value,
 }: QuestionRendererProps) {
@@ -3252,10 +3285,14 @@ export function QuestionRenderer({
           value={getStringValue(value)}
         />
       );
-    case 'number':
+    case 'number': {
+      const unit = getSalaryAmountUnit(question.id, siblingAnswers, locale);
+
       return (
         <TextLikeQuestion
           error={error}
+          inputPrefix={unit.prefix}
+          inputSuffix={unit.suffix}
           keyboardType="numeric"
           onChange={(nextValue) => {
             if (!nextValue) {
@@ -3270,6 +3307,7 @@ export function QuestionRenderer({
           value={getNumberValue(value)}
         />
       );
+    }
     case 'date':
       return (
         <DateSelectQuestion

@@ -172,6 +172,7 @@ export function EditAnswersScreen() {
                                 setErrors((current) => ({ ...current, [question.id]: '' }));
                               }}
                               question={question}
+                              siblingAnswers={answers}
                               value={answers[question.id] ?? undefined}
                             />
                           </View>

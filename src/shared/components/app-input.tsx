@@ -13,6 +13,7 @@ export type AppInputProps = TextInputProps & {
   label?: string;
   prefix?: string;
   shellClassName?: string;
+  suffix?: string;
   shellProps?: ViewProps;
 };
 
@@ -27,6 +28,7 @@ export function AppInput({
   shellClassName,
   shellProps,
   style,
+  suffix,
   ...props
 }: AppInputProps) {
   const [isFocused, setIsFocused] = React.useState(false);
@@ -44,16 +46,18 @@ export function AppInput({
           {label}
         </AppText>
       ) : null}
-      {prefix ? (
+      {prefix || suffix ? (
         <View
           className={cn(
             'min-h-14 flex-row items-center rounded-[16px] border pl-3',
             inputStateClassName,
             className
           )}>
-          <AppText className="text-[15px] leading-5 text-text-muted" numberOfLines={1}>
-            {prefix}
-          </AppText>
+          {prefix ? (
+            <AppText className="text-[15px] leading-5 text-text-muted" numberOfLines={1}>
+              {prefix}
+            </AppText>
+          ) : null}
           <TextInput
             className="min-w-0 flex-1 py-3 pr-4 font-body text-[15px] text-text"
             onBlur={(event) => {
@@ -68,6 +72,11 @@ export function AppInput({
             style={[{ letterSpacing: 0 }, style]}
             {...props}
           />
+          {suffix ? (
+            <AppText className="pr-4 text-[15px] leading-5 text-text-muted" numberOfLines={1}>
+              {suffix}
+            </AppText>
+          ) : null}
         </View>
       ) : (
         <View className="justify-center">

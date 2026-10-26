@@ -758,6 +758,7 @@ export function OnboardingScreen() {
                       void handleAnswerChange(question, value);
                     }}
                     question={question}
+                    siblingAnswers={mergedAnswers}
                     variant={
                       currentStep &&
                         MULTI_SELECT_DROPDOWN_STEP_IDS.has(currentStep.id) &&

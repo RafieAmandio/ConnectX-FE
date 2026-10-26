@@ -320,8 +320,8 @@
           "depends_on": { "question_id": "q_has_salary_minimum", "operator": "in", "value": ["yes_strict", "yes_flexible"] },
           "validation": { "min_length": 1 },
           "options": [
-            { "id": "opt_salary_period_annual", "value": "annual", "label": "Annual", "icon": "calendar", "sub_label": null, "group": null },
-            { "id": "opt_salary_period_hourly", "value": "hourly", "label": "Hourly", "icon": "clock", "sub_label": null, "group": null }
+            { "id": "opt_salary_period_monthly", "value": "monthly", "label": "Monthly", "icon": "calendar", "sub_label": null, "group": null },
+            { "id": "opt_salary_period_annual", "value": "annual", "label": "Annual", "icon": "calendar", "sub_label": null, "group": null }
           ]
         },
         {
