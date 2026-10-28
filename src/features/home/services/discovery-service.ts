@@ -1,3 +1,4 @@
+import type { DiscoverySide } from '@features/auth/types/auth.types';
 import { ApiError, apiFetch, getApiAccessToken } from '@shared/services/api';
 import { buildApiUrl } from '@shared/services/api/config';
 import { isExpoDevModeEnabled, parseBooleanEnv } from '@shared/utils/env';
@@ -94,7 +95,6 @@ export const DISCOVERY_API = {
   FILTER_OPTIONS: '/api/v1/discovery/filter-options',
   ACTION: (targetId: string) => `/api/v1/discovery/cards/${targetId}/action`,
   REWIND: '/api/v1/discovery/swipes/rewind',
-  SPOTLIGHT_ACTIVATE: '/api/v1/discovery/spotlight/activate',
 } as const;
 
 function normalizeLimit(limit?: number) {
@@ -415,9 +415,12 @@ export async function postRewindAction(
   });
 }
 
-export async function postSpotlightActivation(payload: SpotlightActivationRequest = {}) {
-  return apiFetch<SpotlightActivationSuccessResponse>(DISCOVERY_API.SPOTLIGHT_ACTIVATE, {
-    body: payload as unknown as BodyInit,
+
+// Switches the active side to one the person already onboarded for (#156); 409
+// DISCOVERY_ONBOARDING_REQUIRED when they never did.
+export async function switchActiveDiscoverySide(mode: DiscoverySide) {
+  return apiFetch<unknown>('/api/v1/me/mode', {
+    body: { mode } as unknown as BodyInit,
     method: 'POST',
   });
 }

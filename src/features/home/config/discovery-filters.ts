@@ -661,17 +661,12 @@ export function flattenDiscoveryFilterCatalogGroups(groups: DiscoveryFilterCatal
   return groups.flatMap((group) => group.options);
 }
 
-function hasDiscoveryFilterCatalogOptions(groups: DiscoveryFilterCatalogGroup[] | undefined) {
-  return Boolean(groups?.some((group) => group.options.length > 0));
-}
-
 function getCatalogOptions(
   sectionOrFieldId: string,
-  filterOptionsResponse: DiscoveryFilterOptionsResponse | undefined,
-  fallbackOptions: DiscoveryFilterSection['options'] = []
+  filterOptionsResponse: DiscoveryFilterOptionsResponse | undefined
 ) {
   if (!filterOptionsResponse) {
-    return sectionOrFieldId === 'founderTypeIds' ? fallbackOptions : [];
+    return [];
   }
 
   switch (sectionOrFieldId) {
@@ -684,9 +679,7 @@ function getCatalogOptions(
     case 'languageIds':
       return flattenDiscoveryFilterCatalogGroups(filterOptionsResponse.data.languages);
     case 'founderTypeIds':
-      return hasDiscoveryFilterCatalogOptions(filterOptionsResponse.data.founderTypes)
-        ? flattenDiscoveryFilterCatalogGroups(filterOptionsResponse.data.founderTypes ?? [])
-        : fallbackOptions;
+      return flattenDiscoveryFilterCatalogGroups(filterOptionsResponse.data.founderTypes ?? []);
     default:
       return [];
   }
@@ -735,7 +728,7 @@ export function getDiscoveryFilterSections(
     const nextSection = cloneSection(section);
 
     if (CATALOG_SECTION_IDS.has(nextSection.id)) {
-      nextSection.options = getCatalogOptions(nextSection.id, filterOptionsResponse, nextSection.options);
+      nextSection.options = getCatalogOptions(nextSection.id, filterOptionsResponse);
     }
 
     if (nextSection.fields?.length) {
@@ -760,7 +753,7 @@ export function getDiscoveryFilterSections(
 
         return {
           ...field,
-          options: getCatalogOptions(field.id, filterOptionsResponse, field.options),
+          options: getCatalogOptions(field.id, filterOptionsResponse),
         };
       });
     }

@@ -802,6 +802,8 @@ function mergeAuthSessionResponse(
       authSessionSyncedAt: new Date().toISOString(),
       authSessionSource: source,
       defaultDiscoveryMode: response.data.discovery_preferences.default_discovery_mode,
+      activeMode: response.data.discovery_preferences.active_mode ?? null,
+      availableModes: response.data.discovery_preferences.available_modes ?? [],
       premium: normalizePremiumState(response.data.premium),
     };
   }
@@ -816,6 +818,8 @@ function mergeAuthSessionResponse(
     authSessionSyncedAt: new Date().toISOString(),
     authSessionSource: source,
     defaultDiscoveryMode: response.data.discovery_preferences.default_discovery_mode,
+    activeMode: response.data.discovery_preferences.active_mode ?? null,
+    availableModes: response.data.discovery_preferences.available_modes ?? [],
     email: normalizedEmail,
     onboardingCompletedAt:
       authPhase === 'authenticated'

@@ -2,12 +2,11 @@ import { AntDesign } from '@expo/vector-icons';
 import React from 'react';
 import {
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@shared/components';
@@ -132,7 +131,7 @@ export function AuthVerificationShell({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       className="flex-1"
       style={{ backgroundColor: CANVAS_BG }}>
       <Pressable className="flex-1" onPress={Keyboard.dismiss} accessible={false}>

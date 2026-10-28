@@ -7,4 +7,22 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    rules: {
+      // Android keyboards differ per phone (some resize the window, some do not); the built-in
+      // KeyboardAvoidingView double-shifts or under-shifts. keyboard-controller measures the real keyboard.
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-native',
+              importNames: ['KeyboardAvoidingView'],
+              message: "Import KeyboardAvoidingView from 'react-native-keyboard-controller' instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

@@ -27,7 +27,12 @@ import { upsertDiscoveryMatchConversation } from '@features/chat/services/chat-s
 import { matchesQueryKeys } from '@features/matches/hooks/use-matches';
 import { upsertGeneratedMockMatch } from '@features/matches/services/generated-matches-storage';
 import { useNotifications } from '@features/notifications';
-import { useUpdateProfileLocation } from '@features/profile';
+import {
+  ProfileCompletenessCard,
+  UserSafetyButton,
+  useProfileCompleteness,
+  useUpdateProfileLocation,
+} from '@features/profile';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
 import { useTranslation } from '@shared/localization';
@@ -59,6 +64,7 @@ import {
 import {
   isDiscoveryCardsMockEnabled,
   isMergeMockDiscoveryCardsEnabled,
+  switchActiveDiscoverySide,
 } from '../services/discovery-service';
 import { loadOnboardingDiscoveryPreference } from '../services/onboarding-discovery-preference';
 import { toLargePhotoUrl } from '@shared/utils/photo-url';
@@ -1069,6 +1075,11 @@ function CompensationPremiumField({
   );
 }
 
+// Only Joining Startups cards carry open roles and "looking for"; Explore ones carry neither.
+function isJoiningStartupCard(card: DiscoveryStartupCard) {
+  return Boolean(card.openRoles?.length || card.lookingFor?.length);
+}
+
 function StartupPremiumSection({
   card,
   onUpgradePress,
@@ -1096,11 +1107,11 @@ function StartupPremiumSection({
       {fields.traction ? (
         <TractionPremiumField field={fields.traction} onUpgradePress={onUpgradePress} />
       ) : null}
-      {fields.links ? <LinksPremiumField field={fields.links} onUpgradePress={onUpgradePress} /> : null}
       {fields.teamComposition ? (
         <TeamCompositionPremiumField field={fields.teamComposition} onUpgradePress={onUpgradePress} />
       ) : null}
-      {fields.compensation ? (
+      {/* Up under the open roles instead on a Joining Startups card (StartupCardContent). */}
+      {fields.compensation && !isJoiningStartupCard(card) ? (
         <CompensationPremiumField field={fields.compensation} onUpgradePress={onUpgradePress} />
       ) : null}
       {/* One upgrade call to action for the whole section instead of one per locked field. */}
@@ -1285,6 +1296,9 @@ function CertificationCard({ item, index }: { item: DiscoveryCardCertification; 
   );
 }
 
+// Long LinkedIn imports list 15+ certificates; show a few and let people expand.
+const CERTIFICATIONS_PREVIEW_COUNT = 3;
+
 const ProfileCardContent = React.memo(function ProfileCardContent({
   card,
   bottomInset = 24,
@@ -1305,6 +1319,12 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
   const highlightsTitle = card.sections?.highlights?.title?.trim() || undefined;
   const languageItems = normalizeStringList(card.sections?.languages?.items ?? card.languages);
   const certificationItems = card.certifications?.items ?? [];
+  const [showAllCertifications, setShowAllCertifications] = React.useState(false);
+  const visibleCertifications = showAllCertifications
+    ? certificationItems
+    : certificationItems.slice(0, CERTIFICATIONS_PREVIEW_COUNT);
+  // LinkedIn imports store a missing headline as "--"; show nothing instead.
+  const headline = /^[\s\-–—]*$/.test(card.headline ?? '') ? '' : card.headline;
   const { width } = useWindowDimensions();
   const isCompactHeader = width < 390;
   const [photoFailed, setPhotoFailed] = React.useState(false);
@@ -1354,13 +1374,15 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
                   {card.age ? `${card.name}, ${card.age}` : card.name}
                 </AppText>
                 <View className="min-w-0 flex-row items-center gap-2">
-                  <AppText
-                    className="min-w-0 flex-shrink text-[15px] leading-tight"
-                    ellipsizeMode="tail"
-                    numberOfLines={2}
-                    style={{ color: '#E4E7EC', flexShrink: 1 }}>
-                    {card.headline}
-                  </AppText>
+                  {headline ? (
+                    <AppText
+                      className="min-w-0 flex-shrink text-[15px] leading-tight"
+                      ellipsizeMode="tail"
+                      numberOfLines={2}
+                      style={{ color: '#E4E7EC', flexShrink: 1 }}>
+                      {headline}
+                    </AppText>
+                  ) : null}
                   {linkedinUrl ? (
                     <Pressable
                       accessibilityLabel={t('home.deck.openLinkedInAccessibility', { name: card.name })}
@@ -1497,9 +1519,22 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
         {certificationItems.length ? (
           <View className="gap-3">
             <SectionLabel icon="ribbon-outline" title={t('home.deck.certifications')} />
-            {certificationItems.map((item, index) => (
+            {visibleCertifications.map((item, index) => (
               <CertificationCard key={getCertificationKey(item, index)} item={item} index={index} />
             ))}
+            {certificationItems.length > CERTIFICATIONS_PREVIEW_COUNT ? (
+              <Pressable
+                className="self-start rounded-full border border-white/10 px-3.5 py-2 active:opacity-80"
+                onPress={() => setShowAllCertifications((current) => !current)}>
+                <AppText className="text-[13px] text-[#FF9A3E]" variant="bodyStrong">
+                  {showAllCertifications
+                    ? t('home.deck.showLessCertifications')
+                    : t('home.deck.showMoreCertifications', {
+                        count: certificationItems.length - CERTIFICATIONS_PREVIEW_COUNT,
+                      })}
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -1537,6 +1572,11 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
             </AppText>
           </View>
         ) : null}
+
+        {/* Report / Block (App Store guideline 1.2). Startup cards carry no owner user id yet. */}
+        <View className="items-center pt-2">
+          <UserSafetyButton name={card.name} userId={card.profileId} />
+        </View>
       </View>
     </ScrollView>
   );
@@ -1681,6 +1721,11 @@ const StartupCardContent = React.memo(function StartupCardContent({
           </AppText>
         ) : null}
 
+        {/* Website and socials first, right after the description (premium only). */}
+        {card.premium?.fields?.links ? (
+          <LinksPremiumField field={card.premium.fields.links} onUpgradePress={onPremiumUpgradePress} />
+        ) : null}
+
         {problem || solution || targetUsers ? (
           <View className="gap-3">
             {problem ? (
@@ -1741,6 +1786,11 @@ const StartupCardContent = React.memo(function StartupCardContent({
               ))}
             </View>
           </View>
+        ) : null}
+
+        {/* What the startup offers, right under its open roles (Joining Startups). */}
+        {isJoiningStartupCard(card) && card.premium?.fields?.compensation ? (
+          <CompensationPremiumField field={card.premium.fields.compensation} onUpgradePress={onPremiumUpgradePress} />
         ) : null}
 
         {card.lookingFor?.length ? (
@@ -1811,7 +1861,7 @@ const StartupCardContent = React.memo(function StartupCardContent({
   );
 });
 
-const DiscoveryCardContent = React.memo(function DiscoveryCardContent({
+export const DiscoveryCardContent = React.memo(function DiscoveryCardContent({
   bottomInset = 24,
   card,
   onPremiumUpgradePress,
@@ -1874,13 +1924,17 @@ function DeckActionButton({
 }
 
 function EmptyState({
+  isFilteredEmpty,
   isLoadingMore,
   connectedCount,
+  onClearFilters,
   onStartOver,
   skippedCount,
 }: {
   connectedCount: number;
+  isFilteredEmpty: boolean;
   isLoadingMore: boolean;
+  onClearFilters: () => void;
   onStartOver: () => void;
   skippedCount: number;
 }) {
@@ -1901,12 +1955,18 @@ function EmptyState({
 
       <View className="mt-5 items-center">
         <AppText align="center" className="text-[20px] leading-[26px]" variant="subtitle">
-          {isLoadingMore ? t('home.deck.emptyLoadingTitle') : t('home.deck.emptyTitle')}
+          {isLoadingMore
+            ? t('home.deck.emptyLoadingTitle')
+            : isFilteredEmpty
+              ? t('home.deck.filteredEmptyTitle')
+              : t('home.deck.emptyTitle')}
         </AppText>
         <AppText align="center" className="mt-2 max-w-[280px] text-[14px] leading-5" tone="muted">
           {isLoadingMore
             ? t('home.deck.emptyLoadingDescription')
-            : t('home.deck.emptyDescription')}
+            : isFilteredEmpty
+              ? t('home.deck.filteredEmptyDescription')
+              : t('home.deck.emptyDescription')}
         </AppText>
 
         {hasActivity ? (
@@ -1922,11 +1982,11 @@ function EmptyState({
       {!isLoadingMore ? (
         <Pressable
           className="mt-6 h-12 flex-row items-center justify-center gap-2 rounded-[14px] px-5"
-          onPress={onStartOver}
+          onPress={isFilteredEmpty ? onClearFilters : onStartOver}
           style={{ backgroundColor: '#FF9836' }}>
-          <Ionicons color="#1A120B" name="refresh" size={17} />
+          <Ionicons color="#1A120B" name={isFilteredEmpty ? 'close-circle-outline' : 'refresh'} size={17} />
           <AppText className="text-[15px]" style={{ color: '#1A120B' }} variant="bodyStrong">
-            {t('home.deck.refreshResults')}
+            {isFilteredEmpty ? t('home.deck.clearFilters') : t('home.deck.refreshResults')}
           </AppText>
         </Pressable>
       ) : null}
@@ -1936,10 +1996,11 @@ function EmptyState({
 
 export function DiscoveryDeck() {
   const router = useRouter();
+  const profileCompleteness = useProfileCompleteness();
   const t = useTranslation();
   const queryClient = useQueryClient();
   const { height, width } = useWindowDimensions();
-  const { isHydrated: isAuthHydrated, session } = useAuth();
+  const { isHydrated: isAuthHydrated, refreshSession, session } = useAuth();
   const usingMockCards = isDiscoveryCardsMockEnabled();
   const shouldMergeMockCards = isMergeMockDiscoveryCardsEnabled();
   const notificationsQuery = useNotifications();
@@ -1972,6 +2033,8 @@ export function DiscoveryDeck() {
   const [sheetMode, setSheetMode] = React.useState<DiscoveryMode>(DEFAULT_FILTER_MODE);
   const [appliedMode, setAppliedMode] = React.useState<DiscoveryMode | null>(null);
   const [appliedFilters, setAppliedFilters] = React.useState<DiscoveryAppliedFilters>({});
+  // Free-text search over role, bio, skills, industry, experience and education (#160).
+  const [searchQuery, setSearchQuery] = React.useState('');
   const [deviceCoordinates, setDeviceCoordinates] = React.useState<DeviceCoordinates | null>(null);
   const [hasResolvedAuthSessionSetup, setHasResolvedAuthSessionSetup] = React.useState(false);
   const [hasResolvedInitialLocation, setHasResolvedInitialLocation] = React.useState(false);
@@ -2105,15 +2168,15 @@ export function DiscoveryDeck() {
     () => sanitizeDiscoveryFilters(appliedFilters, appliedSections),
     [appliedFilters, appliedSections]
   );
-  const requestFilters = React.useMemo(
-    () =>
-      buildDiscoveryRequestFilters(
-        sanitizedAppliedFilters,
-        deviceCoordinates,
-        shouldIncludeLocationAvailability
-      ),
-    [deviceCoordinates, sanitizedAppliedFilters, shouldIncludeLocationAvailability]
-  );
+  const requestFilters = React.useMemo(() => {
+    const filters = buildDiscoveryRequestFilters(
+      sanitizedAppliedFilters,
+      deviceCoordinates,
+      shouldIncludeLocationAvailability
+    );
+
+    return searchQuery ? { ...filters, q: searchQuery } : filters;
+  }, [deviceCoordinates, sanitizedAppliedFilters, searchQuery, shouldIncludeLocationAvailability]);
 
   const discoveryRequest = React.useMemo<Omit<DiscoveryCardsRequest, 'pagination'>>(() => {
     const hasRequestFilters = Object.keys(requestFilters).length > 0;
@@ -2144,8 +2207,18 @@ export function DiscoveryDeck() {
     DISCOVERY_PAGE_LIMIT,
     hasResolvedAuthSessionSetup && hasResolvedInitialLocation
   );
+  // Dismissing "continue onboarding" goes back to the last mode whose cards loaded.
+  const lastLoadedModeRef = React.useRef<DiscoveryMode | null>(null);
+  const revertModeRef = React.useRef<() => void>(() => undefined);
+  const handleOnboardingDismissed = React.useCallback(() => revertModeRef.current(), []);
   const { handleOnboardingRequired, onboardingRequiredSheetProps } =
-    useDiscoveryOnboardingRequiredHandler();
+    useDiscoveryOnboardingRequiredHandler(handleOnboardingDismissed);
+
+  React.useEffect(() => {
+    if (discoveryQuery.isSuccess && !discoveryQuery.isPlaceholderData && appliedMode) {
+      lastLoadedModeRef.current = appliedMode;
+    }
+  }, [appliedMode, discoveryQuery.isPlaceholderData, discoveryQuery.isSuccess]);
   const rewindAction = useRewindAction();
   const swipeAction = useSwipeAction();
   const viewerContext = useViewerContext();
@@ -2795,6 +2868,7 @@ export function DiscoveryDeck() {
   const handleResetFilters = React.useCallback(() => {
     setAppliedMode(null);
     setAppliedFilters({});
+    setSearchQuery('');
     setShouldIncludeLocationAvailability(false);
     setFilterError(null);
     setSheetMode(DEFAULT_FILTER_MODE);
@@ -2803,8 +2877,29 @@ export function DiscoveryDeck() {
   }, []);
 
   const handleApplyFilters = React.useCallback(
-    async (mode: DiscoveryMode, nextFilters: DiscoveryAppliedFilters) => {
+    async (mode: DiscoveryMode, nextFilters: DiscoveryAppliedFilters, nextSearchQuery = searchQuery) => {
       setIsApplyingFilters(true);
+
+      // A goal of the other side switches the active mode when that side was onboarded
+      // before (#156); otherwise the cards answer 409 and the onboarding sheet opens.
+      const side = mode === 'finding_cofounder' || mode === 'building_team' ? 'startup' : 'talent';
+
+      if (session?.activeMode && session.activeMode !== side && session.availableModes?.includes(side)) {
+        try {
+          await switchActiveDiscoverySide(side);
+          await refreshSession();
+          // Everything but the cards, which reload for the new mode below.
+          await queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] !== 'discovery',
+          });
+        } catch (error) {
+          setIsApplyingFilters(false);
+          if (!handleOnboardingRequired(error)) {
+            setFilterError(getErrorMessage(error, t('home.deck.generateCandidatesError')));
+          }
+          return;
+        }
+      }
 
       try {
         const sanitizedNextFilters = sanitizeDiscoveryFilters(
@@ -2820,6 +2915,7 @@ export function DiscoveryDeck() {
         setShouldIncludeLocationAvailability(isRecordValue(sanitizedNextFilters.locationAvailability));
         setAppliedMode(mode);
         setAppliedFilters(sanitizedNextFilters);
+        setSearchQuery(nextSearchQuery.trim().slice(0, 100));
         setSheetMode(mode);
         setAppliedDiscoveryMode(mode);
         setFilterError(null);
@@ -2828,8 +2924,28 @@ export function DiscoveryDeck() {
         setFilterError(getErrorMessage(error, t('home.deck.generateCandidatesError')));
       }
     },
-    [deviceCoordinates, filterSections, loadDeviceCoordinates, sheetMode, t]
+    [
+      deviceCoordinates,
+      filterSections,
+      handleOnboardingRequired,
+      loadDeviceCoordinates,
+      queryClient,
+      refreshSession,
+      searchQuery,
+      session?.activeMode,
+      session?.availableModes,
+      sheetMode,
+      t,
+    ]
   );
+
+  revertModeRef.current = () => {
+    const lastLoadedMode = lastLoadedModeRef.current;
+
+    if (lastLoadedMode && lastLoadedMode !== appliedMode) {
+      void handleApplyFilters(lastLoadedMode, appliedFilters);
+    }
+  };
 
   React.useEffect(() => {
     if (!isApplyingFilters || discoveryQuery.isFetching) {
@@ -2916,6 +3032,7 @@ export function DiscoveryDeck() {
       hasConnectXPro={hasAdvancedDiscoveryFilters}
       initialAppliedMode={appliedMode}
       initialFilters={appliedFilters}
+      initialSearchQuery={searchQuery}
       isApplying={isApplyingFilters}
       isLoadingOptions={isFilterOptionsLoading}
       onApply={handleApplyFilters}
@@ -3030,6 +3147,17 @@ export function DiscoveryDeck() {
     <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
   );
 
+  // An incomplete profile gets skeleton cards from the backend (profileGate); say why and where to fix it.
+  const completenessNotice = profileCompleteness.missingCount > 0 ? (
+    <View className="mt-2">
+      <ProfileCompletenessCard
+        compact
+        missingCount={profileCompleteness.missingCount}
+        onPress={() => router.push('/profile/edit-answers' as never)}
+      />
+    </View>
+  ) : null;
+
   if (
     !hasResolvedAuthSessionSetup ||
     (!usingLocalMockCards && isApplyingFilters) ||
@@ -3054,11 +3182,14 @@ export function DiscoveryDeck() {
         <AppTopBar rightAccessory={topBarAccessory} />
         <ScrollView
           className="flex-1"
-          contentContainerClassName="flex-grow justify-center px-4 py-8"
+          contentContainerClassName="flex-grow justify-center gap-4 px-4 py-8"
           refreshControl={discoveryRefreshControl}>
+          {completenessNotice}
           <EmptyState
             connectedCount={connectedCount}
+            isFilteredEmpty={Boolean(discoveryQuery.data?.pages.at(-1)?.data.filteredEmpty)}
             isLoadingMore={Boolean(discoveryQuery.hasNextPage && discoveryQuery.isFetchingNextPage)}
+            onClearFilters={handleResetFilters}
             onStartOver={handleStartOver}
             skippedCount={skippedCount}
           />
@@ -3074,6 +3205,7 @@ export function DiscoveryDeck() {
     <View className="flex-1">
       <AppTopBar rightAccessory={topBarAccessory} />
       <View className="flex-1 px-2 pb-1">
+        {completenessNotice}
         {filterError ? (
           <AppCard tone="signal" className="mb-2 gap-2 rounded-[16px] p-3">
             <AppText variant="subtitle">{t('home.deck.discoverySearch')}</AppText>

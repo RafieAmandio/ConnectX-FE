@@ -8,7 +8,8 @@ import Svg, { Circle } from 'react-native-svg';
 import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { isDiscoveryOnboardingRequiredError } from '@features/home/services/discovery-contract';
-import { AppCard, AppPill, AppText } from '@shared/components';
+import { ProfileCompletenessCard, UserSafetyButton, useProfileCompleteness } from '@features/profile';
+import { AppButton, AppCard, AppPill, AppText } from '@shared/components';
 
 import { useMatchAnalysis } from '../hooks/use-matches';
 
@@ -188,6 +189,7 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const analysisQuery = useMatchAnalysis(matchId);
+  const profileCompleteness = useProfileCompleteness();
   const { handleOnboardingRequired, onboardingRequiredSheetProps } =
     useDiscoveryOnboardingRequiredHandler();
   const isOnboardingRequired = isDiscoveryOnboardingRequiredError(analysisQuery.error);
@@ -260,6 +262,13 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
                     ? analysisQuery.error.message
                     : 'The analysis request failed.'}
                 </AppText>
+                <AppButton
+                  className="mt-1"
+                  label={analysisQuery.isFetching ? 'Retrying...' : 'Try again'}
+                  onPress={() => void analysisQuery.refetch()}
+                  size="md"
+                  variant="secondary"
+                />
               </AppCard>
             ) : null}
           </ScrollView>
@@ -294,6 +303,12 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
             <AppText className="flex-1 text-[17px] text-[#F1F1F1]" variant="title">
               Startup Team Fit Analysis
             </AppText>
+            <UserSafetyButton
+              className="h-9 w-9 items-center justify-center rounded-full border border-[#3A3938] active:opacity-70"
+              name={user.name}
+              onBlocked={() => router.back()}
+              userId={user.userId}
+            />
           </View>
         </View>
 
@@ -306,6 +321,11 @@ export function MatchAnalysisScreen({ matchId }: { matchId: string }) {
             paddingTop: 14,
           }}
           showsVerticalScrollIndicator={false}>
+          <ProfileCompletenessCard
+            compact
+            missingCount={profileCompleteness.missingCount}
+            onPress={() => router.push('/profile/edit-answers' as never)}
+          />
           {analysisQuery.isError && !isOnboardingRequired ? (
             <AppCard
               className="gap-2 rounded-[18px] border p-3"

@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView, useKeyboardState } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppText } from '@shared/components';
@@ -36,9 +37,10 @@ type DiscoveryFilterSheetProps = {
   hasConnectXPro?: boolean;
   initialAppliedMode: DiscoveryMode | null;
   initialFilters: DiscoveryAppliedFilters;
+  initialSearchQuery: string;
   isApplying?: boolean;
   isLoadingOptions?: boolean;
-  onApply: (mode: DiscoveryMode, filters: DiscoveryAppliedFilters) => void;
+  onApply: (mode: DiscoveryMode, filters: DiscoveryAppliedFilters, searchQuery: string) => void;
   onClose: () => void;
   onModeChange: (mode: DiscoveryMode) => void;
   onUpgradePress?: () => void;
@@ -1154,6 +1156,7 @@ export function DiscoveryFilterSheet({
   hasConnectXPro = false,
   initialAppliedMode,
   initialFilters,
+  initialSearchQuery,
   isApplying = false,
   isLoadingOptions = false,
   onApply,
@@ -1165,6 +1168,7 @@ export function DiscoveryFilterSheet({
   visible,
 }: DiscoveryFilterSheetProps) {
   const insets = useSafeAreaInsets();
+  const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
   const { locale } = useLocale();
   const t = useTranslation();
   // Talents browsing startups are not generating "candidates".
@@ -1183,6 +1187,14 @@ export function DiscoveryFilterSheet({
       response: filterOptionsResponse,
     });
   }, [currentMode, filterOptionsResponse]);
+
+  const [searchQuery, setSearchQuery] = React.useState(initialSearchQuery);
+
+  React.useEffect(() => {
+    if (visible) {
+      setSearchQuery(initialSearchQuery);
+    }
+  }, [initialSearchQuery, visible]);
 
   React.useEffect(() => {
     if (!visible) {
@@ -1732,11 +1744,17 @@ export function DiscoveryFilterSheet({
       presentationStyle="overFullScreen"
       transparent
       visible={visible}>
-      <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(10, 10, 14, 0.62)' }}>
+      {/* The sheet sits above the keyboard and scrolls the focused field into view. */}
+      <KeyboardAvoidingView
+        behavior="padding"
+        className="flex-1 justify-end"
+        style={{ backgroundColor: 'rgba(10, 10, 14, 0.62)' }}>
         <Pressable className="flex-1" onPress={onClose} />
         <View
           className="rounded-t-[30px] border border-white/10 bg-[#2C2C2C] px-4 pt-8"
           style={{ maxHeight: '90%', paddingBottom: Math.max(insets.bottom, 16) }}>
+          {/* With the keyboard up, header and footer give their room to the field and its results. */}
+          {isKeyboardVisible ? null : (
           <View className="mb-4 flex-row items-start justify-between">
             <View className="flex-1 gap-1">
               <View className="flex-row items-center gap-3">
@@ -1755,6 +1773,7 @@ export function DiscoveryFilterSheet({
               <Ionicons color="#D0D5DD" name="close" size={18} />
             </Pressable>
           </View>
+          )}
 
           {errorMessage ? (
             <AppCard tone="signal" className="mb-4 gap-1.5 rounded-[18px] border-white/10 bg-[#2C2C2C] p-3">
@@ -1770,7 +1789,22 @@ export function DiscoveryFilterSheet({
             </AppCard>
           ) : null}
 
-          <ScrollView contentContainerStyle={{ gap: 20, paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+          <KeyboardAwareScrollView
+            bottomOffset={240}
+            contentContainerStyle={{ gap: 20, paddingBottom: 8 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <View className="gap-3">
+              <AppText className="text-[12px] tracking-[1.6px]" tone="muted" variant="label">
+                {t('home.filters.searchLabel')}
+              </AppText>
+              <SearchInput
+                onChangeText={(value) => setSearchQuery(value.slice(0, 100))}
+                placeholder={t('home.filters.searchPlaceholder')}
+                value={searchQuery}
+              />
+            </View>
+
             <View className="gap-4">
               <AppText className="text-[12px] tracking-[1.6px]" tone="muted" variant="label">
                 {t('home.filters.goalLabel')}
@@ -1826,12 +1860,14 @@ export function DiscoveryFilterSheet({
                 ) : null}
               </>
             )}
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
-          <View className="mt-5">
+          <View className={isKeyboardVisible ? 'hidden' : 'mt-5'}>
             <Pressable
               disabled={isApplying || isLoadingOptions}
-              onPress={() => onApply(currentMode, stripDisabledDiscoveryFilters(currentDraft, sections, hasConnectXPro))}
+              onPress={() =>
+                onApply(currentMode, stripDisabledDiscoveryFilters(currentDraft, sections, hasConnectXPro), searchQuery)
+              }
               className="h-14 flex-row items-center justify-center gap-3 rounded-[18px]"
               style={{
                 backgroundColor: '#FF9A3E',
@@ -1850,7 +1886,7 @@ export function DiscoveryFilterSheet({
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

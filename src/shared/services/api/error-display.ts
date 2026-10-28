@@ -77,9 +77,12 @@ export function normalizeApiDisplayMessage(message: string) {
   return trimmedMessage;
 }
 
+// All of a field's messages, not only the first: a password rejected for three reasons must
+// say all three at once, or people fix one and hit the next (App Review 2.1(a)).
 function getFirstErrorMessage(value: ErrorFieldValue) {
   if (Array.isArray(value)) {
-    return typeof value[0] === 'string' ? normalizeApiDisplayMessage(value[0]) : undefined;
+    const messages = value.filter((item): item is string => typeof item === 'string');
+    return messages.length ? messages.map(normalizeApiDisplayMessage).join('\n') : undefined;
   }
 
   return typeof value === 'string' ? normalizeApiDisplayMessage(value) : undefined;

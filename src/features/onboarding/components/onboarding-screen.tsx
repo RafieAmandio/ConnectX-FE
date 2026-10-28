@@ -4,14 +4,11 @@ import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
-  Keyboard,
-  KeyboardAvoidingView,
-  type LayoutChangeEvent,
   Platform,
   Pressable,
-  ScrollView,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView, useKeyboardState } from 'react-native-keyboard-controller';
 import Animated, {
   Easing,
   FadeInDown,
@@ -457,67 +454,16 @@ export function OnboardingScreen() {
     mode,
   });
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState(0);
-  const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
+  // Only for the footer's bottom padding: keyboard-controller's KeyboardAvoidingView does the lifting.
+  const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
   const [isExiting, setIsExiting] = React.useState(false);
-  const containerFrameRef = React.useRef({ height: 0, y: 0 });
 
   React.useEffect(() => {
     setActiveQuestionIndex(0);
   }, [currentStep?.id]);
 
-  const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
 
-    if (!keyboardY) {
-      setAndroidKeyboardOverlap(0);
-      return;
-    }
 
-    const { height, y } = containerFrameRef.current;
-
-    if (height <= 0) {
-      return;
-    }
-
-    setAndroidKeyboardOverlap(Math.max(y + height - keyboardY, 0));
-  }, []);
-
-  const handleContainerLayout = React.useCallback(
-    (event: LayoutChangeEvent) => {
-      containerFrameRef.current = event.nativeEvent.layout;
-
-      if (Platform.OS === 'android') {
-        updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
-      }
-    },
-    [updateAndroidKeyboardOverlap]
-  );
-
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
-      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
-    });
-    const changeSubscription = Keyboard.addListener('keyboardDidChangeFrame', (event) => {
-      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      updateAndroidKeyboardOverlap();
-    });
-
-    updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
-
-    return () => {
-      showSubscription.remove();
-      changeSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [updateAndroidKeyboardOverlap]);
 
   const handleAnswerChange = React.useCallback(
     async (question: OnboardingQuestion, value: OnboardingAnswerValue) => {
@@ -725,18 +671,16 @@ export function OnboardingScreen() {
   const footerBottomPadding =
     Platform.OS === 'ios'
       ? insets.bottom
-      : androidKeyboardOverlap === 0
+      : !isKeyboardVisible
         ? Math.max(insets.bottom + 16, 32)
         : 12;
 
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       className="flex-1"
-      enabled={Platform.OS === 'ios'}
       keyboardVerticalOffset={0}
-      onLayout={handleContainerLayout}
       style={{ backgroundColor: CANVAS_BG }}>
       <Stack.Screen options={{ headerShown: false }} />
       <View
@@ -770,7 +714,7 @@ export function OnboardingScreen() {
           </View>
         ) : (
           <>
-            <ScrollView
+            <KeyboardAwareScrollView bottomOffset={240}
               className="flex-1"
               contentContainerStyle={{
                 flexGrow: 1,
@@ -826,12 +770,11 @@ export function OnboardingScreen() {
                   {statusMessage}
                 </AppText>
               ) : null}
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             {isAutoAdvanceStep ? (
               <View
                 style={{
-                  marginBottom: androidKeyboardOverlap,
                   paddingBottom: footerBottomPadding,
                 }}
               />
@@ -842,7 +785,6 @@ export function OnboardingScreen() {
                   backgroundColor: CANVAS_BG,
                   borderTopColor: BORDER_SOFT,
                   borderTopWidth: 1,
-                  marginBottom: androidKeyboardOverlap,
                   paddingBottom: footerBottomPadding,
                 }}>
                 <PrimaryCta
