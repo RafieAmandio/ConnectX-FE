@@ -1075,6 +1075,11 @@ function CompensationPremiumField({
   );
 }
 
+// Only Joining Startups cards carry open roles and "looking for"; Explore ones carry neither.
+function isJoiningStartupCard(card: DiscoveryStartupCard) {
+  return Boolean(card.openRoles?.length || card.lookingFor?.length);
+}
+
 function StartupPremiumSection({
   card,
   onUpgradePress,
@@ -1102,11 +1107,11 @@ function StartupPremiumSection({
       {fields.traction ? (
         <TractionPremiumField field={fields.traction} onUpgradePress={onUpgradePress} />
       ) : null}
-      {fields.links ? <LinksPremiumField field={fields.links} onUpgradePress={onUpgradePress} /> : null}
       {fields.teamComposition ? (
         <TeamCompositionPremiumField field={fields.teamComposition} onUpgradePress={onUpgradePress} />
       ) : null}
-      {fields.compensation ? (
+      {/* Up under the open roles instead on a Joining Startups card (StartupCardContent). */}
+      {fields.compensation && !isJoiningStartupCard(card) ? (
         <CompensationPremiumField field={fields.compensation} onUpgradePress={onUpgradePress} />
       ) : null}
       {/* One upgrade call to action for the whole section instead of one per locked field. */}
@@ -1716,6 +1721,11 @@ const StartupCardContent = React.memo(function StartupCardContent({
           </AppText>
         ) : null}
 
+        {/* Website and socials first, right after the description (premium only). */}
+        {card.premium?.fields?.links ? (
+          <LinksPremiumField field={card.premium.fields.links} onUpgradePress={onPremiumUpgradePress} />
+        ) : null}
+
         {problem || solution || targetUsers ? (
           <View className="gap-3">
             {problem ? (
@@ -1776,6 +1786,11 @@ const StartupCardContent = React.memo(function StartupCardContent({
               ))}
             </View>
           </View>
+        ) : null}
+
+        {/* What the startup offers, right under its open roles (Joining Startups). */}
+        {isJoiningStartupCard(card) && card.premium?.fields?.compensation ? (
+          <CompensationPremiumField field={card.premium.fields.compensation} onUpgradePress={onPremiumUpgradePress} />
         ) : null}
 
         {card.lookingFor?.length ? (

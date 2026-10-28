@@ -200,8 +200,8 @@ export const en = {
   'home.match.startChat': 'Start Chat',
   'home.match.viewReportAccessibility': 'View match report for {name}',
   'home.match.viewReport': 'View Report',
-  'home.match.chatFounderAccessibility': 'Chat with co-founder of {name}',
-  'home.match.chatFounder': 'Chat with Co-Founder',
+  'home.match.chatFounderAccessibility': 'Chat with {name}',
+  'home.match.chatFounder': 'Chat with {name}',
 
   'home.onboarding.title': 'Complete your onboarding',
   'home.onboarding.description': 'Finish setting up your profile before continuing.',
@@ -736,8 +736,8 @@ export const id: Record<TranslationKey, string> = {
   'home.match.startChat': 'Mulai Chat',
   'home.match.viewReportAccessibility': 'Lihat laporan match untuk {name}',
   'home.match.viewReport': 'Lihat Laporan',
-  'home.match.chatFounderAccessibility': 'Chat dengan co-founder {name}',
-  'home.match.chatFounder': 'Chat dengan Co-Founder',
+  'home.match.chatFounderAccessibility': 'Chat dengan {name}',
+  'home.match.chatFounder': 'Chat dengan {name}',
 
   'home.onboarding.title': 'Selesaikan onboarding',
   'home.onboarding.description': 'Selesaikan profil Anda sebelum melanjutkan.',
