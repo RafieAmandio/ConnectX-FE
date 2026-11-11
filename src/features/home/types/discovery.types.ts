@@ -175,6 +175,8 @@ export type DiscoveryStartupCard = DiscoveryBaseCard & {
     label: string;
   }[];
   founder: {
+    // Target of Report / Block on startup cards (backend #84).
+    userId?: string;
     name: string;
     title?: string;
   };

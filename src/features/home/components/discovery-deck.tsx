@@ -1299,6 +1299,32 @@ function CertificationCard({ item, index }: { item: DiscoveryCardCertification; 
 // Long LinkedIn imports list 15+ certificates; show a few and let people expand.
 const CERTIFICATIONS_PREVIEW_COUNT = 3;
 
+// Long bios and startup intros start truncated with a Read more toggle (QA BUG-016).
+function ExpandableText({ text }: { text: string }) {
+  const t = useTranslation();
+  const [expanded, setExpanded] = React.useState(false);
+  const isLong = text.length > DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH;
+
+  return (
+    <View className="gap-1.5">
+      <AppText className="text-[16px] leading-7" tone="muted">
+        {expanded || !isLong ? text : truncateText(text, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH)}
+      </AppText>
+      {isLong ? (
+        <Pressable
+          accessibilityRole="button"
+          className="self-start active:opacity-70"
+          hitSlop={8}
+          onPress={() => setExpanded((current) => !current)}>
+          <AppText className="text-[14px] text-[#FF9A3E]" variant="bodyStrong">
+            {expanded ? t('home.deck.readLess') : t('home.deck.readMore')}
+          </AppText>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 const ProfileCardContent = React.memo(function ProfileCardContent({
   card,
   bottomInset = 24,
@@ -1312,7 +1338,6 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
 }) {
   const t = useTranslation();
   const bio = card.bio?.trim() ?? '';
-  const bioPreview = truncateText(bio, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
   const linkedinUrl = card.linkedinUrl?.trim();
   const badgeItems = card.badges ?? [];
   const highlightItems = normalizeStringList(card.sections?.highlights?.items);
@@ -1439,11 +1464,7 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
       <View className="gap-5 px-4 py-4">
         <MatchHighlights items={highlightItems} title={highlightsTitle} />
 
-        {bio ? (
-          <AppText className="text-[16px] leading-7" tone="muted">
-            {bioPreview}
-          </AppText>
-        ) : null}
+        {bio ? <ExpandableText text={bio} /> : null}
 
         {card.startupIdea ? (
           <View
@@ -1540,6 +1561,7 @@ const ProfileCardContent = React.memo(function ProfileCardContent({
 
         {card.education?.length ? (
           <View className="gap-3">
+            <SectionLabel icon="school-outline" title={t('home.deck.education')} />
             {card.education.map((item, index) => (
               <AppCard key={getEducationKey(item, index)} className="flex-row items-center gap-3.5 rounded-[16px] p-4 bg-[#2C2C2C] border-white/10">
                 <LogoBox
@@ -1602,7 +1624,6 @@ const StartupCardContent = React.memo(function StartupCardContent({
   const teamStageIndustry = normalizeIndustryDisplay(card.teamStage?.industry);
   const stageLabel = card.businessStage?.label ?? card.badge?.label ?? card.teamStage?.stage;
   const intro = card.description?.intro?.trim() || card.summary?.trim() || '';
-  const introPreview = truncateText(intro, DISCOVERY_CARD_DESCRIPTION_MAX_LENGTH);
   const problem = card.description?.problem?.trim();
   const solution = card.description?.solution?.trim();
   const targetUsers = card.description?.targetUsers?.trim();
@@ -1715,11 +1736,7 @@ const StartupCardContent = React.memo(function StartupCardContent({
       </View>
 
       <View className="gap-4 px-4 pb-4 pt-3">
-        {intro ? (
-          <AppText className="text-[16px] leading-7" tone="muted">
-            {introPreview}
-          </AppText>
-        ) : null}
+        {intro ? <ExpandableText text={intro} /> : null}
 
         {/* Website and socials first, right after the description (premium only). */}
         {card.premium?.fields?.links ? (
@@ -1856,6 +1873,11 @@ const StartupCardContent = React.memo(function StartupCardContent({
         <StartupJourney card={card} />
 
         <StartupPremiumSection card={card} onUpgradePress={onPremiumUpgradePress} />
+
+        {/* Report / Block the founder behind the startup (App Store guideline 1.2). */}
+        <View className="items-center pt-2">
+          <UserSafetyButton name={card.founder.name} userId={card.founder.userId} />
+        </View>
       </View>
     </ScrollView>
   );

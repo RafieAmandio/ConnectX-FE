@@ -381,11 +381,11 @@ export function validateStepAnswers(
       errors[question.id] = getMessage(
         locale,
         linkedInSlugKind === 'profile'
-          ? 'Enter only your LinkedIn username.'
-          : 'Enter only the LinkedIn company slug.',
+          ? 'Paste your LinkedIn profile link, like linkedin.com/in/your-name.'
+          : 'Paste your LinkedIn company link, like linkedin.com/company/your-company.',
         linkedInSlugKind === 'profile'
-          ? 'Masukkan username LinkedIn saja.'
-          : 'Masukkan slug company LinkedIn saja.'
+          ? 'Tempel link profil LinkedIn kamu, contoh linkedin.com/in/nama-kamu.'
+          : 'Tempel link company LinkedIn, contoh linkedin.com/company/nama-company.'
       );
       continue;
     }

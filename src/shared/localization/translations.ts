@@ -537,6 +537,10 @@ export const en = {
   'home.deck.clearFilters': 'Clear filters',
   'home.filters.searchLabel': 'Search',
   'home.filters.searchPlaceholder': 'Role, skill, industry, company or school',
+  'home.deck.readMore': 'Read more',
+  'home.deck.readLess': 'Show less',
+  'home.deck.education': 'Education',
+  'profile.answers.noChanges': 'Change an answer to save.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1073,6 +1077,10 @@ export const id: Record<TranslationKey, string> = {
   'home.deck.clearFilters': 'Hapus filter',
   'home.filters.searchLabel': 'Cari',
   'home.filters.searchPlaceholder': 'Role, skill, industri, perusahaan, atau kampus',
+  'home.deck.readMore': 'Baca selengkapnya',
+  'home.deck.readLess': 'Tampilkan lebih sedikit',
+  'home.deck.education': 'Pendidikan',
+  'profile.answers.noChanges': 'Ubah jawaban dulu untuk menyimpan.',
 };
 
 export const translations = {

@@ -16,6 +16,7 @@ import type { OnboardingAnswerValue, OnboardingAnswers, OnboardingStep } from '@
 import { AppButton, AppCard, AppText } from '@shared/components';
 import { useLocale, useTranslation } from '@shared/localization';
 import { ApiError } from '@shared/services/api';
+import { composeLinkedInUrl, getLinkedInSlugKindForQuestion } from '@shared/utils/linkedin';
 
 import { useOnboardingAnswers, useUpdateOnboardingAnswers } from '../hooks/use-onboarding-answers';
 import { ProfileCompletenessCard } from './profile-completeness-card';
@@ -81,7 +82,16 @@ export function EditAnswersScreen() {
     setErrors({});
 
     try {
-      await updateAnswers.mutateAsync(changed);
+      // LinkedIn fields take a pasted link or a username as typed; send the canonical URL.
+      const questions = data?.steps.flatMap((step) => step.questions) ?? [];
+      const payload = Object.fromEntries(
+        Object.entries(changed).map(([key, value]) => {
+          const question = questions.find((item) => item.id === key);
+          const kind = question ? getLinkedInSlugKindForQuestion(question) : null;
+          return [key, kind && typeof value === 'string' ? composeLinkedInUrl(value, kind) : value];
+        })
+      ) as Record<string, OnboardingAnswerValue>;
+      await updateAnswers.mutateAsync(payload);
       setDraft({});
       Alert.alert(t('profile.answers.savedTitle'), t('profile.answers.savedMessage'));
     } catch (error) {
@@ -194,6 +204,12 @@ export function EditAnswersScreen() {
               label={updateAnswers.isPending ? t('profile.answers.saving') : t('profile.answers.save')}
               onPress={() => void handleSave()}
             />
+            {/* The button only enables once an answer differs from the saved one (QA BUG-014). */}
+            {!hasChanges ? (
+              <AppText align="center" className="mt-2 text-[13px]" tone="muted">
+                {t('profile.answers.noChanges')}
+              </AppText>
+            ) : null}
           </View>
         ) : null}
       </KeyboardAvoidingView>

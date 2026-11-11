@@ -24,9 +24,7 @@ import Animated, {
 
 import { AppCard, AppInput, AppText } from '@shared/components';
 import {
-  getLinkedInInputPrefix,
   getLinkedInSlugKindForQuestion,
-  normalizeLinkedInSlug,
 } from '@shared/utils/linkedin';
 import { cn } from '@shared/utils/cn';
 
@@ -136,11 +134,11 @@ function getTextLikePlaceholder(question: OnboardingQuestion) {
   const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
   if (linkedInSlugKind === 'profile') {
-    return 'username';
+    return 'linkedin.com/in/your-name';
   }
 
   if (linkedInSlugKind === 'company') {
-    return 'company-slug';
+    return 'linkedin.com/company/your-company';
   }
 
   if (question.placeholder) {
@@ -962,11 +960,11 @@ function TextLikeQuestion({
   value: string;
 }) {
   const [isFocused, setIsFocused] = React.useState(false);
-  const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
   return (
     <View className="gap-3">
-      <QuestionHeader error={error} question={question} />
+      {/* The error shows once, under the input (QA BUG-015). */}
+      <QuestionHeader question={question} />
       <AppInput
         autoCapitalize={question.type === 'email' || question.type === 'url' ? 'none' : 'sentences'}
         autoCorrect={question.type === 'email' || question.type === 'url' ? false : true}
@@ -975,17 +973,15 @@ function TextLikeQuestion({
         multiline={multiline}
         numberOfLines={multiline ? 5 : 1}
         onBlur={() => setIsFocused(false)}
-        onChangeText={(nextValue) =>
-          onChange(
-            linkedInSlugKind ? normalizeLinkedInSlug(nextValue, linkedInSlugKind) : nextValue
-          )
-        }
+        // LinkedIn takes a pasted link or a bare username as typed; it is reduced to the
+        // slug on validate/submit, not per keystroke (QA BUG-012).
+        onChangeText={onChange}
         onFocus={() => setIsFocused(true)}
         placeholder={getTextLikePlaceholder(question)}
-        prefix={linkedInSlugKind ? getLinkedInInputPrefix(linkedInSlugKind) : inputPrefix}
+        prefix={inputPrefix}
         suffix={inputSuffix}
         textAlignVertical={multiline ? 'top' : 'center'}
-        value={linkedInSlugKind ? normalizeLinkedInSlug(value, linkedInSlugKind) : value}
+        value={value}
         className={cn(
           FIELD_BG,
           isFocused ? 'border-[#FF9A3E]' : FIELD_BORDER,
