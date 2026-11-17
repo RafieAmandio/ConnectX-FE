@@ -1,4 +1,4 @@
-export { apiFetch, ApiError, configureApiClient, getApiAccessToken } from './client';
+export { apiFetch, ApiError, configureApiClient, getApiAccessToken, setApiLocale } from './client';
 export {
   getApiDisplayMessage,
   getApiFieldError,

@@ -82,7 +82,7 @@ export type DiscoveryStartupPremiumField<T> =
     };
 
 export type DiscoveryStartupTraction = {
-  stage: string;
+  stage: string | null;
   items: {
     id: string;
     label: string;
@@ -175,6 +175,8 @@ export type DiscoveryStartupCard = DiscoveryBaseCard & {
     label: string;
   }[];
   founder: {
+    // Target of Report / Block on startup cards (backend #84).
+    userId?: string;
     name: string;
     title?: string;
   };
@@ -183,9 +185,10 @@ export type DiscoveryStartupCard = DiscoveryBaseCard & {
     secondary?: string;
     display: string;
   };
+  // Premium data: null for viewers without Premium (the backend leaves the fields out).
   team: {
-    memberCount: number;
-    display: string;
+    memberCount: number | null;
+    display: string | null;
   };
   summary: string;
   openRoles: {
@@ -208,7 +211,7 @@ export type DiscoveryStartupCard = DiscoveryBaseCard & {
     stage: string;
     industry: string;
     hiringCount: number;
-  };
+  } | null;
   journey: {
     currentStage: string;
     stages: DiscoveryStartupJourneyStage[];
@@ -232,6 +235,8 @@ export type DiscoveryCardsResponse = {
     items: DiscoveryCard[];
     nextCursor: string | null;
     hasMore: boolean;
+    /** True when items are empty because filters or the text search matched nobody (#160). */
+    filteredEmpty?: boolean;
   };
 };
 

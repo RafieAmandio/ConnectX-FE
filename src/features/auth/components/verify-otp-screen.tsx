@@ -1,7 +1,8 @@
-import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, Pressable, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText } from '@shared/components';
@@ -98,6 +99,8 @@ export function VerifyOtpScreen() {
       const result = await verifyWhatsappOtp({ otp_code: otpCode });
 
       if ('errors' in result.response) {
+        // Clear the code so the 6-digit auto-submit does not retry the same wrong code.
+        setOtpCode('');
         setStatusTone('danger');
         setOtpError(result.response.errors.otp_code?.[0] ?? result.response.message);
         setStatusMessage(result.response.message);
@@ -114,6 +117,7 @@ export function VerifyOtpScreen() {
 
       router.replace(getRouteForAuthPhase(result.session.authPhase));
     } catch (error: unknown) {
+      setOtpCode('');
       setStatusTone('danger');
 
       if (error instanceof ApiError && error.payload) {
@@ -151,7 +155,7 @@ export function VerifyOtpScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       className="flex-1"
       style={{ backgroundColor: CANVAS_BG }}
     >
@@ -166,10 +170,7 @@ export function VerifyOtpScreen() {
             className="h-12 w-12 items-center justify-center rounded-[16px] border"
             style={{ backgroundColor: FIELD_BG, borderColor: FIELD_BORDER }}
           >
-            <Image
-              source="sf:arrow.left"
-              style={{ width: 22, height: 22, tintColor: TEXT_MUTED }}
-            />
+            <Ionicons color={TEXT_MUTED} name="arrow-back" size={22} />
           </TouchableOpacity>
 
           <View className="flex-1 pt-8">
@@ -257,12 +258,14 @@ export function VerifyOtpScreen() {
                   disabled={isResendingOtp || secondsRemaining > 0}
                   onPress={async () => {
                     setIsResendingOtp(true);
+                    setOtpError(null);
                     setStatusMessage(null);
                     setStatusTone('signal');
 
                     try {
-                      await resendWhatsappOtp();
+                      const result = await resendWhatsappOtp();
                       setStatusTone('signal');
+                      setStatusMessage(result.response.message);
                     } catch (error: unknown) {
                       setStatusTone('danger');
                       if (error instanceof ApiError && error.payload) {

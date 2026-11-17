@@ -2,13 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton, AppText } from '@shared/components';
@@ -87,7 +86,7 @@ export function SupportTicketModal({ onClose, ticketType, visible }: SupportTick
       visible={visible}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         className="flex-1"
         style={{ backgroundColor: palette.canvas }}
       >

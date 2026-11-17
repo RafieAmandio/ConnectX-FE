@@ -2,7 +2,7 @@
   "expo": {
     "name": "connectx",
     "slug": "connectx",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "connectx",
@@ -32,13 +32,13 @@
     },
     "android": {
       "package": "com.connectx.app",
-      "version": "1",
-      "versionCode": 14,
+      "versionCode": 15,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "CAMERA"
       ],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_AUDIO",
@@ -73,6 +73,14 @@
       ],
       "expo-secure-store",
       "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "ConnectX uses your camera so you can take a photo and send it in chat.",
+          "photosPermission": "ConnectX uses your photos so you can share them in chat and on your profile.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-build-properties",
         {

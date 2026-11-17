@@ -47,6 +47,7 @@ export function useMatchAnalysis(matchId: string, enabled = true) {
     enabled: enabled && Boolean(matchId),
     queryKey: matchesQueryKeys.analysis(matchId, viewerContext),
     queryFn: () => fetchMatchAnalysis(matchId, viewerContext),
+    retry: false,
   });
 }
 

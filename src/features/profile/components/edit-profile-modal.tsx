@@ -6,17 +6,18 @@ import { Stack, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   Pressable,
   ScrollView,
   TextInput,
   type TextInputProps,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppCard, AppText } from '@shared/components';
+import { apiFetch } from '@shared/services/api';
 import { cn } from '@shared/utils/cn';
 
 import {
@@ -413,30 +414,38 @@ function LocationSelector({
                 {selectedLabel}
               </AppText>
             </View>
-            <Pressable hitSlop={10} onPress={() => onChange('')}>
-              <Ionicons color={profilePalette.textMuted} name="close-circle" size={20} />
+            <Pressable
+              accessibilityRole="button"
+              className="rounded-full border px-3 py-1.5 active:opacity-80"
+              hitSlop={10}
+              onPress={() => onChange('')}
+              style={{ borderColor: profilePalette.accent }}>
+              <AppText className="text-[12px]" style={{ color: profilePalette.accent }} variant="bodyStrong">
+                Change
+              </AppText>
             </Pressable>
           </View>
-        ) : null}
-
-        <View
-          className="flex-row items-center gap-2 rounded-[14px] border px-4"
-          style={{
-            backgroundColor: '#2C2C2C',
-            borderColor: 'rgba(255,255,255,0.1)',
-            minHeight: 46,
-          }}>
-          <Ionicons color={profilePalette.textSoft} name="search-outline" size={16} />
-          <TextInput
-            autoCapitalize="words"
-            className="flex-1 font-body text-[14px]"
-            onChangeText={setSearchTerm}
-            placeholder="Search a city"
-            placeholderTextColor={profilePalette.textSoft}
-            style={{ color: profilePalette.text, letterSpacing: 0 }}
-            value={searchTerm}
-          />
-        </View>
+        ) : (
+          // Search only while no city is picked: a chosen city shows as the chip above.
+          <View
+            className="flex-row items-center gap-2 rounded-[14px] border px-4"
+            style={{
+              backgroundColor: '#2C2C2C',
+              borderColor: 'rgba(255,255,255,0.1)',
+              minHeight: 46,
+            }}>
+            <Ionicons color={profilePalette.textSoft} name="search-outline" size={16} />
+            <TextInput
+              autoCapitalize="words"
+              className="flex-1 font-body text-[14px]"
+              onChangeText={setSearchTerm}
+              placeholder="Search a city"
+              placeholderTextColor={profilePalette.textSoft}
+              style={{ color: profilePalette.text, letterSpacing: 0 }}
+              value={searchTerm}
+            />
+          </View>
+        )}
 
         {hasSearchTerm ? (
           <ScrollView
@@ -708,112 +717,6 @@ function BackgroundEditorHeader({
   );
 }
 
-function BackgroundLogoUpload({
-  disabled,
-  isUploading,
-  label,
-  logoUrl,
-  onPick,
-  onRemove,
-}: {
-  disabled?: boolean;
-  isUploading?: boolean;
-  label: string;
-  logoUrl?: string | null;
-  onPick: () => void;
-  onRemove: () => void;
-}) {
-  const currentUrl = logoUrl?.trim() || null;
-
-  return (
-    <View className="gap-2">
-      <AppText style={{ color: profilePalette.textMuted }} variant="label">
-        {label}
-      </AppText>
-      <Pressable
-        accessibilityRole="button"
-        className="min-h-[132px] overflow-hidden rounded-[16px] border p-4 active:opacity-80"
-        disabled={disabled}
-        onPress={onPick}
-        style={{
-          backgroundColor: '#2C2C2C',
-          borderColor: currentUrl ? profilePalette.accent : profilePalette.border,
-          opacity: disabled ? 0.7 : 1,
-        }}>
-        {currentUrl ? (
-          <View className="gap-3">
-            <View className="flex-row items-center gap-3">
-              <View
-                className="overflow-hidden rounded-[14px] border"
-                style={{
-                  backgroundColor: profilePalette.field,
-                  borderColor: profilePalette.borderSoft,
-                  height: 64,
-                  width: 64,
-                }}>
-                <Image
-                  contentFit="cover"
-                  source={{ uri: currentUrl }}
-                  style={{ height: '100%', width: '100%' }}
-                />
-              </View>
-              <View className="min-w-0 flex-1 gap-1">
-                <AppText className="text-[14px]" variant="bodyStrong">
-                  Logo selected
-                </AppText>
-                <AppText className="text-[12px]" numberOfLines={1} selectable tone="muted">
-                  {currentUrl}
-                </AppText>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View className="flex-1 items-center justify-center gap-3 py-3">
-            <View
-              className="h-11 w-11 items-center justify-center rounded-full"
-              style={{ backgroundColor: profilePalette.accentSoft }}>
-              <Ionicons color={profilePalette.accent} name="image-outline" size={22} />
-            </View>
-            <View className="items-center gap-1">
-              <AppText align="center" className="text-[14px]" variant="bodyStrong">
-                Upload logo
-              </AppText>
-              <AppText align="center" className="text-[12px]" tone="muted">
-                Choose an image from your library
-              </AppText>
-            </View>
-          </View>
-        )}
-
-        <View className="mt-4 flex-row items-center justify-between gap-3">
-          <View className="min-w-0 flex-1 flex-row items-center gap-2">
-            {isUploading ? <ActivityIndicator color={profilePalette.accent} size="small" /> : null}
-            <AppText className="text-[12px]" numberOfLines={1} tone="muted">
-              {isUploading ? 'Uploading...' : currentUrl ? 'Tap to replace' : 'JPG or PNG'}
-            </AppText>
-          </View>
-
-          {currentUrl && !isUploading ? (
-            <Pressable
-              accessibilityRole="button"
-              className="rounded-full border px-3 py-1"
-              disabled={disabled}
-              onPress={(event) => {
-                event.stopPropagation();
-                onRemove();
-              }}
-              style={{ borderColor: profilePalette.border }}>
-              <AppText className="text-[12px]" tone="muted" variant="label">
-                Remove
-              </AppText>
-            </Pressable>
-          ) : null}
-        </View>
-      </Pressable>
-    </View>
-  );
-}
-
 function sanitizeRequiredText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -861,20 +764,131 @@ function sanitizeCertifications(items: ProfileCertificationItem[]) {
   }));
 }
 
+type OrganizationSuggestion = {
+  logo_url: string | null;
+  name: string;
+  source: string;
+};
+
+// Company / school name with the backend's suggestions (#141): picking one also sets its logo;
+// typing a name of one's own clears the logo, which belonged to the previous name.
+function OrganizationInput({
+  label,
+  logoUrl,
+  onChangeName,
+  onSelect,
+  placeholder,
+  type,
+  value,
+}: {
+  label: string;
+  logoUrl?: string | null;
+  onChangeName: (value: string) => void;
+  onSelect: (suggestion: OrganizationSuggestion) => void;
+  placeholder: string;
+  type: 'company' | 'school';
+  value: string;
+}) {
+  const [isFocused, setIsFocused] = React.useState(false);
+  const [suggestions, setSuggestions] = React.useState<OrganizationSuggestion[]>([]);
+  const query = value.trim();
+
+  React.useEffect(() => {
+    if (!isFocused || query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    let isCancelled = false;
+    const timer = setTimeout(() => {
+      apiFetch<{ data?: OrganizationSuggestion[] }>(
+        `/api/v1/organizations/suggest?q=${encodeURIComponent(query.slice(0, 80))}&type=${type}`
+      )
+        .then((response) => {
+          if (!isCancelled) setSuggestions(response.data ?? []);
+        })
+        .catch(() => {
+          if (!isCancelled) setSuggestions([]);
+        });
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isFocused, query, type]);
+
+  const visibleSuggestions = isFocused ? suggestions.filter((suggestion) => suggestion.name !== value) : [];
+  const currentLogoUrl = logoUrl?.trim() || null;
+
+  return (
+    <View className="gap-2">
+      <ProfileInput
+        autoCapitalize="words"
+        label={label}
+        onBlur={() => setIsFocused(false)}
+        onChangeText={onChangeName}
+        onFocus={() => setIsFocused(true)}
+        placeholder={placeholder}
+        value={value}
+      />
+      {visibleSuggestions.length ? (
+        <View
+          className="overflow-hidden rounded-[16px] border"
+          style={{ backgroundColor: '#2C2C2C', borderColor: profilePalette.border }}>
+          {visibleSuggestions.map((suggestion, index) => (
+            <Pressable
+              key={`${suggestion.name}-${index}`}
+              className="min-h-12 flex-row items-center gap-3 px-3 py-2 active:opacity-70"
+              onPress={() => {
+                onSelect(suggestion);
+                setSuggestions([]);
+                Keyboard.dismiss();
+              }}
+              style={index > 0 ? { borderTopColor: profilePalette.borderSoft, borderTopWidth: 1 } : undefined}>
+              <OrganizationLogo uri={suggestion.logo_url} />
+              <AppText className="flex-1 text-[14px]" numberOfLines={1}>
+                {suggestion.name}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
+      ) : currentLogoUrl ? (
+        <View className="flex-row items-center gap-2">
+          <OrganizationLogo uri={currentLogoUrl} />
+          <AppText className="text-[12px]" tone="muted">
+            Logo added
+          </AppText>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function OrganizationLogo({ uri }: { uri: string | null }) {
+  return (
+    <View
+      className="h-8 w-8 items-center justify-center overflow-hidden rounded-[8px]"
+      style={{ backgroundColor: profilePalette.field }}>
+      {uri ? (
+        <Image contentFit="cover" source={{ uri }} style={{ height: '100%', width: '100%' }} />
+      ) : (
+        <Ionicons color={profilePalette.textSoft} name="business-outline" size={16} />
+      )}
+    </View>
+  );
+}
+
 function ExperienceEditor({
   disabled,
   error,
   items,
-  onPickLogo,
   onChange,
-  uploadingLogoKey,
 }: {
   disabled?: boolean;
   error?: string;
   items: ProfileExperienceItem[];
-  onPickLogo: (index: number) => void;
   onChange: (items: ProfileExperienceItem[]) => void;
-  uploadingLogoKey?: string | null;
 }) {
   function updateItem(index: number, patch: Partial<ProfileExperienceItem>) {
     onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
@@ -914,11 +928,15 @@ function ExperienceEditor({
               placeholder="e.g. Growth Lead"
               value={item.title}
             />
-            <ProfileInput
-              autoCapitalize="words"
+            <OrganizationInput
               label="Organization"
-              onChangeText={(value) => updateItem(index, { organization: value })}
+              logoUrl={item.companyLogo}
+              onChangeName={(value) => updateItem(index, { companyLogo: null, organization: value })}
+              onSelect={(suggestion) =>
+                updateItem(index, { companyLogo: suggestion.logo_url, organization: suggestion.name })
+              }
               placeholder="Company name"
+              type="company"
               value={item.organization}
             />
             <View className="flex-row gap-3">
@@ -939,14 +957,6 @@ function ExperienceEditor({
                 value={item.location ?? ''}
               />
             </View>
-            <BackgroundLogoUpload
-              disabled={disabled}
-              isUploading={uploadingLogoKey === `experience-${index}`}
-              label="Logo"
-              logoUrl={item.companyLogo}
-              onPick={() => onPickLogo(index)}
-              onRemove={() => updateItem(index, { companyLogo: null })}
-            />
           </View>
         ))
       ) : (
@@ -973,16 +983,12 @@ function EducationEditor({
   disabled,
   error,
   items,
-  onPickLogo,
   onChange,
-  uploadingLogoKey,
 }: {
   disabled?: boolean;
   error?: string;
   items: ProfileEducationItem[];
-  onPickLogo: (index: number) => void;
   onChange: (items: ProfileEducationItem[]) => void;
-  uploadingLogoKey?: string | null;
 }) {
   function updateItem(index: number, patch: Partial<ProfileEducationItem>) {
     onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
@@ -1022,11 +1028,13 @@ function EducationEditor({
               placeholder="e.g. Bachelor of Business Administration"
               value={item.degree}
             />
-            <ProfileInput
-              autoCapitalize="words"
+            <OrganizationInput
               label="School"
-              onChangeText={(value) => updateItem(index, { school: value })}
+              logoUrl={item.schoolLogo}
+              onChangeName={(value) => updateItem(index, { school: value, schoolLogo: null })}
+              onSelect={(suggestion) => updateItem(index, { school: suggestion.name, schoolLogo: suggestion.logo_url })}
               placeholder="University name"
+              type="school"
               value={item.school}
             />
             <View className="flex-row gap-3">
@@ -1047,14 +1055,6 @@ function EducationEditor({
                 value={item.period ?? ''}
               />
             </View>
-            <BackgroundLogoUpload
-              disabled={disabled}
-              isUploading={uploadingLogoKey === `education-${index}`}
-              label="Logo"
-              logoUrl={item.schoolLogo}
-              onPick={() => onPickLogo(index)}
-              onRemove={() => updateItem(index, { schoolLogo: null })}
-            />
           </View>
         ))
       ) : (
@@ -1181,7 +1181,6 @@ export function EditProfileScreen() {
   const optionsQuery = useProfileOptions();
   const updateProfileMutation = useUpdateMyProfile();
   const uploadProfileImageMutation = useUploadProfileImage();
-  const uploadBackgroundLogoMutation = useUploadProfileImage();
   const profileResponse = myProfileQuery.data;
   const isShowingRealProfile = Boolean(profileResponse && hasUsableProfile(profileResponse));
   const profile = isShowingRealProfile
@@ -1199,9 +1198,8 @@ export function EditProfileScreen() {
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [backgroundTab, setBackgroundTab] = React.useState<EditableBackgroundTab>('experience');
-  const [uploadingLogoKey, setUploadingLogoKey] = React.useState<string | null>(null);
   const aboutCopy = getAboutCopy(talent.sections.about);
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const scrollViewRef = React.useRef<KeyboardAwareScrollViewRef>(null);
   const cardOffsetsRef = React.useRef<Partial<Record<EditProfileCardKey, number>>>({});
   const isDirtyRef = React.useRef(false);
   const hasSeededRealProfileRef = React.useRef(false);
@@ -1288,30 +1286,6 @@ export function EditProfileScreen() {
     updateField('personalityAndHobbyIds', [...selectedPersonalityIds, itemId]);
   }
 
-  function updateExperienceLogo(index: number, logoUrl: string | null) {
-    isDirtyRef.current = true;
-    setFormState((current) => ({
-      ...current,
-      experience: current.experience.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, companyLogo: logoUrl } : item
-      ),
-    }));
-    setFormErrors((current) => ({ ...current, experience: undefined }));
-    setSubmitError(null);
-  }
-
-  function updateEducationLogo(index: number, logoUrl: string | null) {
-    isDirtyRef.current = true;
-    setFormState((current) => ({
-      ...current,
-      education: current.education.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, schoolLogo: logoUrl } : item
-      ),
-    }));
-    setFormErrors((current) => ({ ...current, education: undefined }));
-    setSubmitError(null);
-  }
-
   async function handleSave() {
     const payload: UpdateMyProfileRequest = {
       name: formState.name.trim(),
@@ -1348,7 +1322,6 @@ export function EditProfileScreen() {
   async function handlePickProfileImage() {
     if (
       uploadProfileImageMutation.isPending ||
-      uploadBackgroundLogoMutation.isPending ||
       updateProfileMutation.isPending
     ) {
       return;
@@ -1389,70 +1362,16 @@ export function EditProfileScreen() {
     }
   }
 
-  async function handlePickBackgroundLogo(type: EditableBackgroundTab, index: number) {
-    if (
-      uploadProfileImageMutation.isPending ||
-      uploadBackgroundLogoMutation.isPending ||
-      updateProfileMutation.isPending
-    ) {
-      return;
-    }
-
-    const nextUploadingLogoKey = `${type}-${index}`;
-    setSubmitError(null);
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      allowsMultipleSelection: false,
-      aspect: [1, 1],
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      selectionLimit: 1,
-    });
-
-    if (result.canceled) {
-      return;
-    }
-
-    const asset = result.assets[0];
-
-    if (!asset?.uri) {
-      setSubmitError('The selected image could not be read.');
-      return;
-    }
-
-    try {
-      setUploadingLogoKey(nextUploadingLogoKey);
-      const uploadedImage = await uploadBackgroundLogoMutation.mutateAsync({
-        fileName: asset.fileName ?? null,
-        mimeType: asset.mimeType ?? null,
-        uri: asset.uri,
-      });
-
-      if (type === 'experience') {
-        updateExperienceLogo(index, uploadedImage.url);
-      } else if (type === 'education') {
-        updateEducationLogo(index, uploadedImage.url);
-      }
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Unable to upload this image right now.');
-    } finally {
-      setUploadingLogoKey(null);
-    }
-  }
-
   const initials = getInitials(talent.name);
   const profilePhotoUrl = formState.photoUrl?.trim() || null;
   const isUploadingProfileImage = uploadProfileImageMutation.isPending;
-  const isUploadingBackgroundLogo = uploadBackgroundLogoMutation.isPending;
-  const isSavingProfile =
-    updateProfileMutation.isPending || isUploadingProfileImage || isUploadingBackgroundLogo;
+  const isSavingProfile = updateProfileMutation.isPending || isUploadingProfileImage;
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         className="flex-1"
         style={{ backgroundColor: profilePalette.canvas }}>
         <View
@@ -1489,7 +1408,7 @@ export function EditProfileScreen() {
           )}
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={240}
           ref={scrollViewRef}
           className="flex-1"
           keyboardShouldPersistTaps="handled"
@@ -1686,8 +1605,6 @@ export function EditProfileScreen() {
                 error={formErrors.experience}
                 items={formState.experience}
                 onChange={(items) => updateField('experience', items)}
-                onPickLogo={(index) => handlePickBackgroundLogo('experience', index)}
-                uploadingLogoKey={uploadingLogoKey}
               />
             ) : backgroundTab === 'education' ? (
               <EducationEditor
@@ -1695,8 +1612,6 @@ export function EditProfileScreen() {
                 error={formErrors.education}
                 items={formState.education}
                 onChange={(items) => updateField('education', items)}
-                onPickLogo={(index) => handlePickBackgroundLogo('education', index)}
-                uploadingLogoKey={uploadingLogoKey}
               />
             ) : (
               <CertificationEditor
@@ -1789,7 +1704,7 @@ export function EditProfileScreen() {
               )}
             </Pressable>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </>
   );

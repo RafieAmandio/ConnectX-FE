@@ -6,9 +6,9 @@ import {
   Modal,
   PanResponder,
   Pressable,
-  ScrollView,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
@@ -331,6 +331,7 @@ export function StartupInvitationComposer({
   return (
     <>
       <Modal animationType="slide" transparent visible={visible} onRequestClose={closeAndReset}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <Pressable className="flex-1" onPress={closeAndReset} />
       <View
         style={{
@@ -343,7 +344,7 @@ export function StartupInvitationComposer({
         <View className="items-center pb-2 pt-3">
           <View className="h-[5px] w-10 rounded-full bg-[#555]" />
         </View>
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={24}
           bounces={false}
           contentContainerStyle={{
             paddingBottom: Math.max(insets.bottom + 20, 32),
@@ -498,8 +499,9 @@ export function StartupInvitationComposer({
               </Pressable>
             </View>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
+      </KeyboardAvoidingView>
       </Modal>
       <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
     </>

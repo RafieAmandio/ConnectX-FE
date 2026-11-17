@@ -504,7 +504,7 @@ q_linkedin_url: string
 ```
 q_cash_equity_expectation: "equity_important" | "some_equity" | "cash_heavy"
 q_has_salary_minimum: "yes_strict" | "yes_flexible" | "no_flexible"
-q_salary_period: "annual" | "hourly"                  // if salary minimum
+q_salary_period: "monthly" | "annual"                  // if salary minimum
 q_minimum_salary: { amount: string; currency: string } // if salary minimum
 ```
 

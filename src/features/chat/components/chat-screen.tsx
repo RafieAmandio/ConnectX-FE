@@ -7,14 +7,13 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
   Linking,
   ListRenderItemInfo,
-  Platform,
   Pressable,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
@@ -971,7 +970,7 @@ export function ChatConversationScreen({ conversationId }: { conversationId: str
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         className="flex-1"
         style={{ backgroundColor: '#262626' }}
         keyboardVerticalOffset={0}>

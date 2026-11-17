@@ -292,7 +292,7 @@ function MysteryLikesYouPreviewCard() {
 }
 
 function formatLikesYouCount(totalNew: number, t: TFunction) {
-  return t('matches.likesCount', { count: Math.max(totalNew, 0) });
+  return totalNew > 100 ? t('matches.likesCountMax') : t('matches.likesCount', { count: Math.max(totalNew, 0) });
 }
 
 function MatchRow({
@@ -497,11 +497,15 @@ export function MatchesScreen() {
                   </AppText>
                 </View>
 
-                <View className="rounded-full bg-[#5A3C23] px-4 py-2">
+                <Pressable
+                  className="rounded-full bg-[#5A3C23] px-4 py-2 active:opacity-80"
+                  disabled={likesYouCount <= 0 && likesYou.length === 0}
+                  hitSlop={8}
+                  onPress={handleViewConnects}>
                   <AppText className="text-[14px] font-semibold uppercase tracking-[0.3px] text-[#FFB35E]">
                     {likesYouCountLabel}
                   </AppText>
-                </View>
+                </Pressable>
               </View>
 
               <View className="flex-row gap-4">

@@ -9,21 +9,23 @@ import { useTranslation } from '@shared/localization';
 export type DiscoveryOnboardingRequiredSheetProps = {
   message: string | null;
   onContinue: () => void;
+  onDismiss: () => void;
   visible: boolean;
 };
 
 export function DiscoveryOnboardingRequiredSheet({
   message,
   onContinue,
+  onDismiss,
   visible,
 }: DiscoveryOnboardingRequiredSheetProps) {
   const insets = useSafeAreaInsets();
   const t = useTranslation();
 
   return (
-    <Modal animationType="slide" onRequestClose={() => {}} transparent visible={visible}>
+    <Modal animationType="slide" onRequestClose={onDismiss} transparent visible={visible}>
       <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(10, 10, 14, 0.42)' }}>
-        <View className="flex-1" />
+        <Pressable className="flex-1" onPress={onDismiss} />
         <View
           className="rounded-t-[28px] border border-white/10 bg-[#2C2C2C] px-4 pt-3"
           style={{ paddingBottom: Math.max(insets.bottom + 12, 24) }}>
@@ -54,6 +56,15 @@ export function DiscoveryOnboardingRequiredSheet({
               onPress={onContinue}>
               <AppText className="text-[#1F160C]" variant="bodyStrong">
                 {t('home.onboarding.continue')}
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              className="min-h-12 items-center justify-center rounded-[18px] active:opacity-70"
+              onPress={onDismiss}>
+              <AppText className="text-[#AFA9A2]" variant="bodyStrong">
+                {t('home.onboarding.notNow')}
               </AppText>
             </Pressable>
           </View>

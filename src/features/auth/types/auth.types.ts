@@ -38,11 +38,16 @@ export type AuthPremiumState = {
   isPremium: boolean;
 };
 
+export type DiscoverySide = 'startup' | 'talent';
+
 export type AuthSession = {
   authPhase: AuthPhase;
   authSessionSyncedAt?: string | null;
   authSessionSource?: 'api' | 'mock' | null;
   defaultDiscoveryMode?: DiscoveryMode | null;
+  /** The side the person acts in now, and the sides they have onboarded for (#156). */
+  activeMode?: DiscoverySide | null;
+  availableModes?: DiscoverySide[];
   displayName: string;
   email: string;
   emailOtpCode?: string | null;
@@ -89,6 +94,8 @@ export type AuthSessionResponse = {
     user: AuthUser;
     discovery_preferences: {
       default_discovery_mode: DiscoveryMode | null;
+      active_mode?: DiscoverySide | null;
+      available_modes?: DiscoverySide[];
     };
     premium: AuthPremiumState;
   };

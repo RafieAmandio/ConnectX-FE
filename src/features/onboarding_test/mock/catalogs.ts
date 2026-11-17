@@ -752,11 +752,11 @@ export const salaryMinimumOptions = [
 ] satisfies LocalizedOnboardingOption[];
 
 export const salaryPeriodOptions = [
-  option('opt_salary_period_annual', 'annual', copy('Annual', 'Tahunan'), {
+  option('opt_salary_period_monthly', 'monthly', copy('Monthly', 'Bulanan'), {
     icon: 'calendar',
   }),
-  option('opt_salary_period_hourly', 'hourly', copy('Hourly', 'Per jam'), {
-    icon: 'clock',
+  option('opt_salary_period_annual', 'annual', copy('Annual', 'Tahunan'), {
+    icon: 'calendar',
   }),
 ] satisfies LocalizedOnboardingOption[];
 

@@ -2,9 +2,10 @@ export type LinkedInSlugKind = 'company' | 'profile';
 
 const LINKEDIN_SLUG_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
+// Any linkedin.com host: www., country subdomains (id.linkedin.com) and none.
 const LINKEDIN_PREFIX_PATTERNS: Record<LinkedInSlugKind, RegExp> = {
-  company: /^(https?:\/\/)?(www\.)?linkedin\.com\/company\//i,
-  profile: /^(https?:\/\/)?(www\.)?linkedin\.com\/in\//i,
+  company: /^(https?:\/\/)?([a-z0-9-]+\.)*linkedin\.com\/company\//i,
+  profile: /^(https?:\/\/)?([a-z0-9-]+\.)*linkedin\.com\/in\//i,
 };
 
 const LINKEDIN_DISPLAY_PREFIXES: Record<LinkedInSlugKind, string> = {
@@ -75,7 +76,11 @@ export function normalizeLinkedInSlug(value: unknown, kind: LinkedInSlugKind) {
     return '';
   }
 
-  let normalizedValue = value.trim().replace(LINKEDIN_PREFIX_PATTERNS[kind], '');
+  // Share links carry ?utm_source=... and the app adds a trailing slash; keep only the slug.
+  let normalizedValue = value
+    .trim()
+    .replace(LINKEDIN_PREFIX_PATTERNS[kind], '')
+    .replace(/[?#].*$/, '');
 
   while (normalizedValue.endsWith('/')) {
     normalizedValue = normalizedValue.slice(0, -1);

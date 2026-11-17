@@ -66,10 +66,11 @@ function mergeProfileResponse(
   };
 }
 
-export function useMyProfile() {
+export function useMyProfile(options: { refetchInterval?: number | false } = {}) {
   return useQuery({
     ...createApiQueryOptions<MyProfileResponse>(profileQueryKeys.me, PROFILE_API.ME),
     queryFn: fetchMyProfile,
+    refetchInterval: options.refetchInterval,
   });
 }
 
