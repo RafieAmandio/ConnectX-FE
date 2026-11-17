@@ -3,12 +3,13 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
+  Alert,
   Linking,
   Pressable,
   RefreshControl,
   ScrollView,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
 
 import { useAuthContext } from '@features/auth/store/auth-provider';
@@ -709,7 +710,13 @@ function BottomSignOut({ onPress }: { onPress: () => void }) {
       </AppText>
       <Pressable
         className="flex-row items-center justify-center gap-2 rounded-[18px] border px-4 py-4"
-        onPress={onPress}
+        // Signing back in needs an email code, so confirm first (QA error-prevention note).
+        onPress={() =>
+          Alert.alert(t('profile.signOutConfirm.title'), t('profile.signOutConfirm.message'), [
+            { style: 'cancel', text: t('profile.signOutConfirm.cancel') },
+            { onPress, style: 'destructive', text: t('profile.signOutConfirm.confirm') },
+          ])
+        }
         style={{ backgroundColor: '#1C1C21', borderColor: DANGER_BORDER }}
       >
         <Ionicons color={DANGER} name="log-out-outline" size={20} />

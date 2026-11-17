@@ -541,6 +541,10 @@ export const en = {
   'home.deck.readLess': 'Show less',
   'home.deck.education': 'Education',
   'profile.answers.noChanges': 'Change an answer to save.',
+  'profile.signOutConfirm.title': 'Sign out of ConnectX?',
+  'profile.signOutConfirm.message': 'You will need to verify your email login code again the next time you sign in.',
+  'profile.signOutConfirm.cancel': 'Cancel',
+  'profile.signOutConfirm.confirm': 'Yes, Sign Out',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1081,6 +1085,10 @@ export const id: Record<TranslationKey, string> = {
   'home.deck.readLess': 'Tampilkan lebih sedikit',
   'home.deck.education': 'Pendidikan',
   'profile.answers.noChanges': 'Ubah jawaban dulu untuk menyimpan.',
+  'profile.signOutConfirm.title': 'Keluar dari ConnectX?',
+  'profile.signOutConfirm.message': 'Kamu perlu memasukkan kode login dari email lagi saat masuk berikutnya.',
+  'profile.signOutConfirm.cancel': 'Batal',
+  'profile.signOutConfirm.confirm': 'Ya, Keluar',
 };
 
 export const translations = {

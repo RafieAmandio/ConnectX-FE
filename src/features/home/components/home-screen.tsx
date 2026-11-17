@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Modal, Pressable, View } from 'react-native';
 
+import { useMyProfile } from '@features/profile';
 import { AppText } from '@shared/components';
 import { useTranslation } from '@shared/localization';
 import {
@@ -19,6 +20,17 @@ function LinkedInSyncNoticeModal() {
     getLinkedInSyncNoticeState,
     getLinkedInSyncNoticeState
   );
+  // The import runs in the background and ends with linkedinSync.status synced | failed on
+  // GET /me/profile. Poll while the notice is open and close it once a result is in
+  // (QA BUG-012); "Got it" still closes it early.
+  const myProfile = useMyProfile({ refetchInterval: notice.isPending ? 5000 : false });
+  const syncStatus = myProfile.data?.data.linkedinSync?.status ?? null;
+
+  React.useEffect(() => {
+    if (notice.isPending && myProfile.isFetchedAfterMount && syncStatus) {
+      clearLinkedInSyncNotice();
+    }
+  }, [myProfile.isFetchedAfterMount, notice.isPending, syncStatus]);
 
   React.useEffect(() => {
     console.log('[home] linkedin sync notice state', notice);
