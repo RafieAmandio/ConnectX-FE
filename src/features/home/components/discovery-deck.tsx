@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import Animated, {
@@ -30,6 +30,7 @@ import { useNotifications } from '@features/notifications';
 import {
   ProfileCompletenessCard,
   UserSafetyButton,
+  useMyProfile,
   useProfileCompleteness,
   useUpdateProfileLocation,
 } from '@features/profile';
@@ -58,6 +59,7 @@ import { setAppliedDiscoveryMode } from '../services/applied-discovery-mode-stor
 import {
   isRewindNotAvailableError,
   isRewindPremiumRequiredError,
+  isPhotoRequiredError,
   isSuperLikePremiumRequiredError,
   isSuperLikeRequiresBoostError,
 } from '../services/discovery-contract';
@@ -2020,6 +2022,15 @@ export function DiscoveryDeck() {
   const router = useRouter();
   const profileCompleteness = useProfileCompleteness();
   const t = useTranslation();
+  const myProfile = useMyProfile();
+  // New accounts swipe only after adding a photo (QA 17 Nov); the backend also rejects with PHOTO_REQUIRED.
+  const isMissingProfilePhoto = myProfile.data?.data.hasProfilePhoto === false;
+  const askForProfilePhoto = React.useCallback(() => {
+    Alert.alert(t('home.deck.photoRequired.title'), t('home.deck.photoRequired.message'), [
+      { style: 'cancel', text: t('home.deck.photoRequired.later') },
+      { onPress: () => router.push('/profile/edit' as never), text: t('home.deck.photoRequired.add') },
+    ]);
+  }, [router, t]);
   const queryClient = useQueryClient();
   const { height, width } = useWindowDimensions();
   const { isHydrated: isAuthHydrated, refreshSession, session } = useAuth();
@@ -2685,6 +2696,13 @@ export function DiscoveryDeck() {
 
       const shouldHandleLocally = usingFallbackRef.current || isMergedMockCard(activeCard);
 
+      if (!shouldHandleLocally && isMissingProfilePhoto) {
+        setIsSubmitting(false);
+        resetCardPosition();
+        askForProfilePhoto();
+        return;
+      }
+
       // Mock/local cards resolve synchronously, so advance immediately.
       if (shouldHandleLocally) {
         if (usingFallbackRef.current) {
@@ -2720,7 +2738,12 @@ export function DiscoveryDeck() {
               // The mutation restored the card to the deck; drop the optimistic history
               // entry so connect/skip counts stay accurate and surface the failure.
               setHistory((current) => current.filter((entry) => entry.card.id !== activeCard.id));
-              setActionError(getErrorMessage(error, t('home.deck.swipeError')));
+
+              if (isPhotoRequiredError(error)) {
+                askForProfilePhoto();
+              } else {
+                setActionError(getErrorMessage(error, t('home.deck.swipeError')));
+              }
             }
           );
 
@@ -2743,7 +2766,9 @@ export function DiscoveryDeck() {
       } catch (error) {
         logSwipeError(action, activeCard, error);
 
-        if (isSuperLikePremiumRequiredError(error)) {
+        if (isPhotoRequiredError(error)) {
+          askForProfilePhoto();
+        } else if (isSuperLikePremiumRequiredError(error)) {
           await handlePresentConnectXProPaywall();
         } else if (isSuperLikeRequiresBoostError(error)) {
           await maybePresentBoostPaywall();
@@ -2757,7 +2782,9 @@ export function DiscoveryDeck() {
     },
     [
       advanceDeck,
+      askForProfilePhoto,
       handlePresentConnectXProPaywall,
+      isMissingProfilePhoto,
       maybePresentBoostPaywall,
       presentLocalMatch,
       presentRemoteMatch,

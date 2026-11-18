@@ -32,8 +32,8 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <PushNotificationTapHandler />
-          <RevenueCatProvider>
-            <LocalizationProvider>
+          <LocalizationProvider>
+            <RevenueCatProvider>
               <ThemeProvider value={NavigationThemes[colorScheme]}>
                 <Stack>
                   <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -58,8 +58,8 @@ export default function RootLayout() {
                 <LinkedInRecoveryModal />
                 <StatusBar style="light" />
               </ThemeProvider>
-            </LocalizationProvider>
-          </RevenueCatProvider>
+            </RevenueCatProvider>
+          </LocalizationProvider>
         </AuthProvider>
       </QueryClientProvider>
       </KeyboardProvider>

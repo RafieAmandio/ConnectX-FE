@@ -3115,7 +3115,7 @@ function DateSelectQuestion({
           onSelect={(nextValue) => updatePart('month', nextValue)}
           onToggle={() => togglePart('month')}
           options={monthOptions}
-          placeholder="MMM"
+          placeholder="MM"
           selectedValue={parts.month}
           minDropdownWidth={DATE_DROPDOWN_WIDTH}
         />

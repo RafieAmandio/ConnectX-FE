@@ -126,6 +126,11 @@ export function isSuperLikeRequiresBoostError(error: unknown): error is ApiError
   return getApiPayloadErrorCode(error.payload) === 'DISCOVERY_SUPER_LIKE_REQUIRES_BOOST';
 }
 
+// 403 PHOTO_REQUIRED: no swiping without a profile photo (client decision 2.4).
+export function isPhotoRequiredError(error: unknown): error is ApiError {
+  return error instanceof ApiError && getApiPayloadErrorCode(error.payload) === 'PHOTO_REQUIRED';
+}
+
 export function isSuperLikePremiumRequiredError(error: unknown): error is ApiError {
   if (!(error instanceof ApiError)) {
     return false;

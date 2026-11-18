@@ -545,6 +545,14 @@ export const en = {
   'profile.signOutConfirm.message': 'You will need to verify your email login code again the next time you sign in.',
   'profile.signOutConfirm.cancel': 'Cancel',
   'profile.signOutConfirm.confirm': 'Yes, Sign Out',
+  'home.deck.photoRequired.title': 'Add a profile photo first',
+  'home.deck.photoRequired.message': 'People connect with a face they can see. Add a profile photo to start swiping.',
+  'home.deck.photoRequired.later': 'Later',
+  'home.deck.photoRequired.add': 'Add Photo',
+  'revenuecat.purchaseSuccess.proTitle': 'Welcome to ConnectX Pro',
+  'revenuecat.purchaseSuccess.proMessage': 'Your payment went through and Pro is now active on this account.',
+  'revenuecat.purchaseSuccess.title': 'Payment successful',
+  'revenuecat.purchaseSuccess.message': 'Your purchase has been added to your account.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1089,6 +1097,14 @@ export const id: Record<TranslationKey, string> = {
   'profile.signOutConfirm.message': 'Kamu perlu memasukkan kode login dari email lagi saat masuk berikutnya.',
   'profile.signOutConfirm.cancel': 'Batal',
   'profile.signOutConfirm.confirm': 'Ya, Keluar',
+  'home.deck.photoRequired.title': 'Pasang foto profil dulu',
+  'home.deck.photoRequired.message': 'Orang lebih percaya kalau bisa lihat wajahmu. Pasang foto profil dulu untuk mulai swipe.',
+  'home.deck.photoRequired.later': 'Nanti',
+  'home.deck.photoRequired.add': 'Pasang Foto',
+  'revenuecat.purchaseSuccess.proTitle': 'Selamat datang di ConnectX Pro',
+  'revenuecat.purchaseSuccess.proMessage': 'Pembayaran berhasil dan Pro sudah aktif di akun ini.',
+  'revenuecat.purchaseSuccess.title': 'Pembayaran berhasil',
+  'revenuecat.purchaseSuccess.message': 'Pembelianmu sudah masuk ke akunmu.',
 };
 
 export const translations = {

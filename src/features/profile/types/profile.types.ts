@@ -184,6 +184,8 @@ export type MyProfileData = {
   profileCompleteness?: { complete: boolean; missingCount: number; missing: string[] } | null;
   // Last LinkedIn import, null when none ever ran.
   linkedinSync?: { status: string; reason: string | null } | null;
+  // A swipe needs a photo (403 PHOTO_REQUIRED); false asks for one before the first swipe.
+  hasProfilePhoto?: boolean;
   createdAt: string;
   updatedAt: string;
 };

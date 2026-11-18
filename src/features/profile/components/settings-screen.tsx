@@ -582,7 +582,7 @@ export function SettingsScreen() {
                 void handleSubscriptionPress();
               }}
               title={t('settings.subscription.title')}
-              tone={isPremiumActive ? 'success' : 'accent'}
+              tone="accent"
               value={isPremiumActive ? t('settings.subscription.activeValue') : t('settings.subscription.freeValue')}
             />
             {!isPremiumActive && lifetimePlan?.available ? (
