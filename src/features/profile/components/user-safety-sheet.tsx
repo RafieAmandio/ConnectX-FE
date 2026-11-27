@@ -84,7 +84,7 @@ export function UserSafetyButton({
           );
         },
         style: 'destructive',
-        text: t('safety.block'),
+        text: t('safety.block', { name }),
       },
     ]);
   }

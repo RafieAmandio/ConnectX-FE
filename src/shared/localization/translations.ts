@@ -553,6 +553,12 @@ export const en = {
   'revenuecat.purchaseSuccess.proMessage': 'Your payment went through and Pro is now active on this account.',
   'revenuecat.purchaseSuccess.title': 'Payment successful',
   'revenuecat.purchaseSuccess.message': 'Your purchase has been added to your account.',
+  'matches.spotlight.title': 'Activate Spotlight',
+  'matches.spotlight.activating': 'Activating...',
+  'matches.spotlight.detail': 'Show your profile first for 12 hours',
+  'matches.spotlight.activeUntil': 'Active until {time}',
+  'safety.unblockConfirm.title': 'Unblock {name}?',
+  'safety.unblockConfirm.confirm': 'Yes, Unblock',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1105,6 +1111,12 @@ export const id: Record<TranslationKey, string> = {
   'revenuecat.purchaseSuccess.proMessage': 'Pembayaran berhasil dan Pro sudah aktif di akun ini.',
   'revenuecat.purchaseSuccess.title': 'Pembayaran berhasil',
   'revenuecat.purchaseSuccess.message': 'Pembelianmu sudah masuk ke akunmu.',
+  'matches.spotlight.title': 'Aktifkan Spotlight',
+  'matches.spotlight.activating': 'Mengaktifkan...',
+  'matches.spotlight.detail': 'Tampilkan profilmu paling atas selama 12 jam',
+  'matches.spotlight.activeUntil': 'Aktif sampai {time}',
+  'safety.unblockConfirm.title': 'Buka blokir {name}?',
+  'safety.unblockConfirm.confirm': 'Ya, Buka Blokir',
 };
 
 export const translations = {

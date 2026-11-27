@@ -70,11 +70,19 @@ export function BlockedUsersScreen() {
                 <Pressable
                   className="rounded-full border border-border-strong px-4 py-2 active:opacity-80"
                   disabled={blockUser.isPending}
+                  // Confirm first so a stray tap does not unblock someone (QA UX-MOD-01).
                   onPress={() =>
-                    blockUser.mutate(
-                      { block: false, userId: item.user_id },
-                      { onError: (error) => Alert.alert(t('safety.errorTitle'), error.message) }
-                    )
+                    Alert.alert(t('safety.unblockConfirm.title', { name: item.name }), undefined, [
+                      { style: 'cancel', text: t('safety.cancel') },
+                      {
+                        onPress: () =>
+                          blockUser.mutate(
+                            { block: false, userId: item.user_id },
+                            { onError: (error) => Alert.alert(t('safety.errorTitle'), error.message) }
+                          ),
+                        text: t('safety.unblockConfirm.confirm'),
+                      },
+                    ])
                   }>
                   <AppText className="text-[13px]" variant="bodyStrong">
                     {t('safety.unblock')}

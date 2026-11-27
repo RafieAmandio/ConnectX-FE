@@ -541,7 +541,8 @@ export function MatchesScreen() {
               </Pressable>
               ) : null}
 
-              {/* <Pressable
+              {/* Spotlight: 12 hours at the top of the feed, Pro only, uses 1 credit (QA Q-03). */}
+              <Pressable
                 className="flex-row items-center justify-between rounded-[24px] border px-5 py-4"
                 disabled={spotlightActivation.isPending}
                 onPress={handleActivateSpotlight}
@@ -559,17 +560,17 @@ export function MatchesScreen() {
                   </View>
                   <View className="gap-0.5">
                     <AppText className="text-[17px] text-[#F4E3C3]" variant="bodyStrong">
-                      {spotlightActivation.isPending ? 'Activating...' : 'Activate Boost'}
+                      {spotlightActivation.isPending ? t('matches.spotlight.activating') : t('matches.spotlight.title')}
                     </AppText>
                     <AppText className="text-[13px] text-[#D2B98D]">
                       {spotlightEndsAtLabel
-                        ? `Active until ${spotlightEndsAtLabel}`
-                        : 'Boost your profile for 12 hours'}
+                        ? t('matches.spotlight.activeUntil', { time: spotlightEndsAtLabel })
+                        : t('matches.spotlight.detail')}
                     </AppText>
                   </View>
                 </View>
                 <Ionicons color="#FFD33D" name="chevron-forward" size={20} />
-              </Pressable> */}
+              </Pressable>
 
               {spotlightBanner ? (
                 <View
