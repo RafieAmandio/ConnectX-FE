@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -910,7 +911,7 @@ function ExperienceEditor({
               autoCapitalize="words"
               label="Title"
               onChangeText={(value) => updateItem(index, { title: value })}
-              placeholder="Growth Lead"
+              placeholder="e.g. Growth Lead"
               value={item.title}
             />
             <ProfileInput
@@ -925,7 +926,7 @@ function ExperienceEditor({
                 autoCapitalize="words"
                 label="Period"
                 onChangeText={(value) => updateItem(index, { period: value })}
-                placeholder="2023 - Present"
+                placeholder="e.g. 2023 - Present"
                 shellClassName="flex-1"
                 value={item.period ?? ''}
               />
@@ -933,7 +934,7 @@ function ExperienceEditor({
                 autoCapitalize="words"
                 label="Location"
                 onChangeText={(value) => updateItem(index, { location: value })}
-                placeholder="Jakarta"
+                placeholder="e.g. Jakarta"
                 shellClassName="flex-1"
                 value={item.location ?? ''}
               />
@@ -1018,7 +1019,7 @@ function EducationEditor({
               autoCapitalize="words"
               label="Degree"
               onChangeText={(value) => updateItem(index, { degree: value })}
-              placeholder="Bachelor of Business Administration"
+              placeholder="e.g. Bachelor of Business Administration"
               value={item.degree}
             />
             <ProfileInput
@@ -1033,7 +1034,7 @@ function EducationEditor({
                 autoCapitalize="words"
                 label="Field"
                 onChangeText={(value) => updateItem(index, { field: value })}
-                placeholder="Product"
+                placeholder="e.g. Product"
                 shellClassName="flex-1"
                 value={item.field ?? ''}
               />
@@ -1041,7 +1042,7 @@ function EducationEditor({
                 autoCapitalize="words"
                 label="Period"
                 onChangeText={(value) => updateItem(index, { period: value })}
-                placeholder="2017 - 2021"
+                placeholder="e.g. 2017 - 2021"
                 shellClassName="flex-1"
                 value={item.period ?? ''}
               />
@@ -1122,14 +1123,14 @@ function CertificationEditor({
               autoCapitalize="words"
               label="Certificate name"
               onChangeText={(value) => updateItem(index, { name: value })}
-              placeholder="AWS Certified Solutions Architect"
+              placeholder="e.g. AWS Certified Solutions Architect"
               value={item.name}
             />
             <ProfileInput
               autoCapitalize="words"
               label="Issuer"
               onChangeText={(value) => updateItem(index, { issuer: value })}
-              placeholder="Amazon Web Services"
+              placeholder="e.g. Amazon Web Services"
               value={item.issuer}
             />
             <View className="flex-row gap-3">
@@ -1137,21 +1138,20 @@ function CertificationEditor({
                 autoCapitalize="sentences"
                 label="Date"
                 onChangeText={(value) => updateItem(index, { date: value })}
-                placeholder="Issued 2024"
+                placeholder="e.g. 2024"
                 shellClassName="flex-1"
                 value={item.date ?? ''}
               />
-              <ProfileInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                label="Proof URL"
-                onChangeText={(value) => updateItem(index, { link: value })}
-                placeholder="https://..."
-                shellClassName="flex-1"
-                value={item.link ?? ''}
-              />
             </View>
+            <ProfileInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              label="Proof URL"
+              onChangeText={(value) => updateItem(index, { link: value })}
+              placeholder="https://..."
+              value={item.link ?? ''}
+            />
           </View>
         ))
       ) : (
@@ -1224,6 +1224,18 @@ export function EditProfileScreen() {
       isDirtyRef.current = false;
     }
   }, [isShowingRealProfile, locationOptions, talent]);
+
+  function handleBack() {
+    if (!isDirtyRef.current) {
+      router.back();
+      return;
+    }
+
+    Alert.alert('Discard changes?', 'Your unsaved profile changes will be lost.', [
+      { style: 'cancel', text: 'Keep editing' },
+      { onPress: () => router.back(), style: 'destructive', text: 'Discard' },
+    ]);
+  }
 
   function scrollToFirstError(errors: FormErrors) {
     const firstField = ERROR_FIELD_ORDER.find((field) => errors[field]);
@@ -1453,7 +1465,7 @@ export function EditProfileScreen() {
           <Pressable
             className="h-11 w-11 items-center justify-center rounded-full border active:opacity-80"
             hitSlop={12}
-            onPress={() => router.back()}
+            onPress={handleBack}
             style={{
               backgroundColor: profilePalette.field,
               borderColor: profilePalette.border,
@@ -1751,7 +1763,7 @@ export function EditProfileScreen() {
             <ActionButton
               disabled={isSavingProfile}
               label="Cancel"
-              onPress={() => router.back()}
+              onPress={handleBack}
             />
             <Pressable
               className="h-12 flex-1 flex-row items-center justify-center gap-2 rounded-[12px] border"

@@ -17,6 +17,7 @@ import type {
 } from '@features/home/types/discovery.types';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
 import { AppCard, AppText } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 import { ApiError } from '@shared/services/api';
 
 import { matchesQueryKeys, useWhoLikedMeList } from '../hooks/use-matches';
@@ -25,6 +26,7 @@ const PAGE_LIMIT = 10;
 
 type BannerState = {
   detail: string;
+  showUpgrade?: boolean;
   title: string;
   tone: 'default' | 'success' | 'warning';
 };
@@ -100,6 +102,8 @@ function WhoLikedMeCard({
   item: DiscoveryProfileCard;
   onAction: (item: DiscoveryProfileCard, action: 'like' | 'pass') => void;
 }) {
+  const t = useTranslation();
+
   return (
     <AppCard
       className="rounded-[20px] border-[#414141] bg-[#2E2C2B] p-3.5"
@@ -125,7 +129,7 @@ function WhoLikedMeCard({
               onPress={() => onAction(item, 'pass')}
               style={{ opacity: disabled ? 0.55 : 1 }}>
               <Ionicons color="#CFC8C0" name="close" size={17} />
-              <AppText className="text-[13px] font-semibold text-[#CFC8C0]">Skip</AppText>
+              <AppText className="text-[13px] font-semibold text-[#CFC8C0]">{t('matches.connects.skip')}</AppText>
             </Pressable>
 
             <Pressable
@@ -134,7 +138,7 @@ function WhoLikedMeCard({
               onPress={() => onAction(item, 'like')}
               style={{ backgroundColor: '#6A431E', opacity: disabled ? 0.55 : 1 }}>
               <Ionicons color="#FFD33D" name="heart" size={16} />
-              <AppText className="text-[13px] font-semibold text-[#FFD33D]">Connect</AppText>
+              <AppText className="text-[13px] font-semibold text-[#FFD33D]">{t('matches.connects.connect')}</AppText>
             </Pressable>
           </View>
         </View>
@@ -147,6 +151,7 @@ export function WhoLikedMeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslation();
   const { presentPaywallForOffering, supported } = useRevenueCat();
   const [page, setPage] = React.useState(1);
   const [items, setItems] = React.useState<DiscoveryProfileCard[]>([]);
@@ -192,8 +197,9 @@ export function WhoLikedMeScreen() {
     setBanner({
       detail: whoLikedMeQuery.error instanceof Error
         ? whoLikedMeQuery.error.message
-        : 'ConnectX Pro is required to see who wants to connect with you.',
-      title: 'ConnectX Pro required',
+        : t('matches.connects.proRequiredDetail'),
+      showUpgrade: true,
+      title: t('matches.connects.proRequiredTitle'),
       tone: 'warning',
     });
 
@@ -203,8 +209,9 @@ export function WhoLikedMeScreen() {
 
     void presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro).catch((error) => {
       setBanner({
-        detail: error instanceof Error ? error.message : 'Unable to open the premium paywall.',
-        title: 'Could not open premium paywall',
+        detail: error instanceof Error ? error.message : t('matches.connects.paywallErrorDetail'),
+        showUpgrade: true,
+        title: t('matches.connects.paywallErrorTitle'),
         tone: 'warning',
       });
     });
@@ -212,6 +219,7 @@ export function WhoLikedMeScreen() {
     presentPaywallForOffering,
     presentedPremiumError,
     supported,
+    t,
     whoLikedMeQuery.error,
     whoLikedMeQuery.isError,
   ]);
@@ -247,8 +255,8 @@ export function WhoLikedMeScreen() {
           void queryClient.invalidateQueries({ queryKey: chatDemoQueryKeys.conversationsRoot });
         } else {
           setBanner({
-            detail: action === 'like' ? 'We saved your connect.' : 'We skipped on this connect.',
-            title: action === 'like' ? 'Connected' : 'Skipped',
+            detail: action === 'like' ? t('matches.connects.savedDetail') : t('matches.connects.skippedDetail'),
+            title: action === 'like' ? t('matches.connects.savedTitle') : t('matches.connects.skippedTitle'),
             tone: 'success',
           });
         }
@@ -256,13 +264,13 @@ export function WhoLikedMeScreen() {
         void queryClient.invalidateQueries({ queryKey: matchesQueryKeys.all });
       } catch (error) {
         setBanner({
-          detail: error instanceof Error ? error.message : 'Unable to update this connect right now.',
-          title: 'Action failed',
+          detail: error instanceof Error ? error.message : t('matches.connects.actionErrorDetail'),
+          title: t('matches.connects.actionErrorTitle'),
           tone: 'warning',
         });
       }
     },
-    [queryClient, swipeAction, viewerContext]
+    [queryClient, swipeAction, t, viewerContext]
   );
 
   const handleOpenMatchChat = React.useCallback(() => {
@@ -327,12 +335,12 @@ export function WhoLikedMeScreen() {
                 <Ionicons color="#F1F1F1" name="chevron-back" size={22} />
               </Pressable>
 
-              <View className="items-end">
-                <AppText className="text-[24px] text-[#F1F1F1]" variant="title">
-                  View Connects
+              <View className="min-w-0 flex-1 pl-3">
+                <AppText className="text-[24px] text-[#F1F1F1]" numberOfLines={1} variant="title">
+                  {t('matches.connects.title')}
                 </AppText>
                 <AppText className="text-[13px] text-[#9F9C99]">
-                  {total} {total === 1 ? 'person' : 'people'} want to connect
+                  {t(total === 1 ? 'matches.connects.countOne' : 'matches.connects.countMany', { count: total })}
                 </AppText>
               </View>
             </View>
@@ -375,6 +383,18 @@ export function WhoLikedMeScreen() {
                   }>
                   {banner.detail}
                 </AppText>
+                {banner.showUpgrade && supported ? (
+                  <Pressable
+                    className="mt-3 h-11 flex-row items-center justify-center gap-2 rounded-full bg-[#FF9A3E] active:opacity-80"
+                    onPress={() => {
+                      void presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro).catch(() => undefined);
+                    }}>
+                    <Ionicons color="#1A1208" name="sparkles" size={16} />
+                    <AppText className="text-[15px] font-semibold text-[#1A1208]">
+                      {t('matches.connects.upgrade')}
+                    </AppText>
+                  </Pressable>
+                ) : null}
               </View>
             ) : null}
 
@@ -383,10 +403,10 @@ export function WhoLikedMeScreen() {
                 className="rounded-[20px] border-[#414141] bg-[#2E2C2B] p-4"
                 style={{ shadowColor: 'transparent' }}>
                 <AppText className="text-[#F1F1F1]" variant="subtitle">
-                  Loading connects...
+                  {t('matches.connects.loadingTitle')}
                 </AppText>
                 <AppText className="mt-1 text-[#9F9C99]">
-                  Pulling everyone who wants to connect.
+                  {t('matches.connects.loadingDetail')}
                 </AppText>
               </AppCard>
             ) : null}
@@ -396,12 +416,12 @@ export function WhoLikedMeScreen() {
                 className="rounded-[20px] border-[#6D3A32] bg-[#332320] p-4"
                 style={{ shadowColor: 'transparent' }}>
                 <AppText className="text-[#F7DDD8]" variant="subtitle">
-                  Could not load connects
+                  {t('matches.connects.loadErrorTitle')}
                 </AppText>
                 <AppText className="mt-1 text-[#D9A49C]">
                   {whoLikedMeQuery.error instanceof Error
                     ? whoLikedMeQuery.error.message
-                    : 'The who liked me request failed.'}
+                    : t('matches.connects.loadErrorDetail')}
                 </AppText>
               </AppCard>
             ) : null}
@@ -411,10 +431,10 @@ export function WhoLikedMeScreen() {
                 className="rounded-[24px] border-[#414141] bg-[#2E2C2B] p-5"
                 style={{ shadowColor: 'transparent' }}>
                 <AppText className="text-[#F1F1F1]" variant="title">
-                  No new interest yet
+                  {t('matches.connects.emptyTitle')}
                 </AppText>
                 <AppText className="mt-1 text-[#9F9C99]">
-                  When someone is interested in connecting, their profile will appear here.
+                  {t('matches.connects.emptyDetail')}
                 </AppText>
               </AppCard>
             ) : null}
@@ -439,7 +459,7 @@ export function WhoLikedMeScreen() {
                 onPress={handleLoadMore}
                 style={{ opacity: whoLikedMeQuery.isFetching ? 0.65 : 1 }}>
                 <AppText className="text-[15px] font-semibold text-[#FFD33D]">
-                  {whoLikedMeQuery.isFetching ? 'Loading...' : 'Load more'}
+                  {whoLikedMeQuery.isFetching ? t('matches.connects.loading') : t('matches.connects.loadMore')}
                 </AppText>
                 <Ionicons color="#FFD33D" name="chevron-down" size={18} />
               </Pressable>

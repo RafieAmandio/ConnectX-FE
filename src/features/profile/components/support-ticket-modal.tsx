@@ -125,7 +125,7 @@ export function SupportTicketModal({ onClose, ticketType, visible }: SupportTick
             onChangeText={setMessage}
             placeholder={config.placeholder}
             placeholderTextColor={palette.textMuted}
-            style={{ color: palette.text, textAlignVertical: 'top' }}
+            style={{ color: palette.text, letterSpacing: 0, textAlignVertical: 'top' }}
             value={message}
           />
         </View>

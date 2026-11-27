@@ -4,6 +4,7 @@ import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   type LayoutChangeEvent,
@@ -41,7 +42,7 @@ import type {
   OnboardingStep,
   OnboardingValidationErrorResponse,
 } from '../types/onboarding.types';
-import { QuestionRenderer } from './question-renderer';
+import { OnboardingScrollContext, QuestionRenderer } from './question-renderer';
 
 const CONNECTX_LOGO = require('../../../../assets/images/connectx-logo.png');
 
@@ -460,6 +461,7 @@ export function OnboardingScreen() {
   const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
   const [isExiting, setIsExiting] = React.useState(false);
   const containerFrameRef = React.useRef({ height: 0, y: 0 });
+  const scrollViewRef = React.useRef<ScrollView>(null);
 
   React.useEffect(() => {
     setActiveQuestionIndex(0);
@@ -748,7 +750,10 @@ export function OnboardingScreen() {
           isExiting={isExiting}
           onBack={handleBackPress}
           onExit={() => {
-            void handleExit();
+            Alert.alert('Exit setup?', 'You will be signed out. Your answers so far are saved, so you can continue later.', [
+              { style: 'cancel', text: 'Stay' },
+              { onPress: () => void handleExit(), style: 'destructive', text: 'Exit' },
+            ]);
           }}
           total={currentStep.overall_progress.total}
         />
@@ -770,7 +775,9 @@ export function OnboardingScreen() {
           </View>
         ) : (
           <>
+            <OnboardingScrollContext.Provider value={scrollViewRef}>
             <ScrollView
+              ref={scrollViewRef}
               className="flex-1"
               contentContainerStyle={{
                 flexGrow: 1,
@@ -826,6 +833,7 @@ export function OnboardingScreen() {
                 </AppText>
               ) : null}
             </ScrollView>
+            </OnboardingScrollContext.Provider>
 
             {isAutoAdvanceStep ? (
               <View

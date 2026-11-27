@@ -17,7 +17,7 @@ const sizeStyles = {
 } as const;
 
 const labelTone = {
-  primary: 'inverse',
+  primary: 'onAccent',
   secondary: 'default',
   danger: 'danger',
   ghost: 'accent',

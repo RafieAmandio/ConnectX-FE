@@ -14,6 +14,7 @@ import {
 import { useAuthContext } from '@features/auth/store/auth-provider';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
 import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 
 import { useMyProfile } from '../hooks/use-profile';
 import type {
@@ -73,12 +74,14 @@ function getImageUri(value: unknown) {
   return value.trim() || null;
 }
 
-function getAboutSectionDescription(kind: ProfileAboutKind) {
+type TFunction = ReturnType<typeof useTranslation>;
+
+function getAboutSectionDescription(kind: ProfileAboutKind, t: TFunction) {
   if (kind === 'personalDescription') {
-    return 'A quick summary of who this person is and what they are looking for.';
+    return t('profile.aboutPersonalDescription');
   }
 
-  return 'A quick summary of what this profile is building right now.';
+  return t('profile.aboutBuildingDescription');
 }
 
 function SectionHeader({
@@ -187,10 +190,11 @@ function StartupProfileCard({
   onEdit: () => void;
   startup: NonNullable<MyProfileData['startup']>;
 }) {
+  const t = useTranslation();
   const visionItems = [
-    { icon: 'alert-circle-outline' as const, label: 'Problem', value: startup.vision?.problem },
-    { icon: 'bulb-outline' as const, label: 'Solution', value: startup.vision?.solution },
-    { icon: 'person-circle-outline' as const, label: 'Target Users', value: startup.vision?.targetUsers },
+    { icon: 'alert-circle-outline' as const, label: t('profile.problem'), value: startup.vision?.problem },
+    { icon: 'bulb-outline' as const, label: t('profile.solution'), value: startup.vision?.solution },
+    { icon: 'person-circle-outline' as const, label: t('profile.targetUsers'), value: startup.vision?.targetUsers },
   ].filter((item) => item.value?.trim());
 
   return (
@@ -206,7 +210,7 @@ function StartupProfileCard({
         <View className="min-w-0 flex-1 gap-1">
           <View className="flex-row flex-wrap items-center gap-2">
             <AppText className="text-[11px] tracking-[1.2px]" tone="muted" variant="label">
-              Startup
+              {t('profile.startup')}
             </AppText>
             <View
               className="rounded-full border px-2.5 py-1"
@@ -229,7 +233,7 @@ function StartupProfileCard({
       {startup.industries.length ? (
         <View className="gap-2.5">
           <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
-            Industries
+            {t('profile.industries')}
           </AppText>
           <NamedItemList items={startup.industries} />
         </View>
@@ -238,7 +242,7 @@ function StartupProfileCard({
       {visionItems.length ? (
         <View className="gap-2.5">
           <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
-            Vision
+            {t('profile.vision')}
           </AppText>
           <View className="gap-2">
             {visionItems.map((item) => (
@@ -264,7 +268,7 @@ function StartupProfileCard({
       {startup.links.length ? (
         <View className="gap-2.5">
           <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
-            Links
+            {t('profile.links')}
           </AppText>
           <View className="gap-2">
             {startup.links.map((link) => (
@@ -302,7 +306,7 @@ function StartupProfileCard({
       >
         <Ionicons color={ACCENT} name="create-outline" size={15} />
         <AppText className="text-[13px]" variant="bodyStrong">
-          Edit Startup
+          {t('profile.editStartup')}
         </AppText>
       </Pressable>
     </SectionCard>
@@ -316,6 +320,7 @@ function ProfileHero({
   onEdit: () => void;
   profile: ProfileTalentData;
 }) {
+  const t = useTranslation();
   const initials = getInitials(profile.name);
   const photoUri = getImageUri(profile.photoUrl);
 
@@ -375,7 +380,7 @@ function ProfileHero({
             >
               <Ionicons color={ACCENT} name="create-outline" size={15} />
               <AppText className="text-[13px]" variant="bodyStrong">
-                Edit
+                {t('profile.edit')}
               </AppText>
             </Pressable>
           </View>
@@ -406,18 +411,19 @@ function StatsOverview({
 }: {
   stats: ProfileStats;
 }) {
+  const t = useTranslation();
   const entries = [
-    { label: 'Connections', value: stats.connections },
-    { label: 'Teams Joined', value: stats.teamsJoined },
-    { label: 'Connects', value: stats.matches },
+    { label: t('profile.statConnections'), value: stats.connections },
+    { label: t('profile.statTeamsJoined'), value: stats.teamsJoined },
+    { label: t('profile.statMatches'), value: stats.matches },
   ];
 
   return (
     <SectionCard className="gap-4 rounded-[24px] px-4 py-4">
       <SectionHeader
-        eyebrow="Snapshot"
+        eyebrow={t('profile.snapshot')}
         icon="bar-chart-outline"
-        title="Your network at a glance"
+        title={t('profile.snapshotTitle')}
       />
 
       <View
@@ -615,6 +621,8 @@ function EducationRow({ item }: { item: ProfileEducationItem }) {
 }
 
 function EmptyDetailTab({ label }: { label: string }) {
+  const t = useTranslation();
+
   return (
     <View
       className="items-center gap-2 rounded-[16px] border px-4 py-6"
@@ -622,7 +630,7 @@ function EmptyDetailTab({ label }: { label: string }) {
     >
       <Ionicons color="#667085" name="file-tray-outline" size={24} />
       <AppText align="center" className="text-[13px]" tone="muted">
-        No {label.toLowerCase()} added yet.
+        {t('profile.emptyDetail', { label: label.toLowerCase() })}
       </AppText>
     </View>
   );
@@ -635,6 +643,7 @@ function ExperienceEducationTabs({
   education: ProfileEducationItem[];
   experience: ProfileExperienceItem[];
 }) {
+  const t = useTranslation();
   const [activeTab, setActiveTab] = React.useState<ProfileDetailTab>(
     experience.length > 0 ? 'experience' : 'education'
   );
@@ -648,10 +657,10 @@ function ExperienceEducationTabs({
   return (
     <SectionCard className="gap-4 rounded-[24px] px-4 py-4">
       <SectionHeader
-        description="Roles and education that give matches more context."
-        eyebrow="Background"
+        description={t('profile.backgroundDescription')}
+        eyebrow={t('profile.background')}
         icon="briefcase-outline"
-        title="Experience & Education"
+        title={t('profile.backgroundTitle')}
       />
 
       <View
@@ -660,12 +669,12 @@ function ExperienceEducationTabs({
       >
         <ProfileDetailTabButton
           active={activeTab === 'experience'}
-          label="Experience"
+          label={t('profile.experience')}
           onPress={() => setActiveTab('experience')}
         />
         <ProfileDetailTabButton
           active={activeTab === 'education'}
-          label="Education"
+          label={t('profile.education')}
           onPress={() => setActiveTab('education')}
         />
       </View>
@@ -675,12 +684,12 @@ function ExperienceEducationTabs({
           experience.length ? (
             experience.map((item, index) => <ExperienceRow key={getExperienceKey(item, index)} item={item} />)
           ) : (
-            <EmptyDetailTab label="Experience" />
+            <EmptyDetailTab label={t('profile.experience')} />
           )
         ) : education.length ? (
           education.map((item, index) => <EducationRow key={getEducationKey(item, index)} item={item} />)
         ) : (
-          <EmptyDetailTab label="Education" />
+          <EmptyDetailTab label={t('profile.education')} />
         )}
       </View>
     </SectionCard>
@@ -688,10 +697,12 @@ function ExperienceEducationTabs({
 }
 
 function BottomSignOut({ onPress }: { onPress: () => void }) {
+  const t = useTranslation();
+
   return (
     <View className="gap-3 px-1 pt-2">
       <AppText className="text-[11px] tracking-[1px]" tone="muted" variant="label">
-        Account
+        {t('profile.account')}
       </AppText>
       <Pressable
         className="flex-row items-center justify-center gap-2 rounded-[18px] border px-4 py-4"
@@ -700,7 +711,7 @@ function BottomSignOut({ onPress }: { onPress: () => void }) {
       >
         <Ionicons color={DANGER} name="log-out-outline" size={20} />
         <AppText className="text-[15px] font-semibold" style={{ color: DANGER }}>
-          Sign Out
+          {t('profile.signOut')}
         </AppText>
       </Pressable>
     </View>
@@ -709,6 +720,7 @@ function BottomSignOut({ onPress }: { onPress: () => void }) {
 
 export function ProfileScreen() {
   const router = useRouter();
+  const t = useTranslation();
   const { width } = useWindowDimensions();
   const { signOut } = useAuthContext();
   const myProfileQuery = useMyProfile();
@@ -750,13 +762,13 @@ export function ProfileScreen() {
             <AppCard className="gap-4">
               <View className="flex-row items-center gap-3">
                 <Ionicons color={ACCENT} name="alert-circle-outline" size={24} />
-                <AppText variant="subtitle">Unable to load profile</AppText>
+                <AppText variant="subtitle">{t('profile.loadErrorTitle')}</AppText>
               </View>
               <AppText tone="muted">
-                We could not load your profile right now. Check your connection and try again.
+                {t('profile.loadErrorDetail')}
               </AppText>
               <AppButton
-                label={myProfileQuery.isRefetching ? 'Refreshing...' : 'Try Again'}
+                label={myProfileQuery.isRefetching ? t('profile.refreshing') : t('profile.tryAgain')}
                 onPress={() => {
                   void myProfileQuery.refetch();
                 }}
@@ -839,8 +851,8 @@ export function ProfileScreen() {
             {aboutSection ? (
               <SectionCard>
                 <SectionHeader
-                  description={getAboutSectionDescription(aboutSection.kind)}
-                  eyebrow="About"
+                  description={getAboutSectionDescription(aboutSection.kind, t)}
+                  eyebrow={t('profile.about')}
                   icon="bulb-outline"
                   title={aboutSection.title}
                 />
@@ -850,11 +862,11 @@ export function ProfileScreen() {
               </SectionCard>
             ) : null}
 
-            {!isStartupViewer && personalitySection ? (
+            {!isStartupViewer && personalitySection?.items?.length ? (
               <SectionCard>
                 <SectionHeader
-                  description="Traits and hobbies that make the collaboration style easier to read."
-                  eyebrow="Personality"
+                  description={t('profile.personalityDescription')}
+                  eyebrow={t('profile.personality')}
                   icon="flash-outline"
                   title={personalitySection.title}
                 />
@@ -862,12 +874,12 @@ export function ProfileScreen() {
               </SectionCard>
             ) : null}
 
-            {skillsSection || interestsSection ? (
+            {skillsSection?.items?.length || interestsSection?.items?.length ? (
               <View className={shouldStackPanels ? 'gap-3' : 'flex-row gap-3'}>
-                {skillsSection ? (
+                {skillsSection?.items?.length ? (
                   <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
                     <SectionHeader
-                      eyebrow="Expertise"
+                      eyebrow={t('profile.expertise')}
                       icon="construct-outline"
                       title={skillsSection.title}
                     />
@@ -875,10 +887,10 @@ export function ProfileScreen() {
                   </SectionCard>
                 ) : null}
 
-                {interestsSection ? (
+                {interestsSection?.items?.length ? (
                   <SectionCard className="min-h-[170px] flex-1 gap-4 rounded-[24px] px-4 py-4">
                     <SectionHeader
-                      eyebrow="Focus"
+                      eyebrow={t('profile.focus')}
                       icon="compass-outline"
                       title={interestsSection.title}
                     />
@@ -895,10 +907,10 @@ export function ProfileScreen() {
             {highlightsSection?.items?.length ? (
               <SectionCard>
                 <SectionHeader
-                  description="Quick facts that help others understand experience and context."
-                  eyebrow="Highlights"
+                  description={t('profile.highlightsDescription')}
+                  eyebrow={t('profile.highlights')}
                   icon="sparkles-outline"
-                  title="Standout details"
+                  title={t('profile.highlightsTitle')}
                 />
                 <HighlightList items={highlightsSection.items} />
               </SectionCard>

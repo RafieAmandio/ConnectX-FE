@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import type { LinkedInAuthResult, LinkedInCallbackNextStep } from '../types/auth.types';
+import { SignInCanceledError } from './sign-in-canceled';
 
 const LINKEDIN_CALLBACK_HOST = 'auth';
 const LINKEDIN_CALLBACK_ROUTE = 'linkedin-callback';
@@ -113,7 +114,7 @@ export async function signInWithLinkedInToken(): Promise<LinkedInAuthResult> {
   }
 
   if (result.type !== 'success') {
-    throw new Error('LinkedIn sign-in was cancelled.');
+    throw new SignInCanceledError('LinkedIn sign-in was cancelled.');
   }
 
   const parsedUrl = Linking.parse(result.url);

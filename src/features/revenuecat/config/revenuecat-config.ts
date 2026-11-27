@@ -28,8 +28,6 @@ export const REVENUECAT_ENABLED =
   REVENUECAT_ENABLED_FLAG === undefined || REVENUECAT_ENABLED_FLAG === ''
     ? true
     : REVENUECAT_ENABLED_FLAG === 'true' || REVENUECAT_ENABLED_FLAG === '1';
-export const REVENUECAT_RUNTIME_SUPPORTED = REVENUECAT_SUPPORTED_PLATFORM && REVENUECAT_ENABLED;
-
 export function getRevenueCatApiKey() {
   const platformKey =
     Platform.OS === 'ios'
@@ -39,8 +37,13 @@ export function getRevenueCatApiKey() {
         : undefined;
   const sharedKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY?.trim();
 
-  return platformKey || sharedKey || TEST_REVENUECAT_API_KEY;
+  // RevenueCat closes a release build that is configured with a Test Store key, so the test key
+  // is a dev-only fallback. A release build without a store key runs with purchases unavailable.
+  return platformKey || sharedKey || (__DEV__ ? TEST_REVENUECAT_API_KEY : null);
 }
+
+export const REVENUECAT_RUNTIME_SUPPORTED =
+  REVENUECAT_SUPPORTED_PLATFORM && REVENUECAT_ENABLED && Boolean(getRevenueCatApiKey());
 
 export function getRevenueCatAppUserId(userId?: string | null) {
   const normalizedUserId = userId?.trim();

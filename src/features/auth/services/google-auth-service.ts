@@ -14,6 +14,7 @@ import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import { getGoogleAuthConfig } from '../config/auth-config';
 import type { GoogleAuthResult } from '../types/auth.types';
+import { SignInCanceledError } from './sign-in-canceled';
 
 let isGoogleConfigured = false;
 
@@ -36,7 +37,7 @@ function normalizeGoogleSignInError(error: unknown) {
   if (isErrorWithCode(error)) {
     switch (error.code) {
       case statusCodes.SIGN_IN_CANCELLED:
-        return new Error('Google Sign-In was cancelled.');
+        return new SignInCanceledError('Google Sign-In was cancelled.');
       case statusCodes.IN_PROGRESS:
         return new Error('Google Sign-In is already in progress.');
       case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
@@ -85,7 +86,7 @@ export async function signInWithGoogleToken(): Promise<GoogleAuthResult> {
     console.log('[auth:google] GoogleSignin.signIn() response', response);
 
     if (response.type === 'cancelled') {
-      throw new Error('Google Sign-In was cancelled.');
+      throw new SignInCanceledError('Google Sign-In was cancelled.');
     }
 
     const tokens = await GoogleSignin.getTokens();

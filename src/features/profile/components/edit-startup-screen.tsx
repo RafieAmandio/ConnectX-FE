@@ -288,6 +288,7 @@ function StartupInput({
             style={[
               {
                 color: palette.text,
+                letterSpacing: 0,
               },
               style,
             ]}
@@ -314,6 +315,7 @@ function StartupInput({
               backgroundColor: palette.field,
               borderColor: isFocused ? palette.accent : palette.border,
               color: palette.text,
+              letterSpacing: 0,
             },
             style,
           ]}
@@ -424,7 +426,7 @@ function DropdownSelector({
               onChangeText={setSearch}
               placeholder="Search..."
               placeholderTextColor={palette.textSoft}
-              style={{ borderBottomColor: palette.border, color: palette.text }}
+              style={{ borderBottomColor: palette.border, color: palette.text, letterSpacing: 0 }}
               value={search}
             />
           ) : null}
@@ -523,7 +525,7 @@ function SearchableMultiSelectDropdown({
             onChangeText={setSearch}
             placeholder="Search roles..."
             placeholderTextColor={palette.textSoft}
-            style={{ borderBottomColor: palette.border, color: palette.text }}
+            style={{ borderBottomColor: palette.border, color: palette.text, letterSpacing: 0 }}
             value={search}
           />
           <ScrollView nestedScrollEnabled>
@@ -1213,16 +1215,18 @@ export function EditStartupScreen() {
             />
             <StartupInput
               autoCapitalize="none"
+              keyboardType="url"
               label="Twitter / X"
               onChangeText={(v) => updateField('twitter', v)}
-              placeholder="@yourhandle"
+              placeholder="https://x.com/yourstartup"
               value={formState.twitter}
             />
             <StartupInput
               autoCapitalize="none"
+              keyboardType="url"
               label="Instagram"
               onChangeText={(v) => updateField('instagram', v)}
-              placeholder="@yourstartup"
+              placeholder="https://instagram.com/yourstartup"
               value={formState.instagram}
             />
             <StartupInput

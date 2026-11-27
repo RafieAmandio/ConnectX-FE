@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppState, type AppStateStatus } from 'react-native';
 import Purchases, {
   type CustomerInfo,
@@ -11,6 +12,7 @@ import Purchases, {
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 import { useAuth } from '@features/auth';
+import { apiFetch } from '@shared/services/api';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
 import {
@@ -22,6 +24,8 @@ import {
   REVENUECAT_RUNTIME_SUPPORTED,
   type RevenueCatPackageId,
 } from '../config/revenuecat-config';
+
+const PRO_SYNC_PATH = '/api/v1/pro/sync';
 
 type RevenueCatPackageMap = Record<RevenueCatPackageId, PurchasesPackage | null>;
 
@@ -123,6 +127,20 @@ async function setConnectXSubscriberAttributes(userId: string, appUserId: string
 
 export function RevenueCatProvider({ children }: React.PropsWithChildren) {
   const { isHydrated: isAuthHydrated, refreshSession, session } = useAuth();
+  const queryClient = useQueryClient();
+  // After a purchase or restore, have the backend re-read RevenueCat instead of waiting for the
+  // webhook, then reload the session and every query so Pro-gated screens unlock right away.
+  const syncProAndRefresh = React.useCallback(async () => {
+    try {
+      await apiFetch(PRO_SYNC_PATH, { method: 'POST' });
+    } catch (syncError) {
+      // 503 PRO_SYNC_UNAVAILABLE/FAILED: the webhook still updates Pro, the session refresh below picks it up later.
+      console.warn('[revenuecat] POST /pro/sync failed', syncError);
+    }
+
+    await refreshSession();
+    await queryClient.invalidateQueries();
+  }, [queryClient, refreshSession]);
   const connectXUserId = session?.user?.id?.trim() || null;
   const desiredAppUserId = React.useMemo(
     () => getRevenueCatAppUserId(connectXUserId),
@@ -170,7 +188,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
     try {
       Purchases.configure({
-        apiKey: getRevenueCatApiKey(),
+        apiKey: getRevenueCatApiKey() ?? '',
         appUserID: desiredAppUserId ?? undefined,
       });
       Purchases.addCustomerInfoUpdateListener(customerInfoListener);
@@ -342,10 +360,10 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     customerInfo?.entitlements.active[REVENUECAT_ENTITLEMENT_CONNECTX_PRO] ?? null;
   const refreshRevenueCatAndAuthSession = React.useCallback(async () => {
     const nextCustomerInfo = await refresh();
-    await refreshSession();
+    await syncProAndRefresh();
 
     return nextCustomerInfo;
-  }, [refresh, refreshSession]);
+  }, [refresh, syncProAndRefresh]);
   const restorePurchases = React.useCallback(async () => {
     if (!REVENUECAT_RUNTIME_SUPPORTED) {
       return null;
@@ -362,7 +380,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         setError(null);
       });
 
-      await refreshSession();
+      await syncProAndRefresh();
       return nextCustomerInfo;
     } catch (nextError) {
       const message = getErrorMessage(nextError);
@@ -371,7 +389,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
     } finally {
       setIsLoading(false);
     }
-  }, [ensureRevenueCatIdentityReady, refreshSession]);
+  }, [ensureRevenueCatIdentityReady, syncProAndRefresh]);
 
   const purchasePackageById = React.useCallback(
     async (packageId: RevenueCatPackageId) => {
@@ -400,7 +418,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
           setError(null);
         });
 
-        await refreshSession();
+        await syncProAndRefresh();
         return result.customerInfo;
       } catch (nextError) {
         const message = getErrorMessage(nextError);
@@ -410,7 +428,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         setIsLoading(false);
       }
     },
-    [ensureRevenueCatIdentityReady, offerings, refreshSession]
+    [ensureRevenueCatIdentityReady, offerings, syncProAndRefresh]
   );
 
   const presentPaywall = React.useCallback(async () => {

@@ -45,7 +45,11 @@ const HOME_BACKGROUND = '#262626';
 const SEARCHABLE_DROPDOWN_DEBOUNCE_MS = 400;
 const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
 const SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH = 2;
+// Lets a search field scroll itself to the top of the onboarding page so its results clear the keyboard.
+export const OnboardingScrollContext = React.createContext<React.RefObject<ScrollView | null> | null>(null);
+
 const SINGLE_LINE_TEXT_INPUT_STYLE = {
+  letterSpacing: 0,
   height: 40,
   lineHeight: 20,
   paddingBottom: 0,
@@ -661,6 +665,30 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     border: '#564518',
     icon: 'trending-up',
     iconColor: '#FFD166',
+  },
+  equity_only: {
+    bg: '#2A2312',
+    border: '#564518',
+    icon: 'pie-chart-outline',
+    iconColor: '#FFD166',
+  },
+  open: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubbles-outline',
+    iconColor: '#7DD3FC',
+  },
+  open_to_discuss: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubbles-outline',
+    iconColor: '#7DD3FC',
+  },
+  open_to_discussion: {
+    bg: '#172734',
+    border: '#2C4C64',
+    icon: 'chatbubbles-outline',
+    iconColor: '#7DD3FC',
   },
   partial_equity: {
     bg: '#122726',
@@ -2429,7 +2457,7 @@ function SearchableMultiSelectQuestion({
           backgroundColor: '#212121',
           borderColor: '#383838',
           borderCurve: 'continuous',
-          maxHeight: 380,
+          maxHeight: 320,
           overflow: 'hidden',
         }}>
         <ScrollView
@@ -2560,7 +2588,7 @@ function InlineSearchableCheckboxMultiSelectQuestion({
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         showsVerticalScrollIndicator
-        style={{ maxHeight: 520 }}>
+        style={{ maxHeight: 320 }}>
         {groupOptions(filteredOptions).map(([groupName, options]) => (
           <View key={groupName} className="pb-5">
             <AppText className="pb-5 text-[15px] leading-[20px] text-text-muted">
@@ -2631,6 +2659,22 @@ function SearchableSingleSelectQuestion({
 }: QuestionRendererProps) {
   const currentValue = getStringValue(value);
   const [query, setQuery] = React.useState('');
+  const scrollRef = React.useContext(OnboardingScrollContext);
+  const containerRef = React.useRef<View>(null);
+
+  const scrollFieldToTop = () => {
+    const scrollView = scrollRef?.current;
+    const container = containerRef.current;
+    if (!scrollView || !container) return;
+    // Wait for the keyboard to start opening so the page has its final height.
+    setTimeout(() => {
+      container.measureLayout(
+        scrollView.getInnerViewNode(),
+        (_x, y) => scrollView.scrollTo({ animated: true, y: Math.max(0, y - 12) }),
+        () => undefined
+      );
+    }, 150);
+  };
 
   const filteredOptions = React.useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -2646,7 +2690,7 @@ function SearchableSingleSelectQuestion({
   }, [query, question.options]);
 
   return (
-    <View className="gap-3">
+    <View ref={containerRef} className="gap-3">
       <QuestionHeader error={error} question={question} />
       <View
         className={cn(
@@ -2659,6 +2703,7 @@ function SearchableSingleSelectQuestion({
           autoCapitalize="none"
           autoCorrect={false}
           onChangeText={setQuery}
+          onFocus={scrollFieldToTop}
           placeholder={question.placeholder ?? 'Search'}
           placeholderTextColor="#667085"
           value={query}
@@ -2839,6 +2884,9 @@ function assembleDate(year: string, month: string, day: string) {
 
 type DatePart = 'day' | 'month' | 'year';
 
+const MIN_BIRTH_AGE_YEARS = 17;
+const DATE_DROPDOWN_WIDTH = 148;
+
 function DateDropdown({
   displayValue,
   isOpen,
@@ -2955,15 +3003,17 @@ function DateSelectQuestion({
   }, [externalValue]);
 
   const parts = draftParts;
-  const currentYear = new Date().getFullYear();
+  // A birth date list starting at the current year lets a newborn through; start at the minimum age.
+  const isBirthDate = question.id === 'q_date_of_birth';
+  const latestYear = new Date().getFullYear() - (isBirthDate ? MIN_BIRTH_AGE_YEARS : 0);
 
   const yearOptions = React.useMemo(
     () =>
       Array.from({ length: 100 }).map((_, index) => {
-        const year = currentYear - index;
+        const year = latestYear - index;
         return { label: String(year), value: String(year) };
       }),
-    [currentYear]
+    [latestYear]
   );
   const monthOptions = React.useMemo(
     () =>
@@ -3027,6 +3077,7 @@ function DateSelectQuestion({
           options={dayOptions}
           placeholder="DD"
           selectedValue={parts.day}
+          minDropdownWidth={DATE_DROPDOWN_WIDTH}
         />
         <DateDropdown
           displayValue={monthDisplay}
@@ -3037,7 +3088,7 @@ function DateSelectQuestion({
           options={monthOptions}
           placeholder="MMM"
           selectedValue={parts.month}
-          minDropdownWidth={148}
+          minDropdownWidth={DATE_DROPDOWN_WIDTH}
         />
         <DateDropdown
           displayValue={parts.year}
@@ -3048,6 +3099,7 @@ function DateSelectQuestion({
           options={yearOptions}
           placeholder="YYYY"
           selectedValue={parts.year}
+          minDropdownWidth={DATE_DROPDOWN_WIDTH}
         />
       </View>
     </View>

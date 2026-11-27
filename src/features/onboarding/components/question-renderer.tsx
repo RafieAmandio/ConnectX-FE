@@ -41,6 +41,7 @@ const SEARCHABLE_DROPDOWN_DEBOUNCE_MS = 400;
 const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
 const SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH = 2;
 const SINGLE_LINE_TEXT_INPUT_STYLE = {
+  letterSpacing: 0,
   height: 40,
   lineHeight: 20,
   paddingBottom: 0,
