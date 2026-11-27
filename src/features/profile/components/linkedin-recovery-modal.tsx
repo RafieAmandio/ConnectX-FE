@@ -4,20 +4,17 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
-  Keyboard,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
-  ScrollView,
   View,
-  type LayoutChangeEvent,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
 import { useFcmToken } from '@features/auth/hooks/use-fcm-token';
 import { AppInput, AppText } from '@shared/components';
+import { useTranslation } from '@shared/localization';
 import { ApiError } from '@shared/services/api';
 import { getOrCreateDeviceId } from '@shared/services/device-id';
 import {
@@ -125,76 +122,22 @@ export function LinkedInRecoveryModal() {
   const [linkedInUsername, setLinkedInUsername] = React.useState('');
   const [fieldError, setFieldError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
-  const containerFrameRef = React.useRef({ height: 0, y: 0 });
-
-  const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    if (!keyboardY) {
-      setAndroidKeyboardOverlap(0);
-      return;
-    }
-
-    const { height, y } = containerFrameRef.current;
-
-    if (height <= 0) {
-      return;
-    }
-
-    setAndroidKeyboardOverlap(Math.max(y + height - keyboardY, 0));
-  }, []);
-
-  const handleContainerLayout = React.useCallback(
-    (event: LayoutChangeEvent) => {
-      containerFrameRef.current = event.nativeEvent.layout;
-
-      if (Platform.OS === 'android') {
-        updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
-      }
-    },
-    [updateAndroidKeyboardOverlap]
-  );
-
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
-      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
-    });
-    const changeSubscription = Keyboard.addListener('keyboardDidChangeFrame', (event) => {
-      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      updateAndroidKeyboardOverlap();
-    });
-
-    updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
-
-    return () => {
-      showSubscription.remove();
-      changeSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [updateAndroidKeyboardOverlap]);
 
   React.useEffect(() => {
     if (!recovery.isRequired) {
       setLinkedInUsername('');
       setFieldError(null);
       setIsSubmitting(false);
-      setAndroidKeyboardOverlap(0);
       return;
     }
 
     setFieldError(null);
   }, [recovery.isRequired]);
 
-  const hint = getRecoveryHint(recovery.errorReason, recovery.message);
+  const t = useTranslation();
+  const hint = recovery.optional
+    ? t('profile.linkedinRecommendHint')
+    : getRecoveryHint(recovery.errorReason, recovery.message);
 
   async function handleSubmit() {
     const normalizedLinkedInUsername = normalizeLinkedInSlug(linkedInUsername, 'profile');
@@ -233,19 +176,19 @@ export function LinkedInRecoveryModal() {
   return (
     <Modal
       animationType="fade"
-      onRequestClose={() => undefined}
+      onRequestClose={() => {
+        if (recovery.optional) clearLinkedInRecovery();
+      }}
       transparent
       visible={recovery.isRequired}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         className="flex-1"
-        enabled={Platform.OS === 'ios'}
         keyboardVerticalOffset={0}
-        onLayout={handleContainerLayout}
         style={{
           backgroundColor: 'rgba(0,0,0,0.68)',
         }}>
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={24}
           alwaysBounceVertical={false}
           contentContainerStyle={{
             flexGrow: 1,
@@ -259,7 +202,6 @@ export function LinkedInRecoveryModal() {
               backgroundColor: '#262626',
               borderColor: '#3A3A3A',
               borderCurve: 'continuous',
-              marginBottom: androidKeyboardOverlap,
               paddingBottom: Math.max(insets.bottom + 20, 28),
             }}>
             <View className="mb-5 flex-row items-center gap-3">
@@ -270,7 +212,7 @@ export function LinkedInRecoveryModal() {
               </View>
               <View className="flex-1">
                 <AppText variant="subtitle" className="text-[20px] leading-[26px] text-white">
-                  Update LinkedIn
+                  {recovery.optional ? t('profile.linkedinRecommendTitle') : 'Update LinkedIn'}
                 </AppText>
                 <AppText className="mt-1 text-[14px] leading-5 text-text-muted">
                   {hint}
@@ -288,7 +230,7 @@ export function LinkedInRecoveryModal() {
                 setLinkedInUsername(normalizeLinkedInSlug(value, 'profile'));
                 setFieldError(null);
               }}
-              placeholder="username"
+              placeholder="your-name"
               prefix={getLinkedInInputPrefix('profile')}
               returnKeyType="done"
               value={linkedInUsername}
@@ -309,8 +251,19 @@ export function LinkedInRecoveryModal() {
                 Save LinkedIn
               </AppText>
             </Pressable>
+            {recovery.optional ? (
+              <Pressable
+                accessibilityRole="button"
+                className="mt-3 h-12 items-center justify-center"
+                disabled={isSubmitting}
+                onPress={clearLinkedInRecovery}>
+                <AppText className="text-text-muted" variant="bodyStrong">
+                  {t('profile.linkedinRecommendLater')}
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );

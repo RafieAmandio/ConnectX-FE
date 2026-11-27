@@ -7,3 +7,4 @@ export { AppStatCard } from './app-stat-card';
 export { AppTabBar } from './app-tab-bar';
 export { AppText } from './app-text';
 export { AppTopBar } from './app-top-bar';
+export { AppAlertHost, showAlert, type AppAlertButton } from './app-alert';

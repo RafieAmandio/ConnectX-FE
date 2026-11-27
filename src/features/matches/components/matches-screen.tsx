@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
+import { ApiError } from '@shared/services/api';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 import { useLocale, useTranslation, type AppLocale } from '@shared/localization';
 
@@ -292,7 +293,7 @@ function MysteryLikesYouPreviewCard() {
 }
 
 function formatLikesYouCount(totalNew: number, t: TFunction) {
-  return t('matches.likesCount', { count: Math.max(totalNew, 0) });
+  return totalNew > 100 ? t('matches.likesCountMax') : t('matches.likesCount', { count: Math.max(totalNew, 0) });
 }
 
 function MatchRow({
@@ -428,6 +429,19 @@ export function MatchesScreen() {
         tone: 'success',
       });
     } catch (error) {
+      // Spotlight is Pro only (403 PREMIUM_REQUIRED): open the Pro upgrade instead of an error banner.
+      if (
+        error instanceof ApiError &&
+        (error.payload as { error?: { code?: string } } | null)?.error?.code === 'PREMIUM_REQUIRED'
+      ) {
+        if (supported) {
+          await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro).catch(() => undefined);
+        } else {
+          setSpotlightBanner({ detail: error.message, title: t('matches.boostActivationFailedTitle'), tone: 'warning' });
+        }
+        return;
+      }
+
       if (isSpotlightRequiresCreditError(error)) {
         setSpotlightBanner({
           detail: t('matches.noBoostCreditsDetail'),
@@ -461,7 +475,7 @@ export function MatchesScreen() {
         tone: 'warning',
       });
     }
-  }, [locale, maybePresentSpotlightPaywall, spotlightActivation, t]);
+  }, [locale, maybePresentSpotlightPaywall, presentPaywallForOffering, spotlightActivation, supported, t]);
 
   const handleViewConnects = React.useCallback(() => {
     router.push('/who-liked-me' as never);
@@ -497,11 +511,15 @@ export function MatchesScreen() {
                   </AppText>
                 </View>
 
-                <View className="rounded-full bg-[#5A3C23] px-4 py-2">
+                <Pressable
+                  className="rounded-full bg-[#5A3C23] px-4 py-2 active:opacity-80"
+                  disabled={likesYouCount <= 0 && likesYou.length === 0}
+                  hitSlop={8}
+                  onPress={handleViewConnects}>
                   <AppText className="text-[14px] font-semibold uppercase tracking-[0.3px] text-[#FFB35E]">
                     {likesYouCountLabel}
                   </AppText>
-                </View>
+                </Pressable>
               </View>
 
               <View className="flex-row gap-4">
@@ -537,7 +555,8 @@ export function MatchesScreen() {
               </Pressable>
               ) : null}
 
-              {/* <Pressable
+              {/* Spotlight: 12 hours at the top of the feed, Pro only, uses 1 credit (QA Q-03). */}
+              <Pressable
                 className="flex-row items-center justify-between rounded-[24px] border px-5 py-4"
                 disabled={spotlightActivation.isPending}
                 onPress={handleActivateSpotlight}
@@ -555,17 +574,17 @@ export function MatchesScreen() {
                   </View>
                   <View className="gap-0.5">
                     <AppText className="text-[17px] text-[#F4E3C3]" variant="bodyStrong">
-                      {spotlightActivation.isPending ? 'Activating...' : 'Activate Boost'}
+                      {spotlightActivation.isPending ? t('matches.spotlight.activating') : t('matches.spotlight.title')}
                     </AppText>
                     <AppText className="text-[13px] text-[#D2B98D]">
                       {spotlightEndsAtLabel
-                        ? `Active until ${spotlightEndsAtLabel}`
-                        : 'Boost your profile for 12 hours'}
+                        ? t('matches.spotlight.activeUntil', { time: spotlightEndsAtLabel })
+                        : t('matches.spotlight.detail')}
                     </AppText>
                   </View>
                 </View>
                 <Ionicons color="#FFD33D" name="chevron-forward" size={20} />
-              </Pressable> */}
+              </Pressable>
 
               {spotlightBanner ? (
                 <View

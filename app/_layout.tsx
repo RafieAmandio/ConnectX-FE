@@ -6,6 +6,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '@features/auth';
@@ -13,6 +14,7 @@ import { PushNotificationTapHandler } from '@features/notifications';
 import { LinkedInRecoveryModal } from '@features/profile/components/linkedin-recovery-modal';
 import { RevenueCatProvider } from '@features/revenuecat';
 import { useColorScheme } from '@shared/hooks/use-color-scheme';
+import { AppAlertHost } from '@shared/components';
 import { LocalizationProvider } from '@shared/localization';
 import { createQueryClient } from '@shared/services/api';
 import { NavigationThemes } from '@shared/theme';
@@ -27,11 +29,12 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <PushNotificationTapHandler />
-          <RevenueCatProvider>
-            <LocalizationProvider>
+          <LocalizationProvider>
+            <RevenueCatProvider>
               <ThemeProvider value={NavigationThemes[colorScheme]}>
                 <Stack>
                   <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -56,10 +59,12 @@ export default function RootLayout() {
                 <LinkedInRecoveryModal />
                 <StatusBar style="light" />
               </ThemeProvider>
-            </LocalizationProvider>
-          </RevenueCatProvider>
+              <AppAlertHost />
+            </RevenueCatProvider>
+          </LocalizationProvider>
         </AuthProvider>
       </QueryClientProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

@@ -717,10 +717,10 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'calendar',
     iconColor: '#C48BFF',
   },
-  hourly: {
+  monthly: {
     bg: '#1F242E',
     border: '#2E3547',
-    icon: 'time-outline',
+    icon: 'calendar-outline',
     iconColor: '#CBD4E0',
   },
   IDR: {
@@ -2924,7 +2924,7 @@ function DateSelectQuestion({
           onSelect={(nextValue) => updatePart('month', nextValue)}
           onToggle={() => togglePart('month')}
           options={monthOptions}
-          placeholder="MMM"
+          placeholder="MM"
           selectedValue={parts.month}
           minDropdownWidth={148}
         />

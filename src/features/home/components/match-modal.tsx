@@ -296,8 +296,8 @@ export function MatchModal({ card, onChat, onClose, onReport }: MatchModalProps)
               onPress={onChat}
               style={{ backgroundColor: '#FF9836' }}>
               <Ionicons color="#1A120B" name="chatbubble-outline" size={16} />
-              <AppText style={{ color: '#1A120B' }} variant="bodyStrong">
-                {t('home.match.chatFounder')}
+              <AppText className="shrink" numberOfLines={1} style={{ color: '#1A120B' }} variant="bodyStrong">
+                {t('home.match.chatFounder', { name: getMatchSubject(card) })}
               </AppText>
             </Pressable>
           )}

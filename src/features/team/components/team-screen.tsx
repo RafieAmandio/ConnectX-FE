@@ -11,6 +11,7 @@ import {
   ScrollView,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -1443,7 +1444,7 @@ export function TeamScreen() {
           <AppText className="text-2xl font-bold text-text">{screenTitle}</AppText>
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={24}
           className="flex-1"
           contentContainerStyle={{
             gap: 24,
@@ -1954,7 +1955,7 @@ export function TeamScreen() {
               ) : null}
             </View>
           ) : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
       <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />
     </>

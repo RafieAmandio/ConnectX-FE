@@ -12,6 +12,7 @@ import Purchases, {
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 import { useAuth } from '@features/auth';
+import { useTranslation } from '@shared/localization';
 import { apiFetch } from '@shared/services/api';
 import { isExpoDevModeEnabled } from '@shared/utils/env';
 
@@ -24,6 +25,7 @@ import {
   REVENUECAT_RUNTIME_SUPPORTED,
   type RevenueCatPackageId,
 } from '../config/revenuecat-config';
+import { showAlert } from '@shared/components';
 
 const PRO_SYNC_PATH = '/api/v1/pro/sync';
 
@@ -364,6 +366,34 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
 
     return nextCustomerInfo;
   }, [refresh, syncProAndRefresh]);
+  const t = useTranslation();
+  // Every paywall ends here: refresh Pro after a purchase or restore, then confirm the payment
+  // (QA 17 Nov). Boost and spotlight packs share the paywall, so only a new Pro says "welcome".
+  const handlePaywallResult = React.useCallback(
+    async (result: PAYWALL_RESULT) => {
+      if (result !== PAYWALL_RESULT.PURCHASED && result !== PAYWALL_RESULT.RESTORED) {
+        return;
+      }
+
+      const wasPro = Boolean(connectXProEntitlement?.isActive);
+      const nextCustomerInfo = await refreshRevenueCatAndAuthSession().catch(() => null);
+
+      if (result !== PAYWALL_RESULT.PURCHASED) {
+        return;
+      }
+
+      const isProNow = Boolean(
+        nextCustomerInfo?.entitlements.active[REVENUECAT_ENTITLEMENT_CONNECTX_PRO]?.isActive
+      );
+
+      if (isProNow && !wasPro) {
+        showAlert(t('revenuecat.purchaseSuccess.proTitle'), t('revenuecat.purchaseSuccess.proMessage'));
+      } else {
+        showAlert(t('revenuecat.purchaseSuccess.title'), t('revenuecat.purchaseSuccess.message'));
+      }
+    },
+    [connectXProEntitlement, refreshRevenueCatAndAuthSession, t]
+  );
   const restorePurchases = React.useCallback(async () => {
     if (!REVENUECAT_RUNTIME_SUPPORTED) {
       return null;
@@ -444,9 +474,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         displayCloseButton: true,
       });
 
-      if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-        await refreshRevenueCatAndAuthSession();
-      }
+      await handlePaywallResult(result);
 
       setError(null);
       return result;
@@ -455,7 +483,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       setError(message);
       throw nextError;
     }
-  }, [currentOffering, ensureRevenueCatIdentityReady, refreshRevenueCatAndAuthSession]);
+  }, [currentOffering, ensureRevenueCatIdentityReady, handlePaywallResult]);
 
   const presentPaywallForOffering = React.useCallback(
     async (offeringId: string) => {
@@ -480,9 +508,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
           displayCloseButton: true,
         });
 
-        if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-          await refreshRevenueCatAndAuthSession();
-        }
+        await handlePaywallResult(result);
 
         setError(null);
         return result;
@@ -492,7 +518,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         throw nextError;
       }
     },
-    [ensureRevenueCatIdentityReady, offerings, refreshRevenueCatAndAuthSession]
+    [ensureRevenueCatIdentityReady, handlePaywallResult, offerings]
   );
 
   const presentPaywallIfNeeded = React.useCallback(async () => {
@@ -509,9 +535,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
         displayCloseButton: true,
       });
 
-      if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-        await refreshRevenueCatAndAuthSession();
-      }
+      await handlePaywallResult(result);
 
       setError(null);
       return result;
@@ -520,7 +544,7 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       setError(message);
       throw nextError;
     }
-  }, [currentOffering, ensureRevenueCatIdentityReady, refreshRevenueCatAndAuthSession]);
+  }, [currentOffering, ensureRevenueCatIdentityReady, handlePaywallResult]);
 
   const presentCustomerCenter = React.useCallback(async () => {
     if (!REVENUECAT_RUNTIME_SUPPORTED) {

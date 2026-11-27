@@ -4,13 +4,11 @@ import React from 'react';
 import {
   ActivityIndicator,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -178,12 +176,12 @@ export function ForgotPasswordScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       className="flex-1"
       style={{ backgroundColor: CANVAS_BG }}>
       <Stack.Screen options={{ headerShown: false }} />
       <Pressable className="flex-1" onPress={Keyboard.dismiss} accessible={false}>
-        <ScrollView
+        <KeyboardAwareScrollView bottomOffset={24}
           className="flex-1"
           contentContainerStyle={{
             flexGrow: 1,
@@ -297,7 +295,7 @@ export function ForgotPasswordScreen() {
               </>
             )}
           </Animated.View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </Pressable>
     </KeyboardAvoidingView>
   );

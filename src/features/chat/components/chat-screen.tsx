@@ -5,21 +5,19 @@ import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  KeyboardAvoidingView,
   Linking,
   ListRenderItemInfo,
-  Platform,
   Pressable,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@features/auth';
 import { StartupInvitationComposer } from '@features/team/components/startup-invitation-composer';
-import { AppButton, AppText, AppTopBar } from '@shared/components';
+import { AppButton, AppText, AppTopBar, showAlert } from '@shared/components';
 
 import { ChatEmptyState } from './chat-empty-state';
 import type { ChatMessage, ChatRoom } from '../domain/models';
@@ -406,14 +404,14 @@ function ConversationPanel({
     const phoneNumber = normalizeDialableNumber(conversation?.participantWhatsappNumber);
 
     if (!phoneNumber) {
-      Alert.alert('Call unavailable', 'This user does not have a phone number available yet.');
+      showAlert('Call unavailable', 'This user does not have a phone number available yet.');
       return;
     }
 
     try {
       await Linking.openURL(`tel:${phoneNumber}`);
     } catch {
-      Alert.alert('Call unavailable', 'Your device could not open the phone dialer.');
+      showAlert('Call unavailable', 'Your device could not open the phone dialer.');
     }
   }, [conversation?.participantWhatsappNumber]);
 
@@ -487,7 +485,7 @@ function ConversationPanel({
     const asset = result.assets[0];
 
     if (!asset?.uri) {
-      Alert.alert('Image unavailable', 'The selected image could not be read.');
+      showAlert('Image unavailable', 'The selected image could not be read.');
       return;
     }
 
@@ -971,7 +969,7 @@ export function ChatConversationScreen({ conversationId }: { conversationId: str
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         className="flex-1"
         style={{ backgroundColor: '#262626' }}
         keyboardVerticalOffset={0}>

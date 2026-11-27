@@ -10,10 +10,8 @@ import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   Linking,
   ListRenderItemInfo,
   Modal,
@@ -24,8 +22,8 @@ import {
   useWindowDimensions,
   View,
   type DimensionValue,
-  type LayoutChangeEvent,
 } from 'react-native';
+import { KeyboardAvoidingView, useKeyboardState } from 'react-native-keyboard-controller';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -35,9 +33,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, AppTopBar } from '@shared/components';
+import { AppText, AppTopBar, showAlert } from '@shared/components';
 import { useLocale, useTranslation } from '@shared/localization';
 import { buildApiUrl } from '@shared/services/api/config';
+import { UserSafetyButton } from '@features/profile/components/user-safety-sheet';
 
 import { ChatEmptyState } from '@features/chat/components/chat-empty-state';
 import {
@@ -107,7 +106,8 @@ const URL_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
 const TRAILING_URL_PUNCTUATION_PATTERN = /[),.!?:;]+$/;
 const COMPOSER_INPUT_MAX_HEIGHT = 92;
 const ATTACHMENT_PICKER_DISMISS_DELAY_MS = 300;
-const CHAT_DEMO_DOCUMENT_TYPES = ['application/pdf', 'audio/*'] as const;
+// Any file: PDF, Word, Excel, slides, audio... The upload is presigned, the backend takes any type.
+const CHAT_DEMO_DOCUMENT_TYPES = ['*/*'] as const;
 
 function withAlpha(hexColor: string, alpha: number) {
   const normalized = hexColor.replace('#', '');
@@ -367,12 +367,12 @@ function openMediaUrl(value: string | null | undefined, t: TFunction) {
   const mediaUrl = normalizeMediaUrl(value);
 
   if (!mediaUrl) {
-    Alert.alert(t('chat.attachmentUnavailableTitle'), t('chat.attachmentUnavailableMessage'));
+    showAlert(t('chat.attachmentUnavailableTitle'), t('chat.attachmentUnavailableMessage'));
     return;
   }
 
   void Linking.openURL(mediaUrl).catch(() => {
-    Alert.alert(t('chat.openAttachmentErrorTitle'), t('chat.attachmentUnavailableMessage'));
+    showAlert(t('chat.openAttachmentErrorTitle'), t('chat.attachmentUnavailableMessage'));
   });
 }
 
@@ -443,9 +443,9 @@ function ImagePreviewModal({
 
     try {
       await saveImageToLibrary(imageUrl, t);
-      Alert.alert(t('chat.imageSavedTitle'), t('chat.imageSavedMessage'));
+      showAlert(t('chat.imageSavedTitle'), t('chat.imageSavedMessage'));
     } catch (error) {
-      Alert.alert(
+      showAlert(
         t('chat.imageSaveErrorTitle'),
         error instanceof Error ? error.message : t('chat.imageSaveErrorFallback')
       );
@@ -557,7 +557,7 @@ function MessageText({
             key={`${part.url}-${index}`}
             onPress={() => {
               void Linking.openURL(part.url).catch(() => {
-                Alert.alert(t('chat.openLinkErrorTitle'), t('chat.openLinkErrorMessage'));
+                showAlert(t('chat.openLinkErrorTitle'), t('chat.openLinkErrorMessage'));
               });
             }}>
             {part.text}
@@ -979,11 +979,13 @@ function AttachmentPickerSheet({
   onClose,
   onPickDocument,
   onPickImage,
+  onTakePhoto,
   visible,
 }: {
   onClose: () => void;
   onPickDocument: () => void;
   onPickImage: () => void;
+  onTakePhoto: () => void;
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
@@ -1008,6 +1010,20 @@ function AttachmentPickerSheet({
           </View>
 
           <View className="gap-3">
+            <Pressable
+              className="min-h-16 flex-row items-center gap-4 rounded-[18px] bg-[#373534] px-4 active:opacity-80"
+              onPress={onTakePhoto}>
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-[#493A2A]">
+                <Ionicons color="#F7B05B" name="camera-outline" size={22} />
+              </View>
+              <View className="flex-1 gap-0.5">
+                <AppText className="text-[#F3F0EB]" variant="bodyStrong">
+                  {t('chat.camera')}
+                </AppText>
+                <AppText className="text-[#AFA9A2]">{t('chat.cameraDescription')}</AppText>
+              </View>
+            </Pressable>
+
             <Pressable
               className="min-h-16 flex-row items-center gap-4 rounded-[18px] bg-[#373534] px-4 active:opacity-80"
               onPress={onPickImage}>
@@ -1070,9 +1086,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const [invitationSent, setInvitationSent] = React.useState(false);
   const [invitationMessage, setInvitationMessage] = React.useState<string | null>(null);
   const [invitationError, setInvitationError] = React.useState<string | null>(null);
-  const [androidKeyboardOverlap, setAndroidKeyboardOverlap] = React.useState(0);
+  // Only for the footer's bottom padding: keyboard-controller's KeyboardAvoidingView does the lifting.
+  const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
   const listRef = React.useRef<FlatList<ChatMessage>>(null);
-  const containerFrameRef = React.useRef({ height: 0, y: 0 });
   const attachmentPickerTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const conversation = conversationsQuery.data?.find((item) => item.id === conversationId) ?? null;
   const messages = React.useMemo(
@@ -1084,7 +1100,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
   const isUploadingMedia = uploadMediaMutation.isPending;
   const canInviteToTeam = viewerContext === 'startup';
   const inputBottomPadding =
-    Platform.OS === 'ios' || androidKeyboardOverlap === 0 ? Math.max(insets.bottom + 8, 20) : 12;
+    Platform.OS === 'ios' || !isKeyboardVisible ? Math.max(insets.bottom + 8, 20) : 12;
 
   useChatDemoRoomRealtime(conversationId);
 
@@ -1100,59 +1116,8 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     }
   }, [handleOnboardingRequired, messagesQuery.error, messagesQuery.isError]);
 
-  const updateAndroidKeyboardOverlap = React.useCallback((keyboardY?: number) => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
 
-    if (!keyboardY) {
-      setAndroidKeyboardOverlap(0);
-      return;
-    }
 
-    const { height, y } = containerFrameRef.current;
-
-    if (height <= 0) {
-      return;
-    }
-
-    setAndroidKeyboardOverlap(Math.max(y + height - keyboardY, 0));
-  }, []);
-
-  const handleContainerLayout = React.useCallback(
-    (event: LayoutChangeEvent) => {
-      containerFrameRef.current = event.nativeEvent.layout;
-
-      if (Platform.OS === 'android') {
-        updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
-      }
-    },
-    [updateAndroidKeyboardOverlap]
-  );
-
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
-      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
-    });
-    const changeSubscription = Keyboard.addListener('keyboardDidChangeFrame', (event) => {
-      updateAndroidKeyboardOverlap(event.endCoordinates.screenY);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      updateAndroidKeyboardOverlap();
-    });
-
-    updateAndroidKeyboardOverlap(Keyboard.metrics()?.screenY);
-
-    return () => {
-      showSubscription.remove();
-      changeSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [updateAndroidKeyboardOverlap]);
 
   React.useEffect(() => {
     setPendingMedia(null);
@@ -1180,7 +1145,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           previewUri: pendingMedia.localUri,
           uploadedMedia: pendingMedia.uploadedMedia,
         });
-      } catch {
+      } catch (error) {
+        // e.g. 403 USER_BLOCKED: say why instead of only marking the bubble failed.
+        showAlert(t('chat.sendFailedTitle'), error instanceof Error ? error.message : '');
         return;
       }
 
@@ -1188,7 +1155,8 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     } else {
       try {
         await sendMessageMutation.mutateAsync(body);
-      } catch {
+      } catch (error) {
+        showAlert(t('chat.sendFailedTitle'), error instanceof Error ? error.message : '');
         return;
       }
     }
@@ -1204,20 +1172,36 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     pendingMedia,
     sendMediaMessageMutation,
     sendMessageMutation,
+    t,
   ]);
 
-  const handlePickImage = React.useCallback(async () => {
+  const handlePickImage = React.useCallback(async (source: 'camera' | 'library' = 'library') => {
     if (isSending || isUploadingMedia) {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (!permission.granted) {
+        showAlert(t('chat.cameraPermissionTitle'), t('chat.cameraPermissionMessage'), [
+          { style: 'cancel', text: t('chat.cancel') },
+          { onPress: () => void Linking.openSettings(), text: t('chat.openSettings') },
+        ]);
+        return;
+      }
+    }
+
+    const options: ImagePicker.ImagePickerOptions = {
       allowsEditing: false,
       allowsMultipleSelection: false,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
       selectionLimit: 1,
-    });
+    };
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
 
     if (result.canceled) {
       return;
@@ -1226,7 +1210,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     const asset = result.assets[0];
 
     if (!asset?.uri) {
-      Alert.alert(t('chat.pickImageUnavailableTitle'), t('chat.pickImageUnavailableMessage'));
+      showAlert(t('chat.pickImageUnavailableTitle'), t('chat.pickImageUnavailableMessage'));
       return;
     }
 
@@ -1269,7 +1253,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     const asset = result.assets[0];
 
     if (!asset?.uri) {
-      Alert.alert(t('chat.pickFileUnavailableTitle'), t('chat.pickFileUnavailableMessage'));
+      showAlert(t('chat.pickFileUnavailableTitle'), t('chat.pickFileUnavailableMessage'));
       return;
     }
 
@@ -1322,6 +1306,12 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     });
   }, [handlePickImage, runAfterAttachmentPickerDismiss]);
 
+  const handleTakePhotoFromSheet = React.useCallback(() => {
+    runAfterAttachmentPickerDismiss(() => {
+      void handlePickImage('camera');
+    });
+  }, [handlePickImage, runAfterAttachmentPickerDismiss]);
+
   const handlePickDocumentFromSheet = React.useCallback(() => {
     runAfterAttachmentPickerDismiss(() => {
       void handlePickDocument();
@@ -1368,11 +1358,9 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        onLayout={handleContainerLayout}
+        behavior="padding"
         style={{ backgroundColor: '#262626', flex: 1 }}
-        keyboardVerticalOffset={0}
-        enabled={Platform.OS === 'ios'}>
+        keyboardVerticalOffset={0}>
         <View
           className="flex-row items-center gap-3 px-4 pb-4"
           style={{ paddingTop: Math.max(insets.top + 8, 16) }}>
@@ -1382,7 +1370,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
             <Ionicons color="#F3F0EB" name="chevron-back" size={22} />
           </Pressable>
 
-          <ChatDemoAvatar conversation={conversation} size={52} />
+          <ChatDemoAvatar conversation={conversation} size={44} />
 
           <View className="flex-1 gap-0.5">
             <AppText className="text-white" numberOfLines={1} variant="title">
@@ -1404,21 +1392,28 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
           </View>
 
           {canInviteToTeam ? (
+            // Round like the back and "..." buttons, so the header keeps room for the name.
             <Pressable
-              className="min-h-11 flex-row items-center justify-center gap-2 rounded-full bg-[#FF9D3D] px-4 active:opacity-80"
+              accessibilityLabel={invitationSent ? t('chat.invited') : t('chat.addToTeam')}
+              accessibilityRole="button"
+              className="h-11 w-11 items-center justify-center rounded-full bg-[#FF9D3D] active:opacity-80"
               disabled={invitationSent || !conversation.participantEmail}
+              hitSlop={6}
               onPress={handleAddToTeam}
               style={{ opacity: invitationSent || !conversation.participantEmail ? 0.6 : 1 }}>
               <Ionicons
                 color="#1F160C"
                 name={invitationSent ? 'checkmark-outline' : 'person-add-outline'}
-                size={18}
+                size={20}
               />
-              <AppText className="text-[#1F160C]" variant="bodyStrong">
-                {invitationSent ? t('chat.invited') : t('chat.addToTeam')}
-              </AppText>
             </Pressable>
           ) : null}
+
+          <UserSafetyButton
+            name={conversation.name}
+            onBlocked={() => router.back()}
+            userId={conversation.participantUserId}
+          />
         </View>
 
         <View className="mx-4 h-px bg-[#3A3938]" />
@@ -1501,7 +1496,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
 
         <View
           className="border-t border-[#3A3938] px-4 pt-3"
-          style={{ marginBottom: androidKeyboardOverlap, paddingBottom: inputBottomPadding }}>
+          style={{ paddingBottom: inputBottomPadding }}>
           {pendingMedia ? (
             <View className="mb-3 flex-row items-center gap-3 rounded-[18px] border border-[#444240] bg-[#2E2C2B] p-2">
               {pendingMedia.mediaType === 'image' ? (
@@ -1612,6 +1607,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
         onClose={() => setAttachmentPickerVisible(false)}
         onPickDocument={handlePickDocumentFromSheet}
         onPickImage={handlePickImageFromSheet}
+        onTakePhoto={handleTakePhotoFromSheet}
         visible={attachmentPickerVisible}
       />
       <DiscoveryOnboardingRequiredSheet {...onboardingRequiredSheetProps} />

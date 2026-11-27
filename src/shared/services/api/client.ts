@@ -1,6 +1,7 @@
 import { buildApiUrl } from './config';
 
 const GENERIC_REQUEST_ERROR_MESSAGE = 'Something went wrong. Please try again in a moment.';
+const REQUEST_TIMEOUT_MESSAGE = 'This is taking too long. Check your connection and try again.';
 // Hard ceiling so a stalled request can't hang a mutation forever (which would, e.g.,
 // leave a Save button disabled indefinitely). Aborts surface as a generic ApiError.
 const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
@@ -28,12 +29,19 @@ type ApiClientAuthConfig = {
 };
 
 let apiClientAuthConfig: ApiClientAuthConfig = {};
+// The backend localizes messages, card labels and emails from Accept-Language (en | id).
+let apiLocale: string | null = null;
+
+export function setApiLocale(locale: string) {
+  apiLocale = locale;
+}
 let refreshAccessTokenPromise: Promise<string> | null = null;
 
 type ApiFetchOptions = {
   allowTokenRefresh?: boolean;
   baseUrl?: string;
   handleUnauthorized?: boolean;
+  timeoutMs?: number;
 };
 
 export function configureApiClient(config: ApiClientAuthConfig) {
@@ -152,6 +160,10 @@ async function executeApiFetch<T>(
 
   headers.set('Accept', 'application/json');
 
+  if (apiLocale && !headers.has('Accept-Language')) {
+    headers.set('Accept-Language', apiLocale);
+  }
+
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -164,7 +176,10 @@ async function executeApiFetch<T>(
   }
 
   const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort(), DEFAULT_REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(
+    () => timeoutController.abort(),
+    options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS
+  );
 
   try {
     if (__DEV__) {
@@ -183,10 +198,8 @@ async function executeApiFetch<T>(
     const payload = await parseResponsePayload(response);
 
     if (!response.ok) {
-      const message =
-        response.status === 400
-          ? GENERIC_REQUEST_ERROR_MESSAGE
-          : getErrorMessage(payload, `Request failed with status ${response.status}`);
+      // The backend writes a user-facing, localized `message` for every error: show it, not the code.
+      const message = getErrorMessage(payload, GENERIC_REQUEST_ERROR_MESSAGE);
 
       if (
         response.status === 401 &&
@@ -224,6 +237,10 @@ async function executeApiFetch<T>(
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
+    }
+
+    if (timeoutController.signal.aborted) {
+      throw new ApiError(REQUEST_TIMEOUT_MESSAGE, 0, { code: 'REQUEST_TIMEOUT' });
     }
 
     throw new ApiError(GENERIC_REQUEST_ERROR_MESSAGE, 0);

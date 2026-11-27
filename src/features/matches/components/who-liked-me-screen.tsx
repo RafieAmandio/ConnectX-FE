@@ -4,10 +4,11 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { chatDemoQueryKeys } from '@features/chat/hooks/use-chat-demo';
+import { DiscoveryCardContent } from '@features/home/components/discovery-deck';
 import { MatchModal } from '@features/home/components/match-modal';
 import { useSwipeAction } from '@features/home/hooks/use-discovery';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
@@ -97,10 +98,12 @@ function WhoLikedMeCard({
   disabled,
   item,
   onAction,
+  onOpen,
 }: {
   disabled: boolean;
   item: DiscoveryProfileCard;
   onAction: (item: DiscoveryProfileCard, action: 'like' | 'pass') => void;
+  onOpen: (item: DiscoveryProfileCard) => void;
 }) {
   const t = useTranslation();
 
@@ -109,18 +112,28 @@ function WhoLikedMeCard({
       className="rounded-[20px] border-[#414141] bg-[#2E2C2B] p-3.5"
       style={{ shadowColor: 'transparent' }}>
       <View className="flex-row gap-3">
-        <LikeAvatar item={item} />
+        <Pressable accessibilityLabel={t('matches.connects.viewProfile')} onPress={() => onOpen(item)}>
+          <LikeAvatar item={item} />
+        </Pressable>
 
         <View className="min-w-0 flex-1 gap-1">
-          <AppText className="text-[18px] leading-[24px] text-[#F1F1F1]" variant="title">
-            {item.name}
-          </AppText>
-          <AppText className="text-[13px] leading-[18px] text-[#D8C6A5]">
-            {item.headline}
-          </AppText>
-          <AppText className="text-[13px] leading-[18px] text-[#9F9C99]">
-            {item.location.display}
-          </AppText>
+          {/* Name and details open the full profile, like a feed card. */}
+          <Pressable className="gap-1 active:opacity-70" onPress={() => onOpen(item)}>
+            <View className="flex-row items-center gap-1">
+              <AppText className="flex-shrink text-[18px] leading-[24px] text-[#F1F1F1]" variant="title">
+                {item.name}
+              </AppText>
+              <Ionicons color="#9F9C99" name="chevron-forward" size={16} />
+            </View>
+            {item.headline ? (
+              <AppText className="text-[13px] leading-[18px] text-[#D8C6A5]">
+                {item.headline}
+              </AppText>
+            ) : null}
+            <AppText className="text-[13px] leading-[18px] text-[#9F9C99]">
+              {item.location.display}
+            </AppText>
+          </Pressable>
 
           <View className="mt-2 flex-row gap-2">
             <Pressable
@@ -157,6 +170,7 @@ export function WhoLikedMeScreen() {
   const [items, setItems] = React.useState<DiscoveryProfileCard[]>([]);
   const [banner, setBanner] = React.useState<BannerState | null>(null);
   const [matchState, setMatchState] = React.useState<MatchState | null>(null);
+  const [openedProfile, setOpenedProfile] = React.useState<DiscoveryProfileCard | null>(null);
   const [presentedPremiumError, setPresentedPremiumError] = React.useState(false);
   const whoLikedMeQuery = useWhoLikedMeList({ limit: PAGE_LIMIT, page });
   const swipeAction = useSwipeAction();
@@ -448,6 +462,7 @@ export function WhoLikedMeScreen() {
                   onAction={(selectedItem, action) => {
                     void handleAction(selectedItem, action);
                   }}
+                  onOpen={setOpenedProfile}
                 />
               ))}
             </View>
@@ -466,6 +481,52 @@ export function WhoLikedMeScreen() {
             ) : null}
           </View>
         </ScrollView>
+        <Modal
+          animationType="slide"
+          onRequestClose={() => setOpenedProfile(null)}
+          presentationStyle="pageSheet"
+          visible={Boolean(openedProfile)}>
+          {openedProfile ? (
+            <View className="flex-1" style={{ backgroundColor: '#232323' }}>
+              <DiscoveryCardContent bottomInset={insets.bottom + 110} card={openedProfile} />
+              <Pressable
+                accessibilityLabel={t('matches.connects.closeProfile')}
+                className="absolute right-4 top-4 h-10 w-10 items-center justify-center rounded-full active:opacity-80"
+                hitSlop={10}
+                onPress={() => setOpenedProfile(null)}
+                style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+                <Ionicons color="#FFFFFF" name="close" size={22} />
+              </Pressable>
+              <View
+                className="absolute inset-x-0 bottom-0 flex-row gap-3 border-t border-[#3A3938] px-4 pt-3"
+                style={{ backgroundColor: '#232323', paddingBottom: insets.bottom + 12 }}>
+                <Pressable
+                  className="h-12 flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-[#55504B] active:opacity-80"
+                  disabled={actionDisabled}
+                  onPress={() => {
+                    const card = openedProfile;
+                    setOpenedProfile(null);
+                    void handleAction(card, 'pass');
+                  }}>
+                  <Ionicons color="#CFC8C0" name="close" size={18} />
+                  <AppText className="text-[15px] font-semibold text-[#CFC8C0]">{t('matches.connects.skip')}</AppText>
+                </Pressable>
+                <Pressable
+                  className="h-12 flex-1 flex-row items-center justify-center gap-1.5 rounded-full active:opacity-80"
+                  disabled={actionDisabled}
+                  onPress={() => {
+                    const card = openedProfile;
+                    setOpenedProfile(null);
+                    void handleAction(card, 'like');
+                  }}
+                  style={{ backgroundColor: '#6A431E' }}>
+                  <Ionicons color="#FFD33D" name="heart" size={17} />
+                  <AppText className="text-[15px] font-semibold text-[#FFD33D]">{t('matches.connects.connect')}</AppText>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+        </Modal>
         <MatchModal
           card={matchState?.card ?? null}
           onChat={handleOpenMatchChat}

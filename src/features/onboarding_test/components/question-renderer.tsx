@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -23,9 +24,7 @@ import Animated, {
 
 import { AppCard, AppInput, AppText } from '@shared/components';
 import {
-  getLinkedInInputPrefix,
   getLinkedInSlugKindForQuestion,
-  normalizeLinkedInSlug,
 } from '@shared/utils/linkedin';
 import { cn } from '@shared/utils/cn';
 
@@ -46,7 +45,7 @@ const SEARCHABLE_DROPDOWN_DEBOUNCE_MS = 400;
 const SEARCHABLE_DROPDOWN_MAX_RENDERED_OPTIONS = 80;
 const SEARCHABLE_DROPDOWN_MIN_QUERY_LENGTH = 2;
 // Lets a search field scroll itself to the top of the onboarding page so its results clear the keyboard.
-export const OnboardingScrollContext = React.createContext<React.RefObject<ScrollView | null> | null>(null);
+export const OnboardingScrollContext = React.createContext<React.RefObject<KeyboardAwareScrollViewRef | null> | null>(null);
 
 const SINGLE_LINE_TEXT_INPUT_STYLE = {
   letterSpacing: 0,
@@ -64,9 +63,36 @@ type QuestionRendererProps = {
   locale?: OnboardingLocale;
   onChange: (value: OnboardingAnswerValue) => void;
   question: OnboardingQuestion;
+  /** The step's other answers, for a field shown with them (the salary amount's unit). */
+  siblingAnswers?: Record<string, OnboardingAnswerValue | undefined>;
   value: OnboardingAnswerValue | undefined;
   variant?: 'default' | 'dropdown_multi_select' | 'inline_searchable_checkbox_multi_select';
 };
+
+// q_*_salary_amount sits below its q_*_salary_period and q_*_salary_currency, which scroll off
+// screen while the numpad is open: the amount carries both, as "USD 5000 / month".
+function getSalaryAmountUnit(
+  questionId: string,
+  answers: QuestionRendererProps['siblingAnswers'],
+  locale: OnboardingLocale | undefined
+) {
+  if (!questionId.endsWith('_salary_amount') || !answers) {
+    return {};
+  }
+
+  const base = questionId.slice(0, -'_amount'.length);
+  const currency = answers[`${base}_currency`];
+  const period = answers[`${base}_period`];
+  const periodLabels: Record<string, Record<OnboardingLocale, string>> = {
+    annual: { en: '/ year', id: '/ tahun' },
+    monthly: { en: '/ month', id: '/ bulan' },
+  };
+
+  return {
+    prefix: typeof currency === 'string' && currency ? `${currency} ` : undefined,
+    suffix: typeof period === 'string' ? periodLabels[period]?.[locale ?? 'en'] : undefined,
+  };
+}
 
 function getStringValue(value: OnboardingAnswerValue | undefined) {
   return typeof value === 'string' ? value : '';
@@ -108,11 +134,11 @@ function getTextLikePlaceholder(question: OnboardingQuestion) {
   const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
   if (linkedInSlugKind === 'profile') {
-    return 'username';
+    return 'linkedin.com/in/your-name';
   }
 
   if (linkedInSlugKind === 'company') {
-    return 'company-slug';
+    return 'linkedin.com/company/your-company';
   }
 
   if (question.placeholder) {
@@ -744,10 +770,10 @@ const CARD_BADGE_STYLES: Record<string, CardBadgeStyle> = {
     icon: 'calendar',
     iconColor: '#C48BFF',
   },
-  hourly: {
+  monthly: {
     bg: '#1F242E',
     border: '#2E3547',
-    icon: 'time-outline',
+    icon: 'calendar-outline',
     iconColor: '#CBD4E0',
   },
   IDR: {
@@ -919,22 +945,26 @@ const FIELD_CLASS = `${FIELD_BG} ${FIELD_BORDER}`;
 
 function TextLikeQuestion({
   error,
+  inputPrefix,
+  inputSuffix,
   keyboardType,
   multiline = false,
   onChange,
   question,
   value,
 }: Omit<QuestionRendererProps, 'value'> & {
+  inputPrefix?: string;
+  inputSuffix?: string;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'url';
   multiline?: boolean;
   value: string;
 }) {
   const [isFocused, setIsFocused] = React.useState(false);
-  const linkedInSlugKind = getLinkedInSlugKindForQuestion(question);
 
   return (
     <View className="gap-3">
-      <QuestionHeader error={error} question={question} />
+      {/* The error shows once, under the input (QA BUG-015). */}
+      <QuestionHeader question={question} />
       <AppInput
         autoCapitalize={question.type === 'email' || question.type === 'url' ? 'none' : 'sentences'}
         autoCorrect={question.type === 'email' || question.type === 'url' ? false : true}
@@ -943,16 +973,15 @@ function TextLikeQuestion({
         multiline={multiline}
         numberOfLines={multiline ? 5 : 1}
         onBlur={() => setIsFocused(false)}
-        onChangeText={(nextValue) =>
-          onChange(
-            linkedInSlugKind ? normalizeLinkedInSlug(nextValue, linkedInSlugKind) : nextValue
-          )
-        }
+        // LinkedIn takes a pasted link or a bare username as typed; it is reduced to the
+        // slug on validate/submit, not per keystroke (QA BUG-012).
+        onChangeText={onChange}
         onFocus={() => setIsFocused(true)}
         placeholder={getTextLikePlaceholder(question)}
-        prefix={linkedInSlugKind ? getLinkedInInputPrefix(linkedInSlugKind) : undefined}
+        prefix={inputPrefix}
+        suffix={inputSuffix}
         textAlignVertical={multiline ? 'top' : 'center'}
-        value={linkedInSlugKind ? normalizeLinkedInSlug(value, linkedInSlugKind) : value}
+        value={value}
         className={cn(
           FIELD_BG,
           isFocused ? 'border-[#FF9A3E]' : FIELD_BORDER,
@@ -3086,7 +3115,7 @@ function DateSelectQuestion({
           onSelect={(nextValue) => updatePart('month', nextValue)}
           onToggle={() => togglePart('month')}
           options={monthOptions}
-          placeholder="MMM"
+          placeholder="MM"
           selectedValue={parts.month}
           minDropdownWidth={DATE_DROPDOWN_WIDTH}
         />
@@ -3237,6 +3266,7 @@ export function QuestionRenderer({
   locale,
   onChange,
   question,
+  siblingAnswers,
   variant = 'default',
   value,
 }: QuestionRendererProps) {
@@ -3251,10 +3281,14 @@ export function QuestionRenderer({
           value={getStringValue(value)}
         />
       );
-    case 'number':
+    case 'number': {
+      const unit = getSalaryAmountUnit(question.id, siblingAnswers, locale);
+
       return (
         <TextLikeQuestion
           error={error}
+          inputPrefix={unit.prefix}
+          inputSuffix={unit.suffix}
           keyboardType="numeric"
           onChange={(nextValue) => {
             if (!nextValue) {
@@ -3269,6 +3303,7 @@ export function QuestionRenderer({
           value={getNumberValue(value)}
         />
       );
+    }
     case 'date':
       return (
         <DateSelectQuestion

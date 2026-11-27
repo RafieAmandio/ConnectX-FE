@@ -7,15 +7,17 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
 
 import { useAuthContext } from '@features/auth/store/auth-provider';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
-import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
+import { AppButton, AppCard, AppText, AppTopBar, showAlert } from '@shared/components';
 import { useTranslation } from '@shared/localization';
+import { requireLinkedInRecovery } from '@shared/services/linkedin-recovery-store';
 
+import { useProfileCompleteness } from '../hooks/use-onboarding-answers';
 import { useMyProfile } from '../hooks/use-profile';
 import type {
   MyProfileData,
@@ -28,6 +30,7 @@ import type {
   ProfileStats,
   ProfileTalentData,
 } from '../types/profile.types';
+import { ProfileCompletenessCard } from './profile-completeness-card';
 import { ProfileSkeleton } from './profile-skeleton';
 
 const BADGE_ICON_BY_ID: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -706,7 +709,13 @@ function BottomSignOut({ onPress }: { onPress: () => void }) {
       </AppText>
       <Pressable
         className="flex-row items-center justify-center gap-2 rounded-[18px] border px-4 py-4"
-        onPress={onPress}
+        // Signing back in needs an email code, so confirm first (QA error-prevention note).
+        onPress={() =>
+          showAlert(t('profile.signOutConfirm.title'), t('profile.signOutConfirm.message'), [
+            { style: 'cancel', text: t('profile.signOutConfirm.cancel') },
+            { onPress, style: 'destructive', text: t('profile.signOutConfirm.confirm') },
+          ])
+        }
         style={{ backgroundColor: '#1C1C21', borderColor: DANGER_BORDER }}
       >
         <Ionicons color={DANGER} name="log-out-outline" size={20} />
@@ -726,6 +735,7 @@ export function ProfileScreen() {
   const myProfileQuery = useMyProfile();
   const viewerContext = useViewerContext();
   const myProfileResponse = myProfileQuery.data;
+  const completeness = useProfileCompleteness();
   const shouldShowProfileError =
     myProfileQuery.isError ||
     (myProfileQuery.isSuccess && !hasUsableProfile(myProfileResponse));
@@ -838,6 +848,40 @@ export function ProfileScreen() {
                 onEdit={() => router.push('/profile/edit' as never)}
                 profile={talent}
               />
+
+            <ProfileCompletenessCard
+              {...completeness}
+              onPress={() => router.push('/profile/edit-answers' as never)}
+            />
+
+            {profile.linkedinSync == null ? (
+              <Pressable
+                className="flex-row items-center gap-3 rounded-[20px] border px-4 py-4 active:opacity-90"
+                onPress={() => requireLinkedInRecovery({ optional: true })}
+                style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}>
+                <Ionicons color="#0A66C2" name="logo-linkedin" size={24} />
+                <View className="min-w-0 flex-1">
+                  <AppText className="text-[15px]" variant="bodyStrong">
+                    {t('profile.linkedinRecommendTitle')}
+                  </AppText>
+                  <AppText className="text-[13px] leading-5" tone="muted">
+                    {t('profile.linkedinRecommendHint')}
+                  </AppText>
+                </View>
+                <Ionicons color={ACCENT} name="chevron-forward" size={18} />
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              className="flex-row items-center gap-3 rounded-[20px] border px-4 py-3.5 active:opacity-90"
+              onPress={() => router.push('/profile/edit-answers' as never)}
+              style={{ backgroundColor: SURFACE_RAISED, borderColor: BORDER_COLOR }}>
+              <Ionicons color={ACCENT} name="create-outline" size={20} />
+              <AppText className="min-w-0 flex-1 text-[15px]" variant="bodyStrong">
+                {t('profile.answers.open')}
+              </AppText>
+              <Ionicons color={ACCENT} name="chevron-forward" size={18} />
+            </Pressable>
 
             <StatsOverview stats={profile.stats} />
 

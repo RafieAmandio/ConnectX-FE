@@ -1,8 +1,8 @@
 import React from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
-import { AppButton, AppCard, AppPill, AppText } from '@shared/components';
+import { AppButton, AppCard, AppPill, AppText, showAlert } from '@shared/components';
 
 import { REVENUECAT_ENTITLEMENT_CONNECTX_PRO, type RevenueCatPackageId } from '../config/revenuecat-config';
 import { useRevenueCat } from '../hooks/use-revenuecat';
@@ -115,7 +115,7 @@ export function ConnectXProCard() {
       return;
     }
 
-    Alert.alert('RevenueCat', message);
+    showAlert('RevenueCat', message);
   }, []);
 
   const runAction = React.useCallback(
@@ -220,7 +220,7 @@ export function ConnectXProCard() {
               const message = getPaywallMessage(result);
 
               if (message) {
-                Alert.alert('RevenueCat', message);
+                showAlert('RevenueCat', message);
               }
             });
           }}
@@ -247,7 +247,7 @@ export function ConnectXProCard() {
               const restoredInfo = await restorePurchases();
 
               if (restoredInfo?.entitlements.active[REVENUECAT_ENTITLEMENT_CONNECTX_PRO]) {
-                Alert.alert('RevenueCat', 'ConnectX Pro was restored successfully.');
+                showAlert('RevenueCat', 'ConnectX Pro was restored successfully.');
               }
             });
           }}
@@ -265,7 +265,7 @@ export function ConnectXProCard() {
                 const message = getPaywallMessage(result);
 
                 if (message) {
-                  Alert.alert('RevenueCat', message);
+                  showAlert('RevenueCat', message);
                 }
               });
             }}
@@ -314,7 +314,7 @@ export function ConnectXProCard() {
                     const nextCustomerInfo = await purchasePackageById(item.id);
 
                     if (nextCustomerInfo?.entitlements.active[REVENUECAT_ENTITLEMENT_CONNECTX_PRO]) {
-                      Alert.alert('RevenueCat', `${item.title} unlocked ConnectX Pro.`);
+                      showAlert('RevenueCat', `${item.title} unlocked ConnectX Pro.`);
                     }
                   });
                 }}
