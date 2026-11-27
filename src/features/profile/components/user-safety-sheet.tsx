@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
-import { Alert, Modal, Pressable, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton, AppInput, AppText } from '@shared/components';
+import { AppButton, AppInput, AppText, showAlert } from '@shared/components';
 import { useTranslation } from '@shared/localization';
 import { apiFetch } from '@shared/services/api';
 
@@ -68,16 +68,16 @@ export function UserSafetyButton({
 
   function confirmBlock() {
     close();
-    Alert.alert(t('safety.blockTitle', { name }), t('safety.blockMessage'), [
+    showAlert(t('safety.blockTitle', { name }), t('safety.blockMessage'), [
       { style: 'cancel', text: t('safety.cancel') },
       {
         onPress: () => {
           blockUser.mutate(
             { block: true, userId: userId! },
             {
-              onError: (error) => Alert.alert(t('safety.errorTitle'), error.message),
+              onError: (error) => showAlert(t('safety.errorTitle'), error.message),
               onSuccess: (response) => {
-                Alert.alert(t('safety.blockedTitle'), response.message ?? t('safety.blockedMessage', { name }));
+                showAlert(t('safety.blockedTitle'), response.message ?? t('safety.blockedMessage', { name }));
                 onBlocked?.();
               },
             }
@@ -97,10 +97,10 @@ export function UserSafetyButton({
     reportUser.mutate(
       { message, reason, userId: userId! },
       {
-        onError: (error) => Alert.alert(t('safety.errorTitle'), error.message),
+        onError: (error) => showAlert(t('safety.errorTitle'), error.message),
         onSuccess: (response) => {
           close();
-          Alert.alert(t('safety.reportedTitle'), response.message ?? t('safety.reportedMessage'));
+          showAlert(t('safety.reportedTitle'), response.message ?? t('safety.reportedMessage'));
         },
       }
     );

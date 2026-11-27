@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, AppState, type AppStateStatus } from 'react-native';
+import { AppState, type AppStateStatus } from 'react-native';
 import Purchases, {
   type CustomerInfo,
   type CustomerInfoUpdateListener,
@@ -25,6 +25,7 @@ import {
   REVENUECAT_RUNTIME_SUPPORTED,
   type RevenueCatPackageId,
 } from '../config/revenuecat-config';
+import { showAlert } from '@shared/components';
 
 const PRO_SYNC_PATH = '/api/v1/pro/sync';
 
@@ -386,9 +387,9 @@ export function RevenueCatProvider({ children }: React.PropsWithChildren) {
       );
 
       if (isProNow && !wasPro) {
-        Alert.alert(t('revenuecat.purchaseSuccess.proTitle'), t('revenuecat.purchaseSuccess.proMessage'));
+        showAlert(t('revenuecat.purchaseSuccess.proTitle'), t('revenuecat.purchaseSuccess.proMessage'));
       } else {
-        Alert.alert(t('revenuecat.purchaseSuccess.title'), t('revenuecat.purchaseSuccess.message'));
+        showAlert(t('revenuecat.purchaseSuccess.title'), t('revenuecat.purchaseSuccess.message'));
       }
     },
     [connectXProEntitlement, refreshRevenueCatAndAuthSession, t]

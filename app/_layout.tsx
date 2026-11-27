@@ -14,6 +14,7 @@ import { PushNotificationTapHandler } from '@features/notifications';
 import { LinkedInRecoveryModal } from '@features/profile/components/linkedin-recovery-modal';
 import { RevenueCatProvider } from '@features/revenuecat';
 import { useColorScheme } from '@shared/hooks/use-color-scheme';
+import { AppAlertHost } from '@shared/components';
 import { LocalizationProvider } from '@shared/localization';
 import { createQueryClient } from '@shared/services/api';
 import { NavigationThemes } from '@shared/theme';
@@ -58,6 +59,7 @@ export default function RootLayout() {
                 <LinkedInRecoveryModal />
                 <StatusBar style="light" />
               </ThemeProvider>
+              <AppAlertHost />
             </RevenueCatProvider>
           </LocalizationProvider>
         </AuthProvider>

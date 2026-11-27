@@ -5,7 +5,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   Pressable,
   ScrollView,
@@ -16,7 +15,7 @@ import {
 import { KeyboardAvoidingView, KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppCard, AppText } from '@shared/components';
+import { AppCard, AppText, showAlert } from '@shared/components';
 import { apiFetch } from '@shared/services/api';
 import { cn } from '@shared/utils/cn';
 
@@ -1229,7 +1228,7 @@ export function EditProfileScreen() {
       return;
     }
 
-    Alert.alert('Discard changes?', 'Your unsaved profile changes will be lost.', [
+    showAlert('Discard changes?', 'Your unsaved profile changes will be lost.', [
       { style: 'cancel', text: 'Keep editing' },
       { onPress: () => router.back(), style: 'destructive', text: 'Discard' },
     ]);

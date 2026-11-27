@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
-  Alert,
   Linking,
   Pressable,
   RefreshControl,
@@ -14,7 +13,7 @@ import {
 
 import { useAuthContext } from '@features/auth/store/auth-provider';
 import { useViewerContext } from '@features/home/hooks/use-viewer-context';
-import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
+import { AppButton, AppCard, AppText, AppTopBar, showAlert } from '@shared/components';
 import { useTranslation } from '@shared/localization';
 import { requireLinkedInRecovery } from '@shared/services/linkedin-recovery-store';
 
@@ -712,7 +711,7 @@ function BottomSignOut({ onPress }: { onPress: () => void }) {
         className="flex-row items-center justify-center gap-2 rounded-[18px] border px-4 py-4"
         // Signing back in needs an email code, so confirm first (QA error-prevention note).
         onPress={() =>
-          Alert.alert(t('profile.signOutConfirm.title'), t('profile.signOutConfirm.message'), [
+          showAlert(t('profile.signOutConfirm.title'), t('profile.signOutConfirm.message'), [
             { style: 'cancel', text: t('profile.signOutConfirm.cancel') },
             { onPress, style: 'destructive', text: t('profile.signOutConfirm.confirm') },
           ])

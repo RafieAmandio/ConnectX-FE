@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  Alert,
   Modal,
   Pressable,
   TextInput,
@@ -10,7 +9,7 @@ import {
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton, AppText } from '@shared/components';
+import { AppButton, AppText, showAlert } from '@shared/components';
 
 import { useSubmitSupportTicket } from '../hooks/use-settings';
 import type { SupportTicketType } from '../types/settings.types';
@@ -68,13 +67,13 @@ export function SupportTicketModal({ onClose, ticketType, visible }: SupportTick
         message: message.trim(),
       });
 
-      Alert.alert('Sent', response.message || 'Your message has been sent. Thank you!', [
+      showAlert('Sent', response.message || 'Your message has been sent. Thank you!', [
         { text: 'OK', onPress: handleClose },
       ]);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to send your message. Please try again.';
-      Alert.alert('Error', errorMessage);
+      showAlert('Error', errorMessage);
     }
   }
 

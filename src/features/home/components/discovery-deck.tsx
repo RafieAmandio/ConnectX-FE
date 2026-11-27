@@ -5,7 +5,14 @@ import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, Linking, Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
+import {
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import Animated, {
@@ -35,7 +42,7 @@ import {
   useUpdateProfileLocation,
 } from '@features/profile';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
-import { AppButton, AppCard, AppText, AppTopBar } from '@shared/components';
+import { AppButton, AppCard, AppText, AppTopBar, showAlert } from '@shared/components';
 import { useTranslation } from '@shared/localization';
 import { ApiError } from '@shared/services/api';
 import { Shadows } from '@shared/theme';
@@ -2026,7 +2033,7 @@ export function DiscoveryDeck() {
   // New accounts swipe only after adding a photo (QA 17 Nov); the backend also rejects with PHOTO_REQUIRED.
   const isMissingProfilePhoto = myProfile.data?.data.hasProfilePhoto === false;
   const askForProfilePhoto = React.useCallback(() => {
-    Alert.alert(t('home.deck.photoRequired.title'), t('home.deck.photoRequired.message'), [
+    showAlert(t('home.deck.photoRequired.title'), t('home.deck.photoRequired.message'), [
       { style: 'cancel', text: t('home.deck.photoRequired.later') },
       { onPress: () => router.push('/profile/edit' as never), text: t('home.deck.photoRequired.add') },
     ]);

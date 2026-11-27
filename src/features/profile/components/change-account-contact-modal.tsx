@@ -1,11 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import {
-  Alert,
-  Modal,
-  Pressable,
-  View,
-} from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,7 +9,7 @@ import {
   getWhatsappNumberError,
   normalizeWhatsappNumber,
 } from '@features/auth/utils/whatsapp-validation';
-import { AppButton, AppInput, AppText } from '@shared/components';
+import { AppButton, AppInput, AppText, showAlert } from '@shared/components';
 import { getApiDisplayMessage, getApiFieldError } from '@shared/services/api';
 
 import {
@@ -141,7 +136,7 @@ export function ChangeAccountContactModal({
       const field = isEmail ? 'email' : 'whatsapp_number';
       const fieldError = getApiFieldError(error, field);
       setValueError(fieldError ?? null);
-      Alert.alert(
+      showAlert(
         'Unable to send code',
         fieldError ??
           getApiDisplayMessage(
@@ -170,14 +165,14 @@ export function ChangeAccountContactModal({
 
       await onConfirmed();
       handleClose();
-      Alert.alert(
+      showAlert(
         isEmail ? 'Email changed' : 'WhatsApp number changed',
         response.message || `${isEmail ? 'Email' : 'WhatsApp number'} updated successfully.`
       );
     } catch (error) {
       const otpFieldError = getApiFieldError(error, 'otp_code');
       setOtpError(otpFieldError ?? null);
-      Alert.alert(
+      showAlert(
         'Unable to verify code',
         otpFieldError ??
           getApiDisplayMessage(error, 'We could not verify this code. Please try again.')

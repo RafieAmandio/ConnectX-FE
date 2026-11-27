@@ -3,10 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText } from '@shared/components';
+import { AppText, showAlert } from '@shared/components';
 import { useTranslation } from '@shared/localization';
 import { apiFetch } from '@shared/services/api';
 
@@ -72,13 +77,13 @@ export function BlockedUsersScreen() {
                   disabled={blockUser.isPending}
                   // Confirm first so a stray tap does not unblock someone (QA UX-MOD-01).
                   onPress={() =>
-                    Alert.alert(t('safety.unblockConfirm.title', { name: item.name }), undefined, [
+                    showAlert(t('safety.unblockConfirm.title', { name: item.name }), undefined, [
                       { style: 'cancel', text: t('safety.cancel') },
                       {
                         onPress: () =>
                           blockUser.mutate(
                             { block: false, userId: item.user_id },
-                            { onError: (error) => Alert.alert(t('safety.errorTitle'), error.message) }
+                            { onError: (error) => showAlert(t('safety.errorTitle'), error.message) }
                           ),
                         text: t('safety.unblockConfirm.confirm'),
                       },

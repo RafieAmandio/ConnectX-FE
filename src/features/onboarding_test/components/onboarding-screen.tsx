@@ -4,7 +4,6 @@ import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   View,
@@ -21,7 +20,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getRouteForAuthPhase, useAuth } from '@features/auth';
-import { AppText } from '@shared/components';
+import { AppText, showAlert } from '@shared/components';
 import {
   clearLinkedInSyncNotice,
   setPendingLinkedInSyncNotice,
@@ -694,7 +693,7 @@ export function OnboardingScreen() {
           isExiting={isExiting}
           onBack={handleBackPress}
           onExit={() => {
-            Alert.alert('Exit setup?', 'You will be signed out. Your answers so far are saved, so you can continue later.', [
+            showAlert('Exit setup?', 'You will be signed out. Your answers so far are saved, so you can continue later.', [
               { style: 'cancel', text: 'Stay' },
               { onPress: () => void handleExit(), style: 'destructive', text: 'Exit' },
             ]);

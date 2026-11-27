@@ -10,7 +10,6 @@ import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Keyboard,
   Linking,
@@ -34,7 +33,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, AppTopBar } from '@shared/components';
+import { AppText, AppTopBar, showAlert } from '@shared/components';
 import { useLocale, useTranslation } from '@shared/localization';
 import { buildApiUrl } from '@shared/services/api/config';
 import { UserSafetyButton } from '@features/profile/components/user-safety-sheet';
@@ -368,12 +367,12 @@ function openMediaUrl(value: string | null | undefined, t: TFunction) {
   const mediaUrl = normalizeMediaUrl(value);
 
   if (!mediaUrl) {
-    Alert.alert(t('chat.attachmentUnavailableTitle'), t('chat.attachmentUnavailableMessage'));
+    showAlert(t('chat.attachmentUnavailableTitle'), t('chat.attachmentUnavailableMessage'));
     return;
   }
 
   void Linking.openURL(mediaUrl).catch(() => {
-    Alert.alert(t('chat.openAttachmentErrorTitle'), t('chat.attachmentUnavailableMessage'));
+    showAlert(t('chat.openAttachmentErrorTitle'), t('chat.attachmentUnavailableMessage'));
   });
 }
 
@@ -444,9 +443,9 @@ function ImagePreviewModal({
 
     try {
       await saveImageToLibrary(imageUrl, t);
-      Alert.alert(t('chat.imageSavedTitle'), t('chat.imageSavedMessage'));
+      showAlert(t('chat.imageSavedTitle'), t('chat.imageSavedMessage'));
     } catch (error) {
-      Alert.alert(
+      showAlert(
         t('chat.imageSaveErrorTitle'),
         error instanceof Error ? error.message : t('chat.imageSaveErrorFallback')
       );
@@ -558,7 +557,7 @@ function MessageText({
             key={`${part.url}-${index}`}
             onPress={() => {
               void Linking.openURL(part.url).catch(() => {
-                Alert.alert(t('chat.openLinkErrorTitle'), t('chat.openLinkErrorMessage'));
+                showAlert(t('chat.openLinkErrorTitle'), t('chat.openLinkErrorMessage'));
               });
             }}>
             {part.text}
@@ -1148,7 +1147,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
         });
       } catch (error) {
         // e.g. 403 USER_BLOCKED: say why instead of only marking the bubble failed.
-        Alert.alert(t('chat.sendFailedTitle'), error instanceof Error ? error.message : '');
+        showAlert(t('chat.sendFailedTitle'), error instanceof Error ? error.message : '');
         return;
       }
 
@@ -1157,7 +1156,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
       try {
         await sendMessageMutation.mutateAsync(body);
       } catch (error) {
-        Alert.alert(t('chat.sendFailedTitle'), error instanceof Error ? error.message : '');
+        showAlert(t('chat.sendFailedTitle'), error instanceof Error ? error.message : '');
         return;
       }
     }
@@ -1185,7 +1184,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
       const permission = await ImagePicker.requestCameraPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert(t('chat.cameraPermissionTitle'), t('chat.cameraPermissionMessage'), [
+        showAlert(t('chat.cameraPermissionTitle'), t('chat.cameraPermissionMessage'), [
           { style: 'cancel', text: t('chat.cancel') },
           { onPress: () => void Linking.openSettings(), text: t('chat.openSettings') },
         ]);
@@ -1211,7 +1210,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     const asset = result.assets[0];
 
     if (!asset?.uri) {
-      Alert.alert(t('chat.pickImageUnavailableTitle'), t('chat.pickImageUnavailableMessage'));
+      showAlert(t('chat.pickImageUnavailableTitle'), t('chat.pickImageUnavailableMessage'));
       return;
     }
 
@@ -1254,7 +1253,7 @@ export function ChatDemoConversationScreen({ conversationId }: { conversationId:
     const asset = result.assets[0];
 
     if (!asset?.uri) {
-      Alert.alert(t('chat.pickFileUnavailableTitle'), t('chat.pickFileUnavailableMessage'));
+      showAlert(t('chat.pickFileUnavailableTitle'), t('chat.pickFileUnavailableMessage'));
       return;
     }
 

@@ -1,17 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import {
-  Alert,
-  Modal,
-  Pressable,
-  View,
-} from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPasswordError } from '@features/auth/utils/auth-validation';
 import { getApiDisplayMessage, getApiFieldError } from '@shared/services/api';
-import { AppButton, AppInput, AppText } from '@shared/components';
+import { AppButton, AppInput, AppText, showAlert } from '@shared/components';
 
 import { useChangePassword } from '../hooks/use-settings';
 
@@ -84,7 +79,7 @@ export function ChangePasswordModal({ onClose, visible }: ChangePasswordModalPro
         password_confirmation: passwordConfirmation,
       });
 
-      Alert.alert('Password changed', response.message || 'Your password has been updated.', [
+      showAlert('Password changed', response.message || 'Your password has been updated.', [
         { onPress: handleClose, text: 'OK' },
       ]);
     } catch (error) {
@@ -94,7 +89,7 @@ export function ChangePasswordModal({ onClose, visible }: ChangePasswordModalPro
         setErrors(apiErrors);
       }
 
-      Alert.alert(
+      showAlert(
         'Unable to change password',
         apiErrors.currentPassword ??
           apiErrors.password ??

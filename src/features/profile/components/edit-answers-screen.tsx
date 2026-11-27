@@ -1,19 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { KeyboardAvoidingView, KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getVisibleQuestions } from '@features/onboarding_test/mock/registry';
 import { OnboardingScrollContext, QuestionRenderer } from '@features/onboarding_test/components/question-renderer';
 import type { OnboardingAnswerValue, OnboardingAnswers, OnboardingStep } from '@features/onboarding_test/types/onboarding.types';
-import { AppButton, AppCard, AppText } from '@shared/components';
+import { AppButton, AppCard, AppText, showAlert } from '@shared/components';
 import { useLocale, useTranslation } from '@shared/localization';
 import { ApiError } from '@shared/services/api';
 import { composeLinkedInUrl, getLinkedInSlugKindForQuestion } from '@shared/utils/linkedin';
@@ -72,7 +67,7 @@ export function EditAnswersScreen() {
       return;
     }
 
-    Alert.alert(t('profile.answers.discardTitle'), t('profile.answers.discardMessage'), [
+    showAlert(t('profile.answers.discardTitle'), t('profile.answers.discardMessage'), [
       { style: 'cancel', text: t('profile.answers.keepEditing') },
       { onPress: () => router.back(), style: 'destructive', text: t('profile.answers.discard') },
     ]);
@@ -93,11 +88,11 @@ export function EditAnswersScreen() {
       ) as Record<string, OnboardingAnswerValue>;
       await updateAnswers.mutateAsync(payload);
       setDraft({});
-      Alert.alert(t('profile.answers.savedTitle'), t('profile.answers.savedMessage'));
+      showAlert(t('profile.answers.savedTitle'), t('profile.answers.savedMessage'));
     } catch (error) {
       const fieldErrors = getFieldErrors(error);
       setErrors(fieldErrors);
-      Alert.alert(
+      showAlert(
         t('profile.answers.saveErrorTitle'),
         error instanceof Error ? error.message : t('profile.answers.saveErrorMessage')
       );

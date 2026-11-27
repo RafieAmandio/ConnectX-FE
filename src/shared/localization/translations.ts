@@ -559,6 +559,7 @@ export const en = {
   'matches.spotlight.activeUntil': 'Active until {time}',
   'safety.unblockConfirm.title': 'Unblock {name}?',
   'safety.unblockConfirm.confirm': 'Yes, Unblock',
+  'common.ok': 'OK',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1117,6 +1118,7 @@ export const id: Record<TranslationKey, string> = {
   'matches.spotlight.activeUntil': 'Aktif sampai {time}',
   'safety.unblockConfirm.title': 'Buka blokir {name}?',
   'safety.unblockConfirm.confirm': 'Ya, Buka Blokir',
+  'common.ok': 'OK',
 };
 
 export const translations = {
