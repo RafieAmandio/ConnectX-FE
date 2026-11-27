@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DiscoveryOnboardingRequiredSheet } from '@features/home/components/discovery-onboarding-required-sheet';
 import { useDiscoveryOnboardingRequiredHandler } from '@features/home/hooks/use-discovery-onboarding-required-handler';
 import { REVENUECAT_OFFERING_IDS, useRevenueCat } from '@features/revenuecat';
+import { ApiError } from '@shared/services/api';
 import { AppCard, AppText, AppTopBar } from '@shared/components';
 import { useLocale, useTranslation, type AppLocale } from '@shared/localization';
 
@@ -428,6 +429,19 @@ export function MatchesScreen() {
         tone: 'success',
       });
     } catch (error) {
+      // Spotlight is Pro only (403 PREMIUM_REQUIRED): open the Pro upgrade instead of an error banner.
+      if (
+        error instanceof ApiError &&
+        (error.payload as { error?: { code?: string } } | null)?.error?.code === 'PREMIUM_REQUIRED'
+      ) {
+        if (supported) {
+          await presentPaywallForOffering(REVENUECAT_OFFERING_IDS.connectXPro).catch(() => undefined);
+        } else {
+          setSpotlightBanner({ detail: error.message, title: t('matches.boostActivationFailedTitle'), tone: 'warning' });
+        }
+        return;
+      }
+
       if (isSpotlightRequiresCreditError(error)) {
         setSpotlightBanner({
           detail: t('matches.noBoostCreditsDetail'),
@@ -461,7 +475,7 @@ export function MatchesScreen() {
         tone: 'warning',
       });
     }
-  }, [locale, maybePresentSpotlightPaywall, spotlightActivation, t]);
+  }, [locale, maybePresentSpotlightPaywall, presentPaywallForOffering, spotlightActivation, supported, t]);
 
   const handleViewConnects = React.useCallback(() => {
     router.push('/who-liked-me' as never);
